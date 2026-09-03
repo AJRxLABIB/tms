@@ -1,0 +1,14 @@
+# Digital Travel Wallet (Phase 2l): these are personal documents (passport
+# scans, visa copies, insurance) — direct web access is denied entirely.
+# Files are only ever served through wallet-document.php, which checks that
+# the requesting session actually owns the document before streaming it.
+#
+# Both directive styles included for compatibility across Apache versions
+# (2.4+ uses Require, older Apache uses Deny/Order):
+<IfModule mod_authz_core.c>
+    Require all denied
+</IfModule>
+<IfModule !mod_authz_core.c>
+    Order allow,deny
+    Deny from all
+</IfModule>

@@ -1,0 +1,423 @@
+<?php
+session_start();
+error_reporting(E_ALL);
+ini_set('display_errors', 0);
+ini_set('log_errors', 1);
+include('includes/config.php');
+tms_require_admin();
+?>
+<!DOCTYPE html>
+<html lang="<?php echo htmlspecialchars(tms_active_language(), ENT_QUOTES, 'UTF-8'); ?>">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>TMS | Manage Bookings</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Plus+Jakarta+Sans:wght@600;700;800&display=swap" rel="stylesheet">
+<link href="css/font-awesome.css" rel="stylesheet">
+<link href="css/bootstrap.min.css" rel="stylesheet">
+<link href="css/admin-v6.css" rel="stylesheet">
+<style>
+.booking-status { display:inline-flex; align-items:center; gap:6px; padding:4px 10px; border-radius:20px; font-size:12px; font-weight:600; }
+.status-pending  { background:#fef3c7; color:#92400e; }
+.status-confirmed{ background:#d1fae5; color:#065f46; }
+.status-cancelled{ background:#fee2e2; color:#991b1b; }
+.filter-bar { display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin-bottom:20px; }
+.filter-bar select, .filter-bar input { padding:8px 12px; border:1.5px solid #e2e8f0; border-radius:8px; font-size:13px; font-family:inherit; color:#0f172a; outline:none; background:#f8fafc; }
+.filter-bar select:focus, .filter-bar input:focus { border-color:#1d4ed8; }
+.stat-strip { display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:14px; margin-bottom:24px; }
+.mini-stat { background:#fff; border:1px solid #e2e8f0; border-radius:12px; padding:16px 20px; }
+.mini-stat .val { font-size:24px; font-weight:700; color:#0f172a; }
+.mini-stat .lbl { font-size:12px; color:#64748b; margin-top:2px; }
+.action-btn { display:inline-flex; align-items:center; gap:5px; padding:5px 10px; border-radius:6px; font-size:12px; font-weight:500; border:none; cursor:pointer; text-decoration:none; transition:all .15s; }
+.btn-confirm  { background:#d1fae5; color:#065f46; }
+.btn-confirm:hover  { background:#a7f3d0; }
+.btn-cancel   { background:#fee2e2; color:#991b1b; }
+.btn-cancel:hover   { background:#fecaca; }
+.btn-delete   { background:#f1f5f9; color:#64748b; }
+.btn-delete:hover   { background:#e2e8f0; }
+.page-title-row { display:flex; align-items:center; justify-content:space-between; margin-bottom:24px; flex-wrap:wrap; gap:12px; }
+.page-title-row h2 { font-family:'Plus Jakarta Sans',sans-serif; font-size:22px; font-weight:800; color:#0f172a; margin:0; }
+.alert-msg { padding:12px 16px; border-radius:10px; font-size:13.5px; margin-bottom:18px; display:flex; align-items:center; gap:8px; }
+.alert-success { background:#d1fae5; color:#065f46; border:1px solid #a7f3d0; }
+.alert-error   { background:#fee2e2; color:#991b1b; border:1px solid #fca5a5; }
+html[data-theme="dark"] .mini-stat { background:#1b222c !important; border-color:#2b3542 !important; }
+html[data-theme="dark"] .mini-stat .val,
+html[data-theme="dark"] .page-title-row h2 { color:#eef2f7 !important; }
+html[data-theme="dark"] .mini-stat .lbl { color:#94a3b8 !important; }
+</style>
+</head>
+<body>
+<div class="tms-shell">
+<?php include('includes/sidebarmenu.php'); ?>
+<main class="tms-main" id="tmsMain">
+<?php include('includes/header.php'); ?>
+<div class="tms-content">
+
+<?php
+
+// --- Handle actions ---
+$msg = ''; $msgType = '';
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'], $_POST['id'])) {
+    tms_csrf_validate();
+    $bid = (int)$_POST['id'];
+    switch ($_POST['action']) {
+        case 'confirm':
+            $dbh->prepare("UPDATE tblbooking SET status=1 WHERE BookingId=:id")->execute([':id'=>$bid]);
+            $ref = 'BK'.str_pad($bid,3,'0',STR_PAD_LEFT);
+            tms_notify_booking_owner(
+                $dbh, $bid, "Great news! Your booking #$ref has been confirmed.",
+                "Your booking #$ref is confirmed! ✈",
+                "<p>Great news — your booking <strong>#$ref</strong> has been confirmed by our team.</p>
+                 <p>You can view your itinerary and download your e-ticket anytime from <strong>My Bookings</strong>.</p>"
+            );
+            $msg = "Booking #BK".str_pad($bid,3,'0',STR_PAD_LEFT)." confirmed.";
+            $msgType = 'success';
+            break;
+        case 'cancel':
+            $dbh->prepare("UPDATE tblbooking SET status=2 WHERE BookingId=:id")->execute([':id'=>$bid]);
+            $ref = 'BK'.str_pad($bid,3,'0',STR_PAD_LEFT);
+            tms_notify_booking_owner(
+                $dbh, $bid, "Your booking #$ref has been cancelled by our team. Please contact support if you have questions.",
+                "Your booking #$ref has been cancelled",
+                "<p>Your booking <strong>#$ref</strong> has been cancelled by our team.</p>
+                 <p>If you weren't expecting this or have questions, please reach out to TMS support and we'll help sort it out.</p>"
+            );
+            $msg = "Booking #BK".str_pad($bid,3,'0',STR_PAD_LEFT)." cancelled.";
+            $msgType = 'success';
+            break;
+        case 'delete':
+            $dbh->prepare("DELETE FROM tblbooking WHERE BookingId=:id")->execute([':id'=>$bid]);
+            $msg = "Booking deleted.";
+            $msgType = 'success';
+            break;
+        case 'approve_mod':
+            $bq = $dbh->prepare("SELECT RequestedFromDate, RequestedToDate FROM tblbooking WHERE BookingId=:id");
+            $bq->execute([':id'=>$bid]);
+            $row = $bq->fetch(PDO::FETCH_OBJ);
+            if ($row && $row->RequestedFromDate && $row->RequestedToDate) {
+                $dbh->prepare("UPDATE tblbooking SET FromDate=:f, ToDate=:t, RequestedFromDate=NULL, RequestedToDate=NULL, ModificationStatus='approved', ModificationNote=NULL WHERE BookingId=:id")
+                    ->execute([':f'=>$row->RequestedFromDate, ':t'=>$row->RequestedToDate, ':id'=>$bid]);
+                $ref = 'BK'.str_pad($bid,3,'0',STR_PAD_LEFT);
+                tms_notify_booking_owner($dbh, $bid, "Your date-change request for booking #$ref was approved.",
+                    "Booking #$ref dates updated",
+                    "<p>Your requested date change for booking <strong>#$ref</strong> has been approved and applied.</p>");
+                $msg = "Date change approved for #BK$bid.";
+                $msgType = 'success';
+            } else {
+                $msg = "No pending date-change request found for that booking.";
+                $msgType = 'error';
+            }
+            break;
+        case 'reject_mod':
+            $note = tms_clean($_POST['note'] ?? '') ?: 'Requested dates were not available.';
+            $dbh->prepare("UPDATE tblbooking SET RequestedFromDate=NULL, RequestedToDate=NULL, ModificationStatus='rejected', ModificationNote=:n WHERE BookingId=:id")
+                ->execute([':n'=>$note, ':id'=>$bid]);
+            $ref = 'BK'.str_pad($bid,3,'0',STR_PAD_LEFT);
+            tms_notify_booking_owner($dbh, $bid, "Your date-change request for booking #$ref was declined: $note",
+                "Booking #$ref date-change request declined",
+                "<p>We were unable to approve your requested date change for booking <strong>#$ref</strong>.</p><p>$note</p>");
+            $msg = "Date-change request declined for #BK$bid.";
+            $msgType = 'success';
+            break;
+        case 'refund_processed':
+            $dbh->prepare("UPDATE tblbooking SET RefundStatus='processed' WHERE BookingId=:id")->execute([':id'=>$bid]);
+            $ref = 'BK'.str_pad($bid,3,'0',STR_PAD_LEFT);
+            tms_notify_booking_owner($dbh, $bid, "Your refund for booking #$ref has been processed.",
+                "Refund processed for #$ref",
+                "<p>Your refund for the cancelled booking <strong>#$ref</strong> has been processed.</p>");
+            $msg = "Refund marked as processed for #BK$bid.";
+            $msgType = 'success';
+            break;
+        case 'refund_rejected':
+            $note = tms_clean($_POST['note'] ?? '') ?: 'Refund could not be verified.';
+            $dbh->prepare("UPDATE tblbooking SET RefundStatus='rejected', RefundNote=:n WHERE BookingId=:id")->execute([':n'=>$note, ':id'=>$bid]);
+            $ref = 'BK'.str_pad($bid,3,'0',STR_PAD_LEFT);
+            tms_notify_booking_owner($dbh, $bid, "Your refund request for booking #$ref was declined: $note",
+                "Refund request declined for #$ref",
+                "<p>We were unable to process a refund for booking <strong>#$ref</strong>.</p><p>$note</p>");
+            $msg = "Refund declined for #BK$bid.";
+            $msgType = 'success';
+            break;
+    }
+}
+
+/** Looks up which user owns a booking and sends them an in-app notification + email. */
+function tms_notify_booking_owner(PDO $dbh, int $bookingId, string $message, string $emailSubject = '', string $emailHtml = ''): void {
+    try {
+        $stmt = $dbh->prepare(
+            "SELECT b.UserEmail, u.FullName FROM tblbooking b
+             LEFT JOIN tblusers u ON u.EmailId = b.UserEmail
+             WHERE b.BookingId=:id"
+        );
+        $stmt->execute([':id' => $bookingId]);
+        $row = $stmt->fetch(PDO::FETCH_OBJ);
+        if ($row && $row->UserEmail) {
+            tms_notify($dbh, $row->UserEmail, $message, 'tour-history.php');
+            if ($emailSubject && $emailHtml) {
+                tms_send_email($row->UserEmail, $row->FullName ?: $row->UserEmail, $emailSubject, tms_email_template($emailSubject, $emailHtml));
+            }
+        }
+    } catch (Exception $e) {
+        error_log('[TMS] Could not notify booking owner: ' . $e->getMessage());
+    }
+}
+
+// --- Stats ---
+function safe_val(PDO $db, string $sql): int {
+    try { return (int)$db->query($sql)->fetchColumn(); } catch(Exception $e) { return 0; }
+}
+$total     = safe_val($dbh, "SELECT COUNT(*) FROM tblbooking");
+$pending   = safe_val($dbh, "SELECT COUNT(*) FROM tblbooking WHERE status=0");
+$confirmed = safe_val($dbh, "SELECT COUNT(*) FROM tblbooking WHERE status=1");
+$cancelled = safe_val($dbh, "SELECT COUNT(*) FROM tblbooking WHERE status=2");
+
+// --- Filters ---
+$search     = tms_clean($_GET['search'] ?? '');
+$filter_status = isset($_GET['status']) && $_GET['status'] !== '' ? (int)$_GET['status'] : null;
+
+$where = "WHERE 1=1";
+$params = [];
+if ($search) {
+    $where .= " AND (b.UserEmail LIKE :s OR p.PackageName LIKE :s2 OR b.BookingId LIKE :s3)";
+    $params[':s'] = "%$search%";
+    $params[':s2'] = "%$search%";
+    $params[':s3'] = "%$search%";
+}
+if ($filter_status !== null) {
+    $where .= " AND b.status=:st";
+    $params[':st'] = $filter_status;
+}
+
+// PERFORMANCE FIX (Section 9 audit): this table has real transactional
+// data that only ever grows — unlike manage-packages.php (which already
+// paginates a fixed-ish 400-package catalog), an unbounded booking list
+// gets slower every single day the site is live. Same LIMIT/OFFSET +
+// numbered-pager pattern already established in manage-packages.php.
+$bookingPerPage = 25;
+$bookingPage    = max(1, (int)($_GET['p'] ?? 1));
+
+try {
+    $countQ = $dbh->prepare("
+        SELECT COUNT(*) FROM tblbooking b
+        LEFT JOIN tbltourpackages p ON p.PackageId = b.PackageId
+        $where
+    ");
+    $countQ->execute($params);
+    $bookingTotal = (int)$countQ->fetchColumn();
+    $bookingTotalPages = max(1, (int)ceil($bookingTotal / $bookingPerPage));
+    $bookingPage = min($bookingPage, $bookingTotalPages);
+    $bookingOffset = ($bookingPage - 1) * $bookingPerPage;
+
+    $q = $dbh->prepare("
+        SELECT b.BookingId, b.UserEmail, b.RegDate, b.status,
+               b.ModificationStatus, b.RequestedFromDate, b.RequestedToDate, b.RefundStatus,
+               p.PackageName, p.PackagePrice
+        FROM tblbooking b
+        LEFT JOIN tbltourpackages p ON p.PackageId = b.PackageId
+        $where
+        ORDER BY b.BookingId DESC
+        LIMIT :lim OFFSET :off
+    ");
+    foreach ($params as $k => $v) { $q->bindValue($k, $v, PDO::PARAM_STR); }
+    $q->bindValue(':lim', $bookingPerPage, PDO::PARAM_INT);
+    $q->bindValue(':off', $bookingOffset, PDO::PARAM_INT);
+    $q->execute();
+    $bookings = $q->fetchAll(PDO::FETCH_OBJ);
+} catch (Exception $e) {
+    $bookings = [];
+    $bookingTotal = 0; $bookingTotalPages = 1; $bookingPage = 1;
+    $msg = "Error loading bookings: " . $e->getMessage();
+    $msgType = 'error';
+}
+
+$statusLabel = [0=>'Pending', 1=>'Confirmed', 2=>'Cancelled'];
+$statusClass = [0=>'status-pending', 1=>'status-confirmed', 2=>'status-cancelled'];
+$statusIcon  = [0=>'fa-clock-o', 1=>'fa-check-circle', 2=>'fa-times-circle'];
+?>
+
+<div class="page-title-row">
+  <h2><i class="fa fa-calendar-check-o" style="color:#1d4ed8;margin-right:10px;"></i>Manage Bookings</h2>
+  <span style="font-size:13px;color:#64748b;"><?= count($bookings) ?> booking(s) found</span>
+</div>
+
+<?php if ($msg): ?>
+<div class="alert-msg alert-<?= $msgType ?>">
+  <i class="fa fa-<?= $msgType==='success'?'check-circle':'exclamation-circle' ?>"></i>
+  <?= htmlspecialchars($msg) ?>
+</div>
+<?php endif; ?>
+
+<!-- Stats Strip -->
+<div class="stat-strip">
+  <div class="mini-stat">
+    <div class="val"><?= $total ?></div>
+    <div class="lbl">Total Bookings</div>
+  </div>
+  <div class="mini-stat">
+    <div class="val" style="color:#92400e;"><?= $pending ?></div>
+    <div class="lbl">Pending</div>
+  </div>
+  <div class="mini-stat">
+    <div class="val" style="color:#065f46;"><?= $confirmed ?></div>
+    <div class="lbl">Confirmed</div>
+  </div>
+  <div class="mini-stat">
+    <div class="val" style="color:#991b1b;"><?= $cancelled ?></div>
+    <div class="lbl">Cancelled</div>
+  </div>
+</div>
+
+<!-- Filters -->
+<form method="get" class="filter-bar">
+  <input type="text" name="search" placeholder="Search by email, package, ID..." value="<?= htmlspecialchars($search) ?>" style="min-width:240px;">
+  <select name="status">
+    <option value="">All Statuses</option>
+    <option value="0" <?= $filter_status===0?'selected':'' ?>>Pending</option>
+    <option value="1" <?= $filter_status===1?'selected':'' ?>>Confirmed</option>
+    <option value="2" <?= $filter_status===2?'selected':'' ?>>Cancelled</option>
+  </select>
+  <button type="submit" class="btn-v6 primary"><i class="fa fa-search"></i> Filter</button>
+  <?php if ($search || $filter_status !== null): ?>
+    <a href="manage-bookings.php" class="btn-v6 ghost">Clear</a>
+  <?php endif; ?>
+</form>
+
+<!-- Table -->
+<div class="table-responsive">
+<table class="tms-table" style="font-size:13px;">
+  <thead>
+    <tr>
+      <th>#</th>
+      <th>Booking ID</th>
+      <th>User Email</th>
+      <th>Package</th>
+      <th>Price</th>
+      <th>Date</th>
+      <th>Status</th>
+      <th>Requests</th>
+      <th>Actions</th>
+    </tr>
+  </thead>
+  <tbody>
+  <?php if (empty($bookings)): ?>
+    <tr><td colspan="9" style="text-align:center;padding:40px;color:#94a3b8;">
+      <i class="fa fa-calendar-o" style="font-size:32px;display:block;margin-bottom:10px;"></i>
+      No bookings found.
+    </td></tr>
+  <?php else: ?>
+    <?php $i=1; foreach ($bookings as $b): ?>
+    <?php
+      $st = (int)($b->status ?? 0);
+      $bid = (int)$b->BookingId;
+      $bcode = '#BK'.str_pad($bid,3,'0',STR_PAD_LEFT);
+    ?>
+    <tr>
+      <td><?= $i++ ?></td>
+      <td><strong style="color:#1d4ed8;"><?= $bcode ?></strong></td>
+      <td><?= htmlspecialchars($b->UserEmail ?? '—') ?></td>
+      <td><?= htmlspecialchars($b->PackageName ?? '—') ?></td>
+      <td><?= $b->PackagePrice ? tms_currency($b->PackagePrice) : '—' ?></td>
+      <td><?= $b->RegDate ? date('d M Y', strtotime($b->RegDate)) : '—' ?></td>
+      <td>
+        <span class="booking-status <?= $statusClass[$st] ?? 'status-pending' ?>">
+          <i class="fa <?= $statusIcon[$st] ?? 'fa-clock-o' ?>"></i>
+          <?= $statusLabel[$st] ?? 'Unknown' ?>
+        </span>
+      </td>
+      <td>
+        <?php if ($b->ModificationStatus === 'pending'): ?>
+          <div style="font-size:11.5px;color:#1e40af;margin-bottom:4px;">
+            <i class="fa fa-exchange"></i> &rarr; <?= htmlspecialchars($b->RequestedFromDate) ?> / <?= htmlspecialchars($b->RequestedToDate) ?>
+          </div>
+          <div style="display:flex;gap:4px;">
+            <form method="post" style="display:contents"><input type="hidden" name="action" value="approve_mod"><input type="hidden" name="id" value="<?= $bid ?>"><?php tms_csrf_field(); ?><button type="submit" class="action-btn btn-confirm" onclick="return confirm('Approve this date change?')">Approve</button></form>
+            <form method="post" style="display:contents" onsubmit="return rejectMod(this)"><input type="hidden" name="action" value="reject_mod"><input type="hidden" name="id" value="<?= $bid ?>"><input type="hidden" name="note"><?php tms_csrf_field(); ?><button type="submit" class="action-btn btn-cancel">Reject</button></form>
+          </div>
+        <?php elseif ($b->RefundStatus === 'requested'): ?>
+          <div style="font-size:11.5px;color:#92400e;margin-bottom:4px;"><i class="fa fa-undo"></i> Refund requested</div>
+          <div style="display:flex;gap:4px;">
+            <form method="post" style="display:contents"><input type="hidden" name="action" value="refund_processed"><input type="hidden" name="id" value="<?= $bid ?>"><?php tms_csrf_field(); ?><button type="submit" class="action-btn btn-confirm" onclick="return confirm('Mark refund as processed?')">Processed</button></form>
+            <form method="post" style="display:contents" onsubmit="return rejectRefund(this)"><input type="hidden" name="action" value="refund_rejected"><input type="hidden" name="id" value="<?= $bid ?>"><input type="hidden" name="note"><?php tms_csrf_field(); ?><button type="submit" class="action-btn btn-cancel">Reject</button></form>
+          </div>
+        <?php elseif ($b->RefundStatus): ?>
+          <span style="font-size:11.5px;color:#64748b;"><?= ucfirst($b->RefundStatus) ?></span>
+        <?php else: ?>
+          <span style="font-size:11.5px;color:#cbd5e1;">—</span>
+        <?php endif; ?>
+      </td>
+      <td>
+        <div style="display:flex;gap:5px;flex-wrap:wrap;">
+          <?php if ($st !== 1): ?>
+          <form method="post" style="display:contents">
+            <input type="hidden" name="action" value="confirm">
+            <input type="hidden" name="id" value="<?= $bid ?>">
+            <?php tms_csrf_field(); ?>
+            <button type="submit" class="action-btn btn-confirm" onclick="return confirm('Confirm this booking?')">
+              <i class="fa fa-check"></i> Confirm
+            </button>
+          </form>
+          <?php endif; ?>
+          <?php if ($st !== 2): ?>
+          <form method="post" style="display:contents">
+            <input type="hidden" name="action" value="cancel">
+            <input type="hidden" name="id" value="<?= $bid ?>">
+            <?php tms_csrf_field(); ?>
+            <button type="submit" class="action-btn btn-cancel" onclick="return confirm('Cancel this booking?')">
+              <i class="fa fa-times"></i> Cancel
+            </button>
+          </form>
+          <?php endif; ?>
+          <form method="post" style="display:contents">
+            <input type="hidden" name="action" value="delete">
+            <input type="hidden" name="id" value="<?= $bid ?>">
+            <?php tms_csrf_field(); ?>
+            <button type="submit" class="action-btn btn-delete" onclick="return confirm('Permanently delete this booking?')">
+              <i class="fa fa-trash"></i>
+            </button>
+          </form>
+        </div>
+      </td>
+    </tr>
+    <?php endforeach; ?>
+  <?php endif; ?>
+  </tbody>
+</table>
+</div>
+
+<div style="font-size:12.5px;color:#94a3b8;margin:10px 0;"><?php echo $bookingTotal; ?> booking<?php echo $bookingTotal!==1?'s':''; ?> total &nbsp;·&nbsp; page <?php echo $bookingPage; ?> of <?php echo $bookingTotalPages; ?></div>
+<?php if ($bookingTotalPages > 1): ?>
+<div style="display:flex;justify-content:center;gap:6px;margin-top:16px;flex-wrap:wrap;">
+    <?php for ($pn = 1; $pn <= $bookingTotalPages; $pn++):
+        $qs = http_build_query(array_merge($_GET, ['p' => $pn])); ?>
+    <a href="?<?php echo $qs; ?>" style="padding:6px 12px;border-radius:6px;font-size:13px;text-decoration:none;
+        <?php echo $pn === $bookingPage ? 'background:#1d4ed8;color:#fff;' : 'background:#f1f5f9;color:#334155;'; ?>"><?php echo $pn; ?></a>
+    <?php endfor; ?>
+</div>
+<?php endif; ?>
+
+<?php include('includes/footer.php'); ?>
+<script src="https://code.jquery.com/jquery-2.1.4.min.js"></script>
+<script src="js/bootstrap.min.js"></script>
+<script>
+// These mirror the confirm/cancel links above (plain GET + confirm()) rather
+// than introducing a new CSRF-protected POST pattern just for these two
+// actions — consistent with how the rest of this file already works. A
+// dedicated pass to move all of manage-bookings.php's actions to CSRF-
+// protected POST requests is still a good idea (noted in earlier audits);
+// this doesn't attempt that here.
+function rejectMod(form) {
+    var note = prompt('Reason for declining this date-change request (shown to the customer):', 'Requested dates are not available.');
+    if (note === null) return false;
+    form.note.value = note;
+    return true;
+}
+function rejectRefund(form) {
+    var note = prompt('Reason for declining this refund (shown to the customer):', 'Refund could not be verified.');
+    if (note === null) return false;
+    form.note.value = note;
+    return true;
+}
+</script>
+</body>
+</html>

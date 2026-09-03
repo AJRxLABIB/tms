@@ -1,0 +1,19 @@
+User-agent: *
+Allow: /
+Disallow: /admin/
+Disallow: /includes/
+Disallow: /api/
+Disallow: /uploads/
+Disallow: /cart.php
+Disallow: /checkout.php
+Disallow: /tour-history.php
+Disallow: /profile.php
+Disallow: /wishlist.php
+Disallow: /ticket.php
+Disallow: /mark-notifications-read.php
+Disallow: /user-register-ajax.php
+Disallow: /check_availability.php
+Disallow: /coupon-check.php
+Disallow: /apply-coupon.php
+
+Sitemap: /sitemap.php

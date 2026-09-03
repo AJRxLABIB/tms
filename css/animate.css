@@ -1,0 +1,14 @@
+/* Micro animate.css - only animations actually used (was 68KB, now <2KB) */
+.animated{animation-duration:.4s;animation-fill-mode:both}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+@keyframes fadeInDown{from{opacity:0;transform:translate3d(0,-20px,0)}to{opacity:1;transform:none}}
+@keyframes fadeInUp{from{opacity:0;transform:translate3d(0,20px,0)}to{opacity:1;transform:none}}
+@keyframes fadeInLeft{from{opacity:0;transform:translate3d(-20px,0,0)}to{opacity:1;transform:none}}
+@keyframes fadeInRight{from{opacity:0;transform:translate3d(20px,0,0)}to{opacity:1;transform:none}}
+@keyframes zoomIn{from{opacity:0;transform:scale3d(.9,.9,.9)}to{opacity:1;transform:none}}
+.fadeIn{animation-name:fadeIn}
+.fadeInDown{animation-name:fadeInDown}
+.fadeInUp{animation-name:fadeInUp}
+.fadeInLeft{animation-name:fadeInLeft}
+.fadeInRight{animation-name:fadeInRight}
+.zoomIn{animation-name:zoomIn}

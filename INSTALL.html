@@ -1,0 +1,494 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>TMS — Full Installation Guide</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Plus+Jakarta+Sans:wght@700;800&display=swap');
+  :root{--blue:#1d4ed8;--green:#059669;--amber:#d97706;--red:#dc2626;--purple:#7c3aed;--bg:#f8fafc;--card:#fff;--text:#0f172a;--muted:#64748b;--border:#e2e8f0;}
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);font-size:14px;line-height:1.7;}
+  .page{max-width:860px;margin:0 auto;padding:40px 24px 80px;}
+  /* Hero */
+  .hero{background:linear-gradient(135deg,#0f172a,#1e3a5f);color:#fff;border-radius:20px;padding:48px 40px;margin-bottom:40px;position:relative;overflow:hidden;}
+  .hero::after{content:'✈';position:absolute;right:40px;top:50%;transform:translateY(-50%);font-size:120px;opacity:0.07;}
+  .hero-badge{display:inline-block;background:rgba(255,255,255,0.15);border:1px solid rgba(255,255,255,0.2);border-radius:20px;padding:4px 14px;font-size:12px;font-weight:500;color:#93c5fd;margin-bottom:16px;}
+  .hero h1{font-family:'Plus Jakarta Sans',sans-serif;font-size:36px;font-weight:800;margin-bottom:12px;letter-spacing:-0.5px;}
+  .hero p{color:#94a3b8;font-size:15px;max-width:520px;}
+  /* Section */
+  .section{margin-bottom:40px;}
+  .section-label{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:1px;color:var(--blue);margin-bottom:16px;display:flex;align-items:center;gap:8px;}
+  .section-label::after{content:'';flex:1;height:1px;background:var(--border);}
+  h2{font-family:'Plus Jakarta Sans',sans-serif;font-size:22px;font-weight:700;color:var(--text);margin-bottom:16px;}
+  /* Cards */
+  .card{background:var(--card);border:1px solid var(--border);border-radius:14px;overflow:hidden;margin-bottom:16px;}
+  .card-head{padding:16px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px;background:#f8fafc;}
+  .card-head .icon{width:32px;height:32px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0;}
+  .card-head h3{font-size:14px;font-weight:600;color:var(--text);}
+  .card-body{padding:20px;}
+  /* Software grid */
+  .sw-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px;}
+  .sw-item{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:16px;display:flex;gap:12px;align-items:flex-start;}
+  .sw-icon{width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;}
+  .sw-name{font-size:14px;font-weight:600;color:var(--text);margin-bottom:2px;}
+  .sw-ver{font-size:12px;color:var(--muted);}
+  .sw-note{font-size:12px;color:var(--muted);margin-top:4px;line-height:1.5;}
+  .badge{display:inline-block;font-size:11px;font-weight:600;padding:2px 8px;border-radius:20px;margin-top:4px;}
+  .badge-req{background:#fee2e2;color:#991b1b;}
+  .badge-inc{background:#dbeafe;color:#1e40af;}
+  .badge-opt{background:#fef3c7;color:#92400e;}
+  /* Steps */
+  .steps{display:flex;flex-direction:column;gap:0;}
+  .step{display:flex;gap:16px;padding-bottom:28px;position:relative;}
+  .step::before{content:'';position:absolute;left:17px;top:38px;bottom:0;width:2px;background:var(--border);}
+  .step:last-child::before{display:none;}
+  .step-num{width:36px;height:36px;border-radius:50%;background:var(--blue);color:#fff;font-size:13px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;position:relative;z-index:1;box-shadow:0 0 0 4px #dbeafe;}
+  .step-body{flex:1;padding-top:6px;}
+  .step-body h3{font-size:15px;font-weight:600;color:var(--text);margin-bottom:8px;}
+  .step-body p{font-size:13px;color:var(--muted);margin-bottom:8px;}
+  /* Code blocks */
+  .code{background:#0f172a;color:#e2e8f0;border-radius:10px;padding:14px 18px;font-family:'Courier New',monospace;font-size:13px;line-height:1.8;margin:8px 0;overflow-x:auto;}
+  .code .cm{color:#475569;}
+  .code .ck{color:#60a5fa;}
+  .code .cv{color:#86efac;}
+  .code .path{color:#fbbf24;}
+  /* Tip/warn boxes */
+  .tip{background:#d1fae5;border-left:4px solid var(--green);border-radius:0 8px 8px 0;padding:10px 14px;font-size:13px;color:#065f46;margin:8px 0;}
+  .warn{background:#fef3c7;border-left:4px solid var(--amber);border-radius:0 8px 8px 0;padding:10px 14px;font-size:13px;color:#78350f;margin:8px 0;}
+  .info{background:#dbeafe;border-left:4px solid var(--blue);border-radius:0 8px 8px 0;padding:10px 14px;font-size:13px;color:#1e3a8a;margin:8px 0;}
+  /* Feature table */
+  table{width:100%;border-collapse:collapse;}
+  th{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);padding:10px 14px;background:#f8fafc;border-bottom:1px solid var(--border);text-align:left;}
+  td{padding:11px 14px;border-bottom:1px solid #f1f5f9;font-size:13px;color:var(--text);}
+  tr:last-child td{border-bottom:none;}
+  /* Checklist */
+  .checklist{list-style:none;padding:0;}
+  .checklist li{display:flex;align-items:flex-start;gap:10px;padding:8px 0;border-bottom:1px solid #f1f5f9;font-size:13px;color:var(--muted);}
+  .checklist li:last-child{border-bottom:none;}
+  .checklist li .ck-icon{width:20px;height:20px;border-radius:6px;background:#d1fae5;color:var(--green);display:flex;align-items:center;justify-content:center;font-size:11px;flex-shrink:0;margin-top:1px;}
+  .checklist li span{color:var(--text);}
+  /* Url chip */
+  .url-chip{display:inline-block;background:#0f172a;color:#60a5fa;font-family:monospace;font-size:12px;padding:5px 12px;border-radius:6px;margin:4px 2px;}
+  /* Print */
+  @media print{body{background:#fff;}.hero{background:#1e3a5f !important;-webkit-print-color-adjust:exact;print-color-adjust:exact;}.code{background:#1e293b !important;-webkit-print-color-adjust:exact;print-color-adjust:exact;}}
+  .print-btn{position:fixed;bottom:24px;right:24px;background:var(--blue);color:#fff;border:none;padding:12px 20px;border-radius:10px;font-size:13px;font-weight:600;cursor:pointer;box-shadow:0 4px 14px rgba(29,78,216,0.4);font-family:'Inter',sans-serif;}
+  .print-btn:hover{background:#1e40af;}
+  @media print{.print-btn{display:none;}}
+</style>
+</head>
+<body>
+<div class="page">
+
+<!-- Hero -->
+<div class="hero">
+  <div class="hero-badge">Complete Setup Guide</div>
+  <h1>TMS — Tourism Management System</h1>
+  <p>Full installation guide. Follow these steps from zero to a running tourism management website on your local machine or live server.</p>
+</div>
+
+<!-- What is TMS -->
+<div class="section">
+  <div class="section-label">Overview</div>
+  <h2>What is TMS?</h2>
+  <p style="font-size:14px;color:var(--muted);margin-bottom:20px;">TMS is a complete PHP + MySQL web application for managing a tourism business. It includes a public-facing website for customers to browse and book tour packages, and a full admin panel to manage everything.</p>
+  <div class="sw-grid">
+    <div class="sw-item"><div class="sw-icon" style="background:#dbeafe;color:#1d4ed8;">🌐</div><div><div class="sw-name">Public Website</div><div class="sw-note">Tour packages, booking, reviews, blog, wishlist, AI recommendations, weather guide, maps, loyalty points, and more.</div></div></div>
+    <div class="sw-item"><div class="sw-icon" style="background:#d1fae5;color:#059669;">⚙️</div><div><div class="sw-name">Admin Panel</div><div class="sw-note">Manage packages, bookings, users, enquiries, revenue analytics, coupon codes, blog posts, reports, activity log.</div></div></div>
+    <div class="sw-item"><div class="sw-icon" style="background:#ede9fe;color:#7c3aed;">🗄️</div><div><div class="sw-name">Database</div><div class="sw-note">MySQL / MariaDB. All data stored locally. No cloud database required. Import with one click in phpMyAdmin.</div></div></div>
+    <div class="sw-item"><div class="sw-icon" style="background:#fef3c7;color:#d97706;">🔒</div><div><div class="sw-name">Security</div><div class="sw-note">CSRF protection, bcrypt passwords, PDO prepared statements, input sanitization on every form.</div></div></div>
+  </div>
+</div>
+
+<!-- Required Software -->
+<div class="section">
+  <div class="section-label">Requirements</div>
+  <h2>Software You Need to Install</h2>
+  <div class="tip">✅ <strong>Short answer:</strong> Install XAMPP. That's it. XAMPP gives you PHP + MySQL + Apache in one free installer.</div>
+  <br>
+  <div class="sw-grid">
+    <div class="sw-item">
+      <div class="sw-icon" style="background:#dbeafe;color:#1d4ed8;">🖥</div>
+      <div>
+        <div class="sw-name">XAMPP</div>
+        <div class="sw-ver">Version 8.x (includes PHP 8.2)</div>
+        <span class="badge badge-inc">Includes PHP + MySQL + Apache</span>
+        <div class="sw-note">One installer for everything. Available for Windows, Mac, and Linux. Free. Download from apachefriends.org</div>
+      </div>
+    </div>
+    <div class="sw-item">
+      <div class="sw-icon" style="background:#d1fae5;color:#059669;">🗄</div>
+      <div>
+        <div class="sw-name">MySQL / MariaDB</div>
+        <div class="sw-ver">5.7+ or MariaDB 10+</div>
+        <span class="badge badge-inc">Included in XAMPP</span>
+        <div class="sw-note">No separate install needed. XAMPP includes MariaDB which is fully compatible with MySQL.</div>
+      </div>
+    </div>
+    <div class="sw-item">
+      <div class="sw-icon" style="background:#ede9fe;color:#7c3aed;">⚡</div>
+      <div>
+        <div class="sw-name">PHP</div>
+        <div class="sw-ver">7.4 minimum — 8.2 recommended</div>
+        <span class="badge badge-inc">Included in XAMPP</span>
+        <div class="sw-note">The entire backend is PHP. No Node.js, no Python, no other language needed.</div>
+      </div>
+    </div>
+    <div class="sw-item">
+      <div class="sw-icon" style="background:#fef3c7;color:#d97706;">🌐</div>
+      <div>
+        <div class="sw-name">Apache Web Server</div>
+        <div class="sw-ver">Apache 2.4+</div>
+        <span class="badge badge-inc">Included in XAMPP</span>
+        <div class="sw-note">Serves PHP files to your browser. Already inside XAMPP. Zero configuration needed.</div>
+      </div>
+    </div>
+    <div class="sw-item">
+      <div class="sw-icon" style="background:#fee2e2;color:#dc2626;">📝</div>
+      <div>
+        <div class="sw-name">Code Editor</div>
+        <div class="sw-ver">VS Code recommended</div>
+        <span class="badge badge-opt">Optional</span>
+        <div class="sw-note">Only needed if you want to edit PHP files. VS Code is free — download from code.visualstudio.com</div>
+      </div>
+    </div>
+    <div class="sw-item">
+      <div class="sw-icon" style="background:#d1fae5;color:#059669;">🌍</div>
+      <div>
+        <div class="sw-name">Web Browser</div>
+        <div class="sw-ver">Chrome, Edge, Firefox</div>
+        <span class="badge badge-inc">Already have it</span>
+        <div class="sw-note">Any modern browser works. Chrome recommended for development tools.</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- APIs -->
+<div class="section">
+  <div class="section-label">APIs & External Services</div>
+  <h2>Do You Need Any API Keys?</h2>
+  <div class="tip">✅ <strong>No API keys required.</strong> Every feature works without any external account, paid service, or API key.</div>
+  <br>
+  <table>
+    <thead><tr><th>Feature</th><th>Service Used</th><th>API Key?</th><th>Cost</th></tr></thead>
+    <tbody>
+      <tr><td>🗺 Interactive Tour Map</td><td>OpenStreetMap via Leaflet.js</td><td>❌ None needed</td><td>Free forever</td></tr>
+      <tr><td>📊 Revenue Charts</td><td>Chart.js (loaded from CDN)</td><td>❌ None needed</td><td>Free forever</td></tr>
+      <tr><td>🌤 Weather Guide</td><td>Built-in (hardcoded data)</td><td>❌ None needed</td><td>Free forever</td></tr>
+      <tr><td>🤖 AI Recommendations</td><td>Local scoring algorithm</td><td>❌ None needed</td><td>Free forever</td></tr>
+      <tr><td>🔤 Google Fonts</td><td>fonts.googleapis.com</td><td>❌ None needed</td><td>Free forever</td></tr>
+      <tr><td>📱 PWA / Offline Mode</td><td>Built-in Service Worker</td><td>❌ None needed</td><td>Free forever</td></tr>
+      <tr><td>💬 Chatbot</td><td>Built-in rule-based</td><td>❌ None needed</td><td>Free forever</td></tr>
+    </tbody>
+  </table>
+  <div class="info" style="margin-top:16px;">ℹ️ The only internet access needed is for loading Google Fonts and Chart.js CDN on first page load. After that, browsers cache them and the site works offline.</div>
+</div>
+
+<!-- Step by step -->
+<div class="section">
+  <div class="section-label">Installation</div>
+  <h2>Step-by-Step Setup</h2>
+  <div class="steps">
+
+    <div class="step">
+      <div class="step-num">1</div>
+      <div class="step-body">
+        <h3>Download and Install XAMPP</h3>
+        <p>Go to the official XAMPP website and download the installer for your operating system.</p>
+        <div class="url-chip">https://www.apachefriends.org/download.html</div>
+        <div style="margin-top:10px;">
+          <strong style="font-size:13px;">Windows:</strong>
+          <p>Run the <code>.exe</code> installer. When asked for install location, use <code>C:\xampp</code> — do NOT install inside <code>Program Files</code> as this causes permission errors. Keep all default components selected (Apache, MySQL, PHP, phpMyAdmin).</p>
+          <strong style="font-size:13px;">Mac:</strong>
+          <p>Open the <code>.dmg</code> file and drag XAMPP to <code>/Applications</code>. Open it from Applications.</p>
+          <strong style="font-size:13px;">Linux (Ubuntu/Debian):</strong>
+          <div class="code">chmod +x xampp-linux-x64-8.2.x-installer.run<br>sudo ./xampp-linux-x64-8.2.x-installer.run</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-num">2</div>
+      <div class="step-body">
+        <h3>Start Apache and MySQL</h3>
+        <p>Open the XAMPP Control Panel and click <strong>Start</strong> next to both <strong>Apache</strong> and <strong>MySQL</strong>. Both should turn green.</p>
+        <div class="warn">⚠️ <strong>Windows — Port 80 conflict:</strong> If Apache won't start, port 80 is taken (by IIS or Skype). In XAMPP Control Panel → Config → Apache (httpd.conf) → find <code>Listen 80</code> → change to <code>Listen 8080</code>. Then access the site at <code>http://localhost:8080/tms/</code>.</div>
+        <div class="warn">⚠️ <strong>Windows — Port 3306 conflict:</strong> If MySQL won't start, another MySQL might be running. Stop it from Windows Services (Win+R → services.msc → find MySQL → Stop).</div>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-num">3</div>
+      <div class="step-body">
+        <h3>Extract and Place the Project Files</h3>
+        <p>Extract the downloaded <code>tms.zip</code> file. You will get a folder named <code>tms</code>. Copy this entire folder into the XAMPP web root:</p>
+        <div class="code">
+<span class="cm">Windows:</span>  <span class="path">C:\xampp\htdocs\tms\</span><br>
+<span class="cm">Mac:</span>       <span class="path">/Applications/XAMPP/htdocs/tms/</span><br>
+<span class="cm">Linux:</span>     <span class="path">/opt/lampp/htdocs/tms/</span>
+        </div>
+        <div class="tip">✅ After copying, verify: <code>C:\xampp\htdocs\tms\index.php</code> should exist. If you see <code>tms\tms\index.php</code> you extracted one level too deep — move the inner folder up.</div>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-num">4</div>
+      <div class="step-body">
+        <h3>Create the Database</h3>
+        <p>Open your browser and go to:</p>
+        <div class="url-chip">http://localhost/phpmyadmin</div>
+        <p style="margin-top:10px;">Then follow these steps:</p>
+        <ol style="padding-left:20px;font-size:13px;color:var(--muted);line-height:2.2;">
+          <li>Click <strong>New</strong> in the left sidebar</li>
+          <li>In "Database name" type: <strong>tms</strong></li>
+          <li>Collation: select <strong>utf8_general_ci</strong></li>
+          <li>Click <strong>Create</strong></li>
+          <li>Click on the new <strong>tms</strong> database in left sidebar</li>
+          <li>Click the <strong>Import</strong> tab at the top</li>
+          <li>Click <strong>Choose File</strong> → navigate to your tms folder → select <strong>tms.sql</strong></li>
+          <li>Scroll down, click <strong>Go</strong> — wait for green success message</li>
+          <li>Click <strong>Import</strong> again → select <strong>v6_migration.sql</strong> → click <strong>Go</strong></li>
+        </ol>
+        <div class="tip">✅ After importing both SQL files, click on the <strong>tms</strong> database — you should see 15+ tables like <code>tblusers</code>, <code>tblbooking</code>, <code>tbltourpackages</code>, etc.</div>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-num">5</div>
+      <div class="step-body">
+        <h3>Configure Database Connection</h3>
+        <p>Open this file in any text editor (Notepad, VS Code, etc.):</p>
+        <div class="code"><span class="path">tms/includes/config.php</span></div>
+        <p>Find these 4 lines near the top and update them:</p>
+        <div class="code">
+<span class="ck">define</span>(<span class="cv">'DB_HOST'</span>, <span class="cv">'localhost'</span>);   <span class="cm">// ← keep as is</span><br>
+<span class="ck">define</span>(<span class="cv">'DB_USER'</span>, <span class="cv">'root'</span>);         <span class="cm">// ← default XAMPP username</span><br>
+<span class="ck">define</span>(<span class="cv">'DB_PASS'</span>, <span class="cv">''</span>);            <span class="cm">// ← empty = no password (XAMPP default)</span><br>
+<span class="ck">define</span>(<span class="cv">'DB_NAME'</span>, <span class="cv">'tms'</span>);         <span class="cm">// ← the database name you created</span>
+        </div>
+        <div class="tip">✅ For standard XAMPP, you don't need to change anything here — the defaults already match.</div>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-num">6</div>
+      <div class="step-body">
+        <h3>Set Folder Permissions (Linux / Mac only)</h3>
+        <p>These upload folders need write permission. Open Terminal and run:</p>
+        <div class="code">
+cd /opt/lampp/htdocs/tms/<br>
+chmod 777 uploads/<br>
+chmod 777 uploads/reviews/<br>
+chmod 777 admin/pacakgeimages/<br>
+mkdir -p admin/blogimages &amp;&amp; chmod 777 admin/blogimages/
+        </div>
+        <div class="info">ℹ️ Windows users skip this step — XAMPP on Windows handles permissions automatically.</div>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-num">7</div>
+      <div class="step-body">
+        <h3>Open the Website</h3>
+        <p>With Apache and MySQL running in XAMPP, open your browser and visit:</p>
+        <div style="margin:8px 0;">
+          <div class="url-chip">http://localhost/tms/</div>
+          <span style="font-size:13px;color:var(--muted);margin-left:8px;">← Public website</span>
+        </div>
+        <div style="margin:8px 0;">
+          <div class="url-chip">http://localhost/tms/admin/</div>
+          <span style="font-size:13px;color:var(--muted);margin-left:8px;">← Admin panel</span>
+        </div>
+        <div class="tip">✅ The homepage should show the TMS website with tour packages. The admin panel should show a login page.</div>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-num">8</div>
+      <div class="step-body">
+        <h3>Log In to Admin Panel</h3>
+        <p>Go to <code>http://localhost/tms/admin/</code> and sign in.</p>
+        <div class="code">
+<span class="cm">Default credentials (from tms.sql):</span><br>
+<span class="ck">Username:</span> <span class="cv">admin</span><br>
+<span class="ck">Password:</span> <span class="cv">Test@12345</span>
+        </div>
+        <div class="warn">⚠️ Change the admin password immediately after first login. Go to <strong>Admin Panel → Change Password</strong>.</div>
+        <div class="info">ℹ️ If you're not sure of the password, open phpMyAdmin → tms database → tbladmin table → edit the row and set a new bcrypt hash, or run: <code>UPDATE tbladmin SET AdminPassword = MD5('yournewpassword') WHERE AdminUserName = 'admin';</code></div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- Admin credentials -->
+<div class="section">
+  <div class="section-label">Default Login Credentials</div>
+  <h2>Login Details</h2>
+  <table>
+    <thead><tr><th>Panel</th><th>URL</th><th>Username</th><th>Password</th></tr></thead>
+    <tbody>
+      <tr><td>🔧 Admin Panel</td><td><code>localhost/tms/admin/</code></td><td>admin</td><td>Test@12345</td></tr>
+      <tr><td>🌐 User Register</td><td><code>localhost/tms/register.php</code></td><td colspan="2">Create your own account</td></tr>
+      <tr><td>🗄 phpMyAdmin</td><td><code>localhost/phpmyadmin</code></td><td>root</td><td>(empty)</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- Pre-loaded data -->
+<div class="section">
+  <div class="section-label">Pre-loaded Data</div>
+  <h2>What Comes Pre-installed in the Database</h2>
+  <table>
+    <thead><tr><th>Item</th><th>Details</th></tr></thead>
+    <tbody>
+      <tr><td>🏖 Tour Packages</td><td>9 sample packages (Bhutan, Bali, Thailand, Switzerland, Dubai, etc.)</td></tr>
+      <tr><td>🏷 Coupon Codes</td><td>WELCOME10 (10% off), SUMMER20 (20% off), TMS2026 (15% off)</td></tr>
+      <tr><td>📝 Blog Posts</td><td>3 sample travel articles pre-published</td></tr>
+      <tr><td>📞 Emergency Contacts</td><td>Country-wise emergency numbers</td></tr>
+      <tr><td>👤 Admin Account</td><td>1 admin user (username: admin)</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- Features -->
+<div class="section">
+  <div class="section-label">Features</div>
+  <h2>Complete Feature List</h2>
+  <table>
+    <thead><tr><th>Feature</th><th>Location</th></tr></thead>
+    <tbody>
+      <tr><td>✈ Tour package browse & booking</td><td>package-list.php, package-details.php</td></tr>
+      <tr><td>💖 Wishlist (save packages)</td><td>wishlist.php</td></tr>
+      <tr><td>📊 Package comparison (up to 3)</td><td>compare.php</td></tr>
+      <tr><td>⭐ Loyalty points & coupon redemption</td><td>loyalty.php</td></tr>
+      <tr><td>🏷 Coupon codes at checkout</td><td>coupon-check.php</td></tr>
+      <tr><td>📝 Travel blog</td><td>blog.php, blog-post.php</td></tr>
+      <tr><td>🌤 Weather guide by destination</td><td>weather.php</td></tr>
+      <tr><td>🗺 Interactive tour map</td><td>tour-map.php</td></tr>
+      <tr><td>🤖 AI tour recommendations</td><td>ai-recommend.php</td></tr>
+      <tr><td>💬 Chatbot</td><td>Built into all pages</td></tr>
+      <tr><td>⭐ Reviews & star ratings</td><td>reviews.php</td></tr>
+      <tr><td>📅 Custom trip planner</td><td>custom-trip.php</td></tr>
+      <tr><td>💰 Budget planner</td><td>budget-planner.php</td></tr>
+      <tr><td>🚨 Emergency contacts by country</td><td>emergency.php</td></tr>
+      <tr><td>📱 PWA — installable as mobile app</td><td>manifest.json + sw.js</td></tr>
+      <tr><td>🌙 Dark mode toggle</td><td>Footer (all pages)</td></tr>
+      <tr><td>📊 Admin revenue analytics</td><td>admin/revenue-analytics.php</td></tr>
+      <tr><td>📤 Export reports (CSV + print)</td><td>admin/export-report.php</td></tr>
+      <tr><td>🏷 Admin coupon manager</td><td>admin/manage-coupons.php</td></tr>
+      <tr><td>✍ Admin blog manager</td><td>admin/manage-blog.php</td></tr>
+      <tr><td>📋 Admin activity log</td><td>admin/activity-log.php</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- Troubleshooting -->
+<div class="section">
+  <div class="section-label">Troubleshooting</div>
+  <h2>Common Problems & Fixes</h2>
+
+  <div class="card">
+    <div class="card-head"><div class="icon" style="background:#fee2e2;color:#dc2626;">❌</div><h3>Blank white page / no styles loading</h3></div>
+    <div class="card-body">
+      <p style="font-size:13px;color:var(--muted);">PHP errors are being suppressed. Check you imported both SQL files. Also open <code>includes/config.php</code> and verify DB_NAME is <code>tms</code>.</p>
+      <div class="code">Check: <span class="path">http://localhost/tms/includes/config.php</span> — should show blank page, not an error.</div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-head"><div class="icon" style="background:#fee2e2;color:#dc2626;">❌</div><h3>Database connection error</h3></div>
+    <div class="card-body">
+      <p style="font-size:13px;color:var(--muted);">Open <code>includes/config.php</code> and check DB_HOST, DB_USER, DB_PASS, DB_NAME. For XAMPP the defaults are correct. Make sure MySQL is running (green in XAMPP panel).</p>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-head"><div class="icon" style="background:#fee2e2;color:#dc2626;">❌</div><h3>Apache won't start (port 80 in use)</h3></div>
+    <div class="card-body">
+      <p style="font-size:13px;color:var(--muted);">In XAMPP Control Panel → Apache → Config → <code>httpd.conf</code> → change <code>Listen 80</code> to <code>Listen 8080</code>. Then access via <code>http://localhost:8080/tms/</code>.</p>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-head"><div class="icon" style="background:#fee2e2;color:#dc2626;">❌</div><h3>Images not showing / upload not working</h3></div>
+    <div class="card-body">
+      <p style="font-size:13px;color:var(--muted);">On Linux/Mac, run the chmod 777 commands from Step 6. On Windows, right-click the <code>uploads</code> folder → Properties → Security → give full control.</p>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-head"><div class="icon" style="background:#fee2e2;color:#dc2626;">❌</div><h3>Admin login fails</h3></div>
+    <div class="card-body">
+      <p style="font-size:13px;color:var(--muted);">Open phpMyAdmin → tms database → tbladmin table. Check the AdminUserName and reset password with this SQL:</p>
+      <div class="code">UPDATE tbladmin SET AdminPassword = <span class="cv">'<?= password_hash("admin123", PASSWORD_BCRYPT) ?>'</span> WHERE AdminUserName = <span class="cv">'admin'</span>;</div>
+      <p style="font-size:13px;color:var(--muted);margin-top:8px;">Or just run it in phpMyAdmin SQL tab to set password to <code>admin123</code>.</p>
+    </div>
+  </div>
+
+</div>
+
+<!-- Live Server -->
+<div class="section">
+  <div class="section-label">Deployment</div>
+  <h2>Uploading to a Live Web Server</h2>
+  <div class="steps">
+    <div class="step">
+      <div class="step-num">1</div>
+      <div class="step-body">
+        <h3>Get Web Hosting</h3>
+        <p>You need a hosting plan with PHP 7.4+ and MySQL. Recommended hosts: Hostinger, Namecheap, or InfinityFree (free option).</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">2</div>
+      <div class="step-body">
+        <h3>Upload Files via FTP or File Manager</h3>
+        <p>Upload the entire <code>tms</code> folder to <code>public_html/</code> on your server using FTP (FileZilla) or the hosting control panel file manager.</p>
+        <div class="url-chip">public_html/tms/</div>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">3</div>
+      <div class="step-body">
+        <h3>Create Database on Hosting</h3>
+        <p>In cPanel → MySQL Databases → create a new database and user. Import <code>tms.sql</code> then <code>v6_migration.sql</code> via phpMyAdmin in cPanel.</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">4</div>
+      <div class="step-body">
+        <h3>Update Config</h3>
+        <p>Edit <code>tms/includes/config.php</code> with your live hosting DB credentials (host, username, password, database name).</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Final checklist -->
+<div class="section">
+  <div class="section-label">Final Check</div>
+  <h2>Installation Checklist</h2>
+  <div class="card">
+    <div class="card-body" style="padding:8px 20px;">
+      <ul class="checklist">
+        <li><div class="ck-icon">✓</div><span>XAMPP installed — Apache and MySQL both showing green</span></li>
+        <li><div class="ck-icon">✓</div><span><code>tms</code> folder placed inside <code>htdocs/</code></span></li>
+        <li><div class="ck-icon">✓</div><span><code>tms.sql</code> imported into a database named <code>tms</code></span></li>
+        <li><div class="ck-icon">✓</div><span><code>v6_migration.sql</code> also imported into the same database</span></li>
+        <li><div class="ck-icon">✓</div><span><code>includes/config.php</code> has correct DB_HOST, DB_USER, DB_PASS, DB_NAME</span></li>
+        <li><div class="ck-icon">✓</div><span>Upload folders are writable (Linux/Mac only)</span></li>
+        <li><div class="ck-icon">✓</div><span><code>http://localhost/tms/</code> loads the homepage</span></li>
+        <li><div class="ck-icon">✓</div><span><code>http://localhost/tms/admin/</code> shows the login page</span></li>
+        <li><div class="ck-icon">✓</div><span>Logged in to admin with username <code>admin</code></span></li>
+        <li><div class="ck-icon">✓</div><span>Changed admin password from default</span></li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+</div><!-- /.page -->
+<button class="print-btn" onclick="window.print()">🖨 Print / Save as PDF</button>
+</body>
+</html>

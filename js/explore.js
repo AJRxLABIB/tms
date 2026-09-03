@@ -1,0 +1,676 @@
+/**
+ * explore.js — Client-side logic for TMS Explore Mode
+ * Covers: destination search/autocomplete (explore.php) and the destination
+ * hub page — overview, map & navigation, nearby places, weather, AI chat
+ * (explore-view.php). Uses feature detection so one file can serve both pages.
+ */
+
+var EXPLORE_API = 'api/explore.php';
+
+/* ══════════════════════════════════════════════════════════════
+   Utility
+   ══════════════════════════════════════════════════════════════ */
+function exploreDebounce(fn, delay) {
+    var t;
+    return function () {
+        var args = arguments, ctx = this;
+        clearTimeout(t);
+        t = setTimeout(function () { fn.apply(ctx, args); }, delay);
+    };
+}
+
+function exploreGet(action, params) {
+    var qs = new URLSearchParams(Object.assign({ action: action }, params || {})).toString();
+    return fetch(EXPLORE_API + '?' + qs).then(function (r) { return r.json(); });
+}
+
+function explorePost(action, formData) {
+    formData.append('action', action);
+    return fetch(EXPLORE_API, { method: 'POST', body: formData }).then(function (r) { return r.json(); });
+}
+
+function escapeHtml(str) {
+    var div = document.createElement('div');
+    div.textContent = str == null ? '' : String(str);
+    return div.innerHTML;
+}
+
+function goToDestination(name, lat, lng, country) {
+    var url = 'explore-view.php?name=' + encodeURIComponent(name)
+        + '&lat=' + encodeURIComponent(lat)
+        + '&lng=' + encodeURIComponent(lng)
+        + '&country=' + encodeURIComponent(country || '');
+    window.location.href = url;
+}
+
+/* ══════════════════════════════════════════════════════════════
+   SEARCH PAGE (explore.php)
+   ══════════════════════════════════════════════════════════════ */
+(function initExploreSearchPage() {
+    var input = document.getElementById('exploreSearchInput');
+    if (!input) return;
+
+    var box  = document.getElementById('exploreSuggestions');
+    var spin = document.getElementById('exploreSearchSpinner');
+
+    var doSearch = exploreDebounce(function (val) {
+        if (val.trim().length < 2) { box.style.display = 'none'; box.innerHTML = ''; return; }
+        spin.style.display = 'inline-block';
+        exploreGet('search', { q: val }).then(function (res) {
+            spin.style.display = 'none';
+            if (!res.success) return;
+            renderSuggestions(res.data.results || []);
+        }).catch(function () { spin.style.display = 'none'; });
+    }, 350);
+
+    input.addEventListener('input', function () { doSearch(this.value); });
+    input.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter') {
+            var first = box.querySelector('.explore-suggestion-item');
+            if (first) first.click();
+        }
+    });
+    document.addEventListener('click', function (e) {
+        if (!box.contains(e.target) && e.target !== input) box.style.display = 'none';
+    });
+
+    function renderSuggestions(results) {
+        if (!results.length) { box.style.display = 'none'; box.innerHTML = ''; return; }
+        box.innerHTML = results.map(function (r, i) {
+            return '<div class="explore-suggestion-item" data-idx="' + i + '">' +
+                '<i class="fa fa-map-marker"></i>' +
+                '<div><div class="explore-suggestion-main">' + escapeHtml(r.short_name) + '</div>' +
+                '<div class="explore-suggestion-sub">' + escapeHtml(r.display_name) + '</div></div>' +
+                '</div>';
+        }).join('');
+        box.style.display = 'block';
+        // Event delegation with the raw data (no HTML/JS string-escaping needed —
+        // this is what previously broke on destinations with an apostrophe, e.g.
+        // "Cox's Bazar": building 'goToDestination(\'' + name + ...)' as an HTML
+        // string meant a literal apostrophe in `name` closed the JS string early,
+        // producing "missing ) after argument list" / "Could not parse..." errors.
+        box.__results = results;
+    }
+
+    box.addEventListener('click', function (e) {
+        var item = e.target.closest('.explore-suggestion-item');
+        if (!item || !box.__results) return;
+        var r = box.__results[parseInt(item.dataset.idx, 10)];
+        if (r) goToDestination(r.short_name, r.lat, r.lng, r.country || '');
+    });
+
+    window.searchExploreDestination = function () { doSearch(input.value); };
+    window.exploreChip = function (name) { input.value = name; doSearch(name); input.focus(); };
+})();
+
+/* ══════════════════════════════════════════════════════════════
+   DESTINATION HUB PAGE (explore-view.php)
+   ══════════════════════════════════════════════════════════════ */
+(function initExploreViewPage() {
+    var root = document.getElementById('exploreViewRoot');
+    if (!root) return;
+
+    var DEST = {
+        name:    root.dataset.name,
+        lat:     parseFloat(root.dataset.lat),
+        lng:     parseFloat(root.dataset.lng),
+        country: root.dataset.country || ''
+    };
+
+    var state = { info: null, weather: null, userLoc: null, map: null, markers: [], routeLayer: null, navTarget: null, navMarker: null, currentPlaces: [], currentCategory: 'hotel' };
+
+    // ── Tabs ──────────────────────────────────────────────────
+    window.exploreSwitchTab = function (tab) {
+        document.querySelectorAll('.explore-tab-btn').forEach(function (b) { b.classList.toggle('active', b.dataset.tab === tab); });
+        document.querySelectorAll('.explore-panel').forEach(function (p) { p.classList.toggle('active', p.id === 'panel-' + tab); });
+        if (tab === 'map' && !state.map) initMap();
+        if (tab === 'map' && state.map) setTimeout(function () { state.map.invalidateSize(); }, 100);
+        if (tab === 'places' && !state.placesLoaded) loadPlaces('hotel');
+        if (tab === 'weather' && !state.weather) loadWeather();
+    };
+
+    // BUG FIX: the AI chat's system prompt (see api/explore.php's
+    // handleChat()) is designed to fold in "a short summary of what the
+    // visitor is currently seeing" via body.dataset.exploreContext, so
+    // follow-up questions like "is it a good time to go?" or "what's the
+    // weather like there?" can be answered directly instead of vaguely.
+    // Nothing ever wrote that attribute, so the chatbot was always
+    // context-blind. Populated here from whatever of the Overview/Weather
+    // tabs has loaded so far — safe to call multiple times, and safe if
+    // neither has loaded yet (chat just gets an empty context, same as
+    // the previous behavior).
+    function updateExploreContext() {
+        var parts = [];
+        if (state.info) {
+            if (state.info.overview) parts.push('Overview: ' + String(state.info.overview).slice(0, 220));
+            if (state.info.best_time_to_visit) parts.push('Best time to visit: ' + state.info.best_time_to_visit);
+        }
+        if (state.weather && state.weather.current) {
+            var c = state.weather.current;
+            parts.push('Current weather: ' + (c.description || '') + ', ' + Math.round(c.temp) + '°C (feels like ' + Math.round(c.feels_like) + '°C)');
+        }
+        document.body.dataset.exploreContext = parts.join(' | ').slice(0, 1200);
+    }
+
+    // ── Overview tab ──────────────────────────────────────────
+    function loadOverview() {
+        var elOverview = document.getElementById('overviewContent');
+        exploreGet('info', { name: DEST.name, lat: DEST.lat, lng: DEST.lng, country: DEST.country }).then(function (res) {
+            if (!res.success) {
+                elOverview.innerHTML = '<div class="explore-error"><i class="fa fa-exclamation-triangle"></i> ' + escapeHtml(res.error) + '</div>';
+                return;
+            }
+            state.info = res.data.info;
+            renderOverview(state.info);
+            updateExploreContext();
+        }).catch(function () {
+            elOverview.innerHTML = '<div class="explore-error"><i class="fa fa-exclamation-triangle"></i> Could not load destination information. Please check your connection and try again.</div>';
+        });
+    }
+
+    function renderOverview(info) {
+        var el = document.getElementById('overviewContent');
+        var attractions = (info.attractions || []).map(function (a) {
+            return '<div class="attraction-item"><div class="attraction-icon"><i class="fa fa-map-pin"></i></div>' +
+                '<div><strong>' + escapeHtml(a.name) + '</strong><span>' + escapeHtml(a.description) + '</span></div></div>';
+        }).join('') || '<p class="text-muted">No attraction data available.</p>';
+
+        var foods = (info.famous_foods || []).map(function (f) {
+            return '<div class="food-item"><div class="food-icon"><i class="fa fa-utensils"></i></div>' +
+                '<div><strong>' + escapeHtml(f.name) + '</strong><span>' + escapeHtml(f.description) + '</span></div></div>';
+        }).join('') || '<p class="text-muted">No food data available.</p>';
+
+        var tips = (info.safety_tips || []).map(function (t) {
+            return '<div class="safety-tip-row"><i class="fa fa-shield-alt"></i><span>' + escapeHtml(t) + '</span></div>';
+        }).join('');
+
+        var costs = info.estimated_costs || {};
+        var emg = info.emergency_contacts;
+        var emgHtml = '<p class="text-muted" style="font-size:13px;">' + escapeHtml(info.emergency_note || '') + '</p>';
+        if (emg) {
+            emgHtml += '<div class="emergency-box">' +
+                (emg.police    ? '<div class="emergency-row"><span>Police</span><strong>' + escapeHtml(emg.police) + '</strong></div>' : '') +
+                (emg.ambulance ? '<div class="emergency-row"><span>Ambulance</span><strong>' + escapeHtml(emg.ambulance) + '</strong></div>' : '') +
+                (emg.fire      ? '<div class="emergency-row"><span>Fire</span><strong>' + escapeHtml(emg.fire) + '</strong></div>' : '') +
+                (emg.helpline  ? '<div class="emergency-row"><span>Tourist Helpline</span><strong>' + escapeHtml(emg.helpline) + '</strong></div>' : '') +
+                (emg.embassy   ? '<div class="emergency-row"><span>Embassy</span><strong>' + escapeHtml(emg.embassy) + '</strong></div>' : '') +
+                '</div>';
+        }
+
+        el.innerHTML =
+            '<div class="explore-card"><h4><i class="fa fa-info-circle"></i> Overview</h4><p>' + escapeHtml(info.overview) + '</p></div>' +
+            '<div class="explore-card"><h4><i class="fa fa-landmark"></i> Popular Attractions</h4>' + attractions + '</div>' +
+            '<div class="explore-card"><h4><i class="fa fa-scroll"></i> Historical Background</h4><p>' + escapeHtml(info.history) + '</p></div>' +
+            '<div class="explore-card"><h4><i class="fa fa-calendar-check"></i> Best Time to Visit</h4><p>' + escapeHtml(info.best_time_to_visit) + '</p></div>' +
+            '<div class="explore-card"><h4><i class="fa fa-users"></i> Local Culture</h4><p>' + escapeHtml(info.local_culture) + '</p></div>' +
+            '<div class="explore-card"><h4><i class="fa fa-utensils"></i> Famous Foods</h4>' + foods + '</div>' +
+            '<div class="explore-card"><h4><i class="fa fa-wallet"></i> Estimated Travel Costs (per day)</h4>' +
+                '<div class="cost-grid">' +
+                    // DATA-ACCURACY FIX: these three fields are named
+                    // *_per_day_usd (see ExploreService::getDestinationInfo's
+                    // AI prompt) — they were being rendered with the site's
+                    // Taka symbol, misstating an actual USD estimate as if it
+                    // were ~80x smaller in BDT. Label them as USD instead of
+                    // silently relabeling the currency.
+                    '<div class="cost-box"><div class="lbl">Budget</div><div class="val">$' + escapeHtml(costs.budget_per_day_usd) + '<span class="cost-unit">/day USD</span></div></div>' +
+                    '<div class="cost-box"><div class="lbl">Mid-range</div><div class="val">$' + escapeHtml(costs.midrange_per_day_usd) + '<span class="cost-unit">/day USD</span></div></div>' +
+                    '<div class="cost-box"><div class="lbl">Luxury</div><div class="val">$' + escapeHtml(costs.luxury_per_day_usd) + '<span class="cost-unit">/day USD</span></div></div>' +
+                '</div><p style="font-size:12px;color:var(--text-muted);margin-top:10px;">' + escapeHtml(costs.currency_note || '') + ' Figures are approximate, in US dollars.</p></div>' +
+            '<div class="explore-card"><h4><i class="fa fa-shield-alt"></i> Safety Tips</h4>' + tips + '</div>' +
+            '<div class="explore-card"><h4><i class="fa fa-phone-alt"></i> Emergency Contacts</h4>' + emgHtml + '</div>';
+    }
+
+    // ── Map & Navigation tab ─────────────────────────────────
+    function initMap() {
+        state.map = L.map('exploreMap').setView([DEST.lat, DEST.lng], 13);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; OpenStreetMap contributors', maxZoom: 19
+        }).addTo(state.map);
+
+        L.marker([DEST.lat, DEST.lng], { icon: destIcon() }).addTo(state.map)
+            .bindPopup('<strong>' + escapeHtml(DEST.name) + '</strong><br>Your destination').openPopup();
+
+        // Also drop pins for nearby attractions (live OSM data) for spatial context
+        exploreGet('places', { lat: DEST.lat, lng: DEST.lng, category: 'attraction', radius: 5000 }).then(function (res) {
+            if (!res.success) return;
+            (res.data.places || []).slice(0, 15).forEach(function (p) {
+                if (!p.lat || !p.lng) return;
+                var m = L.marker([p.lat, p.lng], { icon: attractionIcon() }).addTo(state.map)
+                    .bindPopup('<strong>' + escapeHtml(p.name) + '</strong>' + (p.address ? '<br>' + escapeHtml(p.address) : ''));
+                state.markers.push(m);
+            });
+        }).catch(function () {});
+    }
+
+    function destIcon() {
+        return L.divIcon({ className: '', html: '<div style="background:var(--primary,#0F4C81);width:34px;height:34px;border-radius:50% 50% 50% 0;transform:rotate(-45deg);display:flex;align-items:center;justify-content:center;box-shadow:0 3px 8px rgba(0,0,0,.3);"><i class="fa fa-flag" style="transform:rotate(45deg);color:#fff;font-size:14px;"></i></div>', iconSize:[34,34], iconAnchor:[17,34] });
+    }
+    function attractionIcon() {
+        return L.divIcon({ className: '', html: '<div style="background:#00A8A8;width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(0,0,0,.3);"><i class="fa fa-camera" style="color:#fff;font-size:10px;"></i></div>', iconSize:[24,24], iconAnchor:[12,12] });
+    }
+    function userIcon() {
+        return L.divIcon({ className: '', html: '<div style="background:#e74c3c;width:20px;height:20px;border-radius:50%;border:3px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,.4);"></div>', iconSize:[20,20], iconAnchor:[10,10] });
+    }
+
+    window.exploreLocateMe = function () {
+        var btn = document.getElementById('locateBtn');
+        if (!navigator.geolocation) { alert('Geolocation is not supported by your browser.'); return; }
+        btn.innerHTML = '<i class="fa fa-spinner fa-spin"></i> Locating...';
+        navigator.geolocation.getCurrentPosition(function (pos) {
+            state.userLoc = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+            btn.innerHTML = '<i class="fa fa-location-arrow"></i> Locate Me';
+            if (state.userMarker) state.map.removeLayer(state.userMarker);
+            state.userMarker = L.marker([state.userLoc.lat, state.userLoc.lng], { icon: userIcon() })
+                .addTo(state.map).bindPopup('You are here');
+            document.getElementById('routeModeBar').style.display = 'flex';
+            exploreDrawRoute('driving');
+        }, function () {
+            btn.innerHTML = '<i class="fa fa-location-arrow"></i> Locate Me';
+            alert('Could not get your location. Please allow location access and try again.');
+        }, { enableHighAccuracy: true, timeout: 10000 });
+    };
+
+    window.exploreDrawRoute = function (mode) {
+        if (!state.userLoc) { exploreLocateMe(); return; }
+        var target = state.navTarget || DEST;
+        document.querySelectorAll('.map-mode-btn').forEach(function (b) { b.classList.toggle('active', b.dataset.mode === mode); });
+        var summary = document.getElementById('routeSummary');
+        summary.innerHTML = '<span class="item"><i class="fa fa-spinner fa-spin"></i> Calculating route...</span>';
+
+        exploreGet('route', {
+            from_lat: state.userLoc.lat, from_lng: state.userLoc.lng,
+            to_lat: target.lat, to_lng: target.lng, mode: mode
+        }).then(function (res) {
+            if (!res.success) {
+                summary.innerHTML = '<span class="item" style="color:#c0392b;"><i class="fa fa-exclamation-triangle"></i> ' + escapeHtml(res.error) + '</span>';
+                return;
+            }
+            var route = res.data.route;
+            summary.innerHTML =
+                '<span class="item"><i class="fa fa-map-marker"></i> To ' + escapeHtml(target.name || DEST.name) + '</span>' +
+                '<span class="item"><i class="fa fa-road"></i> ' + escapeHtml(route.distance_text) + '</span>' +
+                '<span class="item"><i class="fa fa-clock"></i> ' + escapeHtml(route.duration_text) + '</span>' +
+                '<span class="item"><i class="fa fa-signal"></i> via ' + (route.source === 'osrm' ? 'OSRM' : 'Google Directions') + '</span>';
+
+            if (state.routeLayer) state.map.removeLayer(state.routeLayer);
+            if (route.geometry && route.geometry.length) {
+                state.routeLayer = L.polyline(route.geometry, { color: '#00A8A8', weight: 5, opacity: .85 }).addTo(state.map);
+                state.map.fitBounds(state.routeLayer.getBounds(), { padding: [40, 40] });
+            }
+        }).catch(function () {
+            summary.innerHTML = '<span class="item" style="color:#c0392b;"><i class="fa fa-exclamation-triangle"></i> Routing service unavailable right now.</span>';
+        });
+    };
+
+    // ROOT-CAUSE FIX: "Get Directions" on a nearby-place card used to open
+    // https://www.openstreetmap.org/directions in a new tab, taking visitors
+    // off the site entirely. This keeps them on the page: it switches to the
+    // existing (already-built) embedded Map & Navigation tab, drops a pin on
+    // the chosen place, and draws the route with the same OSRM-backed
+    // in-app routing used for the main destination — auto-detecting the
+    // visitor's GPS location via navigator.geolocation exactly as before,
+    // just now reusable for any nearby place instead of only the destination.
+    window.exploreNavigateToPlace = function (lat, lng, name) {
+        lat = parseFloat(lat); lng = parseFloat(lng);
+        if (!lat || !lng) return;
+        state.navTarget = { lat: lat, lng: lng, name: name || 'this place' };
+
+        exploreSwitchTab('map');
+        if (!state.map) initMap();
+
+        if (state.navMarker) state.map.removeLayer(state.navMarker);
+        state.navMarker = L.marker([lat, lng], { icon: attractionIcon() }).addTo(state.map)
+            .bindPopup('<strong>' + escapeHtml(state.navTarget.name) + '</strong>').openPopup();
+        state.map.setView([lat, lng], 15);
+
+        document.getElementById('routeModeBar').style.display = 'flex';
+        if (state.userLoc) {
+            var activeBtn = document.querySelector('.map-mode-btn.active');
+            exploreDrawRoute(activeBtn ? activeBtn.dataset.mode : 'driving');
+        } else {
+            exploreLocateMe();
+        }
+    };
+
+    // ── Nearby places tab ─────────────────────────────────────
+    var PLACE_LABELS = {
+        hotel: ['Hotels', 'fa-bed'], restaurant: ['Restaurants', 'fa-utensils'],
+        hospital: ['Hospitals', 'fa-hospital'], pharmacy: ['Pharmacies', 'fa-prescription-bottle-alt'],
+        police: ['Police Stations', 'fa-shield-alt'], atm: ['ATMs & Banks', 'fa-money-bill-wave'],
+        gas_station: ['Gas Stations', 'fa-gas-pump'], shopping_mall: ['Shopping Malls', 'fa-shopping-bag'],
+        tourist_info: ['Tourist Info Centers', 'fa-info-circle'], attraction: ['Attractions', 'fa-landmark']
+    };
+
+    window.loadPlaces = function (category) {
+        state.placesLoaded = true;
+        state.currentCategory = category;
+        document.querySelectorAll('.place-cat-btn').forEach(function (b) { b.classList.toggle('active', b.dataset.cat === category); });
+        var grid = document.getElementById('placesGrid');
+        grid.innerHTML = '<div class="explore-loading"><i class="fa fa-spinner fa-spin spin"></i>Finding ' + (PLACE_LABELS[category] ? PLACE_LABELS[category][0].toLowerCase() : 'places') + ' nearby...</div>';
+
+        exploreGet('places', { lat: DEST.lat, lng: DEST.lng, category: category }).then(function (res) {
+            if (!res.success) {
+                grid.innerHTML = '<div class="explore-error"><i class="fa fa-exclamation-triangle"></i> ' + escapeHtml(res.error) + '</div>';
+                return;
+            }
+            var places = res.data.places || [];
+            state.currentPlaces = places;
+            if (!places.length) {
+                grid.innerHTML = '<p class="text-muted">No results found nearby. Try a different category or check back later.</p>';
+                return;
+            }
+            grid.innerHTML = '<div class="place-grid">' + places.map(renderPlaceCard).join('') + '</div>';
+        }).catch(function () {
+            grid.innerHTML = '<div class="explore-error"><i class="fa fa-exclamation-triangle"></i> Could not load nearby places. Please try again.</div>';
+        });
+    };
+
+    document.getElementById('placesGrid').addEventListener('click', function (e) {
+        var opener = e.target.closest('.place-card-open, .place-card-details-link');
+        if (opener) {
+            e.preventDefault();
+            var p2 = state.currentPlaces[parseInt(opener.dataset.idx, 10)];
+            if (p2) openPlaceDetails(p2, state.currentCategory);
+            return;
+        }
+        var link = e.target.closest('.nav-link');
+        if (link) {
+            e.preventDefault();
+            var p1 = state.currentPlaces[parseInt(link.dataset.idx, 10)];
+            if (p1) exploreNavigateToPlace(p1.lat, p1.lng, p1.name);
+        }
+    });
+
+    function renderPlaceCard(p, idx) {
+        var distKm = p.distance_m ? (p.distance_m / 1000).toFixed(1) + ' km away' : '';
+        return '<div class="place-card">' +
+            '<a href="#" class="place-card-open" data-idx="' + idx + '">' +
+            (p.photo ? '<img class="photo" src="' + p.photo + '" alt="' + escapeHtml(p.name) + '">' : '') +
+            '<h6>' + escapeHtml(p.name) + '</h6>' +
+            '</a>' +
+            (p.rating ? '<div class="rating"><i class="fa fa-star"></i> ' + p.rating + ' / 5</div>' : '') +
+            (p.address ? '<div class="meta"><i class="fa fa-map-marker"></i> ' + escapeHtml(p.address) + '</div>' : '') +
+            (p.phone ? '<div class="meta"><i class="fa fa-phone"></i> ' + escapeHtml(p.phone) + '</div>' : '') +
+            (p.opening_hours ? '<div class="meta"><i class="fa fa-clock"></i> ' + escapeHtml(p.opening_hours) + '</div>' : '') +
+            (distKm ? '<div class="meta"><i class="fa fa-route"></i> ' + distKm + '</div>' : '') +
+            '<div class="place-card-actions">' +
+            '<a class="nav-link place-card-details-link" href="#" data-idx="' + idx + '"><i class="fa fa-circle-info"></i> View Details</a>' +
+            '<a class="nav-link" href="#" data-idx="' + idx + '"><i class="fa fa-directions"></i> Get Directions</a>' +
+            '</div>' +
+            '</div>';
+    }
+
+    // ── Place details modal ────────────────────────────────────
+    var SECTION_ICONS = { info_grid: 'fa-info-circle', list: 'fa-list', rooms: 'fa-bed', menu: 'fa-book-open',
+        doctors: 'fa-user-md', text: 'fa-align-left', reviews: 'fa-star', gallery: 'fa-images' };
+
+    function openPlaceDetails(p, category) {
+        var modal = document.getElementById('placeDetailModal');
+        var body  = document.getElementById('placeDetailBody');
+        if (!modal || !body) return;
+
+        body.innerHTML = '<div class="explore-loading"><i class="fa fa-spinner fa-spin spin"></i>Loading details...</div>';
+        modal.classList.add('open');
+        document.body.style.overflow = 'hidden';
+
+        exploreGet('place_details', {
+            category: category || 'hotel',
+            name: p.name || '',
+            lat: p.lat || '',
+            lng: p.lng || '',
+            address: p.address || '',
+            phone: p.phone || '',
+            opening_hours: p.opening_hours || '',
+            website: p.website || '',
+            rating: p.rating || '',
+            distance_m: p.distance_m || ''
+        }).then(function (res) {
+            if (!res.success) {
+                body.innerHTML = '<div class="explore-error"><i class="fa fa-exclamation-triangle"></i> ' + escapeHtml(res.error) + '</div>';
+                return;
+            }
+            body.innerHTML = renderPlaceDetail(res.data.place);
+        }).catch(function () {
+            body.innerHTML = '<div class="explore-error"><i class="fa fa-exclamation-triangle"></i> Could not load details. Please try again.</div>';
+        });
+    }
+    window.openPlaceDetails = openPlaceDetails;
+
+    window.closePlaceDetails = function () {
+        var modal = document.getElementById('placeDetailModal');
+        if (!modal) return;
+        modal.classList.remove('open');
+        document.body.style.overflow = '';
+    };
+
+    document.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape') window.closePlaceDetails();
+    });
+
+    function renderPlaceDetail(pl) {
+        var gallery = '<div class="pd-gallery">' + (pl.images || []).map(function (src) {
+            return '<img src="' + src + '" alt="' + escapeHtml(pl.name) + '" loading="lazy">';
+        }).join('') + '</div>';
+
+        var badges = '<div class="pd-badges">' +
+            '<span class="pd-badge"><i class="fa fa-tag"></i> ' + escapeHtml(pl.category_label) + '</span>' +
+            (pl.rating ? '<span class="pd-badge pd-rating"><i class="fa fa-star"></i> ' + pl.rating + ' (' + pl.review_count + ')</span>' : '') +
+            '<span class="pd-badge ' + (pl.is_open_now ? 'pd-open' : 'pd-closed') + '"><i class="fa fa-clock"></i> ' + (pl.is_open_now ? 'Open Now' : 'Closed Now') + '</span>' +
+            (pl.distance_km != null ? '<span class="pd-badge"><i class="fa fa-route"></i> ' + pl.distance_km + ' km away</span>' : '') +
+            '</div>';
+
+        // SAFETY FIX: pl.phone is intentionally left blank by the backend
+        // for hospital/police when there's no real number on file (see
+        // PlaceDetailsService::buildCommon) rather than inventing one that
+        // looks real. Show real guidance instead of a blank line for those.
+        var phoneRow = pl.phone
+            ? '<div class="pd-contact-item"><i class="fa fa-phone"></i> ' + escapeHtml(pl.phone) + '</div>'
+            : (pl.category === 'hospital' || pl.category === 'police')
+                ? '<div class="pd-contact-item pd-missing"><i class="fa fa-phone"></i> No number on file — call your local emergency number</div>'
+                : '<div class="pd-contact-item pd-missing"><i class="fa fa-phone"></i> Phone not listed</div>';
+
+        var contact = '<div class="pd-contact-grid">' +
+            '<div class="pd-contact-item"><i class="fa fa-map-marker"></i> ' + escapeHtml(pl.address) + '</div>' +
+            phoneRow +
+            '<div class="pd-contact-item"><i class="fa fa-envelope"></i> ' + escapeHtml(pl.email) + '</div>' +
+            '<div class="pd-contact-item"><i class="fa fa-clock"></i> ' + escapeHtml(pl.opening_hours) + '</div>' +
+            '<div class="pd-contact-item"><a href="' + escapeHtml(pl.website) + '" target="_blank" rel="noopener"><i class="fa fa-globe"></i> Website</a></div>' +
+            '<div class="pd-contact-item"><a href="' + escapeHtml(pl.map_url) + '" target="_blank" rel="noopener"><i class="fa fa-map"></i> Open in Google Maps</a></div>' +
+            '<div class="pd-contact-item"><a href="' + escapeHtml(pl.social.facebook) + '" target="_blank" rel="noopener"><i class="fa fa-brands fa-facebook"></i> Facebook</a></div>' +
+            '<div class="pd-contact-item"><a href="' + escapeHtml(pl.social.instagram) + '" target="_blank" rel="noopener"><i class="fa fa-brands fa-instagram"></i> Instagram</a></div>' +
+            '</div>';
+
+        var map = '<div class="pd-map"><iframe src="' + escapeHtml(pl.map_embed_url) + '" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe></div>';
+
+        var sections = (pl.sections || []).map(renderSection).join('');
+
+        return '<div class="pd-hero" style="background-image:url(\'' + pl.hero_image + '\')"></div>' +
+            '<div class="pd-header"><h2>' + escapeHtml(pl.name) + '</h2>' + badges + '</div>' +
+            gallery +
+            '<div class="explore-card"><h4><i class="fa fa-address-card"></i> Contact & Location</h4>' + contact + map + '</div>' +
+            sections;
+    }
+
+    function renderSection(s) {
+        var icon = s.icon || SECTION_ICONS[s.type] || 'fa-circle';
+        var head = '<h4><i class="fa ' + icon + '"></i> ' + escapeHtml(s.title) + '</h4>';
+
+        if (s.type === 'text') {
+            return '<div class="explore-card">' + head + '<p class="pd-text">' + escapeHtml(s.content) + '</p></div>';
+        }
+        if (s.type === 'list') {
+            return '<div class="explore-card">' + head + '<div class="pd-list">' + s.items.map(function (i) {
+                return '<div class="pd-list-item"><i class="fa fa-check"></i> ' + escapeHtml(i) + '</div>';
+            }).join('') + '</div></div>';
+        }
+        if (s.type === 'info_grid') {
+            return '<div class="explore-card">' + head + '<div class="pd-info-grid">' + s.items.map(function (i) {
+                return '<div class="pd-info-item"><i class="fa ' + (i.icon || 'fa-circle') + '"></i><div><div class="lbl">' + escapeHtml(i.label) + '</div><div class="val">' + escapeHtml(i.value) + '</div></div></div>';
+            }).join('') + '</div></div>';
+        }
+        if (s.type === 'rooms') {
+            return '<div class="explore-card">' + head + '<div class="pd-room-grid">' + s.items.map(function (r) {
+                return '<div class="pd-room-card"><h6>' + escapeHtml(r.name) + '</h6><div class="pd-room-price">' + escapeHtml(r.price) + '</div><div class="pd-room-desc">' + escapeHtml(r.desc) + '</div></div>';
+            }).join('') + '</div></div>';
+        }
+        if (s.type === 'menu') {
+            return '<div class="explore-card">' + head + (s.categories || []).map(function (c) {
+                return '<div class="pd-menu-cat"><h6>' + escapeHtml(c.name) + '</h6>' + c.items.map(function (it) {
+                    return '<div class="pd-menu-item"><span class="pd-menu-name">' + escapeHtml(it.name) +
+                        (it.popular ? ' <span class="pd-tag pd-popular">Popular</span>' : '') +
+                        (it.vegetarian ? ' <span class="pd-tag pd-veg">Veg</span>' : ' <span class="pd-tag pd-nonveg">Non-Veg</span>') +
+                        '</span><span class="pd-menu-price">' + escapeHtml(it.price) + '</span></div>';
+                }).join('') + '</div>';
+            }).join('') + '</div>';
+        }
+        if (s.type === 'doctors') {
+            return '<div class="explore-card">' + head + '<div class="pd-doctor-grid">' + s.items.map(function (d) {
+                return '<div class="pd-doctor-card"><i class="fa fa-user-md"></i><div><div class="pd-doctor-name">' + escapeHtml(d.name) + '</div><div class="pd-doctor-spec">' + escapeHtml(d.specialty) + '</div></div></div>';
+            }).join('') + '</div></div>';
+        }
+        if (s.type === 'reviews') {
+            return '<div class="explore-card">' + head + (s.items || []).map(function (r) {
+                var stars = '';
+                for (var i = 0; i < 5; i++) stars += '<i class="fa fa-star' + (i < r.rating ? '' : '-o') + '"></i>';
+                return '<div class="pd-review"><div class="pd-review-head"><strong>' + escapeHtml(r.name) + '</strong><span class="pd-review-stars">' + stars + '</span><span class="pd-review-date">' + escapeHtml(r.date) + '</span></div><p>' + escapeHtml(r.comment) + '</p></div>';
+            }).join('') + '</div>';
+        }
+        return '';
+    }
+
+    // ── Weather tab ────────────────────────────────────────────
+    function loadWeather() {
+        var panel = document.getElementById('weatherContent');
+        exploreGet('weather', { lat: DEST.lat, lng: DEST.lng }).then(function (res) {
+            if (!res.success) {
+                panel.innerHTML = '<div class="explore-error"><i class="fa fa-exclamation-triangle"></i> ' + escapeHtml(res.error) + '</div>';
+                return;
+            }
+            state.weather = res.data.weather;
+            renderWeather(state.weather);
+            updateExploreContext();
+        }).catch(function () {
+            panel.innerHTML = '<div class="explore-error"><i class="fa fa-exclamation-triangle"></i> Weather service is currently unavailable.</div>';
+        });
+    }
+
+    function renderWeather(w) {
+        var c = w.current;
+        var alerts = (w.alerts || []).map(function (a) {
+            return '<div class="weather-alert ' + a.severity + '"><i class="fa fa-' + (a.severity === 'warning' ? 'exclamation-triangle' : 'info-circle') + '"></i>' + escapeHtml(a.message) + '</div>';
+        }).join('');
+
+        var hourly = (w.hourly || []).map(function (h) {
+            var t = new Date(h.time);
+            return '<div class="hour-chip"><div class="t">' + t.getHours() + ':00</div><i class="fa ' + weatherIcon(h.code) + '"></i><div class="temp">' + Math.round(h.temp) + '°</div></div>';
+        }).join('');
+
+        var daily = (w.daily || []).map(function (d) {
+            var dt = new Date(d.date);
+            var dayName = dt.toLocaleDateString(undefined, { weekday: 'short' });
+            return '<div class="daily-row"><span class="day">' + dayName + '</span><i class="fa ' + weatherIcon(d.code) + '"></i>' +
+                '<span>' + Math.round(d.tmax) + '° / ' + Math.round(d.tmin) + '°</span>' +
+                '<span class="range">' + (d.pop != null ? d.pop + '% rain' : '') + '</span></div>';
+        }).join('');
+
+        var aq = w.air_quality;
+        var aqHtml = aq ? '<div class="weather-stat"><div class="lbl">Air Quality</div><div class="val">' + (aq.us_aqi ?? '—') + '</div><div class="lbl">' + escapeHtml(aq.label) + '</div></div>' : '';
+
+        document.getElementById('weatherContent').innerHTML =
+            '<div class="weather-hero-card">' +
+                '<i class="fa ' + weatherIcon(c.code) + '" style="font-size:2em;"></i>' +
+                '<div class="temp">' + Math.round(c.temp) + '°C</div>' +
+                '<div class="desc">' + escapeHtml(c.description) + ' · Feels like ' + Math.round(c.feels_like) + '°C</div>' +
+                '<div class="weather-stat-grid">' +
+                    '<div class="weather-stat"><div class="lbl">Humidity</div><div class="val">' + c.humidity + '%</div></div>' +
+                    '<div class="weather-stat"><div class="lbl">Wind</div><div class="val">' + Math.round(c.wind_speed) + ' km/h</div></div>' +
+                    aqHtml +
+                '</div>' +
+            '</div>' +
+            (alerts ? '<div class="explore-card"><h4><i class="fa fa-bell"></i> Weather Alerts</h4>' + alerts + '</div>' : '') +
+            '<div class="explore-card"><h4><i class="fa fa-clock"></i> Hourly Forecast (next 24h)</h4><div class="hourly-scroll">' + hourly + '</div></div>' +
+            '<div class="explore-card"><h4><i class="fa fa-calendar-week"></i> 7-Day Forecast</h4>' + daily + '</div>';
+    }
+
+    function weatherIcon(code) {
+        var map = { 0:'fa-sun',1:'fa-sun',2:'fa-cloud-sun',3:'fa-cloud',45:'fa-smog',48:'fa-smog',
+            51:'fa-cloud-rain',53:'fa-cloud-rain',55:'fa-cloud-rain',61:'fa-cloud-showers-heavy',
+            63:'fa-cloud-showers-heavy',65:'fa-cloud-showers-heavy',71:'fa-snowflake',73:'fa-snowflake',
+            75:'fa-snowflake',80:'fa-cloud-showers-heavy',81:'fa-cloud-showers-heavy',82:'fa-cloud-showers-heavy',
+            95:'fa-bolt',96:'fa-bolt',99:'fa-bolt' };
+        return map[code] || 'fa-cloud';
+    }
+
+    window.exploreRefreshPlaceCat = function (btn, cat) { loadPlaces(cat); };
+
+    // ── Init ──────────────────────────────────────────────────
+    loadOverview();
+})();
+
+/* ══════════════════════════════════════════════════════════════
+   FLOATING AI EXPLORE CHATBOT (explore-chatbot.php)
+   ══════════════════════════════════════════════════════════════ */
+(function initExploreChatbot() {
+    var toggleBtn = document.getElementById('exploreChatToggle');
+    if (!toggleBtn) return;
+
+    var open = false;
+    var sessionId = 'exp_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8);
+
+    window.toggleExploreChat = function () {
+        open = !open;
+        document.getElementById('exploreChatPanel').classList.toggle('open', open);
+        if (open) {
+            var msgs = document.getElementById('exploreChatMessages');
+            if (!msgs.children.length) {
+                var destName = document.body.dataset.exploreDest || 'your destination';
+                addExploreMsg('bot', "Hi! I'm your AI travel assistant for " + destName + ". Ask me about attractions, food, transport, safety, weather-based activities, or anything else about your trip!");
+            }
+            document.getElementById('exploreChatInput').focus();
+        }
+    };
+
+    function addExploreMsg(type, text) {
+        var msgs = document.getElementById('exploreChatMessages');
+        var div = document.createElement('div');
+        div.className = 'exp-msg exp-msg-' + type;
+        var formatted = escapeHtml(text).replace(/\n/g, '<br>');
+        div.innerHTML = '<div class="exp-msg-bubble">' + formatted + '</div>';
+        msgs.appendChild(div);
+        msgs.scrollTop = msgs.scrollHeight;
+    }
+
+    function showExploreTyping() {
+        var msgs = document.getElementById('exploreChatMessages');
+        var div = document.createElement('div');
+        div.className = 'exp-msg exp-msg-bot exp-typing';
+        div.id = 'expTyping';
+        div.innerHTML = '<div class="exp-msg-bubble"><span class="exp-typing-dot"></span><span class="exp-typing-dot"></span><span class="exp-typing-dot"></span></div>';
+        msgs.appendChild(div);
+        msgs.scrollTop = msgs.scrollHeight;
+    }
+    function hideExploreTyping() { var el = document.getElementById('expTyping'); if (el) el.remove(); }
+
+    window.sendExploreChat = function () {
+        var input = document.getElementById('exploreChatInput');
+        var text = input.value.trim();
+        if (!text) return;
+        input.value = '';
+        addExploreMsg('user', text);
+        showExploreTyping();
+
+        var fd = new FormData();
+        fd.append('message', text);
+        fd.append('destination', document.body.dataset.exploreDest || '');
+        fd.append('session_id', sessionId);
+        fd.append('context', document.body.dataset.exploreContext || '');
+
+        explorePost('chat', fd).then(function (res) {
+            hideExploreTyping();
+            addExploreMsg('bot', res.success ? res.data.reply : ('Sorry, I ran into an issue: ' + (res.error || 'please try again.')));
+        }).catch(function () {
+            hideExploreTyping();
+            addExploreMsg('bot', "Sorry, I couldn't reach the AI assistant. Please check your connection and try again.");
+        });
+    };
+})();
