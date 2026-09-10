@@ -52,6 +52,8 @@ $currentPage = basename($_SERVER['PHP_SELF']);
             <a href="dashboard.php"><i class="fa fa-th-large"></i> Dashboard</a>
             <a href="profile.php"><i class="fa fa-user-circle"></i> <?php echo tms_t('nav_profile','My Profile'); ?></a>
             <a href="tour-history.php"><i class="fa fa-suitcase"></i> <?php echo tms_t('nav_bookings','My Bookings'); ?></a>
+            <a href="alerts.php"><i class="fa fa-bell"></i> Price Alerts</a>
+            <a href="group-trips.php"><i class="fa fa-users"></i> Group Trips</a>
             <a href="referral.php"><i class="fa fa-gift"></i> Refer Friends</a>
             <?php else: ?>
             <span class="tms-topbar-divider"></span>
@@ -119,7 +121,7 @@ $currentPage = basename($_SERVER['PHP_SELF']);
                  dismissible banner. Hidden until the browser actually confirms
                  installability via 'beforeinstallprompt' (see footer.php) —
                  never shown as a fake/always-on button. -->
-            <button type="button" id="tmsInstallBtn" class="tms-install-btn" style="display:none;" title="Install TMS as an app">
+            <button type="button" id="tmsInstallBtn" class="tms-install-btn" style="display:none;" title="Install TMS as an app" aria-label="Install TMS as an app">
                 <i class="fa fa-download"></i> <span>Install App</span>
             </button>
             <span class="tms-topbar-divider" id="tmsInstallDivider" style="display:none;"></span>
@@ -323,7 +325,7 @@ $currentPage = basename($_SERVER['PHP_SELF']);
 <!-- ═══════════════════════════════════════════ SIGN IN MODAL ═══════════════════════════════════════════ -->
 <div id="signinModal" class="tms-modal-overlay" onclick="if(event.target===this)closeModal('signinModal')">
     <div class="tms-modal-box">
-        <button class="tms-modal-close" onclick="closeModal('signinModal')">&times;</button>
+        <button class="tms-modal-close" onclick="closeModal('signinModal')" aria-label="Close sign-in dialog">&times;</button>
         <div class="tms-modal-header">
             <div class="tms-modal-icon"><i class="fa fa-sign-in"></i></div>
             <h3>Welcome Back</h3>
@@ -353,7 +355,7 @@ $currentPage = basename($_SERVER['PHP_SELF']);
 <!-- ═══════════════════════════════════════════ SIGN UP MODAL ═══════════════════════════════════════════ -->
 <div id="signupModal" class="tms-modal-overlay" onclick="if(event.target===this)closeModal('signupModal')">
     <div class="tms-modal-box">
-        <button class="tms-modal-close" onclick="closeModal('signupModal')">&times;</button>
+        <button class="tms-modal-close" onclick="closeModal('signupModal')" aria-label="Close sign-up dialog">&times;</button>
         <div class="tms-modal-header">
             <div class="tms-modal-icon" style="background:linear-gradient(135deg,var(--secondary),var(--primary));"><i class="fa fa-user-plus"></i></div>
             <h3>Join TMS</h3>
@@ -363,7 +365,11 @@ $currentPage = basename($_SERVER['PHP_SELF']);
         <div class="tms-alert tms-alert-error"><i class="fa fa-exclamation-circle"></i> <?php echo htmlspecialchars($_SESSION['reg_error']); unset($_SESSION['reg_error']); ?></div>
         <?php endif; ?>
         <form method="post" action="register.php">
-            <?php tms_csrf_field(); ?>
+            <?php /* id="signupCsrf" matters: checkEmailLive() below reads the token
+                     from this element. It used to call tms_csrf_field(), which emits
+                     no id, so the live email check always posted an empty token,
+                     always got a 403, and always disabled the submit button. */ ?>
+            <input type="hidden" name="csrf_token" id="signupCsrf" value="<?php echo htmlspecialchars(tms_csrf_token(), ENT_QUOTES, 'UTF-8'); ?>">
             <input type="hidden" name="ref" value="<?php echo htmlspecialchars($_COOKIE['tms_ref'] ?? '', ENT_QUOTES, 'UTF-8'); ?>">
             <div class="tms-field">
                 <label>Full Name *</label>
@@ -395,7 +401,7 @@ $currentPage = basename($_SERVER['PHP_SELF']);
 <?php if(isset($_SESSION['reg_success'])): ?>
 <div id="successBanner" style="background:linear-gradient(135deg,#00b09b,#96c93d);color:#fff;padding:14px 20px;text-align:center;font-size:15px;font-weight:600;">
     <i class="fa fa-check-circle"></i> <?php echo htmlspecialchars($_SESSION['reg_success']); unset($_SESSION['reg_success']); ?>
-    <button onclick="document.getElementById('successBanner').style.display='none'" style="background:none;border:none;float:right;cursor:pointer;color:#fff;font-size:18px;">&times;</button>
+    <button onclick="document.getElementById('successBanner').style.display='none'" style="background:none;border:none;float:right;cursor:pointer;color:#fff;font-size:18px;" aria-label="Dismiss">&times;</button>
 </div>
 <?php endif; ?>
 
@@ -933,23 +939,45 @@ document.addEventListener('keydown', function(e) {
 window.addEventListener('scroll', function() {
     document.getElementById('tmsNavbar').classList.toggle('scrolled', window.scrollY > 20);
 });
+// FIX (Round 14): this used to decide whether to disable the signup button by
+// searching the response text for "already" or "red" — and the CSRF error
+// message contains "red" (inside "expired"), so every failure locked the form.
+// It also read the token from #signupCsrf, an id that did not exist on the live
+// modal, so the request failed CSRF validation every single time. Nobody could
+// register from the site-wide Sign Up modal at all. Both are fixed: the endpoint
+// returns JSON, and the token element now exists.
 function checkEmailLive(email) {
-    if(!email || email.length < 5) return;
     var result = document.getElementById('emailCheckResult');
-    result.innerHTML = '<span style="color:#888">Checking...</span>';
-    var xhr = new XMLHttpRequest();
-    xhr.open('POST', 'check_availability.php', true);
-    xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
-    xhr.onload = function() {
-        result.innerHTML = xhr.responseText;
-        document.getElementById('regSubmitBtn').disabled = (xhr.responseText.indexOf('already') > -1 || xhr.responseText.indexOf('red') > -1);
-    };
-    // Reuses the same session CSRF token already embedded in the signup
-    // modal's hidden #signupCsrf field, so this AJAX call passes the same
-    // strict tms_csrf_validate() check that endpoint uses.
+    var btn = document.getElementById('regSubmitBtn');
+    if (!result) return;
+    if (!email || email.length < 5) { result.innerHTML = ''; if (btn) btn.disabled = false; return; }
+
+    result.innerHTML = '<span style="color:#888;font-size:12px;">Checking...</span>';
+
+    var form = new URLSearchParams();
+    form.set('emailid', email);
     var csrfEl = document.getElementById('signupCsrf');
-    var csrfTok = csrfEl ? csrfEl.value : '';
-    xhr.send('emailid=' + encodeURIComponent(email) + '&csrf_token=' + encodeURIComponent(csrfTok));
+    form.set('csrf_token', csrfEl ? csrfEl.value : '');
+
+    fetch('check_availability.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: form.toString()
+    }).then(function (r) {
+        if (!r.ok) throw new Error('http ' + r.status);
+        return r.json();
+    }).then(function (data) {
+        var available = !!data.available;
+        result.innerHTML = '<span style="color:' + (available ? '#27ae60' : '#e74c3c') + ';font-size:12px;">' +
+            '<i class="fa ' + (available ? 'fa-check-circle' : 'fa-times-circle') + '"></i> ' +
+            String(data.message || '').replace(/[<>]/g, '') + '</span>';
+        if (btn) btn.disabled = !available;
+    }).catch(function () {
+        // Never block signup because a convenience check failed — the server
+        // validates the email properly on submit anyway.
+        result.innerHTML = '';
+        if (btn) btn.disabled = false;
+    });
 }
 <?php if(isset($_SESSION['login_error'])): ?>
 window.onload = function(){ openModal('signinModal'); };

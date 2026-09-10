@@ -12,12 +12,26 @@
                     </div>
                 </a>
                 <p>Your premium travel partner. AI-powered planning, expert guidance, and world-class service.</p>
+                <?php /* Round 14: these four buttons were all href="#" — clicking any of
+                         them just jumped to the top of the page. Set TMS_SOCIAL_* in .env
+                         to switch them on; until then they are not rendered at all, which
+                         is better than four dead links on every page. */ ?>
+                <?php
+                $tmsSocials = array_filter([
+                    'facebook'  => tms_env('TMS_SOCIAL_FACEBOOK', ''),
+                    'twitter'   => tms_env('TMS_SOCIAL_TWITTER', ''),
+                    'instagram' => tms_env('TMS_SOCIAL_INSTAGRAM', ''),
+                    'youtube'   => tms_env('TMS_SOCIAL_YOUTUBE', ''),
+                ]);
+                if ($tmsSocials): ?>
                 <div class="tms-footer-social">
-                    <a href="#" class="tms-social-btn"><i class="fa fa-facebook"></i></a>
-                    <a href="#" class="tms-social-btn"><i class="fa fa-twitter"></i></a>
-                    <a href="#" class="tms-social-btn"><i class="fa fa-instagram"></i></a>
-                    <a href="#" class="tms-social-btn"><i class="fa fa-youtube"></i></a>
+                    <?php foreach ($tmsSocials as $net => $url): ?>
+                    <a href="<?php echo htmlspecialchars($url, ENT_QUOTES, 'UTF-8'); ?>" target="_blank" rel="noopener"
+                       class="tms-social-btn" aria-label="<?php echo htmlspecialchars(ucfirst($net), ENT_QUOTES, 'UTF-8'); ?>">
+                       <i class="fa fa-<?php echo htmlspecialchars($net, ENT_QUOTES, 'UTF-8'); ?>"></i></a>
+                    <?php endforeach; ?>
                 </div>
+                <?php endif; ?>
             </div>
             <?php if (empty($tms_landing_mode)): ?>
             <div class="tms-footer-col">
@@ -47,6 +61,13 @@
                 <h5><?php echo tms_t('footer_support','Support'); ?></h5>
                 <ul>
                     <li><a href="issuetickets.php">Support Tickets</a></li>
+                    <?php /* Round 14: includes/write-us.php renders the ONLY form that
+                             writes to tblissues, and nothing anywhere opened it — no
+                             button, no link, no data-target. The whole customer
+                             ticket channel was unreachable, so issuetickets.php showed
+                             its empty state forever and admin/manage-issues.php never
+                             had anything to answer. */ ?>
+                    <li><a href="#" data-toggle="modal" data-target="#myModal3">Write to Us</a></li>
                     <li><a href="reviews.php">Reviews</a></li>
                     <li><a href="loyalty.php">Loyalty Points</a></li>
                     <li><a href="custom-trip.php">Custom Trips</a></li>

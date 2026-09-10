@@ -1,0 +1,12 @@
+# Secrets — never commit
+.env
+
+# User uploads (documents, wallet files, package images added at runtime)
+uploads/*
+!uploads/.gitkeep
+!uploads/*/.htaccess
+
+# Local/editor noise
+Thumbs.db
+.DS_Store
+*.log

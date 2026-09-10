@@ -9,7 +9,14 @@
 session_start();
 error_reporting(E_ALL); ini_set('display_errors', '0'); ini_set('log_errors', '1');
 include('includes/config.php');
-tms_require_user(); // Batch 1 (landing/auth gating): whole app now requires login
+// LIVE BUG FIX (customer-facing audit): this page is real browsing/
+// marketing content -- it's explicitly allowed in robots.txt and listed
+// in sitemap.php for search engines -- but a blanket "require login
+// everywhere" change (see includes/config.php's tms_require_user())
+// silently gated it too, so Google (and any signed-out visitor) was
+// redirected to the homepage instead of seeing this page. Intentionally
+// left public; booking/account actions on this page still check
+// $_SESSION['login'] individually where needed.
 ?>
 <!DOCTYPE HTML>
 <html lang="<?php echo htmlspecialchars(tms_active_language(), ENT_QUOTES, 'UTF-8'); ?>">
@@ -110,6 +117,20 @@ tms_require_user(); // Batch 1 (landing/auth gating): whole app now requires log
 <?php include('includes/signin.php'); ?>
 
 <script>
+/* Round 14: prices rendered in JavaScript used to hardcode the Taka symbol,
+   even though the site has a currency selector and every server-rendered price
+   goes through tms_currency(). A visitor on EUR saw "৳5,000" here next to
+   "€ 38" for the same figure elsewhere. TMS_CUR carries the active currency
+   (and its BDT conversion rate) so client-side prices agree with server ones. */
+var TMS_CUR = <?php echo json_encode(tms_currency_js()); ?>;
+function tmsMoney(bdtAmount) {
+    var n = (Number(bdtAmount) || 0) * TMS_CUR.rate;
+    return TMS_CUR.symbol + ' ' + n.toLocaleString(undefined, {
+        minimumFractionDigits: TMS_CUR.decimals, maximumFractionDigits: TMS_CUR.decimals
+    });
+}
+</script>
+<script>
 var SCENE_ICONS = {
     beach: 'fa-umbrella-beach', mountain: 'fa-mountain', forest: 'fa-tree',
     city: 'fa-building', snow: 'fa-snowflake-o', desert: 'fa-sun-o',
@@ -202,12 +223,12 @@ function renderResult(data) {
     } else {
         var html = '<div class="ia-matches-grid">';
         data.matches.forEach(function(p){
-            html += '<a class="ia-match-card" href="package-details.php?id=' + p.PackageId + '">' +
+            html += '<a class="ia-match-card" href="package-details.php?pkgid=' + p.PackageId + '">' +
                 '<img src="' + p.image_url + '" alt="">' +
                 '<div class="ia-match-body">' +
                 '<div class="ia-match-name">' + escHtml(p.PackageName) + '</div>' +
                 '<div class="ia-match-loc">' + escHtml(p.PackageLocation || '') + '</div>' +
-                '<div class="ia-match-price">৳ ' + Number(p.PackagePrice).toLocaleString() + '</div>' +
+                '<div class="ia-match-price">' + tmsMoney(p.PackagePrice) + '</div>' +
                 '</div></a>';
         });
         html += '</div>';

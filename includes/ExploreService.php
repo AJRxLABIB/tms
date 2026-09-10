@@ -23,9 +23,19 @@ class ExploreService {
 
     private PDO $db;
     private CacheService $cache;
-    private string $ua = 'TMS-AI-Travel-Copilot/1.0 (Final Year Project; contact: support@tms.local)';
+    // Nominatim's usage policy requires a real, reachable contact. This used to
+    // be "support@tms.local", which is not a routable domain — exactly the kind
+    // of UA that gets an IP blocked, and a block here takes out destination
+    // search entirely. Set TMS_CONTACT_EMAIL in .env to your own address.
+    private string $ua;
 
     public function __construct(PDO $db, ?CacheService $cache = null) {
+        $contact = defined('TMS_CONTACT_EMAIL') && TMS_CONTACT_EMAIL
+            ? TMS_CONTACT_EMAIL
+            : (function_exists('tms_env') ? (tms_env('TMS_CONTACT_EMAIL', '') ?: '') : '');
+        $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
+        $this->ua = 'TMS-Travel-Explorer/1.0 (+http://' . $host . '; contact: '
+                  . ($contact !== '' ? $contact : 'admin@' . $host) . ')';
         $this->db    = $db;
         // ensureTable=false: includes/config.php already migrates the shared
         // tblcache table once per request via its own $tmsCache instance.
@@ -111,10 +121,29 @@ class ExploreService {
         $aqRes = $this->httpGetJson($aqUrl);
         $aq    = $aqRes['success'] ? ($aqRes['data']['current'] ?? null) : null;
 
+        // FIX (Round 14): this took the FIRST 24 hourly entries. Open-Meteo's
+        // hourly array starts at 00:00 local on the current day, so a panel
+        // headed "next 24h" actually showed midnight to 23:00 today — at 8pm,
+        // twenty of the twenty-four chips were hours that had already passed.
+        // Start from the first entry at or after the destination's local "now".
         $hourly = [];
         if (!empty($w['hourly']['time'])) {
-            $count = min(24, count($w['hourly']['time']));
-            for ($i = 0; $i < $count; $i++) {
+            // Open-Meteo returns hourly timestamps as LOCAL time with no offset
+            // ("2026-09-03T14:00") plus the destination's offset in seconds.
+            // Building the destination's current local hour in the same format
+            // makes this a plain string comparison — no timezone juggling, and
+            // no dependency on the server's own date.timezone setting.
+            $startIdx = 0;
+            $offset   = (int)($w['utc_offset_seconds'] ?? 0);
+            $nowLocal = gmdate('Y-m-d\TH:i', time() + $offset);
+            foreach ($w['hourly']['time'] as $k => $t) {
+                if (strcmp((string)$t, $nowLocal) >= 0) { $startIdx = $k; break; }
+            }
+
+            $total = count($w['hourly']['time']);
+            $count = min(24, max(0, $total - $startIdx));
+            for ($n = 0; $n < $count; $n++) {
+                $i = $startIdx + $n;
                 $hourly[] = [
                     'time' => $w['hourly']['time'][$i],
                     'temp' => $w['hourly']['temperature_2m'][$i] ?? null,
@@ -155,11 +184,14 @@ class ExploreService {
                 'description' => $this->weatherCodeToText($code),
                 'icon'        => $this->weatherCodeToIcon($code, (bool)($current['is_day'] ?? 1)),
             ],
-            'air_quality' => $aq ? [
-                'us_aqi' => $aq['us_aqi'] ?? null,
+            // FIX (Round 14): aqiLabel(0) returns "Good", so a location whose
+            // air-quality call returned nothing was shown as "— · Good" — a
+            // health claim about a value we never received. No reading, no label.
+            'air_quality' => ($aq && isset($aq['us_aqi']) && $aq['us_aqi'] !== null) ? [
+                'us_aqi' => $aq['us_aqi'],
                 'pm2_5'  => $aq['pm2_5']  ?? null,
                 'pm10'   => $aq['pm10']   ?? null,
-                'label'  => $this->aqiLabel((int)($aq['us_aqi'] ?? 0)),
+                'label'  => $this->aqiLabel((int)$aq['us_aqi']),
             ] : null,
             'hourly'   => $hourly,
             'daily'    => $daily,
@@ -319,8 +351,12 @@ class ExploreService {
         foreach (($res['data']['results'] ?? []) as $p) {
             $photo = null;
             if (!empty($p['photos'][0]['photo_reference'])) {
-                $photo = 'https://maps.googleapis.com/maps/api/place/photo?maxwidth=400&photo_reference='
-                       . $p['photos'][0]['photo_reference'] . '&key=' . GOOGLE_PLACES_API_KEY;
+                // SECURITY FIX (Round 14): this used to embed GOOGLE_PLACES_API_KEY
+                // in a URL that was sent to the browser and rendered in an <img src>,
+                // exposing the server's billing key to every visitor. Hand out the
+                // opaque reference and let api/explore.php?action=place_photo stream
+                // the image server-side instead.
+                $photo = 'api/explore.php?action=place_photo&ref=' . urlencode($p['photos'][0]['photo_reference']);
             }
             $plat = $p['geometry']['location']['lat'] ?? null;
             $plng = $p['geometry']['location']['lng'] ?? null;
@@ -352,7 +388,17 @@ class ExploreService {
             return $this->routeFromGoogle($fromLat, $fromLng, $toLat, $toLng, $mode);
         }
         if ($mode === 'transit') {
-            return ['success' => false, 'error' => 'Public transit directions require a Google Maps API key. Showing driving/walking directions instead.'];
+            // FIX (Round 14): this returned an error whose text promised
+            // "Showing driving/walking directions instead" — and then showed
+            // nothing at all, leaving the user parked on a mode that can never
+            // work. Actually fall back to driving, and say so honestly.
+            $fallback = $this->routeFromOsrm($fromLat, $fromLng, $toLat, $toLng, 'driving');
+            if ($fallback['success']) {
+                $fallback['data']['mode'] = 'driving';
+                $fallback['data']['notice'] = 'Public transport routing needs a Google Maps API key, '
+                    . 'which is not configured — showing the driving route instead.';
+            }
+            return $fallback;
         }
 
         return $this->routeFromOsrm($fromLat, $fromLng, $toLat, $toLng, $mode);
@@ -399,15 +445,45 @@ class ExploreService {
         }
 
         $leg = $res['data']['routes'][0]['legs'][0];
+        // FIX (Round 14): 'geometry' was hardcoded to [] so the client never drew
+        // a line for a Google route — configuring a Maps key silently made the
+        // map WORSE than the keyless OSRM path, which does return geometry.
+        // Google supplies an encoded polyline; decode it.
+        $encoded  = $res['data']['routes'][0]['overview_polyline']['points'] ?? '';
+        $geometry = $encoded !== '' ? $this->decodePolyline($encoded) : [];
         return ['success' => true, 'data' => [
             'mode'          => $mode,
             'distance_m'    => $leg['distance']['value'] ?? 0,
             'duration_s'    => $leg['duration']['value'] ?? 0,
             'distance_text' => $leg['distance']['text'] ?? '',
             'duration_text' => $leg['duration']['text'] ?? '',
-            'geometry'      => [],
+            'geometry'      => $geometry,
             'source'        => 'google_directions',
         ]];
+    }
+
+    /**
+     * Decode Google's encoded-polyline format into [[lat,lng], ...] pairs,
+     * which is the shape the Leaflet layer on the client already expects.
+     */
+    private function decodePolyline(string $encoded): array {
+        $points = [];
+        $index = 0; $lat = 0; $lng = 0; $len = strlen($encoded);
+        while ($index < $len) {
+            foreach (['lat', 'lng'] as $axis) {
+                $shift = 0; $result = 0;
+                do {
+                    if ($index >= $len) return $points;
+                    $b = ord($encoded[$index++]) - 63;
+                    $result |= ($b & 0x1f) << $shift;
+                    $shift += 5;
+                } while ($b >= 0x20);
+                $delta = ($result & 1) ? ~($result >> 1) : ($result >> 1);
+                if ($axis === 'lat') { $lat += $delta; } else { $lng += $delta; }
+            }
+            $points[] = [$lat / 1e5, $lng / 1e5];
+        }
+        return $points;
     }
 
     private function formatDistance(float $meters): string {
@@ -464,6 +540,15 @@ class ExploreService {
 
         $userMsg = "Destination: {$name}" . ($country ? ", {$country}" : "") . " (lat {$lat}, lng {$lng}).";
 
+        // FIX (Round 14): the "Recently Explored" history INSERT used to live at
+        // the very bottom of this method, after two early returns — so if the AI
+        // call failed (which it does for every install without a Gemini key) the
+        // visit was never recorded and the Recently Explored strip stayed empty
+        // forever, with nothing to indicate why. Recording that someone opened a
+        // destination has nothing to do with whether the AI wrote a description,
+        // so it happens here, first.
+        $this->recordVisit($userEmail, $name, $lat, $lng, $country);
+
         $res = $ai->ask($system, $userMsg, '', $userEmail);
         if (!$res['success']) {
             return ['success' => false, 'error' => $res['error'] ?? 'AI service is temporarily unavailable.'];
@@ -486,14 +571,18 @@ class ExploreService {
             $stmt->execute([$placeKey, $name, $country, $lat, $lng, json_encode($data, JSON_UNESCAPED_UNICODE), $expires]);
         } catch (Exception $e) {}
 
-        if ($userEmail !== 'guest' && $userEmail !== '') {
-            try {
-                $this->db->prepare("INSERT INTO tbl_explore_history (user_email, display_name, lat, lng) VALUES (?,?,?,?)")
-                    ->execute([$userEmail, $name, $lat, $lng]);
-            } catch (Exception $e) {}
-        }
-
         return ['success' => true, 'data' => $data, 'cached' => false];
+    }
+
+    /** Record that this user opened a destination (see the note above). */
+    private function recordVisit(string $userEmail, string $name, float $lat, float $lng, string $country = ''): void {
+        if ($userEmail === 'guest' || $userEmail === '') return;
+        try {
+            $this->db->prepare("INSERT INTO tbl_explore_history (user_email, display_name, lat, lng) VALUES (?,?,?,?)")
+                ->execute([$userEmail, $name, $lat, $lng]);
+        } catch (Exception $e) {
+            error_log('[TMS Explore] history insert failed: ' . $e->getMessage());
+        }
     }
 
     private function lookupEmergencyContacts(string $country): ?array {
@@ -519,15 +608,20 @@ class ExploreService {
         if ($userEmail === '' || $userEmail === 'guest') return [];
         try {
             $stmt = $this->db->prepare(
-                "SELECT display_name, lat, lng, MAX(created_at) as last_visited
+                // FIX (Round 14): lat/lng were neither grouped nor aggregated, which
+                // MySQL 5.7+/8.0 reject outright under the default ONLY_FULL_GROUP_BY
+                // (error 1055). The catch below swallowed it, so on any standard MySQL
+                // host "Recently Explored" silently never appeared. MariaDB (XAMPP)
+                // happens to allow it, which is why it looked fine locally.
+                "SELECT display_name, MAX(lat) AS lat, MAX(lng) AS lng, MAX(created_at) as last_visited
                  FROM tbl_explore_history WHERE user_email=?
-                 GROUP BY display_name ORDER BY last_visited DESC LIMIT ?"
+                 GROUP BY display_name ORDER BY last_visited DESC LIMIT " . (int)$limit
             );
             $stmt->bindValue(1, $userEmail);
-            $stmt->bindValue(2, $limit, PDO::PARAM_INT);
             $stmt->execute();
             return $stmt->fetchAll(PDO::FETCH_ASSOC);
         } catch (Exception $e) {
+            error_log('[TMS Explore] getRecentHistory failed: ' . $e->getMessage());
             return [];
         }
     }
@@ -567,7 +661,12 @@ class ExploreService {
 
         curl_setopt_array($ch, [
             CURLOPT_RETURNTRANSFER => true,
-            CURLOPT_TIMEOUT        => 15,
+            // FIX (Round 14): this was 15s while the Overpass query itself asks
+            // for [timeout:20] — so any query taking 15-20s (routine in dense
+            // areas) was aborted client-side and reported to the user as
+            // "temporarily unavailable", even though the server would have
+            // answered. Give the slowest upstream room to finish.
+            CURLOPT_TIMEOUT        => 25,
             CURLOPT_CONNECTTIMEOUT => 8,
             CURLOPT_HTTPHEADER     => $headers,
             CURLOPT_SSL_VERIFYPEER => true,

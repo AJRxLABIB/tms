@@ -64,7 +64,11 @@ class AIClient {
     ): array {
 
         if (empty($this->apiKey) || $this->apiKey === 'YOUR_GEMINI_API_KEY_HERE') {
-            return $this->fallback('No Gemini API key configured. Add your key to includes/config.php');
+            // FIX (Round 14): this exact string was rendered to visitors — the
+            // first thing anyone saw on Explore Mode was "Add your key to
+            // includes/config.php". The operator detail belongs in the log.
+            error_log('[TMS AI] No GEMINI_API_KEY configured — set it in .env (see .env.example).');
+            return $this->fallback('The AI assistant is not switched on for this site yet.');
         }
 
         // ── Rate limit check ──────────────────────────────────────────────────
@@ -82,7 +86,7 @@ class AIClient {
 
         // ── Sanitize inputs ───────────────────────────────────────────────────
         $messages = array_map(function($m) {
-            $m['content'] = $this->sanitizePromptInput($m['content']);
+            $m['content'] = $this->sanitizePromptInput((string)($m['content'] ?? ''), $m['role'] ?? 'user');
             return $m;
         }, $messages);
 
@@ -110,15 +114,19 @@ class AIClient {
                 'topP'            => 0.9,
             ],
             'safetySettings'     => [
-                ['category' => 'HARM_CATEGORY_HARASSMENT',        'threshold' => 'BLOCK_ONLY_HIGH'],
-                ['category' => 'HARM_CATEGORY_HATE_SPEECH',       'threshold' => 'BLOCK_ONLY_HIGH'],
-                ['category' => 'HARM_CATEGORY_SEXUALLY_EXPLICIT', 'threshold' => 'BLOCK_ONLY_HIGH'],
-                ['category' => 'HARM_CATEGORY_DANGEROUS_CONTENT', 'threshold' => 'BLOCK_ONLY_HIGH'],
+                // Round 14: all four were BLOCK_ONLY_HIGH, the loosest available
+                // setting, on a public consumer travel site.
+                ['category' => 'HARM_CATEGORY_HARASSMENT',        'threshold' => 'BLOCK_MEDIUM_AND_ABOVE'],
+                ['category' => 'HARM_CATEGORY_HATE_SPEECH',       'threshold' => 'BLOCK_MEDIUM_AND_ABOVE'],
+                ['category' => 'HARM_CATEGORY_SEXUALLY_EXPLICIT', 'threshold' => 'BLOCK_MEDIUM_AND_ABOVE'],
+                ['category' => 'HARM_CATEGORY_DANGEROUS_CONTENT', 'threshold' => 'BLOCK_MEDIUM_AND_ABOVE'],
             ],
         ];
 
         // ── API call ──────────────────────────────────────────────────────────
-        $url    = self::GEMINI_BASE . $this->model . ':generateContent?key=' . $this->apiKey;
+        // Round 14: the key used to travel in the query string, which lands in
+        // every proxy access log. Gemini accepts it as a header instead.
+        $url    = self::GEMINI_BASE . $this->model . ':generateContent';
         $result = $this->httpPost($url, $payload);
 
         if (!$result['success']) {
@@ -156,7 +164,11 @@ class AIClient {
      */
     public function askWithImage(string $system, string $userText, string $imageB64, string $mimeType, string $userEmail = 'guest'): array {
         if (empty($this->apiKey) || $this->apiKey === 'YOUR_GEMINI_API_KEY_HERE') {
-            return $this->fallback('No Gemini API key configured. Add your key to includes/config.php');
+            // FIX (Round 14): this exact string was rendered to visitors — the
+            // first thing anyone saw on Explore Mode was "Add your key to
+            // includes/config.php". The operator detail belongs in the log.
+            error_log('[TMS AI] No GEMINI_API_KEY configured — set it in .env (see .env.example).');
+            return $this->fallback('The AI assistant is not switched on for this site yet.');
         }
         if ($this->isRateLimited($userEmail)) {
             return $this->fallback('AI request limit reached. Please try again in a few minutes.');
@@ -188,7 +200,7 @@ class AIClient {
             ],
         ];
 
-        $url    = self::GEMINI_BASE . $this->model . ':generateContent?key=' . $this->apiKey;
+        $url    = self::GEMINI_BASE . $this->model . ':generateContent';
         $result = $this->httpPost($url, $payload);
 
         if (!$result['success']) {
@@ -236,71 +248,125 @@ class AIClient {
      * on the first attempt, unchanged from before.
      */
     private function httpPost(string $url, array $payload): array {
-        $maxAttempts = 3;
-        $backoffMs   = 300;
-        $lastError   = 'Unknown error';
+        // FIX (Round 14): CURLOPT_TIMEOUT was 30s with no connect timeout, inside
+        // a 3-attempt retry loop — a worst case of ~91 seconds for an
+        // INTERACTIVE chat request. XAMPP's default max_execution_time is 30-60s,
+        // so PHP killed the script mid-retry and the browser got an HTML fatal
+        // instead of JSON. These values keep the whole operation inside a
+        // sensible interactive budget.
+        $maxAttempts   = 3;
+        $backoffMs     = 400;
+        $perAttemptSec = 12;
+        $totalBudgetSec = 22;
+        $startedAt     = microtime(true);
+
+        // Encoding can fail on invalid UTF-8 (easy to send in a raw POST), which
+        // used to post an empty body and surface as a baffling "HTTP 400".
+        $body = json_encode($payload, JSON_INVALID_UTF8_SUBSTITUTE);
+        if ($body === false) {
+            return ['success' => false, 'error' => 'Could not encode the request (invalid characters in the message).'];
+        }
+
+        $response = false; $httpCode = 0; $curlErr = '';
 
         for ($attempt = 1; $attempt <= $maxAttempts; $attempt++) {
+            $remaining = $totalBudgetSec - (int)(microtime(true) - $startedAt);
+            if ($remaining < 3) break;
+
             $ch = curl_init($url);
             curl_setopt_array($ch, [
                 CURLOPT_RETURNTRANSFER => true,
                 CURLOPT_POST           => true,
-                CURLOPT_POSTFIELDS     => json_encode($payload),
-                CURLOPT_HTTPHEADER     => ['Content-Type: application/json'],
-                CURLOPT_TIMEOUT        => 30,
+                CURLOPT_POSTFIELDS     => $body,
+                CURLOPT_HTTPHEADER     => [
+                    'Content-Type: application/json',
+                    'x-goog-api-key: ' . $this->apiKey,
+                ],
+                CURLOPT_CONNECTTIMEOUT => 5,
+                CURLOPT_TIMEOUT        => min($perAttemptSec, $remaining),
                 CURLOPT_SSL_VERIFYPEER => true,
             ]);
 
             $response = curl_exec($ch);
-            $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+            $httpCode = (int)curl_getinfo($ch, CURLINFO_HTTP_CODE);
             $curlErr  = curl_error($ch);
             curl_close($ch);
 
             $isTransientNetworkError = (bool)$curlErr;
             $isTransientHttpError    = in_array($httpCode, [429, 500, 502, 503, 504], true);
 
-            if (!$isTransientNetworkError && !$isTransientHttpError) {
-                // Either a clean success, or a definitive failure (4xx other
-                // than 429) that retrying won't fix — handle it below and
-                // stop looping either way.
-                break;
+            // A 429 is either a per-minute burst (worth one short retry) or the
+            // daily free-tier quota being spent (retrying is pure waste and just
+            // hammers the API). Tell them apart from the response body.
+            if ($httpCode === 429 && is_string($response) && stripos($response, 'per day') !== false) {
+                return ['success' => false, 'error' => 'The AI assistant has reached today\'s usage limit. Please try again tomorrow.'];
             }
 
-            $lastError = $curlErr ? "Network error: $curlErr" : "HTTP $httpCode (transient)";
+            if (!$isTransientNetworkError && !$isTransientHttpError) {
+                break; // clean success, or a definitive failure retrying won't fix
+            }
+
             if ($attempt < $maxAttempts) {
                 usleep($backoffMs * 1000);
-                $backoffMs *= 3; // 300ms -> 900ms
+                $backoffMs *= 2;
                 continue;
             }
         }
 
         if ($curlErr) {
-            return ['success' => false, 'error' => "Network error after $maxAttempts attempt(s): $curlErr"];
+            error_log('[TMS AI] network error after ' . $maxAttempts . ' attempt(s): ' . $curlErr);
+            return ['success' => false, 'error' => 'The AI assistant could not be reached. Please try again in a moment.'];
         }
 
-        $data = json_decode($response, true);
+        $data = json_decode((string)$response, true);
 
         if ($httpCode !== 200) {
-            $errMsg = $data['error']['message'] ?? "HTTP $httpCode — " . substr($response, 0, 200);
-            return ['success' => false, 'error' => $errMsg];
+            $detail = $data['error']['message'] ?? ('HTTP ' . $httpCode . ' — ' . substr((string)$response, 0, 200));
+            error_log('[TMS AI] Gemini returned HTTP ' . $httpCode . ': ' . $detail);
+            if ($httpCode === 401 || $httpCode === 403) {
+                return ['success' => false, 'error' => 'The AI assistant is not configured correctly on this site.'];
+            }
+            if ($httpCode === 429) {
+                return ['success' => false, 'error' => 'The AI assistant is busy right now. Please try again in a minute.'];
+            }
+            return ['success' => false, 'error' => 'The AI assistant had a problem answering that. Please try again.'];
         }
 
-        // Extract text from Gemini response structure
+        // A prompt blocked BEFORE generation is reported at the top level, not on
+        // the candidate — that case used to fall through to the generic
+        // "Empty response from Gemini API."
+        $blockReason = $data['promptFeedback']['blockReason'] ?? '';
+        if ($blockReason !== '') {
+            return ['success' => false, 'error' => 'That message could not be processed. Please rephrase it and try again.'];
+        }
+
         $content = $data['candidates'][0]['content']['parts'][0]['text'] ?? '';
 
         if (empty($content)) {
-            // Check if blocked by safety filters
             $finishReason = $data['candidates'][0]['finishReason'] ?? '';
             if ($finishReason === 'SAFETY') {
-                return ['success' => false, 'error' => 'Response blocked by safety filter. Try rephrasing.'];
+                return ['success' => false, 'error' => 'The answer was blocked by a safety filter. Try rephrasing your question.'];
             }
-            return ['success' => false, 'error' => 'Empty response from Gemini API.'];
+            if ($finishReason === 'MAX_TOKENS') {
+                return ['success' => false, 'error' => 'That answer was too long to finish. Try asking something more specific.'];
+            }
+            error_log('[TMS AI] empty Gemini response (finishReason=' . $finishReason . ')');
+            return ['success' => false, 'error' => 'The AI assistant returned an empty answer. Please try again.'];
         }
 
         return ['success' => true, 'content' => $content];
     }
 
     private function isRateLimited(string $userEmail): bool {
+        // FIX (Round 14): every signed-out visitor was logged under the literal
+        // string 'guest', so the 31st AI call from ANY guest in a rolling hour
+        // locked out the chatbot for EVERY guest on the site. Callers still pass
+        // 'guest'; we scope it per browser session here so one visitor can no
+        // longer exhaust everyone else's allowance.
+        if ($userEmail === 'guest' || $userEmail === '') {
+            $sid = session_id();
+            $userEmail = 'guest:' . ($sid !== '' ? substr($sid, 0, 24) : ($_SERVER['REMOTE_ADDR'] ?? 'unknown'));
+        }
         $limit  = defined('AI_RATE_LIMIT') ? AI_RATE_LIMIT : 30;
         $window = 3600;
         try {
@@ -316,6 +382,11 @@ class AIClient {
     }
 
     private function logUsage(string $userEmail): void {
+        // Must match the key isRateLimited() counts, or the limit never triggers.
+        if ($userEmail === 'guest' || $userEmail === '') {
+            $sid = session_id();
+            $userEmail = 'guest:' . ($sid !== '' ? substr($sid, 0, 24) : ($_SERVER['REMOTE_ADDR'] ?? 'unknown'));
+        }
         try {
             $this->db->prepare(
                 "INSERT INTO tbl_ai_usage_log (user_email, created_at) VALUES (?, NOW())"
@@ -337,18 +408,29 @@ class AIClient {
         $this->cache->set('ai_' . $key, $value, $this->cacheTtl);
     }
 
-    private function sanitizePromptInput(string $input): string {
-        $blacklist = [
-            '/ignore previous instructions/i',
-            '/forget everything/i',
-            '/system prompt/i',
-            '/jailbreak/i',
-            '/disregard all/i',
-        ];
-        foreach ($blacklist as $pattern) {
-            $input = preg_replace($pattern, '[filtered]', $input);
+    /**
+     * FIX (Round 14): this used to regex-replace five English phrases
+     * ("ignore previous instructions", "system prompt", "jailbreak", ...) with
+     * "[filtered]". That stopped nothing — two spaces, a synonym, another
+     * language or base64 all sail past — while corrupting legitimate messages:
+     * a visitor asking "what's in the system prompt for this bot?" got
+     * "[filtered]", and a review saying "forget everything I said about the
+     * hotel" was rewritten before the sentiment analyser scored it. Worse, it
+     * created false confidence while the defences that actually matter were
+     * missing (structural role separation, never putting untrusted text in the
+     * system instruction, and escaping model output at the DOM sink — all three
+     * now in place).
+     *
+     * strip_tags is also no longer applied to assistant turns: the site
+     * assistant is instructed to answer in HTML anchors, and stripping them from
+     * its own replayed history taught it that its previous format was wrong.
+     */
+    private function sanitizePromptInput(string $input, string $role = 'user'): string {
+        $input = trim($input);
+        if ($role !== 'assistant') {
+            $input = strip_tags($input);
         }
-        return mb_substr(strip_tags(trim($input)), 0, 2000);
+        return mb_substr($input, 0, 4000);
     }
 
     private function fallback(string $reason): array {

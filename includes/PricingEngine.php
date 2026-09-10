@@ -93,6 +93,32 @@ function tms_remaining_seats(PDO $dbh, int $packageId): ?int {
     }
 }
 
+/**
+ * Same as tms_remaining_seats(), but takes a row-level write lock on the
+ * package first (SELECT ... FOR UPDATE) so it MUST be called inside an
+ * already-open transaction ($dbh->beginTransaction()). This is what
+ * actually prevents overselling under concurrency (Rule 9): two checkouts
+ * racing for the last seat on the same package will now serialize on this
+ * lock instead of both reading "1 seat left" and both succeeding. The
+ * plain, lock-free tms_remaining_seats() above is kept for read-only
+ * display (package cards, listing pages) where taking a write lock would
+ * be wasteful and isn't needed.
+ */
+function tms_remaining_seats_for_update(PDO $dbh, int $packageId): ?int {
+    $capQ = $dbh->prepare("SELECT SeatsAvailable FROM tbltourpackages WHERE PackageId = :pid FOR UPDATE");
+    $capQ->execute([':pid' => $packageId]);
+    $capacity = $capQ->fetchColumn();
+    if ($capacity === false || $capacity === null || $capacity === '') return null;
+
+    $bookedQ = $dbh->prepare(
+        "SELECT COALESCE(SUM(NoOfPersons),0) FROM tblbooking WHERE PackageId = :pid AND status IN (0,1)"
+    );
+    $bookedQ->execute([':pid' => $packageId]);
+    $booked = (int) $bookedQ->fetchColumn();
+
+    return max(0, (int)$capacity - $booked);
+}
+
 function tms_dynamic_price(PDO $dbh, int $packageId, float $basePrice, ?string $fromDate = null): array
 {
     if ($basePrice <= 0) {

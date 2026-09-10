@@ -303,6 +303,19 @@ function tms_translate_batch(array $texts, string $lang, PDO $dbh): array {
     // language was selected — exactly the kind of blank/broken page this whole
     // audit has been fixing. Loaded lazily here so English-only requests (the
     // majority) pay zero extra cost.
+    // FIX (Round 14): a failed translation was never remembered, so with the AI
+    // unreachable EVERY page render re-attempted the call and waited for it —
+    // which, with the old 30s-per-attempt / 3-attempt transport, meant listing
+    // pages could hang past max_execution_time and return the generic fatal
+    // page. A short circuit-breaker means one failure costs one wait, not one
+    // wait per page view, and the page still renders in the original language.
+    global $tmsCache;
+    $breakerKey = 'i18n_fail_' . $lang;
+    if (isset($tmsCache) && $tmsCache->get($breakerKey) !== null) {
+        foreach ($misses as $key => $text) { $result[$key] = $text; }
+        return $result;
+    }
+
     require_once __DIR__ . '/ai/AIClient.php';
     try {
         $ai = new AIClient($dbh);
@@ -331,8 +344,10 @@ function tms_translate_batch(array $texts, string $lang, PDO $dbh): array {
             }
         }
         error_log('[TMS i18n] Batch translation to ' . $lang . ' failed or malformed: ' . ($res['error'] ?? 'unexpected AI response shape'));
+        if (isset($tmsCache)) $tmsCache->set($breakerKey, 1, 300);
     } catch (Throwable $e) {
         error_log('[TMS i18n] Batch translation error: ' . $e->getMessage());
+        if (isset($tmsCache)) $tmsCache->set($breakerKey, 1, 300);
     }
 
     // AI unavailable/failed — fall back to the original text so the page still renders correctly.

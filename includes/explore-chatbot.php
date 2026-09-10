@@ -1,5 +1,11 @@
 <!-- TMS Explore Mode — Floating AI Travel Assistant -->
 <!-- Include on any Explore page: include('includes/explore-chatbot.php'); -->
+<?php
+// FIX (Round 14): this widget rendered a "🟢 Live · powered by Gemini" badge and
+// a working-looking launcher even with no API key configured — every message
+// then came back as an error. If the assistant can't run, don't offer it.
+if (defined('GEMINI_API_KEY') && GEMINI_API_KEY !== ''):
+?>
 <button id="exploreChatToggle" onclick="toggleExploreChat()" title="Ask the AI Travel Assistant">
     <i class="fa fa-robot"></i>
 </button>
@@ -19,3 +25,4 @@
         <button class="exp-chat-send" onclick="sendExploreChat()"><i class="fa fa-paper-plane"></i></button>
     </div>
 </div>
+<?php endif; ?>

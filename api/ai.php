@@ -40,14 +40,31 @@ header('X-Frame-Options: SAMEORIGIN');
 $action    = tms_clean($_GET['action'] ?? $_POST['action'] ?? '');
 $userEmail = $_SESSION['login'] ?? 'guest';
 
-// ── Rate limit per IP for guest users ────────────────────────────────────────
-if ($userEmail === 'guest') {
-    $ip = $_SERVER['REMOTE_ADDR'] ?? 'unknown';
-    // Lightweight IP-based limit stored in session
-    $sessionKey = 'ai_calls_' . date('YmdH');
-    $_SESSION[$sessionKey] = ($_SESSION[$sessionKey] ?? 0) + 1;
-    if ($_SESSION[$sessionKey] > 10) {
-        apiError(429, 'Too many requests. Please sign in for unlimited AI access.');
+// ── Rate limit for guest users ───────────────────────────────────────────────
+// FIX (Round 14): the previous version (a) assigned $ip and never used it,
+// despite the comment claiming an IP-based limit, (b) added a brand-new
+// 'ai_calls_YYYYMMDDHH' key to the session every hour and never removed the old
+// ones, so a long-lived session grew without bound, and (c) counted unknown
+// actions and 400s against the visitor's allowance because it ran before
+// dispatch. One rolling entry, and only real AI actions are counted.
+const TMS_AI_GUEST_ACTIONS = ['chatbot', 'recommend', 'itinerary', 'budget', 'packing_list',
+                              'answer', 'memory', 'package', 'prediction', 'footprint', 'image_analyze',
+                              // virtual_guide (used by virtual-guide.php, now a public page) had no
+                              // rate limit at all for guests before this -- unlimited free Gemini
+                              // calls from anyone, logged in or not.
+                              'virtual_guide'];
+if ($userEmail === 'guest' && in_array($action, TMS_AI_GUEST_ACTIONS, true)) {
+    $hour = date('YmdH');
+    $bucket = $_SESSION['ai_guest_calls'] ?? ['hour' => $hour, 'count' => 0];
+    if (($bucket['hour'] ?? '') !== $hour) { $bucket = ['hour' => $hour, 'count' => 0]; }
+    $bucket['count']++;
+    $_SESSION['ai_guest_calls'] = $bucket;
+    // Clear any keys left behind by the old implementation.
+    foreach (array_keys($_SESSION) as $k) {
+        if (str_starts_with((string)$k, 'ai_calls_')) unset($_SESSION[$k]);
+    }
+    if ($bucket['count'] > 30) {
+        apiError(429, 'You have reached the hourly limit for guests. Please sign in to keep chatting.');
     }
 }
 
@@ -123,14 +140,38 @@ function handleItinerary(PDO $dbh, string $email): void {
         apiError(400, 'Destination is required.');
     }
 
+    // Optional: link this generated itinerary to a real booking (my-trip.php)
+    // so it shows up there via ItineraryPlanner::getByBookingId() instead of
+    // only ever being retrievable through this same session's AI response.
+    // IDOR guard: only the booking's own owner may attach an itinerary to it,
+    // same principle as payment.php/pay-now.php's ownership checks.
+    $bookingId = (int)($_POST['booking_id'] ?? 0);
+    if ($bookingId > 0) {
+        $owns = $dbh->prepare("SELECT 1 FROM tblbooking WHERE BookingId = :bid AND UserEmail = :email LIMIT 1");
+        $owns->execute([':bid' => $bookingId, ':email' => $email]);
+        if (!$owns->fetchColumn()) {
+            $bookingId = 0; // not this user's booking -- silently don't link, don't error the whole request
+        }
+    }
+
     $planner   = new ItineraryPlanner($dbh);
-    $itinerary = $planner->generate($tripData, $email);
+    $itinerary = $planner->generate($tripData, $email, $bookingId > 0 ? $bookingId : null);
 
     apiSuccess(['itinerary' => $itinerary]);
 }
 
 function handleChatbot(PDO $dbh, string $email): void {
-    $message = tms_clean($_POST['message'] ?? '');
+    // CSRF: this endpoint spends the site's AI quota and is posted as a simple
+    // form-encoded request (no preflight), so without a token any page on the
+    // internet could drive it with a visitor's cookies attached.
+    tms_csrf_validate();
+
+    // NOT tms_clean(): that runs strip_tags(), which deletes everything from a
+    // "<" to the next ">". A visitor asking "anything under 50k? we're >4
+    // people" lost half the sentence, and "packages < 50000" (no closing ">")
+    // arrived as just "packages ". Chat messages are escaped where they are
+    // rendered, not mangled on the way in.
+    $message = trim((string)($_POST['message'] ?? ''));
     if ($message === '') {
         apiError(400, 'Message is required.');
     }
@@ -138,20 +179,34 @@ function handleChatbot(PDO $dbh, string $email): void {
         apiError(400, 'Message is too long.');
     }
 
-    // History comes from the browser as JSON: [{"role":"user"|"assistant","content":"..."}]
-    // Capped here server-side too (never trust the client's cap alone) so a
-    // manipulated request can't blow up the prompt size / API cost.
-    $historyRaw = json_decode($_POST['history'] ?? '[]', true);
-    $history = is_array($historyRaw) ? array_slice($historyRaw, -8) : [];
+    // Round 14: history used to be posted BY the browser, which meant (a) it was
+    // lost on every page navigation — including clicking a link the bot itself
+    // rendered — so real conversations never got past one or two turns, and (b)
+    // a crafted request could put words in the assistant's mouth. It now lives
+    // server-side, keyed to a long-lived cookie, and is read back here.
+    $chatUid = function_exists('tms_chat_uid') ? tms_chat_uid() : '';
+    $history = ($chatUid !== '' && function_exists('tms_chat_history'))
+        ? tms_chat_history($dbh, $chatUid, 12)
+        : [];
+
+    // Which page the visitor is standing on. Without this, asking "is this good
+    // for a family?" on a package page got an answer with no idea what "this" is.
+    $pageContext = mb_substr(trim((string)($_POST['page_context'] ?? '')), 0, 300);
 
     $assistant = new SiteAssistant($dbh);
-    $result    = $assistant->reply($message, $history, $email);
+    $result    = $assistant->reply($message, $history, $email, $pageContext);
 
     if (!$result['success']) {
-        // Let the frontend fall back to its local rule-based responder rather
-        // than showing the visitor a raw error inside the chat window.
+        // The frontend falls back to its local rule-based responder — and now
+        // tells the visitor that's what happened (see includes/chatbot.php).
         apiError(503, $result['error'] ?: 'AI assistant temporarily unavailable.');
     }
+
+    if ($chatUid !== '' && function_exists('tms_chat_save')) {
+        tms_chat_save($dbh, $chatUid, 'user', $message, $email);
+        tms_chat_save($dbh, $chatUid, 'assistant', $result['reply'], $email);
+    }
+    if (function_exists('tms_prune_ai_logs')) { tms_prune_ai_logs($dbh); }
 
     apiSuccess(['reply' => $result['reply']]);
 }
@@ -454,7 +509,11 @@ function handleImageAnalyze(PDO $dbh, string $email): void {
     $result = $ai->askWithImage($system, 'Classify this travel photo.', $imageB64, $realMime, $email);
 
     if (!$result['success']) {
-        apiError(502, $result['content'] ?? 'Could not analyze this photo right now.');
+        // FIX (Round 14): AIClient::fallback() returns content => '' (an empty
+        // string, not null), so ?? never fired and the client received
+        // {"success":false,"error":""} — the actual reason ("AI not configured",
+        // "rate limit reached") was thrown away.
+        apiError(502, $result['error'] ?? 'Could not analyze this photo right now.');
     }
 
     $parsed = null;

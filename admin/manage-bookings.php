@@ -4,7 +4,11 @@ error_reporting(E_ALL);
 ini_set('display_errors', 0);
 ini_set('log_errors', 1);
 include('includes/config.php');
+require_once(__DIR__ . '/../includes/payments/PaymentProviderInterface.php');
+require_once(__DIR__ . '/../includes/payments/SandboxProvider.php');
+require_once(__DIR__ . '/../includes/payments/PaymentService.php');
 tms_require_admin();
+$paymentService = new PaymentService($dbh);
 ?>
 <!DOCTYPE html>
 <html lang="<?php echo htmlspecialchars(tms_active_language(), ENT_QUOTES, 'UTF-8'); ?>">
@@ -122,6 +126,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'], $_POST['id'
             break;
         case 'refund_processed':
             $dbh->prepare("UPDATE tblbooking SET RefundStatus='processed' WHERE BookingId=:id")->execute([':id'=>$bid]);
+            // Keeps tblpayments/tblpayment_refunds truthful when this booking
+            // was actually paid through payment.php's sandbox flow; a no-op
+            // otherwise (see PaymentService::markRefundProcessed()).
+            $paymentService->markRefundProcessed($bid);
             $ref = 'BK'.str_pad($bid,3,'0',STR_PAD_LEFT);
             tms_notify_booking_owner($dbh, $bid, "Your refund for booking #$ref has been processed.",
                 "Refund processed for #$ref",
@@ -132,6 +140,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'], $_POST['id'
         case 'refund_rejected':
             $note = tms_clean($_POST['note'] ?? '') ?: 'Refund could not be verified.';
             $dbh->prepare("UPDATE tblbooking SET RefundStatus='rejected', RefundNote=:n WHERE BookingId=:id")->execute([':n'=>$note, ':id'=>$bid]);
+            $paymentService->markRefundRejected($bid, $note);
             $ref = 'BK'.str_pad($bid,3,'0',STR_PAD_LEFT);
             tms_notify_booking_owner($dbh, $bid, "Your refund request for booking #$ref was declined: $note",
                 "Refund request declined for #$ref",

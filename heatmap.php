@@ -94,7 +94,10 @@ unset($p);
 .heat-rank-item { display:flex; align-items:center; gap:12px; padding:10px; border-radius:8px; margin-bottom:8px; border:1px solid #f0f0f0; text-decoration:none; color:inherit; transition:0.2s; }
 .heat-rank-item:hover { background: linear-gradient(135deg,#667eea11,#764ba211); border-color:#667eea; color:inherit; text-decoration:none; }
 .heat-rank-num { flex-shrink:0; width:26px; height:26px; border-radius:50%; background:#ff6b35; color:#fff; font-size:12px; font-weight:700; display:flex; align-items:center; justify-content:center; }
-.heat-rank-item:nth-child(1) .heat-rank-num, .heat-rank-item:nth-child(2) .heat-rank-num, .heat-rank-item:nth-child(3) .heat-rank-num { background:#667eea; }
+/* Round 14: these were :nth-child(1..3), but the sidebar's first child is the
+   <h4> heading — so ranks 1 and 2 got the highlight and rank 3 did not.
+   :nth-of-type counts only the rank rows. */
+.heat-rank-item:nth-of-type(1) .heat-rank-num, .heat-rank-item:nth-of-type(2) .heat-rank-num, .heat-rank-item:nth-of-type(3) .heat-rank-num { background:#667eea; }
 .heat-rank-name { font-size:13px; font-weight:700; margin:0 0 2px; color:#333; }
 .heat-rank-meta { font-size:11px; color:#888; }
 .heat-legend { display:flex; gap:16px; flex-wrap:wrap; align-items:center; margin:0 0 15px; font-size:12.5px; color:#555; }

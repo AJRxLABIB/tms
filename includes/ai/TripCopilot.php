@@ -107,11 +107,12 @@ class TripCopilot {
         try {
             $stmt = $this->db->prepare(
                 "SELECT role, message, created_at FROM tbl_copilot_sessions
-                 WHERE booking_id = ? ORDER BY id DESC LIMIT ?"
+                 WHERE booking_id = ? ORDER BY id DESC LIMIT " . (int)$limit
             );
-            $stmt->execute([$bookingId, $limit]);
+            $stmt->execute([$bookingId]);
             return array_reverse($stmt->fetchAll(PDO::FETCH_OBJ));
         } catch (Exception $e) {
+            error_log('[TMS] ' . __METHOD__ . ' failed: ' . $e->getMessage());
             return [];
         }
     }
@@ -134,6 +135,7 @@ class TripCopilot {
             $stmt->execute([$email]);
             return $stmt->fetch(PDO::FETCH_OBJ) ?: null;
         } catch (Exception $e) {
+            error_log('[TMS] ' . __METHOD__ . ' failed: ' . $e->getMessage());
             return null;
         }
     }
@@ -243,6 +245,7 @@ SYSTEM;
 
             return $row;
         } catch (Exception $e) {
+            error_log('[TMS] ' . __METHOD__ . ' failed: ' . $e->getMessage());
             return null;
         }
     }

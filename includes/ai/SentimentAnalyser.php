@@ -119,9 +119,9 @@ Return: {
                  FROM tblreviews r
                  LEFT JOIN tbl_review_sentiment s ON s.review_id = r.id
                  WHERE s.id IS NULL AND r.Status = 1
-                 LIMIT ?"
+                 LIMIT " . (int)$limit
             );
-            $stmt->execute([$limit]);
+            $stmt->execute();
             $reviews = $stmt->fetchAll(PDO::FETCH_OBJ);
 
             $count = 0;
@@ -180,11 +180,12 @@ Return: {
                  LEFT JOIN tbltourpackages p ON p.PackageId = r.PackageId
                  WHERE s.is_suspicious = 1
                  ORDER BY r.PostingDate DESC
-                 LIMIT ?"
+                 LIMIT " . (int)$limit
             );
-            $stmt->execute([$limit]);
+            $stmt->execute();
             return $stmt->fetchAll(PDO::FETCH_OBJ);
         } catch (Exception $e) {
+            error_log('[TMS] ' . __METHOD__ . ' failed: ' . $e->getMessage());
             return [];
         }
     }

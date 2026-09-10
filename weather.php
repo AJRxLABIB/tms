@@ -2,7 +2,14 @@
 session_start();
 error_reporting(E_ALL); ini_set('display_errors', '0'); ini_set('log_errors', '1');
 include('includes/config.php');
-tms_require_user(); // Batch 1 (landing/auth gating): whole app now requires login
+// LIVE BUG FIX (customer-facing audit): this page is real browsing/
+// marketing content -- it's explicitly allowed in robots.txt and listed
+// in sitemap.php for search engines -- but a blanket "require login
+// everywhere" change (see includes/config.php's tms_require_user())
+// silently gated it too, so Google (and any signed-out visitor) was
+// redirected to the homepage instead of seeing this page. Intentionally
+// left public; booking/account actions on this page still check
+// $_SESSION['login'] individually where needed.
 
 // Best travel months data for destinations
 $travelSeasons = [
@@ -46,17 +53,23 @@ if(isset($_GET['dest'])) {
         }
         if(!$seasonInfo) $seasonInfo = ['best'=>['Oct','Nov','Dec','Jan'],'avoid'=>['Jun','Jul'],'tip'=>'Generally suitable year-round. Check local forecasts before travel.'];
 
-        // Weather simulation based on location and month
-        $lat = $selectedPkg->MapLat ?? 20;
-        $lng = $selectedPkg->MapLng ?? 70;
-        $weatherData = [
-            'city' => $selectedPkg->PackageLocation,
-            'lat' => $lat,
-            'lng' => $lng
-        ];
+        // ROOT-CAUSE FIX (Round 14): this used to read
+        //     $lat = $selectedPkg->MapLat ?? 20;  $lng = $selectedPkg->MapLng ?? 70;
+        // Both admin forms deliberately store SQL NULL when the map fields are
+        // left blank, so for every package without coordinates those defaults
+        // fired and the page fetched genuine live weather for 20N 70E — open
+        // ocean off the Gujarat coast — then displayed it under this
+        // destination's name with a "Live via Open-Meteo" badge. It also made
+        // the honest "we don't have a map location yet" branch below (which was
+        // already written, and correct) unreachable. Pass the emptiness through
+        // instead so that branch actually runs. compare.php already did this
+        // correctly; weather.php was the odd one out.
+        $hasCoords = !empty($selectedPkg->MapLat) && !empty($selectedPkg->MapLng);
+        $lat = $hasCoords ? (float)$selectedPkg->MapLat : 0.0;
+        $lng = $hasCoords ? (float)$selectedPkg->MapLng : 0.0;
 
-        // Real live weather (OpenWeatherMap) — never throws, always returns a usable array
-        $liveWeather = tms_get_weather($dbh, floatval($lat), floatval($lng), $selectedPkg->PackageLocation);
+        // Real live weather — never throws, always returns a usable array
+        $liveWeather = tms_get_weather($dbh, $lat, $lng, $selectedPkg->PackageLocation);
     }
 }
 
@@ -165,15 +178,15 @@ html[data-theme="dark"] .forecast-temps { color: var(--text-muted) !important; }
                     <?php else: ?>
                     <i class="fa <?php echo htmlentities($liveWeather['icon']); ?>" style="font-size:56px;line-height:70px;" aria-label="<?php echo htmlentities($liveWeather['condition']); ?>"></i>
                     <?php endif; ?>
-                    <div class="temp"><?php echo $liveWeather['temp']; ?>°C</div>
+                    <div class="temp"><?php echo $liveWeather['temp'] !== null ? (int)$liveWeather['temp'] . '°C' : '—'; ?></div>
                     <div class="desc"><?php echo htmlentities($liveWeather['description']); ?></div>
                     <div style="margin-top:10px;font-size:13px;opacity:0.85;">
                         <strong><?php echo htmlentities($liveWeather['city']); ?></strong><br>
-                        Feels like <?php echo $liveWeather['feels_like']; ?>°C
+                        Feels like <?php echo $liveWeather['feels_like'] !== null ? (int)$liveWeather['feels_like'] . '°C' : '—'; ?>
                     </div>
                     <div class="weather-grid">
-                        <div class="weather-stat"><span class="label">Humidity</span><span class="val"><?php echo $liveWeather['humidity']; ?>%</span></div>
-                        <div class="weather-stat"><span class="label">Wind</span><span class="val"><?php echo $liveWeather['wind_speed']; ?> m/s</span></div>
+                        <div class="weather-stat"><span class="label">Humidity</span><span class="val"><?php echo $liveWeather['humidity'] !== null ? (int)$liveWeather['humidity'] . '%' : '—'; ?></span></div>
+                        <div class="weather-stat"><span class="label">Wind</span><span class="val"><?php echo $liveWeather['wind_speed'] !== null ? round((float)$liveWeather['wind_speed'] * 3.6, 1) . ' km/h' : '—'; ?></span></div>
                         <div class="weather-stat"><span class="label">Condition</span><span class="val" style="font-size:0.85em;"><?php echo htmlentities($liveWeather['condition']); ?></span></div>
                         <?php if(!empty($liveWeather['sunrise'])): ?>
                         <div class="weather-stat"><span class="label">Sunrise</span><span class="val" style="font-size:0.85em;"><i class="fa fa-sun-o"></i> <?php echo htmlentities($liveWeather['sunrise']); ?></span></div>
@@ -183,14 +196,20 @@ html[data-theme="dark"] .forecast-temps { color: var(--text-muted) !important; }
                         <?php endif; ?>
                     </div>
                     <p style="font-size:10.5px;margin-top:12px;opacity:0.75;">
-                        Live via <?php echo $liveWeather['source'] === 'openweathermap' ? 'OpenWeatherMap' : 'Open-Meteo'; ?>
+                        Live via <?php echo $liveWeather['source'] === 'openweathermap' ? 'OpenWeatherMap' : 'Open-Meteo'; ?><?php
+                        // Round 14: 'fetched_at' was being stored on every reading
+                        // and never shown, while the label said "Live" on data that
+                        // can legitimately be up to 30 minutes old (WEATHER_CACHE_TTL).
+                        if (!empty($liveWeather['fetched_at'])) {
+                            echo ' · updated ' . htmlentities(date('H:i', strtotime($liveWeather['fetched_at'])));
+                        }
+                        ?>
                     </p>
                 </div>
                 <?php else: ?>
                 <div class="weather-widget">
                     <div style="font-size:50px; margin-bottom:5px;">
                         <?php
-                        $cMonth = intval(date('n'));
                         $isAvoid = in_array($currentMonth, $seasonInfo['avoid']);
                         $isBest = in_array($currentMonth, $seasonInfo['best']);
                         echo $isAvoid ? '🌧️' : ($isBest ? '☀️' : '🌤️');
@@ -214,9 +233,20 @@ html[data-theme="dark"] .forecast-temps { color: var(--text-muted) !important; }
                     // The real cases are 'no_coords' (this destination has no
                     // map location to fetch weather for) vs. everything else
                     // (a real, temporary fetch failure).
-                    echo ($liveWeather['error'] ?? '') === 'no_coords'
-                        ? "We don't have a map location for this destination yet, so we can't fetch live weather — here are typical seasonal averages instead."
-                        : 'Live weather is temporarily unavailable right now — showing seasonal averages instead.';
+                    // Round 14: one message used to cover every failure. These
+                    // are genuinely different situations and a user can act on
+                    // the difference (a missing map location is permanent until
+                    // an admin fixes it; a timeout resolves on refresh).
+                    switch ($liveWeather['error'] ?? '') {
+                        case 'no_coords':
+                            echo "We don't have a map location saved for this destination yet, so live weather can't be fetched. The seasonal guidance below is still accurate.";
+                            break;
+                        case 'bad_coords':
+                            echo "This destination's saved map location looks invalid, so live weather can't be fetched. An admin can correct it in the package settings.";
+                            break;
+                        default:
+                            echo 'Live weather is temporarily unavailable right now — please refresh in a moment. The seasonal guidance below is unaffected.';
+                    }
                     ?>
                 </p>
                 <?php endif; ?>
@@ -236,7 +266,7 @@ html[data-theme="dark"] .forecast-temps { color: var(--text-muted) !important; }
             </div>
 
             <div class="weather-card wow fadeInLeft" style="margin-top:0;">
-                <h4><i class="fa fa-calendar" style="color:#1e3c72"></i> <?php echo $liveWeather['ok'] ? '5-Day Forecast' : '7-Day Forecast'; ?></h4>
+                <h4><i class="fa fa-calendar" style="color:#1e3c72"></i> <?php echo ($liveWeather['ok'] && !empty($liveWeather['forecast'])) ? 'Forecast' : 'Seasonal Guidance'; ?></h4>
                 <?php if($liveWeather['ok'] && !empty($liveWeather['forecast'])): ?>
                     <?php foreach($liveWeather['forecast'] as $f): ?>
                     <div class="forecast-row">
@@ -254,21 +284,30 @@ html[data-theme="dark"] .forecast-temps { color: var(--text-muted) !important; }
                     <p style="font-size:11px;color:#aaa;margin-top:8px;">Live forecast via <?php echo $liveWeather['source'] === 'openweathermap' ? 'OpenWeatherMap' : 'Open-Meteo'; ?></p>
                 <?php else: ?>
                 <?php
-                $forecastIcons = ['☀️','🌤️','⛅','🌦️','🌧️','🌤️','☀️'];
-                $days = ['Today','Tomorrow'];
-                for($d=2;$d<7;$d++) $days[] = date('D', strtotime("+$d days"));
-                $isBest = in_array($currentMonth, $seasonInfo['best']);
+                // HONESTY FIX (Round 14): this block used to render seven
+                // hard-coded high/low pairs in exactly the same markup as the
+                // live rows — same day names, same °C styling — distinguished
+                // only by a grey footnote. The numbers were keyed solely off
+                // "is this a best/avoid month", so Switzerland in January and
+                // Dubai in December were both presented as 28°C/22°C. That is a
+                // fabricated forecast, and it appeared precisely when the real
+                // one was unavailable. Now we say what we actually know.
+                $isBest  = in_array($currentMonth, $seasonInfo['best']);
                 $isAvoid = in_array($currentMonth, $seasonInfo['avoid']);
-                $hiLow = $isBest ? [[28,22],[29,21],[27,20],[28,22],[30,23],[29,21],[28,20]] : ($isAvoid ? [[18,12],[17,11],[19,13],[20,14],[18,12],[17,11],[19,13]] : [[22,16],[23,17],[21,15],[22,16],[24,18],[23,17],[22,15]]);
-                foreach($days as $i=>$day):
                 ?>
-                <div class="forecast-row">
-                    <span class="forecast-day"><?php echo $day; ?></span>
-                    <span class="forecast-icon"><?php echo $forecastIcons[$i]; ?></span>
-                    <span class="forecast-temps"><strong><?php echo $hiLow[$i][0]; ?>°C</strong> / <?php echo $hiLow[$i][1]; ?>°C</span>
+                <div style="text-align:center;padding:18px 10px;">
+                    <div style="font-size:38px;line-height:1;margin-bottom:10px;">
+                        <?php echo $isAvoid ? '🌧️' : ($isBest ? '☀️' : '🌤️'); ?>
+                    </div>
+                    <p style="font-size:14px;font-weight:600;color:var(--text,#333);margin-bottom:6px;">
+                        <?php echo $isBest ? 'A good month to visit' : ($isAvoid ? 'A month most travellers avoid' : 'A reasonable month to visit'); ?>
+                    </p>
+                    <p style="font-size:12.5px;color:var(--text-muted,#777);line-height:1.6;margin:0;">
+                        We don't have a live day-by-day forecast for this destination right now,
+                        and we'd rather show you nothing than invent numbers. The month-by-month
+                        guidance below is based on this destination's real travel season.
+                    </p>
                 </div>
-                <?php endforeach; ?>
-                <p style="font-size:11px;color:#aaa;margin-top:8px;">* Indicative forecast based on seasonal patterns</p>
                 <?php endif; ?>
             </div>
         </div>

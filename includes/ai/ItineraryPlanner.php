@@ -33,7 +33,7 @@ class ItineraryPlanner {
      * @param string $email     User email
      * @return array            Full structured itinerary
      */
-    public function generate(array $tripData, string $email = 'guest'): array {
+    public function generate(array $tripData, string $email = 'guest', ?int $bookingId = null): array {
         $dest      = $tripData['destination'] ?? 'Unknown';
         $duration  = $tripData['duration'] ?? 5;
         $startDate = $tripData['start_date'] ?? date('Y-m-d', strtotime('+7 days'));
@@ -174,7 +174,7 @@ MSG;
         $itinerary['live_weather_alerts'] = $weatherContext['risk_alerts'];
 
         // Save to database for future reference
-        $this->saveItinerary($itinerary, $tripData, $email);
+        $this->saveItinerary($itinerary, $tripData, $email, $bookingId);
 
         return $itinerary;
     }
@@ -318,13 +318,19 @@ MSG;
         }
     }
 
-    private function saveItinerary(array $itinerary, array $tripData, string $email): void {
+    private function saveItinerary(array $itinerary, array $tripData, string $email, ?int $bookingId = null): void {
         try {
+            // $bookingId links this AI-generated plan to a real, paid-for
+            // booking (see my-trip.php) so getByBookingId() below actually
+            // has something to find -- before this, nothing in the codebase
+            // ever passed a booking_id here (custom-trip.php's ad-hoc trip
+            // planner has no real booking to link to), so every row was
+            // saved with booking_id NULL and getByBookingId() was dead code.
             $stmt = $this->db->prepare(
-                "INSERT INTO tbl_ai_itineraries (user_email, itinerary_json, ai_version, created_at)
-                 VALUES (?, ?, ?, NOW())"
+                "INSERT INTO tbl_ai_itineraries (booking_id, user_email, itinerary_json, ai_version, created_at)
+                 VALUES (?, ?, ?, ?, NOW())"
             );
-            $stmt->execute([$email, json_encode($itinerary), defined('GEMINI_MODEL') ? GEMINI_MODEL : 'gemini-1.5-flash']);
+            $stmt->execute([$bookingId, $email, json_encode($itinerary), defined('GEMINI_MODEL') ? GEMINI_MODEL : 'gemini-1.5-flash']);
         } catch (Exception $e) {
             error_log('[TMS AI] Failed to save itinerary: ' . $e->getMessage());
         }

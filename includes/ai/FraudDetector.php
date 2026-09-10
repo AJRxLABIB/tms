@@ -92,9 +92,9 @@ class FraudDetector {
                  GROUP BY b.CouponCode, u.MobileNumber
                  HAVING distinct_users > 1
                  ORDER BY uses DESC
-                 LIMIT ?"
+                 LIMIT " . (int)$limit
             );
-            $stmt->execute([$limit]);
+            $stmt->execute();
             foreach ($stmt->fetchAll(PDO::FETCH_OBJ) as $row) {
                 $flagged[] = [
                     'type'   => 'coupon_cluster',
@@ -116,9 +116,9 @@ class FraudDetector {
                  GROUP BY UserEmail, hour_bucket
                  HAVING cnt >= 5
                  ORDER BY cnt DESC
-                 LIMIT ?"
+                 LIMIT " . (int)$limit
             );
-            $stmt->execute([$limit]);
+            $stmt->execute();
             foreach ($stmt->fetchAll(PDO::FETCH_OBJ) as $row) {
                 $flagged[] = [
                     'type'   => 'rapid_fire',
@@ -142,9 +142,9 @@ class FraudDetector {
                  GROUP BY UserEmail
                  HAVING total_bookings >= 5 AND (cancelled / total_bookings) >= 0.8
                  ORDER BY total_bookings DESC
-                 LIMIT ?"
+                 LIMIT " . (int)$limit
             );
-            $stmt->execute([$limit]);
+            $stmt->execute();
             foreach ($stmt->fetchAll(PDO::FETCH_OBJ) as $row) {
                 $pct = round(($row->cancelled / $row->total_bookings) * 100);
                 $flagged[] = [

@@ -2,7 +2,14 @@
 session_start();
 error_reporting(E_ALL); ini_set('display_errors', '0'); ini_set('log_errors', '1');
 include('includes/config.php');
-tms_require_user(); // Batch 1 (landing/auth gating): whole app now requires login
+// LIVE BUG FIX (customer-facing audit): this page is real browsing/
+// marketing content -- it's explicitly allowed in robots.txt and listed
+// in sitemap.php for search engines -- but a blanket "require login
+// everywhere" change (see includes/config.php's tms_require_user())
+// silently gated it too, so Google (and any signed-out visitor) was
+// redirected to the homepage instead of seeing this page. Intentionally
+// left public; booking/account actions on this page still check
+// $_SESSION['login'] individually where needed.
 
 // ─── Pagination & filter params ───────────────────────────────────────────────
 $perPage    = 6;
@@ -22,14 +29,44 @@ $maxPrice   = isset($_GET['max_price']) && is_numeric($_GET['max_price']) ? max(
 // meaningful as prices change.
 $avgPriceRow = $dbh->query("SELECT AVG(PackagePrice) FROM tbltourpackages WHERE Status=1")->fetchColumn();
 $avgPrice = $avgPriceRow ? (float)$avgPriceRow : 0;
+// FIX (Round 14): the Family / Couple / Group chips matched
+// `PackageType LIKE '%Family%'` etc. Only the nine original demo rows use those
+// words — the 400-package catalogue that ships in data/packages_seed.json uses
+// types like Adventure, Beach, Heritage, Island, Mountain, Nature, Wildlife. So
+// "Couple" returned 1 result out of 413 and "Family" returned 4, which reads as
+// a broken filter. The audience chips are replaced with chips built from the
+// types the catalogue actually contains, so every chip is guaranteed to return
+// results and the set stays correct as the catalogue changes.
 $quickFilters = [
     'cheap'   => ['label' => 'Budget-Friendly', 'icon' => 'fa-tag'],
     'premium' => ['label' => 'Premium',         'icon' => 'fa-gem'],
-    'family'  => ['label' => 'Family',          'icon' => 'fa-users'],
-    'couple'  => ['label' => 'Couple',          'icon' => 'fa-heart'],
-    'group'   => ['label' => 'Group',           'icon' => 'fa-user-friends'],
     'rated'   => ['label' => 'Highly Rated',    'icon' => 'fa-star'],
 ];
+
+$typeIcons = [
+    'adventure' => 'fa-hiking',    'beach'    => 'fa-umbrella-beach', 'island'  => 'fa-water',
+    'mountain'  => 'fa-mountain',  'heritage' => 'fa-landmark',       'nature'  => 'fa-tree',
+    'wildlife'  => 'fa-paw',       'religious'=> 'fa-place-of-worship','city'   => 'fa-city',
+    'wetland'   => 'fa-water',     'scenic drive' => 'fa-road',       'family'  => 'fa-users',
+    'couple'    => 'fa-heart',     'group'    => 'fa-user-friends',
+];
+try {
+    $typeRows = $dbh->query(
+        "SELECT PackageType, COUNT(*) AS n FROM tbltourpackages
+         WHERE Status=1 AND PackageType IS NOT NULL AND PackageType <> ''
+         GROUP BY PackageType HAVING n > 0 ORDER BY n DESC LIMIT 8"
+    )->fetchAll(PDO::FETCH_ASSOC) ?: [];
+    foreach ($typeRows as $t) {
+        $slug  = 'type:' . strtolower($t['PackageType']);
+        $first = strtolower(trim(explode('/', $t['PackageType'])[0]));
+        $quickFilters[$slug] = [
+            'label' => $t['PackageType'] . ' (' . $t['n'] . ')',
+            'icon'  => $typeIcons[$first] ?? 'fa-suitcase',
+        ];
+    }
+} catch (Exception $e) {
+    error_log('[TMS] package type chips failed: ' . $e->getMessage());
+}
 
 // ─── Build query ──────────────────────────────────────────────────────────────
 $where  = [];
@@ -55,17 +92,15 @@ if ($quick !== '' && isset($quickFilters[$quick])) {
             $where[] = "PackagePrice > :avgprice2";
             $params[':avgprice2'] = $avgPrice;
             break;
-        case 'family':
-            $where[] = "PackageType LIKE '%Family%'";
-            break;
-        case 'couple':
-            $where[] = "PackageType LIKE '%Couple%'";
-            break;
-        case 'group':
-            $where[] = "PackageType LIKE '%Group%'";
-            break;
         case 'rated':
             $where[] = "AvgRating >= 4";
+            break;
+        default:
+            // Chips generated from the catalogue's own types (see above).
+            if (str_starts_with($quick, 'type:')) {
+                $where[] = "LOWER(PackageType) = :quicktype";
+                $params[':quicktype'] = substr($quick, 5);
+            }
             break;
     }
 }
@@ -446,7 +481,7 @@ function tmsSwitchView(view) {
             TMS_MAP_POINTS.forEach(function(p) {
                 var m = L.marker([p.lat, p.lng]).addTo(tmsPkgMap)
                     .bindPopup('<strong>' + p.name.replace(/</g,'&lt;') + '</strong><br>' + p.price +
-                        '<br><a href="package-details.php?id=' + p.id + '">View package</a>');
+                        '<br><a href="package-details.php?pkgid=' + p.id + '">View package</a>');
                 bounds.push([p.lat, p.lng]);
             });
             tmsPkgMap.fitBounds(bounds, { padding: [40, 40], maxZoom: 12 });

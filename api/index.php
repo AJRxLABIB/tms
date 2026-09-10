@@ -194,6 +194,20 @@ function api_login(PDO $dbh): void {
     $ip    = $_SERVER['REMOTE_ADDR'] ?? 'unknown';
     if (!$email || $pass === '') { api_error(400, 'email and password are required.'); }
 
+    // SECURITY FIX: tbl_login_attempts / tms_login_lockout_minutes_remaining()
+    // already implement a real brute-force lockout (5 failed attempts -> 15
+    // minute lockout by email+IP) and login.php/admin/index.php both check it
+    // -- but this endpoint only ever recorded failures below, it never
+    // checked the lockout first. That meant the exact same account was fully
+    // protected from password guessing on the website and completely
+    // unprotected against the same attack through this REST API. Same fix
+    // shape as login.php's Round-14 fix, same underlying helper, no new
+    // mechanism introduced.
+    $waitMinutes = tms_login_lockout_minutes_remaining($dbh, $email, $ip);
+    if ($waitMinutes > 0) {
+        api_error(429, "Too many failed sign-in attempts. Please try again in {$waitMinutes} minute" . ($waitMinutes === 1 ? '' : 's') . '.');
+    }
+
     $q = $dbh->prepare("SELECT id, FullName, EmailId, Password FROM tblusers WHERE EmailId=:e LIMIT 1");
     $q->execute([':e' => $email]);
     $user = $q->fetch(PDO::FETCH_OBJ);

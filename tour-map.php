@@ -2,7 +2,14 @@
 session_start();
 error_reporting(E_ALL); ini_set('display_errors', '0'); ini_set('log_errors', '1');
 include('includes/config.php');
-tms_require_user(); // Batch 1 (landing/auth gating): whole app now requires login
+// LIVE BUG FIX (customer-facing audit): this page is real browsing/
+// marketing content -- it's explicitly allowed in robots.txt and listed
+// in sitemap.php for search engines -- but a blanket "require login
+// everywhere" change (see includes/config.php's tms_require_user())
+// silently gated it too, so Google (and any signed-out visitor) was
+// redirected to the homepage instead of seeing this page. Intentionally
+// left public; booking/account actions on this page still check
+// $_SESSION['login'] individually where needed.
 
 // BUG FIX (customer-facing audit): this used to only require MapLat, not
 // MapLng — a package with one coordinate set and the other blank would
@@ -19,6 +26,38 @@ $sql2 = "SELECT * FROM tbltourpackages ORDER BY PackageId DESC";
 $q2 = $dbh->prepare($sql2);
 $q2->execute();
 $allPackages = $q2->fetchAll(PDO::FETCH_OBJ);
+
+// LIVE BUG FIX (customer-facing audit): the quick-filter pills, the map
+// legend, and every marker/sidebar color used to be keyed on fictional
+// PackageType values ("Family Package", "Couple Package", "Group Package",
+// "Domestic Packages") that do not exist anywhere in this catalogue's real
+// data (real types are things like Nature, Heritage, City, Beach, Island,
+// Adventure, Wildlife...). The practical effect, confirmed live: every
+// marker and every sidebar heading rendered in the same fallback orange
+// (nothing ever matched), the legend's 4 colored categories described
+// packages that don't exist, and clicking "Family"/"Couple"/"Group"/
+// "Domestic" always returned zero results -- a completely dead filter row.
+// Replaced with the real top types (same pattern as package-list.php's
+// quick filters), each given a real color, so the legend/pills/markers
+// all describe the actual catalogue.
+$tmsMapTypeColors = [];
+$tmsMapTypePalette = ['#27ae60', '#8e44ad', '#3498db', '#f1c40f', '#1abc9c', '#e67e22'];
+try {
+    $typeRows = $dbh->query(
+        "SELECT PackageType, COUNT(*) AS n FROM tbltourpackages
+         WHERE PackageType IS NOT NULL AND PackageType <> ''
+         GROUP BY PackageType HAVING n > 0 ORDER BY n DESC LIMIT 6"
+    )->fetchAll(PDO::FETCH_ASSOC) ?: [];
+    foreach ($typeRows as $i => $t) {
+        $tmsMapTypeColors[$t['PackageType']] = [
+            'color' => $tmsMapTypePalette[$i % count($tmsMapTypePalette)],
+            'count' => (int)$t['n'],
+        ];
+    }
+} catch (Exception $e) {
+    error_log('[TMS] tour-map type colors failed: ' . $e->getMessage());
+}
+$tmsMapOtherColor = '#95a5a6';
 ?>
 <!DOCTYPE HTML>
 <html lang="<?php echo htmlspecialchars(tms_active_language(), ENT_QUOTES, 'UTF-8'); ?>">
@@ -133,19 +172,17 @@ html[data-theme="dark"] .map-search-result span { color: var(--text-muted) !impo
 
     <div class="map-legend">
         <h5><i class="fa fa-info-circle" style="color:#667eea"></i> Map Legend</h5>
-        <span class="legend-item"><span class="legend-dot" style="background:#e74c3c"></span> Family Package</span>
-        <span class="legend-item"><span class="legend-dot" style="background:#e91e8c"></span> Couple Package</span>
-        <span class="legend-item"><span class="legend-dot" style="background:#3498db"></span> Group Package</span>
-        <span class="legend-item"><span class="legend-dot" style="background:#27ae60"></span> Domestic Packages</span>
-        <span class="legend-item"><span class="legend-dot" style="background:#f39c12"></span> International</span>
+        <?php foreach ($tmsMapTypeColors as $tName => $tInfo): ?>
+        <span class="legend-item"><span class="legend-dot" style="background:<?php echo $tInfo['color']; ?>"></span> <?php echo htmlentities($tName); ?></span>
+        <?php endforeach; ?>
+        <span class="legend-item"><span class="legend-dot" style="background:<?php echo $tmsMapOtherColor; ?>"></span> Other</span>
     </div>
 
     <div class="filter-pills">
         <span class="filter-pill active" onclick="filterMap('all',this)">All</span>
-        <span class="filter-pill" onclick="filterMap('family',this)">Family</span>
-        <span class="filter-pill" onclick="filterMap('couple',this)">Couple</span>
-        <span class="filter-pill" onclick="filterMap('group',this)">Group</span>
-        <span class="filter-pill" onclick="filterMap('domestic',this)">Domestic</span>
+        <?php foreach ($tmsMapTypeColors as $tName => $tInfo): ?>
+        <span class="filter-pill" onclick="filterMap('<?php echo strtolower(htmlentities($tName)); ?>',this)"><?php echo htmlentities($tName); ?> (<?php echo $tInfo['count']; ?>)</span>
+        <?php endforeach; ?>
     </div>
 
     <div class="row">
@@ -168,10 +205,9 @@ html[data-theme="dark"] .map-search-result span { color: var(--text-muted) !impo
         </div>
         <div class="col-md-3">
             <div class="map-sidebar">
-                <h4><i class="fa fa-list" style="color:#667eea"></i> Destinations (<?php echo count($allPackages); ?>)</h4>
+                <h4><i class="fa fa-list" style="color:#667eea"></i> Destinations (<span id="destCount"><?php echo count($allPackages); ?></span>)</h4>
                 <?php foreach($allPackages as $p):
-                    $colors = ['Family Package'=>'#e74c3c','Couple Package'=>'#e91e8c','Group Package'=>'#3498db','Domestic Packages'=>'#27ae60'];
-                    $c = $colors[$p->PackageType] ?? '#f39c12';
+                    $c = $tmsMapTypeColors[$p->PackageType]['color'] ?? $tmsMapOtherColor;
                     // BUG FIX: a package with no (or only partial) map coordinates
                     // used to render an identical, clickable-looking sidebar row
                     // that silently did nothing when clicked — no error, no
@@ -186,7 +222,7 @@ html[data-theme="dark"] .map-search-result span { color: var(--text-muted) !impo
                     <p><i class="fa fa-map-marker"></i> <?php echo htmlentities($p->PackageLocation); ?>
                         <?php if (!$hasCoords): ?><span class="dest-nomap-badge">Not mapped</span><?php endif; ?>
                     </p>
-                    <span><?php echo tms_currency($p->PackagePrice); ?></span>
+                    <span><?php echo tms_currency((float)$p->PackagePrice); ?></span>
                 </div>
                 <?php endforeach; ?>
             </div>
@@ -203,15 +239,10 @@ L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
 var markers = {};
 var allMarkerData = [];
 
+var tmsTypeColors = <?php echo json_encode(array_map(function($t){ return $t['color']; }, $tmsMapTypeColors)); ?>;
+var tmsOtherColor = <?php echo json_encode($tmsMapOtherColor); ?>;
 function getColor(type) {
-    var colors = {
-        'Family Package': '#e74c3c',
-        'Couple Package': '#e91e8c',
-        'Group Package': '#3498db',
-        'Domestic Packages': '#27ae60',
-        'Group': '#3498db'
-    };
-    return colors[type] || '#f39c12';
+    return tmsTypeColors[type] || tmsOtherColor;
 }
 
 function createMarkerIcon(color) {
@@ -221,18 +252,51 @@ function createMarkerIcon(color) {
     });
 }
 
+// FIX (Round 14): 'price' used to be the raw number, and both JS render paths
+// (map popup, search dropdown) prefixed a hardcoded '৳' — so a visitor who had
+// selected USD saw "$ 55.00" in the sidebar and "৳6,000" in the popup for the
+// SAME package. The price is now formatted server-side through tms_currency(),
+// exactly like the sidebar, so there is a single source of truth. 'type' is
+// also normalised to a string here, because PackageType is nullable and
+// filterMap() called .toLowerCase() on it directly (a NULL row threw a
+// TypeError mid-forEach and left the map half-filtered with no visible error).
 var packages = <?php echo json_encode(array_map(function($p) {
     return [
-        'id' => $p->PackageId,
-        'name' => $p->PackageName,
-        'location' => $p->PackageLocation,
-        'price' => $p->PackagePrice,
-        'type' => $p->PackageType,
+        'id' => (int)$p->PackageId,
+        'name' => (string)$p->PackageName,
+        'location' => (string)($p->PackageLocation ?? ''),
+        'price_display' => tms_currency((float)$p->PackagePrice),
+        'type' => (string)($p->PackageType ?? ''),
         'lat' => floatval($p->MapLat),
         'lng' => floatval($p->MapLng),
         'image' => $p->PackageImage
     ];
-}, $mapPackages)); ?>;
+}, $mapPackages), JSON_UNESCAPED_UNICODE); ?>;
+
+// LIVE BUG FIX (customer-facing audit): `packages` above only holds
+// destinations that HAVE map coordinates (~404 of 413). The sidebar lists
+// ALL destinations, including the ~9 without coordinates (shown greyed out
+// with a "Not mapped" badge). filterMap() used to loop over `packages` to
+// decide which sidebar rows to hide, so those unmapped rows were silently
+// skipped by every filter and stayed visible no matter what was selected,
+// and destCount showed a different total ("all" -> only the mappable
+// count) than the number the page loaded with. This full id+type list lets
+// filtering and counting cover every sidebar row, matching what the visitor
+// actually sees.
+var allDestMeta = <?php echo json_encode(array_map(function($p) {
+    return ['id' => (int)$p->PackageId, 'type' => (string)($p->PackageType ?? '')];
+}, $allPackages)); ?>;
+
+// Escape anything that goes into innerHTML. Package names come from the admin
+// form, which only strip_tags()es them — so a name containing a quote used to
+// break the "Get Directions" onclick attribute and silently kill that button,
+// and anything script-like went straight into the DOM. js/explore.js already
+// had this helper; the map didn't.
+function tmEsc(v) {
+    var d = document.createElement('div');
+    d.textContent = (v === null || v === undefined) ? '' : String(v);
+    return d.innerHTML;
+}
 
 packages.forEach(function(pkg) {
     if(!pkg.lat || !pkg.lng) return;
@@ -241,16 +305,27 @@ packages.forEach(function(pkg) {
     var marker = L.marker([pkg.lat, pkg.lng], {icon: createMarkerIcon(color)})
         .addTo(map)
         .bindPopup('<div class="popup-card" id="'+popupId+'">'+
-            '<h4>'+pkg.name+'</h4>'+
-            '<p><i class="fa fa-map-marker"></i> '+pkg.location+'</p>'+
-            '<p><i class="fa fa-tag"></i> '+pkg.type+'</p>'+
-            '<p><strong>৳'+Number(pkg.price).toLocaleString()+'</strong></p>'+
-            '<a href="package-details.php?pkgid='+pkg.id+'">View & Book</a> '+
-            '<a href="javascript:void(0)" class="directions-btn" onclick="startDirections('+pkg.id+','+pkg.lat+','+pkg.lng+',\''+pkg.name.replace(/'/g,"\\'")+'\')" style="color:#fff;padding:5px 12px;border-radius:5px;font-size:12px;text-decoration:none;"><i class="fa fa-route"></i> Get Directions</a>'+
+            '<h4>'+tmEsc(pkg.name)+'</h4>'+
+            '<p><i class="fa fa-map-marker"></i> '+tmEsc(pkg.location)+'</p>'+
+            (pkg.type ? '<p><i class="fa fa-tag"></i> '+tmEsc(pkg.type)+'</p>' : '')+
+            '<p><strong>'+tmEsc(pkg.price_display)+'</strong></p>'+
+            '<a href="package-details.php?pkgid='+pkg.id+'">View &amp; Book</a> '+
+            '<a href="javascript:void(0)" class="directions-btn" data-dir-id="'+pkg.id+'" style="color:#fff;padding:5px 12px;border-radius:5px;font-size:12px;text-decoration:none;"><i class="fa fa-route"></i> Get Directions</a>'+
         '</div>', {maxWidth:240});
     marker.pkgType = pkg.type;
     markers[pkg.id] = {marker: marker, data: pkg};
     allMarkerData.push({id: pkg.id, marker: marker, type: pkg.type});
+});
+
+// Directions buttons live inside Leaflet popups that are created and destroyed
+// on demand, so the handler is delegated from the map container rather than
+// written into each popup's HTML.
+document.getElementById('tourMap').addEventListener('click', function(e) {
+    var btn = e.target.closest ? e.target.closest('[data-dir-id]') : null;
+    if (!btn) return;
+    e.preventDefault();
+    var rec = markers[btn.getAttribute('data-dir-id')];
+    if (rec) startDirections(rec.data.id, rec.data.lat, rec.data.lng, rec.data.name);
 });
 
 function focusDestination(id, lat, lng) {
@@ -270,13 +345,31 @@ function focusDestination(id, lat, lng) {
 function filterMap(type, el) {
     document.querySelectorAll('.filter-pill').forEach(function(p){ p.classList.remove('active'); });
     el.classList.add('active');
+
+    var visible = 0;
     allMarkerData.forEach(function(item){
-        if(type === 'all' || item.type.toLowerCase().includes(type)) {
-            item.marker.addTo(map);
-        } else {
-            map.removeLayer(item.marker);
-        }
+        // String() guard: PackageType is nullable, and .toLowerCase() on null
+        // threw mid-loop, leaving the map partly filtered with no error shown.
+        var match = (type === 'all') || String(item.type || '').toLowerCase().indexOf(type) !== -1;
+        if (match) { item.marker.addTo(map); visible++; }
+        else { map.removeLayer(item.marker); }
     });
+
+    // Keep the sidebar in step with the map, so every row you can see is a row
+    // you can actually click. Uses allDestMeta (every sidebar row, mapped or
+    // not) rather than `packages` (mappable rows only) -- see the note above
+    // allDestMeta's declaration.
+    var sidebarVisible = 0;
+    allDestMeta.forEach(function(pkg) {
+        var row = document.getElementById('dest-' + pkg.id);
+        if (!row) return;
+        var match = (type === 'all') || String(pkg.type || '').toLowerCase().indexOf(type) !== -1;
+        row.style.display = match ? '' : 'none';
+        if (match) sidebarVisible++;
+    });
+
+    var counter = document.getElementById('destCount');
+    if (counter) counter.textContent = sidebarVisible;
 }
 
 // Auto-focus a destination passed via ?focus=ID (e.g. from a package details page)
@@ -311,7 +404,8 @@ searchInput.addEventListener('input', function() {
     }
     searchResults.innerHTML = matches.map(function(pkg) {
         return '<div class="map-search-result" onclick="selectSearchResult('+pkg.id+','+pkg.lat+','+pkg.lng+')">' +
-               '<strong>'+pkg.name+'</strong><span><i class="fa fa-map-marker"></i> '+pkg.location+' · ৳'+Number(pkg.price).toLocaleString()+'</span></div>';
+               '<strong>'+tmEsc(pkg.name)+'</strong><span><i class="fa fa-map-marker"></i> '+
+               tmEsc(pkg.location)+' · '+tmEsc(pkg.price_display)+'</span></div>';
     }).join('');
     searchResults.style.display = 'block';
 });
@@ -407,6 +501,16 @@ function setTravelMode(el) {
     document.querySelectorAll('#tmsDirPanel .mode-btn').forEach(function(b){ b.classList.remove('active'); });
     el.classList.add('active');
     currentMode = el.getAttribute('data-mode');
+    if (!userStart) {
+        // FIX (Round 14): this called computeRoute(), which returns immediately
+        // without a start point — so after a geolocation denial these buttons
+        // visibly responded while doing nothing at all. Re-state what's needed.
+        var statsEl = document.getElementById('tmsDirStats');
+        if (statsEl) {
+            statsEl.innerHTML = '<i class="fa fa-hand-pointer-o"></i> Pick your starting point first — use "Locate me", or click anywhere on the map.';
+        }
+        return;
+    }
     computeRoute();
 }
 

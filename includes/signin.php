@@ -39,7 +39,13 @@
                             </form>
                             <p style="text-align:center;margin-top:12px;font-size:13px;color:#666;">
                                 No account yet?
-                                <a href="#" data-dismiss="modal" data-toggle="modal" data-target="#myModal"
+                                <?php /* Round 14: this pointed at #myModal, which exists
+                                         nowhere in the codebase (the only file that
+                                         would have defined it, includes/signup.php, is
+                                         never included). Clicking it closed the sign-in
+                                         box and opened nothing. The real signup modal
+                                         lives in includes/header.php. */ ?>
+                                <a href="#" onclick="if(typeof closeModal==='function'){closeModal('signinModal');openModal('signupModal');}else{window.location='register.php';}return false;"
                                    style="color:#3F84B1;font-weight:600;">Create one free</a>
                             </p>
                         </div>

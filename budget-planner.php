@@ -2,7 +2,14 @@
 session_start();
 error_reporting(E_ALL); ini_set('display_errors', '0'); ini_set('log_errors', '1');
 include('includes/config.php');
-tms_require_user(); // Batch 1 (landing/auth gating): whole app now requires login
+// LIVE BUG FIX (customer-facing audit): this page is real browsing/
+// marketing content -- it's explicitly allowed in robots.txt and listed
+// in sitemap.php for search engines -- but a blanket "require login
+// everywhere" change (see includes/config.php's tms_require_user())
+// silently gated it too, so Google (and any signed-out visitor) was
+// redirected to the homepage instead of seeing this page. Intentionally
+// left public; booking/account actions on this page still check
+// $_SESSION['login'] individually where needed.
 
 $saved = false;
 if(isset($_POST['saveplan']) && $_SESSION['login']) {
@@ -150,7 +157,7 @@ html[data-theme="dark"] .bar-label { color: var(--text-muted) !important; }
                     </div>
 
                     <div class="form-group">
-                        <label>Total Budget (৳) &nbsp;<span class="range-value" id="totalVal">৳5,000</span></label>
+                        <label>Total Budget &nbsp;<span class="range-value" id="totalVal">&nbsp;</span></label>
                         <input type="range" name="totalbudget" id="totalbudget" min="500" max="50000" step="100" value="5000" oninput="updateTotal()">
                     </div>
 
@@ -169,7 +176,7 @@ html[data-theme="dark"] .bar-label { color: var(--text-muted) !important; }
                     <div class="form-group">
                         <label><i class="fa <?php echo $exp['icon']; ?>" style="color:<?php echo $exp['color']; ?>"></i>
                             <?php echo $exp['label']; ?> &nbsp;
-                            <span class="range-value" id="<?php echo $exp['key']; ?>Val" style="background:<?php echo $exp['color']; ?>">৳<?php echo number_format($exp['default']); ?></span>
+                            <span class="range-value" id="<?php echo $exp['key']; ?>Val" style="background:<?php echo $exp['color']; ?>"><?php echo TMS_BASE_SYMBOL . ' ' . number_format((float)$exp['default']); ?></span>
                         </label>
                         <input type="range" name="<?php echo $exp['key']; ?>" id="<?php echo $exp['key']; ?>" min="0" max="15000" step="50" value="<?php echo $exp['default']; ?>"
                             oninput="updateSlider('<?php echo $exp['key']; ?>')" style="accent-color:<?php echo $exp['color']; ?>">
@@ -199,21 +206,21 @@ html[data-theme="dark"] .bar-label { color: var(--text-muted) !important; }
 
             <div class="summary-box wow fadeInRight">
                 <div class="label">Total Budget</div>
-                <div class="total" id="totalDisplay">৳5,000</div>
+                <div class="total" id="totalDisplay">&nbsp;</div>
                 <div style="font-size:13px;opacity:0.75;margin-bottom:15px;">for <span id="travelersDisplay">2</span> travelers, <span id="durationDisplay">7</span> days</div>
                 <?php foreach($expenses as $exp): ?>
                 <div class="summary-item">
                     <span><i class="fa <?php echo $exp['icon']; ?>"></i> <?php echo $exp['label']; ?></span>
-                    <span id="<?php echo $exp['key']; ?>Summary">৳<?php echo number_format($exp['default']); ?></span>
+                    <span id="<?php echo $exp['key']; ?>Summary"><?php echo TMS_BASE_SYMBOL . ' ' . number_format((float)$exp['default']); ?></span>
                 </div>
                 <?php endforeach; ?>
                 <div class="summary-item" style="font-weight:700;font-size:15px;">
                     <span>Remaining</span>
-                    <span id="remainingDisplay">৳300</span>
+                    <span id="remainingDisplay">&nbsp;</span>
                 </div>
                 <div style="margin-top:15px;font-size:13px;opacity:0.85;">
-                    Per person: <strong id="perPersonDisplay">৳2,500</strong> &nbsp;|&nbsp;
-                    Per day: <strong id="perDayDisplay">৳714</strong>
+                    Per person: <strong id="perPersonDisplay">&nbsp;</strong> &nbsp;|&nbsp;
+                    Per day: <strong id="perDayDisplay">&nbsp;</strong>
                 </div>
             </div>
 
@@ -232,7 +239,7 @@ html[data-theme="dark"] .bar-label { color: var(--text-muted) !important; }
             <div class="saved-plan">
                 <h5><?php echo htmlentities($plan->PlanName); ?></h5>
                 <p><i class="fa fa-map-marker"></i> <?php echo htmlentities($plan->Destination); ?></p>
-                <p>Total: <strong><?php echo tms_currency($plan->TotalBudget); ?></strong> | <?php echo $plan->Duration; ?> days | <?php echo $plan->Travelers; ?> travelers</p>
+                <p>Total: <strong><?php echo TMS_BASE_SYMBOL . ' ' . number_format((float)$plan->TotalBudget); ?></strong> | <?php echo $plan->Duration; ?> days | <?php echo $plan->Travelers; ?> travelers</p>
                 <p style="font-size:11px;color:#aaa;"><?php echo $plan->CreatedAt; ?></p>
             </div>
         </div>
@@ -243,6 +250,21 @@ html[data-theme="dark"] .bar-label { color: var(--text-muted) !important; }
 </div>
 
 <script>
+/* Round 14: this page hardcoded the Taka symbol in a dozen places while the
+   saved-plan list below rendered the same figures through tms_currency() — so a
+   visitor on EUR saw "৳5,000" in the planner and "€ 38" for the identical saved
+   plan. The planner deliberately works in the site's BASE currency, because that
+   is the currency the plan is stored in; the symbol now comes from one place
+   instead of being retyped, and the heading says which currency it is. */
+var TMS_CUR = { symbol: <?php echo json_encode(TMS_BASE_SYMBOL); ?>, rate: 1, decimals: 0 };
+function tmsMoney(bdtAmount) {
+    var n = (Number(bdtAmount) || 0) * TMS_CUR.rate;
+    return TMS_CUR.symbol + ' ' + n.toLocaleString(undefined, {
+        minimumFractionDigits: TMS_CUR.decimals, maximumFractionDigits: TMS_CUR.decimals
+    });
+}
+</script>
+<script>
 var chartInstance = null;
 var colors = ['#3498db','#e74c3c','#2ecc71','#f39c12','#9b59b6'];
 var expenseKeys = ['accommodation','food','transport','activities','miscellaneous'];
@@ -250,13 +272,13 @@ var expenseLabels = ['Accommodation','Food','Transport','Activities','Misc'];
 
 function updateTotal() {
     var v = parseInt(document.getElementById('totalbudget').value);
-    document.getElementById('totalVal').textContent = '৳' + v.toLocaleString();
+    document.getElementById('totalVal').textContent = TMS_CUR.symbol + ' ' + v.toLocaleString();
     calculate();
 }
 
 function updateSlider(key) {
     var v = parseInt(document.getElementById(key).value);
-    document.getElementById(key+'Val').textContent = '৳' + v.toLocaleString();
+    document.getElementById(key+'Val').textContent = TMS_CUR.symbol + ' ' + v.toLocaleString();
     calculate();
 }
 
@@ -268,23 +290,23 @@ function calculate() {
 
     expenseKeys.forEach(function(k) {
         var v = parseInt(document.getElementById(k).value);
-        document.getElementById(k+'Summary').textContent = '৳' + v.toLocaleString();
+        document.getElementById(k+'Summary').textContent = TMS_CUR.symbol + ' ' + v.toLocaleString();
         spent += v;
     });
 
     var remaining = total - spent;
-    document.getElementById('remainingDisplay').textContent = (remaining >= 0 ? '+' : '') + '৳' + remaining.toLocaleString();
-    document.getElementById('totalDisplay').textContent = '৳' + total.toLocaleString();
+    document.getElementById('remainingDisplay').textContent = (remaining >= 0 ? '+' : '') + TMS_CUR.symbol + ' ' + remaining.toLocaleString();
+    document.getElementById('totalDisplay').textContent = TMS_CUR.symbol + ' ' + total.toLocaleString();
     document.getElementById('travelersDisplay').textContent = travelers;
     document.getElementById('durationDisplay').textContent = duration;
-    document.getElementById('perPersonDisplay').textContent = '৳' + Math.round(total/travelers).toLocaleString();
-    document.getElementById('perDayDisplay').textContent = '৳' + Math.round(total/duration).toLocaleString();
+    document.getElementById('perPersonDisplay').textContent = TMS_CUR.symbol + ' ' + Math.round(total/travelers).toLocaleString();
+    document.getElementById('perDayDisplay').textContent = TMS_CUR.symbol + ' ' + Math.round(total/duration).toLocaleString();
 
     var pct = (spent/total)*100;
     var statusEl = document.getElementById('budgetStatus');
-    if(pct > 100) { statusEl.className='budget-status status-over'; statusEl.textContent='⚠ Over Budget by ৳' + Math.abs(remaining).toLocaleString(); }
+    if(pct > 100) { statusEl.className='budget-status status-over'; statusEl.textContent='⚠ Over Budget by ' + tmsMoney(Math.abs(remaining)); }
     else if(pct > 90) { statusEl.className='budget-status status-warn'; statusEl.textContent='⚡ Almost at budget limit!'; }
-    else { statusEl.className='budget-status status-ok'; statusEl.textContent='✓ Budget looks balanced! ৳' + remaining.toLocaleString() + ' reserve.'; }
+    else { statusEl.className='budget-status status-ok'; statusEl.textContent='✓ Budget looks balanced! ' + tmsMoney(remaining) + ' reserve.'; }
 
     updateChart();
 }

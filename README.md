@@ -23,10 +23,14 @@
 | `SUMMER20` | 20% off |
 | `TMS2026` | 15% off |
 
-## Admin Loging 
-  username:admin
-  password Admin@123
+## Default seed accounts (local development only)
 
-## User login
-  username: user@tms.com
-  password : User@123
+This project's `tms.sql` seeds one demo admin and one demo user account so
+you can log in immediately after a fresh install. **If this site is public
+or hosted anywhere outside your own machine, change both passwords
+immediately** (admin: Admin > Change Password once logged in, or
+`admin/manage-admins.php` as a superadmin; user: Profile > Change Password)
+— the credentials that used to be printed here were real, working
+passwords for a publicly-documented file, which is a real credential
+exposure once this repo or its docs are shared (Rule 5). Check `tms.sql`
+directly if you need the exact seeded username/email for your local copy.

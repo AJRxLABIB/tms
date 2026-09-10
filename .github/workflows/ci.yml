@@ -1,0 +1,66 @@
+name: TMS CI
+
+# Rule 59 (CI/CD): this activates automatically the first time this repo is
+# pushed to GitHub -- nothing else to configure. It does NOT deploy anywhere
+# (no hosting credentials exist for this project yet, see HOSTING_GUIDE.md);
+# it only proves every PHP file still parses and the test suite still
+# passes before anything reaches a "develop"/"main" branch.
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+
+jobs:
+  lint-and-test:
+    runs-on: ubuntu-latest
+
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ALLOW_EMPTY_PASSWORD: yes
+          MYSQL_DATABASE: tms
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          extensions: pdo_mysql
+
+      - name: Lint every PHP file (php -l)
+        run: |
+          find . -name "*.php" -not -path "./uploads/*" -print0 \
+            | xargs -0 -n1 php -l
+
+      - name: Load base schema
+        run: |
+          mysql -h127.0.0.1 -uroot tms < tms.sql
+          mysql -h127.0.0.1 -uroot tms < v6_migration.sql
+          mysql -h127.0.0.1 -uroot tms < AI_MIGRATION.sql
+          mysql -h127.0.0.1 -uroot tms < explore_migration.sql
+          mysql -h127.0.0.1 -uroot tms < schema_repair_migration.sql
+
+      - name: Configure environment
+        run: |
+          cp .env.example .env
+          sed -i 's/^DB_HOST=.*/DB_HOST=127.0.0.1/' .env
+          sed -i 's/^DB_NAME=.*/DB_NAME=tms/' .env
+          sed -i 's/^DB_USER=.*/DB_USER=root/' .env
+
+      - name: Run migrations
+        run: php database/migrate.php
+
+      - name: Run test suite
+        run: php tests/run.php

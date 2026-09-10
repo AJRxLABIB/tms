@@ -48,28 +48,56 @@ if (isset($_POST['confirm_checkout'])) {
     if ($hasInvalidPrice) {
         $error = "One or more items in your cart don't have a price set yet, so checkout can't proceed. Please remove them from your cart or contact support.";
     } else {
-    // Seat-capacity check — live, right before booking, not the stale count
-    // shown when the item was added to cart (someone else may have booked
-    // in between). Sums requested seats per package across the whole cart
-    // in case the same package appears more than once.
+    // CONCURRENCY FIX (Rule 9 -- prevent double booking): everything from the
+    // capacity check through the booking inserts now runs inside one real
+    // database transaction, and the capacity check takes a row lock
+    // (SELECT ... FOR UPDATE) on every package involved via
+    // tms_remaining_seats_for_update(). Before this, two customers checking
+    // out the last seat on the same package at the same moment could both
+    // read "1 seat left" and both succeed -- a classic check-then-act race.
+    // Now the second transaction blocks on the lock until the first commits
+    // (or rolls back), then re-checks capacity against the first one's
+    // now-committed booking, so overselling a capacity-tracked package is no
+    // longer possible. Packages that don't track capacity (SeatsAvailable
+    // NULL, tms_remaining_seats*() returns null) are completely unaffected,
+    // exactly as before.
     $requestedPerPackage = [];
     foreach ($items as $it) {
         $requestedPerPackage[$it->PackageId] = ($requestedPerPackage[$it->PackageId] ?? 0) + max(1, (int)$it->NoOfPersons);
     }
+
+    $dbh->beginTransaction();
     $capacityError = '';
-    foreach ($requestedPerPackage as $pkgIdCheck => $requested) {
-        $available = tms_remaining_seats($dbh, (int)$pkgIdCheck);
-        if ($available !== null && $requested > $available) {
-            $pkgNameQ = $dbh->prepare("SELECT PackageName FROM tbltourpackages WHERE PackageId=:p");
-            $pkgNameQ->execute([':p' => $pkgIdCheck]);
-            $pkgNameForError = $pkgNameQ->fetchColumn() ?: 'One of your packages';
-            $capacityError .= "\"{$pkgNameForError}\" only has {$available} seat" . ($available===1?'':'s') . " left, but you're requesting {$requested}. ";
+    try {
+        // Lock package rows in a fixed order (ascending PackageId) to avoid a
+        // deadlock if two checkouts touch the same two packages in different
+        // orders.
+        $lockOrderIds = $requestedPerPackage;
+        ksort($lockOrderIds);
+        foreach ($lockOrderIds as $pkgIdCheck => $requested) {
+            $available = tms_remaining_seats_for_update($dbh, (int)$pkgIdCheck);
+            if ($available !== null && $requested > $available) {
+                $pkgNameQ = $dbh->prepare("SELECT PackageName FROM tbltourpackages WHERE PackageId=:p");
+                $pkgNameQ->execute([':p' => $pkgIdCheck]);
+                $pkgNameForError = $pkgNameQ->fetchColumn() ?: 'One of your packages';
+                $capacityError .= "\"{$pkgNameForError}\" only has {$available} seat" . ($available===1?'':'s') . " left, but you're requesting {$requested}. ";
+            }
         }
+    } catch (Exception $e) {
+        $dbh->rollBack();
+        error_log('[TMS Checkout] Capacity lock check failed: ' . $e->getMessage());
+        $error = "Something went wrong checking availability. Please try again.";
+        $capacityError = null; // signal: already handled, skip the block below
     }
-    if ($capacityError !== '') {
+
+    if ($capacityError === null) {
+        // already set $error above and rolled back -- fall through to render
+    } elseif ($capacityError !== '') {
+        $dbh->rollBack();
         $error = trim($capacityError) . " Please adjust the traveler count in your cart.";
     } else {
     $createdIds = [];
+    try {
     foreach ($items as $it) {
         // Previously this dropped NoOfPersons and TotalCost entirely — every
         // cart checkout became a 1-traveler, NULL-cost booking regardless of
@@ -119,9 +147,31 @@ if (isset($_POST['confirm_checkout'])) {
     // Clear the cart now that everything has become real bookings
     $dbh->prepare("DELETE FROM tblcart WHERE UserEmail=:e")->execute([':e' => $email]);
 
+    // Everything above (capacity lock, booking inserts, loyalty credit, cart
+    // clear) commits together now, or none of it does.
+    $dbh->commit();
+
     $_SESSION['checkout_success'] = count($createdIds);
+    // LIVE FEATURE (payment architecture, Rule 10/11): previously this went
+    // straight to tour-history.php and the booking just sat at
+    // status=0/PaymentStatus=unpaid until an admin manually confirmed it --
+    // there was no payment step in the app at all. Now the customer is sent
+    // to the new payment.php first, which lets them pay immediately via the
+    // sandbox provider (auto-confirming the booking) or skip it and leave
+    // the booking exactly as Pending/unpaid as before -- nothing about the
+    // old manual-admin-confirms-it path was removed.
+    if (!empty($createdIds)) {
+        $_SESSION['pending_payment_booking_ids'] = $createdIds;
+        header('Location: payment.php');
+        exit;
+    }
     header('Location: tour-history.php');
     exit;
+    } catch (Exception $e) {
+        $dbh->rollBack();
+        error_log('[TMS Checkout] Booking transaction failed, rolled back: ' . $e->getMessage());
+        $error = "Something went wrong while confirming your booking. Nothing was charged or reserved -- please try again.";
+    }
     }
     }
 }
@@ -176,7 +226,18 @@ html[data-theme="dark"] .summary-row.total { color: var(--text) !important; }
         <strong><?php echo htmlspecialchars($it->PackageName, ENT_QUOTES, 'UTF-8'); ?></strong><br>
         <small style="color:#888;"><?php echo date('d M Y', strtotime($it->FromDate)); ?> &rarr; <?php echo date('d M Y', strtotime($it->ToDate)); ?></small>
       </div>
-      <div><?php echo ($it->PackagePrice === null || (float)$it->PackagePrice <= 0) ? '<span style="color:#e11d48;">Price not set</span>' : tms_currency((float)$it->EffectivePrice); ?></div>
+      <?php $pax = max(1, (int)$it->NoOfPersons); ?>
+      <div style="text-align:right;">
+        <?php if ($it->PackagePrice === null || (float)$it->PackagePrice <= 0): ?>
+          <span style="color:#e11d48;">Price not set</span>
+        <?php else: ?>
+          <?php echo tms_currency((float)$it->EffectivePrice); ?>
+          <div style="font-size:12px;color:#888;">
+            × <?php echo $pax; ?> traveller<?php echo $pax > 1 ? 's' : ''; ?>
+            = <strong><?php echo tms_currency((float)$it->EffectivePrice * $pax); ?></strong>
+          </div>
+        <?php endif; ?>
+      </div>
     </div>
     <?php endforeach; ?>
     <div class="summary-row total"><span>Total</span><span><?php echo tms_currency($total); ?></span></div>

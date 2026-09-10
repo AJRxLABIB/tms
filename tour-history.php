@@ -2,7 +2,11 @@
 session_start();
 error_reporting(E_ALL); ini_set('display_errors', '0'); ini_set('log_errors', '1');
 include('includes/config.php');
+require_once('includes/payments/PaymentProviderInterface.php');
+require_once('includes/payments/SandboxProvider.php');
+require_once('includes/payments/PaymentService.php');
 tms_require_user();
+$paymentService = new PaymentService($dbh);
 
 $error = '';
 $msg   = '';
@@ -25,9 +29,13 @@ if (isset($_POST['cancel_booking'])) {
     if ($booking) {
         $fromDate  = new DateTime($booking->FromDate);
         $today     = new DateTime();
-        $diffDays  = (int)$today->diff($fromDate)->days;
+        // FIX (Round 14): this used ->diff()->days, which truncates — a trip
+        // departing in 38 hours gives days = 1, so `$diffDays > 1` was false and
+        // the user was told they were "within 24 hours of departure" two full
+        // days out. Compare actual hours against the stated 24-hour rule.
+        $hoursUntil = ($fromDate->getTimestamp() - $today->getTimestamp()) / 3600;
 
-        if ($fromDate > $today && $diffDays > 1) {
+        if ($hoursUntil > 24) {
             // A booking only reaches status=1 after our team has confirmed
             // it — the closest thing this schema has to "money changed
             // hands" (there's no payment-gateway integration; confirmation
@@ -44,6 +52,12 @@ if (isset($_POST['cancel_booking'])) {
             $upd->bindParam(':bid',   $bid,   PDO::PARAM_INT);
             $upd->bindParam(':email', $email, PDO::PARAM_STR);
             $upd->execute();
+            if ($wasConfirmed) {
+                // Links this booking-level refund request to the payment
+                // ledger too, if it was actually paid through payment.php's
+                // sandbox flow (no-ops otherwise -- see PaymentService::logRefundRequest()).
+                $paymentService->logRefundRequest($bid, 'Customer cancelled booking #BK' . $bid);
+            }
             $msg = 'Booking #BK' . $bid . ' has been cancelled successfully.'
                  . ($wasConfirmed ? ' A refund request has been logged — our team will process it and update the status here.' : '');
         } else {
@@ -81,6 +95,10 @@ if (isset($_POST['request_modification'])) {
         $error = 'This booking already has a pending date-change request.';
     } elseif (!$from || !$to || $to <= $from) {
         $error = 'Please enter a valid date range for the change request.';
+    } elseif ($from <= $now) {
+        // Round 14: the new departure date was never checked against today, so a
+        // request to move a trip to 01-01-2020 went through to the admin queue.
+        $error = 'The new departure date must be in the future.';
     } elseif ((new DateTime($booking->FromDate)) <= $now) {
         $error = 'This trip has already started or passed, so it can no longer be modified.';
     } else {
@@ -97,7 +115,25 @@ if (isset($_POST['request_modification'])) {
 
 // Fetch all bookings for this user
 $uemail = $_SESSION['login'];
-$sql = "SELECT b.BookingId, b.PackageId, p.PackageName, b.FromDate, b.ToDate,
+// RESILIENCE (Rule 2 -- never let a page start crashing just because a new
+// migration hasn't been run yet): b.PaymentStatus was added by
+// database/migrations/003_booking_payment_columns.sql. If that migration
+// hasn't been applied on this database yet, selecting it would throw
+// (PDO is configured ERRMODE_EXCEPTION) and take this whole page down for
+// every visitor. Try the new column first; fall back to the pre-payment
+// column list (and default PaymentStatus to 'unpaid' below) if it's
+// missing, so this page works identically before and after the migration
+// is applied.
+$sqlWithPayment = "SELECT b.BookingId, b.PackageId, p.PackageName, b.FromDate, b.ToDate,
+               b.Comment, b.status, b.RegDate, b.CancelledBy, b.UpdationDate,
+               b.NoOfPersons, b.TotalCost, b.VerificationCode,
+               b.RequestedFromDate, b.RequestedToDate, b.ModificationStatus, b.ModificationNote,
+               b.RefundStatus, b.RefundNote, b.PaymentStatus
+        FROM tblbooking b
+        JOIN tbltourpackages p ON p.PackageId = b.PackageId
+        WHERE b.UserEmail=:uemail
+        ORDER BY b.BookingId DESC";
+$sqlWithoutPayment = "SELECT b.BookingId, b.PackageId, p.PackageName, b.FromDate, b.ToDate,
                b.Comment, b.status, b.RegDate, b.CancelledBy, b.UpdationDate,
                b.NoOfPersons, b.TotalCost, b.VerificationCode,
                b.RequestedFromDate, b.RequestedToDate, b.ModificationStatus, b.ModificationNote,
@@ -106,9 +142,16 @@ $sql = "SELECT b.BookingId, b.PackageId, p.PackageName, b.FromDate, b.ToDate,
         JOIN tbltourpackages p ON p.PackageId = b.PackageId
         WHERE b.UserEmail=:uemail
         ORDER BY b.BookingId DESC";
-$q = $dbh->prepare($sql);
-$q->bindParam(':uemail', $uemail, PDO::PARAM_STR);
-$q->execute();
+try {
+    $q = $dbh->prepare($sqlWithPayment);
+    $q->bindParam(':uemail', $uemail, PDO::PARAM_STR);
+    $q->execute();
+} catch (PDOException $e) {
+    error_log('[TMS] tour-history.php: PaymentStatus column not available yet (run database/migrate.php) -- falling back: ' . $e->getMessage());
+    $q = $dbh->prepare($sqlWithoutPayment);
+    $q->bindParam(':uemail', $uemail, PDO::PARAM_STR);
+    $q->execute();
+}
 $bookings = $q->fetchAll(PDO::FETCH_OBJ);
 
 $statusConfig = [
@@ -244,8 +287,11 @@ html[data-theme="dark"] .history-body .detail-row { color: var(--text-muted) !im
                 $canCancel = ($b->status != 2);
                 $fromDate  = new DateTime($b->FromDate);
                 $today     = new DateTime();
-                $diffDays  = (int)$today->diff($fromDate)->days;
-                $canCancel = $canCancel && ($fromDate > $today) && ($diffDays > 1);
+                // Must match the server-side rule in the handler above (hours,
+                // not truncated days) or the button state contradicts what
+                // actually happens when it's clicked.
+                $hoursUntil = ($fromDate->getTimestamp() - $today->getTimestamp()) / 3600;
+                $canCancel = $canCancel && ($hoursUntil > 24);
                 $canModify = ($b->status != 2) && ($fromDate > $today) && ($b->ModificationStatus !== 'pending');
             ?>
             <div class="history-card wow fadeInUp" data-wow-delay=".05s">
@@ -260,6 +306,27 @@ html[data-theme="dark"] .history-body .detail-row { color: var(--text-muted) !im
                                       echo $b->CancelledBy === 'a' ? ' (by Admin)' : ' (by You)';
                                   } ?>
                         </span>
+                        <?php
+                        // LIVE FEATURE (payment architecture): PaymentStatus is new on
+                        // tblbooking -- older rows and any booking made before this
+                        // column existed default to 'unpaid', which is exactly the
+                        // truthful state (no payment step existed before). A Pending,
+                        // unpaid booking can still be paid now via the sandbox flow.
+                        $payStatus = $b->PaymentStatus ?? 'unpaid';
+                        $payBadge = ['unpaid'=>'default','pending'=>'warning','paid'=>'success','failed'=>'danger','refunded'=>'default','partially_refunded'=>'warning'][$payStatus] ?? 'default';
+                        ?>
+                        <span class="label label-<?php echo $payBadge; ?>" style="font-size:12px;padding:5px 10px;">
+                            <i class="fa fa-credit-card"></i> <?php echo ucfirst(str_replace('_',' ', $payStatus)); ?>
+                        </span>
+                        <?php if ($payStatus === 'unpaid' && $b->status != 2): ?>
+                        <form method="POST" action="pay-now.php" style="display:inline;margin:0;">
+                            <?php tms_csrf_field(); ?>
+                            <input type="hidden" name="booking_id" value="<?php echo (int)$b->BookingId; ?>">
+                            <button type="submit" class="label label-primary" style="border:none;font-size:12px;padding:5px 10px;cursor:pointer;">
+                                <i class="fa fa-flask"></i> Pay Now (Sandbox)
+                            </button>
+                        </form>
+                        <?php endif; ?>
                         <small style="color:#aaa;">Booked: <?php echo htmlspecialchars($b->RegDate, ENT_QUOTES,'UTF-8'); ?></small>
                     </div>
                 </div>
@@ -346,6 +413,9 @@ html[data-theme="dark"] .history-body .detail-row { color: var(--text-muted) !im
                         <?php endif; ?>
 
                         <div style="display:flex;align-items:flex-end;gap:8px;flex-wrap:wrap;">
+                            <a href="my-trip.php?id=<?php echo (int)$b->BookingId; ?>" class="ticket-btn" style="background:#0f2027;color:#fff;border-color:#0f2027;">
+                                <i class="fa fa-compass"></i> My Trip
+                            </a>
                             <?php if ($b->status == 1): ?>
                             <a href="ticket.php?bkid=<?php echo (int)$b->BookingId; ?>" class="ticket-btn">
                                 <i class="fa fa-download"></i> Ticket
@@ -406,11 +476,12 @@ html[data-theme="dark"] .history-body .detail-row { color: var(--text-muted) !im
             <input type="hidden" name="bkid" id="modBkId">
             <div class="form-group">
                 <label>New Departure Date</label>
-                <input type="text" name="new_fromdate" class="form-control" placeholder="dd-mm-yyyy" required>
+                <?php /* Round 14: same bare-text-box problem as the booking form. */ ?>
+                <input type="date" name="new_fromdate" class="form-control" min="<?php echo date('Y-m-d', strtotime('+1 day')); ?>" required>
             </div>
             <div class="form-group">
                 <label>New Return Date</label>
-                <input type="text" name="new_todate" class="form-control" placeholder="dd-mm-yyyy" required>
+                <input type="date" name="new_todate" class="form-control" min="<?php echo date('Y-m-d', strtotime('+1 day')); ?>" required>
             </div>
             <p style="font-size:12px;color:#94a3b8;margin-bottom:16px;">
                 This sends a request to our team — dates won't change until it's reviewed and approved,
