@@ -31,6 +31,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['upload_doc'])) {
     tms_csrf_validate();
     $docType = array_key_exists($_POST['doc_type'] ?? '', DOC_TYPES) ? $_POST['doc_type'] : 'other';
     $notes   = tms_clean($_POST['notes'] ?? '');
+    // Real structured expiry date (Rule 28), validated rather than trusted
+    // as-is -- an invalid/garbage date is silently dropped (stored NULL)
+    // rather than saved as something strtotime() would later misinterpret.
+    $expiryRaw = trim($_POST['expiry_date'] ?? '');
+    $expiryDate = null;
+    if ($expiryRaw !== '') {
+        $d = DateTime::createFromFormat('Y-m-d', $expiryRaw);
+        if ($d && $d->format('Y-m-d') === $expiryRaw) {
+            $expiryDate = $expiryRaw;
+        }
+    }
 
     if (empty($_FILES['document']['size'])) {
         $error = 'Choose a file to upload.';
@@ -58,10 +69,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['upload_doc'])) {
             $stored = time() . '_' . bin2hex(random_bytes(8)) . '.' . $ext;
             if (move_uploaded_file($tmpPath, 'uploads/wallet/' . $stored)) {
                 $stmt = $dbh->prepare(
-                    "INSERT INTO tbltraveldocuments (UserEmail, DocType, OriginalFilename, StoredFilename, MimeType, FileSize, Notes)
-                     VALUES (?, ?, ?, ?, ?, ?, ?)"
+                    "INSERT INTO tbltraveldocuments (UserEmail, DocType, OriginalFilename, StoredFilename, MimeType, FileSize, Notes, ExpiryDate)
+                     VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
                 );
-                $stmt->execute([$email, $docType, tms_clean($_FILES['document']['name']), $stored, $realMime, $size, $notes]);
+                $stmt->execute([$email, $docType, tms_clean($_FILES['document']['name']), $stored, $realMime, $size, $notes, $expiryDate]);
                 $msg = 'Document uploaded securely.';
                 tms_notify($dbh, $email, "📁 Your \"" . $docType . "\" document was added to your Travel Wallet.", 'wallet.php');
             } else {
@@ -153,20 +164,25 @@ $docIcons = ['passport'=>'book','visa'=>'id-card','insurance'=>'shield','id'=>'i
       <form method="post" enctype="multipart/form-data">
         <?php tms_csrf_field(); ?>
         <div class="form-group">
-          <label>Document Type</label>
-          <select name="doc_type" class="form-control">
+          <label for="wallet_doc_type">Document Type</label>
+          <select id="wallet_doc_type" name="doc_type" class="form-control">
             <?php foreach (DOC_TYPES as $key => $label): ?>
             <option value="<?= $key ?>"><?= $label ?></option>
             <?php endforeach; ?>
           </select>
         </div>
         <div class="form-group">
-          <label>File (JPG, PNG, or PDF — max 8MB)</label>
-          <input type="file" name="document" class="form-control" accept=".jpg,.jpeg,.png,.pdf" required>
+          <label for="wallet_document">File (JPG, PNG, or PDF — max 8MB)</label>
+          <input type="file" id="wallet_document" name="document" class="form-control" accept=".jpg,.jpeg,.png,.pdf" required>
         </div>
         <div class="form-group">
-          <label>Notes (optional)</label>
-          <input type="text" name="notes" class="form-control" maxlength="255" placeholder="e.g. Expires March 2027">
+          <label for="wallet_expiry_date">Expiry date (optional)</label>
+          <input type="date" id="wallet_expiry_date" name="expiry_date" class="form-control">
+          <small style="color:#9ca3af;">We'll remind you before this expires.</small>
+        </div>
+        <div class="form-group">
+          <label for="wallet_notes">Notes (optional)</label>
+          <input type="text" id="wallet_notes" name="notes" class="form-control" maxlength="255" placeholder="e.g. Multi-entry visa">
         </div>
         <button type="submit" name="upload_doc" class="btn btn-primary btn-block"><i class="fa fa-lock"></i> Upload Securely</button>
       </form>
@@ -184,6 +200,15 @@ $docIcons = ['passport'=>'book','visa'=>'id-card','insurance'=>'shield','id'=>'i
           <div style="flex:1;">
             <div style="font-size:13px;font-weight:600;"><?= htmlspecialchars(DOC_TYPES[$d->DocType] ?? 'Document') ?></div>
             <div style="font-size:11px;color:#9ca3af;"><?= htmlspecialchars($d->OriginalFilename) ?> &middot; <?= date('d M Y', strtotime($d->UploadedAt)) ?><?= $d->Notes ? ' &middot; ' . htmlspecialchars($d->Notes) : '' ?></div>
+            <?php if (!empty($d->ExpiryDate)):
+              $daysLeft = (int)floor((strtotime($d->ExpiryDate) - strtotime(date('Y-m-d'))) / 86400);
+              $expColor = $daysLeft < 0 ? '#e74c3c' : ($daysLeft <= 30 ? '#e67e22' : '#9ca3af');
+            ?>
+            <div style="font-size:11px;color:<?= $expColor ?>;font-weight:<?= $daysLeft<=30?'700':'400' ?>;">
+              <i class="fa fa-calendar"></i>
+              <?= $daysLeft < 0 ? 'Expired ' . date('d M Y', strtotime($d->ExpiryDate)) : 'Expires ' . date('d M Y', strtotime($d->ExpiryDate)) . " ({$daysLeft} days)" ?>
+            </div>
+            <?php endif; ?>
           </div>
           <a href="wallet-document.php?id=<?= (int)$d->DocId ?>" class="btn btn-xs btn-default"><i class="fa fa-download"></i> Download</a>
           <form method="post" style="display:inline;margin:0;">

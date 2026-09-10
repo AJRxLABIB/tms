@@ -21,12 +21,20 @@ $msg = ''; $error = '';
 if (isset($_POST['redeem']) && $loyalty->Points >= 500) {
     tms_csrf_validate();
     $coupon = 'TMS-' . strtoupper(bin2hex(random_bytes(4)));
-    $discount = floor($loyalty->Points / 500) * 10;
+    // FIX (Round 14): this was uncapped — 5,000 points minted a 100%-off coupon
+    // (a free booking) and 6,000 points produced DiscountPercent = 120. Points
+    // are farmable (20 per review, one review per package, 400+ packages), so
+    // this was reachable in minutes. Capped at a sane maximum.
+    $discount = min(TMS_MAX_LOYALTY_DISCOUNT, floor($loyalty->Points / 500) * 10);
     $dbh->prepare("UPDATE tblloyalty SET Points=Points-:used WHERE UserEmail=:e")
         ->execute([':used'=>floor($loyalty->Points/500)*500, ':e'=>$email]);
     $dbh->prepare("INSERT INTO tblcoupons(Code,DiscountPercent,UserEmail,ExpiryDate,IsUsed) VALUES(:c,:d,:e,DATE_ADD(NOW(),INTERVAL 30 DAY),0)")
         ->execute([':c'=>$coupon,':d'=>$discount,':e'=>$email]);
-    $msg = "Coupon <strong>$coupon</strong> generated! {$discount}% off — valid for 30 days. Use it at checkout.";
+    // The message used to say "use it at checkout" — but checkout.php has no
+    // coupon field at all; the only place a code can be entered is a package's
+    // own booking form. Point people where the feature actually is.
+    $msg = "Coupon <strong>$coupon</strong> generated! {$discount}% off — valid for 30 days. "
+         . "Enter it in the <em>Coupon code</em> box on any package's booking form.";
     $q->execute([':e'=>$email]);
     $loyalty = $q->fetch(PDO::FETCH_OBJ);
 }

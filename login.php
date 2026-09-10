@@ -34,11 +34,29 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (!$email || empty($password)) {
         $error = 'Please enter your email and password.';
     } else {
-        $stmt = $dbh->prepare("SELECT id, FullName, Password FROM tblusers WHERE EmailId = ? LIMIT 1");
-        $stmt->execute([$email]);
-        $user = $stmt->fetch(PDO::FETCH_OBJ);
+        // FIX (Round 14): the brute-force lockout was implemented and recorded
+        // (tms_record_failed_login below) but NEVER checked here — the only
+        // caller of tms_login_lockout_minutes_remaining() was admin/index.php.
+        // tbl_login_attempts filled up with rows nothing ever read, and customer
+        // accounts accepted unlimited password guesses.
+        $waitMinutes = tms_login_lockout_minutes_remaining($dbh, $email, $ip);
+        if ($waitMinutes > 0) {
+            $error = "Too many failed sign-in attempts. Please try again in {$waitMinutes} minute"
+                   . ($waitMinutes === 1 ? '' : 's') . '.';
+            $user = null;
+        } else {
+            $stmt = $dbh->prepare("SELECT id, FullName, Password FROM tblusers WHERE EmailId = ? LIMIT 1");
+            $stmt->execute([$email]);
+            $user = $stmt->fetch(PDO::FETCH_OBJ);
+        }
 
-        if ($user && password_verify($password, $user->Password)) {
+        // FIX (Round 14): this called password_verify() directly, so every
+        // account still holding a legacy md5 hash — including the seeded demo
+        // users — could never sign in on the website, even though the SAME
+        // credentials worked through api/index.php. Every other login path in
+        // the app (admin, API, change-password, 2FA) uses this shared helper,
+        // which accepts a legacy hash and transparently upgrades it to bcrypt.
+        if ($user && tms_verify_password($password, $user->Password, (int)$user->id, $dbh)) {
             tms_clear_login_attempts($dbh, $email, $ip);
             // SECURITY FIX (Section 13 audit): admin/index.php already
             // regenerates the session ID on successful login to prevent

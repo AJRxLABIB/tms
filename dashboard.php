@@ -72,6 +72,20 @@ $stmt = $dbh->prepare("SELECT COUNT(*) FROM tblissues WHERE UserEmail=:e AND (Ad
 $stmt->execute([':e' => $email]);
 $openTickets = (int)$stmt->fetchColumn();
 
+// Marketplace bookings (Round 37 -- sample-data hotels & activities marketplace).
+// Wrapped in try/catch since these tables only exist once a session has triggered
+// the ad-hoc migration in includes/config.php; a brand-new account visiting before
+// that has run should see 0, not an error.
+$marketplaceBookings = 0;
+try {
+    $stmt = $dbh->prepare("SELECT COUNT(*) FROM tblhotel_bookings WHERE UserEmail=:e AND status != 2");
+    $stmt->execute([':e' => $email]);
+    $marketplaceBookings += (int)$stmt->fetchColumn();
+    $stmt = $dbh->prepare("SELECT COUNT(*) FROM tblactivity_bookings WHERE UserEmail=:e AND status != 2");
+    $stmt->execute([':e' => $email]);
+    $marketplaceBookings += (int)$stmt->fetchColumn();
+} catch (Exception $e) { /* tables not migrated yet on this environment -- treat as 0 */ }
+
 // ─── Recent bookings (last 4, any status) ──────────────────────────────────
 $recent = $dbh->prepare(
     "SELECT b.BookingId, b.FromDate, b.status, p.PackageName, p.PackageLocation
@@ -213,6 +227,11 @@ $statusMeta = [
             <i class="fa fa-briefcase"></i>
             <div class="n"><?php echo $documentCount; ?></div>
             <div class="l">Travel Wallet</div>
+          </a>
+          <a href="my-marketplace-bookings.php" class="quick-tile" style="text-decoration:none;">
+            <i class="fa fa-hotel"></i>
+            <div class="n"><?php echo $marketplaceBookings; ?></div>
+            <div class="l">Marketplace Bookings</div>
           </a>
           <a href="reviews.php" class="quick-tile" style="text-decoration:none;">
             <i class="fa fa-comment"></i>

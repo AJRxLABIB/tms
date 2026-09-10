@@ -162,12 +162,13 @@
         <button class="chat-close" onclick="toggleChat()"><i class="fa fa-times"></i></button>
     </div>
 
-    <div class="chat-messages" id="chatMessages">
+    <div class="chat-messages" id="chatMessages" role="log" aria-live="polite" aria-atomic="false">
         <!-- Initial message added by JS -->
     </div>
 
     <div class="chat-input-area">
-        <input type="text" class="chat-input" id="chatInput" placeholder="Ask me anything about tours..." onkeypress="if(event.key==='Enter') sendMessage()">
+        <input type="text" class="chat-input" id="chatInput" placeholder="Ask me anything about tours..."
+           autocomplete="off" onkeydown="if(event.key==='Enter' && !event.isComposing){event.preventDefault();sendMessage();}">
         <button class="chat-mic" id="chatMicBtn" style="display:none;" onclick="toggleListening()" title="Speak your question" aria-label="Speak your question"><i class="fa fa-microphone"></i></button>
         <button class="chat-send" onclick="sendMessage()"><i class="fa fa-paper-plane"></i></button>
     </div>
@@ -175,24 +176,72 @@
 
 <script>
 var chatOpen = false;
-var isTyping = false;
+// Round 14: `isTyping` was declared here and never read or written again, while
+// nothing actually prevented concurrent sends — hammering Enter fired N
+// overlapping requests whose replies then arrived out of order, each one
+// removing a duplicated-id typing indicator and corrupting the history sent on
+// the next turn. `chatBusy` is the real guard, and it is honoured in sendMessage().
+var chatBusy = false;
 var userName = '<?php echo isset($_SESSION['login']) ? htmlspecialchars($_SESSION["login"], ENT_QUOTES) : ""; ?>';
+var CHAT_CSRF = '<?php echo tms_csrf_token(); ?>';
+var CHAT_PAGE_CONTEXT = document.title || '';
 
+<?php
+// LIVE BUG FIX (customer-facing audit): every visitor currently sees this
+// canned knowledge base, not a live model -- GEMINI_API_KEY isn't configured
+// yet, so the "packages" and "map" replies below (previously static text)
+// are the actual answer given to 100% of chat visitors asking "what
+// packages do you have" or "where do you go". They named fictional
+// groupings ("Family Packages - Kerala, Bhutan, Sikkim", "Couple/Honeymoon
+// - Bali, Paris, Switzerland"...) that don't match this catalogue's real
+// PackageType values (Nature, Heritage, City, Beach, Island, Adventure...),
+// and claimed coverage of about 9 countries when the real catalogue spans
+// 40+. Pulling the real top types/countries here keeps the canned fallback
+// honest. json_encode() (not string concatenation) builds the JS string
+// literals below, so quotes/newlines/unicode from real data can never
+// break the surrounding <script> block.
+$tmsChatTopTypes = [];
+$tmsChatTopCountries = [];
+$tmsChatCatalogTotal = 0;
+try {
+    $tmsChatCatalogTotal = (int)$dbh->query("SELECT COUNT(*) FROM tbltourpackages")->fetchColumn();
+    $tmsChatTopTypes = $dbh->query(
+        "SELECT PackageType, COUNT(*) AS n FROM tbltourpackages
+         WHERE PackageType IS NOT NULL AND PackageType <> ''
+         GROUP BY PackageType HAVING n > 0 ORDER BY n DESC LIMIT 5"
+    )->fetchAll(PDO::FETCH_COLUMN);
+    $tmsChatTopCountries = $dbh->query(
+        "SELECT Country, COUNT(*) AS n FROM tbltourpackages
+         WHERE Country IS NOT NULL AND Country <> ''
+         GROUP BY Country ORDER BY n DESC LIMIT 8"
+    )->fetchAll(PDO::FETCH_COLUMN);
+} catch (Exception $e) {
+    error_log('[TMS] chatbot kb catalogue facts failed: ' . $e->getMessage());
+}
+$tmsChatPackagesReply = $tmsChatTopTypes
+    ? ("🌍 We have {$tmsChatCatalogTotal}+ tour packages across categories like "
+        . implode(', ', array_slice($tmsChatTopTypes, 0, 4)) . " and more.\n\nVisit our <a href='package-list.php' style='color:#667eea'>Package List</a> to filter by type, price and destination!")
+    : "🌍 Browse our full range on the <a href='package-list.php' style='color:#667eea'>Package List</a> page -- filter by type, price and destination!";
+$tmsChatMapReply = $tmsChatTopCountries
+    ? ("🗺️ Explore our destinations on our <a href='tour-map.php' style='color:#667eea'>Interactive Map</a>!\n\nWe cover {$tmsChatCatalogTotal}+ destinations, including "
+        . implode(', ', array_slice($tmsChatTopCountries, 0, 6)) . " and more.\n\nFilter by package type and click any marker for details!")
+    : "🗺️ Explore our destinations on our <a href='tour-map.php' style='color:#667eea'>Interactive Map</a>! Filter by package type and click any marker for details!";
+?>
 // Knowledge base
 var kb = [
     { patterns: ['hello','hi','hey','good morning','good evening','greetings'], response: "Hello! 👋 Welcome to TMS Travel Assistant. I'm here to help you plan your dream trip! What can I help you with today?\n\nYou can ask me about:\n• Tour packages\n• Booking process\n• Weather & best travel times\n• Budget planning\n• Safety tips", quick: ['Show Packages','Budget Help','Best Destinations','Book a Tour'] },
-    { patterns: ['package','packages','tour','tours','available','what tours'], response: "🌍 We have amazing tour packages!\n\n• **Family Packages** – Kerala, Bhutan, Sikkim\n• **Couple/Honeymoon** – Bali, Paris, Switzerland\n• **Group Tours** – North East India, Darjeeling\n• **Budget Trips** – Domestic destinations\n• **Luxury Trips** – Dubai, Paris, Maldives\n\nVisit our <a href='package-list.php' style='color:#667eea'>Package List</a> to browse all options!", quick: ['Family Tours','Couple Tours','Budget Tours','AI Recommend'] },
+    { patterns: ['package','packages','tour','tours','available','what tours'], response: <?php echo json_encode($tmsChatPackagesReply, JSON_UNESCAPED_UNICODE); ?>, quick: ['Show Packages','AI Recommend','Budget Planner'] },
     { patterns: ['book','booking','reserve','how to book'], response: "📋 Booking a tour is easy!\n\n1. Browse <a href='package-list.php' style='color:#667eea'>Tour Packages</a>\n2. Click on a package you like\n3. Select your travel dates\n4. Sign in or create an account\n5. Submit your booking\n\nOur team confirms within 24 hours. You can also <a href='custom-trip.php' style='color:#667eea'>design a custom trip</a>!", quick: ['Browse Packages','Custom Trip','Sign Up','Contact Us'] },
-    { patterns: ['price','cost','budget','cheap','expensive','how much'], response: "💰 Our tour packages start from:\n\n• Budget: ৳50,000\n• Mid-range: ৳1,50,000–2,50,000\n• Luxury: ৳2,50,000+\n\nPrices are per person. Use our <a href='budget-planner.php' style='color:#667eea'>Budget Planner</a> to estimate total costs for your group!\n\nWant our AI to find packages within your budget?", quick: ['Budget Planner','AI Recommender','Family Packages','Cheap Packages'] },
+    { patterns: ['price','cost','budget','cheap','expensive','how much'], response: "💰 Our tour packages start from:\n\nPrices vary by destination and season — the live figures are on each package page.\n\nPrices are per person. Use our <a href='budget-planner.php' style='color:#667eea'>Budget Planner</a> to estimate total costs for your group!\n\nWant our AI to find packages within your budget?", quick: ['Budget Planner','AI Recommender','Family Packages','Cheap Packages'] },
     { patterns: ['weather','climate','best time','when to visit','season','temperature'], response: "☀️ Best travel seasons:\n\n🇮🇳 **India/Bhutan/Sikkim** – Oct to May\n🇮🇩 **Bali** – Apr to Sep\n🇦🇪 **Dubai** – Nov to Mar\n🇫🇷 **France/Switzerland** – Apr to Oct\n\nCheck our <a href='weather.php' style='color:#667eea'>Weather Tool</a> for detailed monthly forecasts for any destination!", quick: ['Check Weather','Bali','Dubai','Paris'] },
     { patterns: ['safety','safe','emergency','danger','police','hospital','ambulance'], response: "🛡️ Safety is our priority!\n\nOur <a href='emergency.php' style='color:#667eea'>Emergency Contacts</a> page has:\n\n• Emergency numbers for all destinations\n• Tourist helpline numbers\n• Embassy information\n• Travel safety tips\n\nAlways share your itinerary with someone before traveling!", quick: ['Emergency Contacts','Safety Tips','Travel Insurance','Contact Us'] },
-    { patterns: ['map','location','where','destination','country','place'], response: "🗺️ Explore our destinations on our <a href='tour-map.php' style='color:#667eea'>Interactive Map</a>!\n\nWe cover destinations across:\n🌏 Asia – India, Bali, Bhutan, Thailand\n🌍 Europe – France, Switzerland\n🌎 Middle East – Dubai, UAE\n\nFilter by package type and click any marker for details!", quick: ['View Map','India Tours','Europe Tours','Asia Tours'] },
+    { patterns: ['map','location','where','destination','country','place'], response: <?php echo json_encode($tmsChatMapReply, JSON_UNESCAPED_UNICODE); ?>, quick: ['View Map'] },
     { patterns: ['review','reviews','rating','feedback','testimonial','experience'], response: "⭐ Read real traveler reviews on our <a href='reviews.php' style='color:#667eea'>Review Page</a>!\n\nYou can:\n• Read reviews by package\n• Rate your own trip (1-5 stars)\n• Upload travel photos\n• See overall ratings\n\nWe have verified reviews from real customers!", quick: ['Read Reviews','Write Review','Top Rated','Best Packages'] },
     { patterns: ['custom','customize','personalise','build my own','special request'], response: "🎨 Yes! We offer fully customized trips!\n\nWith our <a href='custom-trip.php' style='color:#667eea'>Custom Trip Planner</a> you can choose:\n\n• Specific destinations\n• Travel dates & duration\n• Accommodation type\n• Transport preference\n• Activities & meal plans\n• Special requests\n\nSubmit your requirements and we'll create a tailor-made quote!", quick: ['Build Custom Trip','Standard Packages','Budget Planner','Contact Us'] },
     { patterns: ['recommend','suggest','which','best for me','advice','help me choose'], response: "🤖 Try our <a href='ai-recommend.php' style='color:#667eea'>AI Tour Recommender</a>!\n\nIt analyzes your:\n• Budget\n• Travel style (family, couple, group)\n• Climate preference\n• Trip duration\n\nAnd suggests the best matching packages. Give it a try!", quick: ['AI Recommender','Family Tours','Couple Tours','Solo Travel'] },
     { patterns: ['language','translate','bengali','hindi','french','arabic','spanish'], response: "🌐 TMS supports multiple languages!\n\nVisit our <a href='language.php' style='color:#667eea'>Language Settings</a> to switch to:\n\n🇧🇩 Bengali | 🇮🇳 Hindi | 🇫🇷 French\n🇸🇦 Arabic | 🇨🇳 Chinese | 🇪🇸 Spanish | 🇩🇪 German\n\nSelect your preferred language for a better experience!", quick: ['Change Language','Bengali','Hindi','English'] },
     { patterns: ['cancel','cancellation','refund','policy'], response: "📋 Our Cancellation Policy:\n\n• 30+ days before: Full refund\n• 15–30 days: 50% refund\n• 7–15 days: 25% refund\n• Under 7 days: No refund\n\nFor special circumstances, please <a href='page.php?type=contact' style='color:#667eea'>contact us</a> directly. We try to be flexible!", quick: ['Contact Support','My Bookings','Book Now','Custom Trip'] },
-    { patterns: ['contact','call','email','phone','support','help','talk to','human'], response: "📞 Need to speak with us?\n\n• 📧 Email: info@tms.com\n• 📱 Phone: +1-800-TMS-TOUR\n• 🕒 Hours: Mon–Sat 9AM–6PM\n• 💬 You can also <a href='enquiry.php' style='color:#667eea'>send an enquiry</a>\n\nOr use the Issue Tracker in your account for booking-related issues.", quick: ['Send Enquiry','Book Now','Emergency','FAQ'] },
+    { patterns: ['contact','call','email','phone','support','help','talk to','human'], response: "📞 Need to speak with us?\n\n• 💬 <a href='enquiry.php' style='color:#667eea'>Send us an enquiry</a> and we'll reply by email\n• 🎫 For an existing booking, open a ticket from your account\n• 🕒 We answer enquiries Mon–Sat\n• 💬 You can also <a href='enquiry.php' style='color:#667eea'>send an enquiry</a>\n\nOr use the Issue Tracker in your account for booking-related issues.", quick: ['Send Enquiry','Book Now','Emergency','FAQ'] },
     { patterns: ['visa','passport','document','requirement'], response: "📄 For visa requirements:\n\n• Requirements vary by nationality and destination\n• We recommend checking official embassy websites\n• We can provide invitation/booking letters\n• Allow 2–4 weeks for visa processing\n\nOur team can guide you through the process — just <a href='enquiry.php' style='color:#667eea'>send an enquiry</a>!", quick: ['Send Enquiry','Emergency Contacts','Contact Us','Book Now'] },
     { patterns: ['thank','thanks','thank you','great','awesome','good','helpful'], response: "😊 You're welcome! I'm glad I could help!\n\nIs there anything else you'd like to know about our tours or services? I'm here 24/7!", quick: ['Browse Packages','Plan My Trip','AI Recommender','Goodbye'] },
     { patterns: ['bye','goodbye','exit','see you','ciao','done'], response: "👋 Safe travels and happy adventures!\n\nCome back anytime you need help planning your trip. TMS is always here for you! 🌍✈️", quick: [] },
@@ -232,25 +281,60 @@ function initChat() {
     addMessage('bot', greet, ['Show Packages','AI Recommender','Budget Help','Safety Info']);
 }
 
+// SECURITY FIX (Round 14): both the visitor's own text and the model's reply
+// used to go into innerHTML with no escaping at all. The system prompt
+// deliberately instructs the model to answer in raw HTML anchors, so the sink is
+// load-bearing and cannot simply be escaped away — instead everything is escaped
+// first and then exactly one construct is allowed back in: a relative-path
+// anchor to a .php page on this site. Anything else the model emits (an <img
+// onerror=...>, a javascript: href, an absolute URL) now renders as visible text
+// instead of executing in a page that holds the visitor's session cookie.
+function chatEscape(v) {
+    var d = document.createElement('div');
+    d.textContent = (v === null || v === undefined) ? '' : String(v);
+    return d.innerHTML;
+}
+
+function chatFormat(text) {
+    // LIVE BUG FIX (customer-facing screenshot): chatEscape() uses the
+    // textContent -> innerHTML trick, which escapes "<", ">" and "&" but
+    // does NOT escape quote characters in text content (only attribute
+    // VALUES need that, and this isn't one). So a real model response like
+    // <a href="budget-planner.php" style="color:#667eea">Budget Planner</a>
+    // came out of chatEscape() as &lt;a href="..." style="..."&gt;...&lt;/a&gt;
+    // -- a literal, un-escaped double quote. The allow-list regex below only
+    // ever matched &quot; or a literal single quote, never a literal double
+    // quote, so this exact (very common) shape silently fell through and
+    // rendered as visible raw HTML tags instead of a clickable link.
+    return chatEscape(text)
+        .replace(/\n/g, '<br>')
+        .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+        .replace(
+            /&lt;a\s+href=(?:&quot;|"|')([a-z0-9\-]{1,40}\.php(?:\?[a-z_]{1,20}=[a-z0-9\-]{1,40})?)(?:&quot;|"|')[^&]*&gt;([^&<]{1,120})&lt;\/a&gt;/gi,
+            '<a href="$1" style="color:#667eea">$2</a>'
+        );
+}
+
 function addMessage(type, text, quickReplies) {
     var msgs = document.getElementById('chatMessages');
     var div = document.createElement('div');
     div.className = 'msg msg-' + type;
 
     var time = new Date().toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'});
-    var formattedText = text.replace(/\n/g,'<br>').replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>');
 
     var html = (type === 'bot' ? '<div class="bot-name">🤖 TMS Assistant</div>' : '') +
-        '<div class="msg-bubble">' + formattedText + '</div>' +
+        '<div class="msg-bubble">' + chatFormat(text) + '</div>' +
         '<div class="msg-time">' + time + '</div>';
 
     if(quickReplies && quickReplies.length > 0) {
         html += '<div class="quick-replies">';
         quickReplies.forEach(function(qr) {
+            var label = chatEscape(qr);
+            var arg = encodeURIComponent(qr);
             if(quickLinks[qr]) {
-                html += '<a href="' + quickLinks[qr] + '" class="qr-btn" onclick="tmsTrackQuickReply(\'' + qr + '\')">' + qr + '</a>';
+                html += '<a href="' + chatEscape(quickLinks[qr]) + '" class="qr-btn" data-qr="' + arg + '">' + label + '</a>';
             } else {
-                html += '<button class="qr-btn" onclick="handleQuickReply(\'' + qr + '\')">' + qr + '</button>';
+                html += '<button type="button" class="qr-btn" data-qr="' + arg + '" data-qr-send="1">' + label + '</button>';
             }
         });
         html += '</div>';
@@ -260,6 +344,20 @@ function addMessage(type, text, quickReplies) {
     msgs.appendChild(div);
     msgs.scrollTop = msgs.scrollHeight;
 }
+
+// Quick replies are delegated rather than carrying inline onclick handlers built
+// by string concatenation (a label containing an apostrophe used to break them).
+document.addEventListener('click', function (e) {
+    var btn = e.target.closest ? e.target.closest('[data-qr]') : null;
+    if (!btn) return;
+    var label = decodeURIComponent(btn.getAttribute('data-qr'));
+    if (btn.hasAttribute('data-qr-send')) {
+        e.preventDefault();
+        handleQuickReply(label);
+    } else {
+        tmsTrackQuickReply(label);
+    }
+});
 
 function showTyping() {
     var msgs = document.getElementById('chatMessages');
@@ -300,55 +398,93 @@ function getResponse(input) {
    is hit, or the request simply fails (offline, slow network, etc.), we fall
    straight back to the original local kb matching below — the widget never
    just breaks or shows a raw error in the chat window. */
-var conversationHistory = []; // [{role:'user'|'assistant', content:'...'}], capped client-side too
-
+// Round 14: history is no longer sent from here. It lives server-side against a
+// long-lived cookie (tms_chat_uid), so the conversation survives a page
+// navigation — including clicking one of the bot's own links, which used to wipe
+// it — and a client can no longer forge "the assistant previously said X".
 function askAI(text) {
     return fetch('api/ai.php?action=chatbot', {
         method: 'POST',
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        body: 'message=' + encodeURIComponent(text) + '&history=' + encodeURIComponent(JSON.stringify(conversationHistory.slice(-8)))
-    }).then(function(r) { return r.json(); }).then(function(data) {
+        body: 'message=' + encodeURIComponent(text) +
+              '&page_context=' + encodeURIComponent(CHAT_PAGE_CONTEXT + ' | ' + location.pathname + location.search) +
+              '&csrf_token=' + encodeURIComponent(CHAT_CSRF)
+    }).then(function(r) {
+        return r.json().then(function (data) { return { status: r.status, data: data }; });
+    }).then(function(res) {
+        var data = res.data;
         if (data && data.success && data.data && data.data.reply) {
             return { ok: true, text: data.data.reply };
         }
-        return { ok: false };
+        // Keep the reason. It used to be discarded, so "the AI is switched off",
+        // "you've hit the rate limit" and "the network is down" were all
+        // indistinguishable from the bot simply giving a poor answer.
+        return { ok: false, reason: (data && data.error) ? data.error : '', status: res.status };
     }).catch(function() {
-        return { ok: false };
+        return { ok: false, reason: 'network' };
     });
+}
+
+function setChatBusy(busy) {
+    chatBusy = busy;
+    var send = document.querySelector('.chat-send');
+    var input = document.getElementById('chatInput');
+    if (send)  { send.disabled = busy; send.style.opacity = busy ? '0.5' : ''; }
+    if (input) { input.disabled = busy; }
+    if (!busy && input) { input.focus(); }
 }
 
 function respondTo(text, appendUserTurn) {
-    if (appendUserTurn) conversationHistory.push({ role: 'user', content: text });
+    setChatBusy(true);
     showTyping();
     askAI(text).then(function(result) {
         hideTyping();
+        setChatBusy(false);
         if (result.ok) {
-            conversationHistory.push({ role: 'assistant', content: result.text });
-            // A light, generic set of shortcuts under every AI reply — the AI
-            // reply itself already contains contextual inline links per the
-            // system prompt, these are just quick common next-steps.
             addMessage('bot', result.text, ['Show Packages','AI Recommender','Budget Planner','Contact Us']);
             speakChatReply(result.text);
-        } else {
-            // Fallback: original local rule-based responder, unchanged.
-            var resp = getResponse(text);
-            addMessage('bot', resp.text, resp.quick);
-            speakChatReply(resp.text);
+            return;
         }
+
+        // Fallback: the original local rule-based responder — but the visitor is
+        // now TOLD it's a standard answer, instead of a weaker reply being
+        // presented as if the assistant had considered their question.
+        var resp = getResponse(text);
+        var note;
+        if (result.reason === 'network') {
+            note = "\n\n_(I couldn't reach the assistant just now, so that's a standard answer. Check your connection and try again.)_";
+        } else if (result.status === 429) {
+            note = "\n\n_(The assistant is busy right now, so that's a standard answer — try again in a minute.)_";
+        } else {
+            note = "\n\n_(The smart assistant isn't available at the moment, so that's a standard answer.)_";
+        }
+        addMessage('bot', resp.text + note, (resp.quick || []).concat(['Try that again']));
+        speakChatReply(resp.text);
     });
 }
 
+var lastUserMessage = '';
+
 function sendMessage() {
+    if (chatBusy) return; // one request in flight at a time
     var input = document.getElementById('chatInput');
     var text = input.value.trim();
     if(!text) return;
     input.value = '';
+    lastUserMessage = text;
     addMessage('user', text, []);
     respondTo(text, true);
 }
 
 function handleQuickReply(text) {
+    if (chatBusy) return;
+    if (text === 'Try that again') {
+        if (!lastUserMessage) return;
+        respondTo(lastUserMessage, false);
+        return;
+    }
     tmsTrackQuickReply(text);
+    lastUserMessage = text;
     addMessage('user', text, []);
     respondTo(text, true);
 }

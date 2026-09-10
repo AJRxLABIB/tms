@@ -52,6 +52,32 @@
   --font-display: 'Fraunces', Georgia, serif;
   --font-body: 'Manrope', sans-serif;
   --font-mono: 'Space Mono', monospace;
+
+  /* NEW (Round 20, spec item 33 — Dark Mode): master prompt asks for a
+     centralized token system covering background/surface/text/secondary
+     text/border/accent/success/warning/danger, redefined per theme rather
+     than patched page-by-page. --bg/--text/--text-muted/--white already
+     existed and were already redefined for dark mode (see
+     includes/header.php's html[data-theme="dark"] block) -- the ones
+     missing were --border and the three status colors, which up to now
+     were hardcoded ad hoc per component (e.g. tour-history.php's own
+     "danger"/"#e74c3c" badge colors, my-trip.php's own status pill
+     colors). Each status token ships as a solid color (icons, borders,
+     text-on-light-bg) plus a "-bg"/"-text" pair for the common
+     light-chip-with-dark-text badge pattern used across booking/payment
+     status pills -- both halves get redefined for dark mode below so a
+     badge never ends up as unreadable dark-on-dark or a chip that stays
+     paper-white against a near-black page. */
+  --border: #DCE6EA;
+  --success: #16A34A;
+  --success-bg: #DCFCE7;
+  --success-text: #14532D;
+  --warning: #D97706;
+  --warning-bg: #FEF3C7;
+  --warning-text: #78350F;
+  --danger: #DC2626;
+  --danger-bg: #FEE2E2;
+  --danger-text: #7F1D1D;
 }
 
 /* ─── RESET & BASE ─── */
@@ -1607,4 +1633,42 @@ textarea:focus-visible,
 @media (max-width: 767px) {
   .rom-btm .room-midle { padding-left: 12px; }
   .rom-btm .room-midle::before { display: none; }
+}
+
+/* ── Sample/demo data badge (Round 37, Rule 3) ──────────────────────────
+   Used on hotels.php/activities.php and their detail pages: this project
+   has no real hotel/activity supplier feed, so every listing is clearly
+   labeled rather than presented as real bookable-today inventory. */
+.tms-sample-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: #fff3cd;
+  color: #8a6d00;
+  border: 1px solid #ffe08a;
+  border-radius: 20px;
+  padding: 3px 11px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .02em;
+  text-transform: uppercase;
+}
+html[data-theme="dark"] .tms-sample-badge {
+  background: #3a2f00;
+  color: #ffd76a;
+  border-color: #5c4a00;
+}
+.tms-sample-banner {
+  background: #fff8e1;
+  border: 1px solid #ffe082;
+  color: #8d6e00;
+  border-radius: 8px;
+  padding: 12px 18px;
+  margin-bottom: 20px;
+  font-size: 13.5px;
+}
+html[data-theme="dark"] .tms-sample-banner {
+  background: #2a2400;
+  border-color: #5c4a00;
+  color: #ffd76a;
 }

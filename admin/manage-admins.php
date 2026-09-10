@@ -1,16 +1,33 @@
 <?php
 /**
- * manage-admins.php — RBAC (Phase 1b)
+ * manage-admins.php — RBAC (master prompt spec item 46)
  *
  * Superadmin-only. Lets a superadmin create additional admin accounts and
- * assign each one a role:
- *   - superadmin: full access (same as every admin before this feature existed)
- *   - manager:    everything except Revenue Analytics, Export Reports, and
- *                 this page itself
+ * assign each one a role. Round 20 expanded this from the original 2-role
+ * (superadmin/manager) system to the spec's 8 granular roles:
+ *   - superadmin:      full access, always implicit everywhere (tms_admin_can())
+ *   - booking_manager: bookings, booking calendar, custom trips
+ *   - package_manager: packages (add/edit/images), popular destinations, coupons
+ *   - finance:         revenue analytics, report exports, coupons
+ *   - support:         support issues, enquiries, live chat, user accounts
+ *   - content_manager: blog, pages, translations, reviews
+ *   - ai_manager:      AI usage dashboard
+ *   - operations:      operations dashboard, activity log, user analytics,
+ *                      emergency contacts, custom trips, booking calendar
+ *   - manager (legacy): kept working for any admin created before this round
+ *     (broad access, same set it always had) but no longer offered for NEW
+ *     admins -- the 8 roles above are strictly more specific. See
+ *     tms_admin_role()'s docblock in includes/config.php.
+ * See each admin/*.php file's tms_admin_require_role() call for the exact,
+ * enforced per-page list -- this docblock is a summary, not the source of
+ * truth.
  *
  * Safeguards:
  *   - Can't delete your own account (avoids accidentally locking yourself out)
  *   - Can't delete the last remaining superadmin (avoids locking EVERYONE out)
+ *   - Can't demote the last remaining superadmin to any other role (same
+ *     reason -- generalized in Round 20 to cover all 8+1 roles, not just
+ *     the old superadmin->manager case)
  *   - Usernames are unique (DB-enforced via uq_admin_username + an
  *     application-level check for a friendly error message)
  *   - Passwords are bcrypt-hashed with tms_hash_password(), same as every
@@ -29,9 +46,14 @@ $msg = ''; $msgType = '';
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['create_admin'])) {
     tms_csrf_validate();
 
+    // Round 20: validate against the full 8-role (+superadmin) set instead
+    // of the old binary superadmin/manager ternary. 'manager' deliberately
+    // excluded here -- it's kept working for existing admins but is no
+    // longer offered for newly-created ones (see this file's docblock).
+    $creatableRoles = array_diff(array_keys(tms_admin_role_labels()), ['manager']);
     $newUser = tms_clean($_POST['new_username'] ?? '');
     $newPass = $_POST['new_password'] ?? '';
-    $newRole = ($_POST['new_role'] ?? '') === 'manager' ? 'manager' : 'superadmin';
+    $newRole = in_array($_POST['new_role'] ?? '', $creatableRoles, true) ? $_POST['new_role'] : 'operations';
 
     if (strlen($newUser) < 3) {
         $msg = 'Username must be at least 3 characters.'; $msgType = 'error';
@@ -59,8 +81,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['create_admin'])) {
 // ─── Change an existing admin's role ───────────────────────────────────────
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['change_role'])) {
     tms_csrf_validate();
-    $targetId  = (int)($_POST['admin_id'] ?? 0);
-    $targetRole = ($_POST['role'] ?? '') === 'manager' ? 'manager' : 'superadmin';
+    $targetId = (int)($_POST['admin_id'] ?? 0);
+    // Round 20: validate against the full role set (all 8 + superadmin +
+    // legacy manager -- a superadmin can still explicitly move someone
+    // back to 'manager' if they want, this just isn't offered when
+    // *creating* a new admin, see the create_admin handler above).
+    $validRoles = array_keys(tms_admin_role_labels());
+    $targetRole = in_array($_POST['role'] ?? '', $validRoles, true) ? $_POST['role'] : null;
 
     $target = $dbh->prepare("SELECT UserName, Role FROM admin WHERE id = :id LIMIT 1");
     $target->execute([':id' => $targetId]);
@@ -68,20 +95,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['change_role'])) {
 
     if (!$targetRow) {
         $msg = 'Admin not found.'; $msgType = 'error';
-    } elseif ($targetRow->Role === 'superadmin' && $targetRole === 'manager') {
-        // Demoting a superadmin — make sure at least one superadmin remains
+    } elseif ($targetRole === null) {
+        $msg = 'Unknown role selected.'; $msgType = 'error';
+    } elseif ($targetRow->Role === 'superadmin' && $targetRole !== 'superadmin') {
+        // Demoting a superadmin to ANY other role — make sure at least one
+        // superadmin remains. Generalized in Round 20: the old check only
+        // caught the specific superadmin->manager case, which would have
+        // let the last superadmin demote themselves to one of the 8 new
+        // roles and lock everyone out of manage-admins.php.
         $remaining = (int)$dbh->query("SELECT COUNT(*) FROM admin WHERE Role='superadmin'")->fetchColumn();
         if ($remaining <= 1) {
             $msg = 'Cannot demote the last remaining super-admin.'; $msgType = 'error';
         } else {
-            $dbh->prepare("UPDATE admin SET Role='manager' WHERE id=:id")->execute([':id' => $targetId]);
-            tms_log_activity($dbh, $_SESSION['alogin'], 'Admin Role Changed', "Demoted '{$targetRow->UserName}' to manager");
-            $msg = "'{$targetRow->UserName}' is now a manager."; $msgType = 'success';
+            $dbh->prepare("UPDATE admin SET Role=:r WHERE id=:id")->execute([':r' => $targetRole, ':id' => $targetId]);
+            $label = tms_admin_role_labels()[$targetRole] ?? $targetRole;
+            tms_log_activity($dbh, $_SESSION['alogin'], 'Admin Role Changed', "Demoted '{$targetRow->UserName}' from superadmin to '$targetRole'");
+            $msg = "'{$targetRow->UserName}' is now {$label}."; $msgType = 'success';
         }
     } else {
         $dbh->prepare("UPDATE admin SET Role=:r WHERE id=:id")->execute([':r' => $targetRole, ':id' => $targetId]);
+        $label = tms_admin_role_labels()[$targetRole] ?? $targetRole;
         tms_log_activity($dbh, $_SESSION['alogin'], 'Admin Role Changed', "Set '{$targetRow->UserName}' to role '$targetRole'");
-        $msg = "'{$targetRow->UserName}' is now a $targetRole."; $msgType = 'success';
+        $msg = "'{$targetRow->UserName}' is now {$label}."; $msgType = 'success';
     }
 }
 
@@ -127,8 +162,15 @@ $admins = $dbh->query("SELECT id, UserName, Role, updationDate FROM admin ORDER 
 .action-btn{display:inline-flex;align-items:center;gap:5px;padding:5px 10px;border-radius:6px;font-size:12px;font-weight:500;border:none;cursor:pointer;text-decoration:none;transition:all .15s;}
 .btn-delete{background:#fee2e2;color:#991b1b;}.btn-delete:hover{background:#fecaca;}
 .role-badge{display:inline-block;padding:3px 10px;border-radius:20px;font-size:11.5px;font-weight:700;letter-spacing:.3px;}
-.role-super{background:#ede9fe;color:#5b21b6;}
+.role-superadmin{background:#ede9fe;color:#5b21b6;}
 .role-manager{background:#dbeafe;color:#1e40af;}
+.role-booking_manager{background:#dbeafe;color:#1e40af;}
+.role-package_manager{background:#cffafe;color:#0e7490;}
+.role-finance{background:#fef3c7;color:#92400e;}
+.role-support{background:#dcfce7;color:#166534;}
+.role-content_manager{background:#fce7f3;color:#9d174d;}
+.role-ai_manager{background:#ede9fe;color:#6d28d9;}
+.role-operations{background:#e0e7ff;color:#3730a3;}
 .create-card{background:#fff;border:1px solid #e2e8f0;border-radius:14px;padding:22px 24px;margin-bottom:24px;max-width:520px;}
 .create-card h4{font-size:15px;font-weight:700;margin:0 0 16px;color:#0f172a;}
 .form-row{margin-bottom:13px;}
@@ -170,8 +212,10 @@ html[data-theme="dark"] .form-row label { color:#94a3b8 !important; }
     <div class="form-row">
       <label>Role</label>
       <select name="new_role">
-        <option value="manager">Manager (operational access, no financial/export data)</option>
-        <option value="superadmin">Super Admin (full access)</option>
+        <?php foreach (tms_admin_role_labels() as $roleSlug => $roleLabel): ?>
+          <?php if ($roleSlug === 'manager') continue; // legacy value, not offered for new admins ?>
+          <option value="<?= htmlspecialchars($roleSlug) ?>" <?= $roleSlug === 'operations' ? 'selected' : '' ?>><?= htmlspecialchars($roleLabel) ?></option>
+        <?php endforeach; ?>
       </select>
     </div>
     <button type="submit" name="create_admin" class="btn-primary-sm"><i class="fa fa-plus"></i> Create Admin</button>
@@ -186,15 +230,16 @@ html[data-theme="dark"] .form-row label { color:#94a3b8 !important; }
   <tr>
     <td><?= (int)$a->id ?></td>
     <td><?= htmlspecialchars($a->UserName) ?><?php if ($a->UserName === $_SESSION['alogin']): ?> <span style="color:#94a3b8;font-size:11px;">(you)</span><?php endif; ?></td>
-    <td><span class="role-badge <?= $a->Role === 'superadmin' ? 'role-super' : 'role-manager' ?>"><?= htmlspecialchars($a->Role) ?></span></td>
+    <td><span class="role-badge role-<?= htmlspecialchars($a->Role ?: 'superadmin') ?>"><?= htmlspecialchars(tms_admin_role_labels()[$a->Role] ?? $a->Role) ?></span></td>
     <td><?= htmlspecialchars($a->updationDate ?? '—') ?></td>
     <td style="display:flex;gap:8px;align-items:center;">
       <form method="post" style="display:inline-flex;gap:6px;align-items:center;">
         <?php tms_csrf_field(); ?>
         <input type="hidden" name="admin_id" value="<?= (int)$a->id ?>">
         <select name="role" class="role-select-inline">
-          <option value="manager" <?= $a->Role==='manager'?'selected':'' ?>>Manager</option>
-          <option value="superadmin" <?= $a->Role==='superadmin'?'selected':'' ?>>Super Admin</option>
+          <?php foreach (tms_admin_role_labels() as $roleSlug => $roleLabel): ?>
+            <option value="<?= htmlspecialchars($roleSlug) ?>" <?= $a->Role === $roleSlug ? 'selected' : '' ?>><?= htmlspecialchars($roleLabel) ?></option>
+          <?php endforeach; ?>
         </select>
         <button type="submit" name="change_role" class="action-btn btn-edit" style="background:#dbeafe;color:#1e40af;"><i class="fa fa-check"></i></button>
       </form>

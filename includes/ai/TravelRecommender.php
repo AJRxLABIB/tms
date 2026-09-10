@@ -88,7 +88,7 @@ Return a JSON array of exactly 5 objects. No other text.
 MSG;
 
         $cacheKey = md5('recommend_' . json_encode($prefs));
-        $result = $this->ai->ask($system, $userMessage, $cacheKey, $email);
+        $result = $this->ai->ask($system, $userMessage, $cacheKey, $email, feature: 'recommender');
 
         if (!$result['success']) {
             // Fallback to rule-based scoring
@@ -123,7 +123,7 @@ MSG;
 User: Budget {$userPrefs['budget']} BDT, {$userPrefs['travelers']} travelers, style {$userPrefs['travel_type']}, climate {$userPrefs['climate']}.
 Return: {\"score\": <int>, \"reason\": \"<string>\"}";
 
-        $result = $this->ai->ask($system, $userMsg, 'match_' . $packageId . '_' . md5(json_encode($userPrefs)), $email);
+        $result = $this->ai->ask($system, $userMsg, 'match_' . $packageId . '_' . md5(json_encode($userPrefs)), $email, feature: 'recommender');
         $data   = $result['success'] ? ($this->ai->parseJson($result['content']) ?? []) : [];
         return ['score' => $data['score'] ?? 75, 'reason' => $data['reason'] ?? 'Good match for your profile'];
     }
@@ -159,6 +159,19 @@ Return: {\"score\": <int>, \"reason\": \"<string>\"}";
     private function getUserProfileContext(string $email): string {
         if ($email === 'guest') return 'First-time user, no history available';
         try {
+            // NEW (Round 20, spec item 48 -- Privacy): honor
+            // PersonalizationEnabled before reading any booking history into
+            // the AI prompt. A missing tblusers row (shouldn't happen for a
+            // real logged-in email, but defensively) doesn't opt someone
+            // OUT by accident -- only an explicit 0 does, matching the
+            // column's own DEFAULT 1.
+            $prefStmt = $this->db->prepare("SELECT PersonalizationEnabled FROM tblusers WHERE EmailId = ? LIMIT 1");
+            $prefStmt->execute([$email]);
+            $personalizationEnabled = $prefStmt->fetchColumn();
+            if ($personalizationEnabled !== false && (int)$personalizationEnabled === 0) {
+                return 'Personalization disabled by user -- do not use booking history';
+            }
+
             // Get past bookings
             $stmt = $this->db->prepare(
                 "SELECT p.PackageName, p.PackageLocation

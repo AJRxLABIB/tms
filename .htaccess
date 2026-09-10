@@ -1,0 +1,59 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# TMS — Apache configuration
+# ─────────────────────────────────────────────────────────────────────────────
+
+# 1. Never serve secrets, dumps, or internal notes over HTTP.
+#    .env sits inside the document root, so without this rule anyone could read
+#    the API keys at http://<host>/tms/.env
+<FilesMatch "^\.env|\.(env|sql|md|log|ini|bak|old|orig)$">
+    <IfModule mod_authz_core.c>
+        Require all denied
+    </IfModule>
+    <IfModule !mod_authz_core.c>
+        Order allow,deny
+        Deny from all
+    </IfModule>
+</FilesMatch>
+
+# 2. Let the REST API see "Authorization: Bearer ..." headers.
+#    XAMPP's default Apache/PHP setup strips them before PHP ever sees them,
+#    which silently breaks every token-authenticated API call.
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    RewriteCond %{HTTP:Authorization} .
+    RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
+</IfModule>
+
+# 3. Don't advertise the directory listing of folders without an index file.
+Options -Indexes
+
+
+# 4. Baseline security response headers (production hardening pass).
+#    Deliberately NOT including a Content-Security-Policy here: ~60 pages in
+#    this project use inline <script>/<style> blocks and load Bootstrap 3 /
+#    Font Awesome / Google Fonts from CDNs, so a CSP strict enough to matter
+#    would need `unsafe-inline` almost everywhere to avoid silently breaking
+#    real, working pages (Rule 2) -- and with the local database currently
+#    unstable, this isn't a safe moment to click through every page and
+#    verify a new CSP doesn't break something. The headers below are safe
+#    regardless of that: they only change how browsers treat responses this
+#    site was already going to send, not what the site is allowed to load.
+<IfModule mod_headers.c>
+    # Stop browsers guessing a different MIME type than the one the server sent
+    # (e.g. treating an uploaded travel-document as executable HTML/JS).
+    Header always set X-Content-Type-Options "nosniff"
+    # Nothing in this project is meant to be embedded in another site's frame.
+    Header always set X-Frame-Options "SAMEORIGIN"
+    # Send the referring URL to other sites only as an origin, never the full
+    # path/query (booking IDs, tokens, etc. never leak via the Referer header).
+    Header always set Referrer-Policy "strict-origin-when-cross-origin"
+    # Only the features this app actually uses: tour-map.php asks for
+    # geolocation, the AI copilot's voice input asks for the microphone.
+    # Camera and payment-UI delegation are switched off since nothing here
+    # uses them.
+    Header always set Permissions-Policy "geolocation=(self), microphone=(self), camera=(), payment=()"
+    # No effect over plain HTTP (which is what local XAMPP serves) -- browsers
+    # only honor this over HTTPS, so it's inert here and simply already in
+    # place for whenever this is deployed behind TLS.
+    Header always set Strict-Transport-Security "max-age=31536000; includeSubDomains"
+</IfModule>

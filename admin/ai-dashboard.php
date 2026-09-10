@@ -7,10 +7,64 @@ session_start();
 error_reporting(E_ALL); ini_set('display_errors', '0'); ini_set('log_errors', '1');
 include('../includes/config.php');
 tms_require_admin();
+tms_admin_require_role($dbh, ['ai_manager', 'manager']); // Round 20 RBAC (item 46)
 
 require_once '../includes/ai/AIClient.php';
 require_once '../includes/ai/SentimentAnalyser.php';
 require_once '../includes/ai/FraudDetector.php';
+require_once '../includes/ai/AIEvaluator.php';
+
+// Round 35 (item 22, "AI Evaluation suite"): admin-triggered only, never
+// automatic -- this makes ~8 real AI calls (real quota cost), so it must
+// never run on a normal page load. See AIEvaluator.php's own docblock for
+// what it covers and what it deliberately doesn't.
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['run_eval_suite'])) {
+    tms_csrf_validate();
+    // The itinerary case alone can legitimately take up to ~90s (see
+    // ItineraryPlanner's own extended budget for that workload), this runs
+    // 8 cases in sequence with a small deliberate gap between each (see
+    // AIEvaluator::runAll()) -- a default 30s max_execution_time would kill
+    // this mid-run.
+    set_time_limit(240);
+    $evalSummary = (new AIEvaluator($dbh))->runAll();
+    header('Content-Type: application/json');
+    echo json_encode($evalSummary);
+    exit;
+}
+
+// Travel Alert System (master prompt item 17). tbl_safety_alerts and this
+// page's own read-side display (further down) already existed, but the
+// "+ Add Alert" button's JS posted add_alert=1 to nowhere -- there was no
+// server-side handler at all, so clicking it silently did nothing (Rule 7:
+// a control that does nothing is a fake feature). Adding the real write
+// path here, plus a Dismiss action that didn't exist either.
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_alert'])) {
+    tms_csrf_validate();
+    $destination = trim($_POST['destination'] ?? '');
+    $alertType   = trim($_POST['alert_type'] ?? '');
+    $message     = trim($_POST['message'] ?? '');
+    $severity    = in_array($_POST['severity'] ?? '', ['info', 'warning', 'critical'], true) ? $_POST['severity'] : 'warning';
+    $alertMsg = '';
+    if ($destination === '' || $alertType === '' || $message === '') {
+        $alertMsg = 'Destination, type, and message are all required -- alert not created.';
+    } else {
+        $dbh->prepare("INSERT INTO tbl_safety_alerts (destination, alert_type, message, severity, active) VALUES (:d, :t, :m, :s, 1)")
+            ->execute([':d' => $destination, ':t' => $alertType, ':m' => $message, ':s' => $severity]);
+        tms_log_activity($dbh, $_SESSION['alogin'], 'Safety Alert Created', "Destination: $destination, type: $alertType, severity: $severity");
+        $alertMsg = "Alert created for {$destination}.";
+    }
+    header('Location: ai-dashboard.php?alert_msg=' . urlencode($alertMsg));
+    exit;
+}
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['dismiss_alert'])) {
+    tms_csrf_validate();
+    $alertId = (int)$_POST['dismiss_alert'];
+    $dbh->prepare("UPDATE tbl_safety_alerts SET active = 0 WHERE id = :id")->execute([':id' => $alertId]);
+    tms_log_activity($dbh, $_SESSION['alogin'], 'Safety Alert Dismissed', "Alert #$alertId");
+    header('Location: ai-dashboard.php?alert_msg=' . urlencode('Alert dismissed.'));
+    exit;
+}
+$alertFlashMsg = isset($_GET['alert_msg']) ? htmlspecialchars($_GET['alert_msg'], ENT_QUOTES, 'UTF-8') : '';
 
 // ── Load stats ────────────────────────────────────────────────────────────────
 $stats = [];
@@ -67,6 +121,53 @@ try {
     $stmt->execute();
     $topUsers = $stmt->fetchAll(PDO::FETCH_OBJ);
 } catch(Exception $e) { $topUsers = []; }
+
+// Round 34 (item 21, "AI Provider Abstraction + telemetry"): per-feature
+// success rate, latency and token usage from the new tbl_ai_telemetry log
+// (one row per AIClient call, any provider) -- separate from tbl_ai_usage_log
+// above, which only ever counted calls for rate limiting.
+try {
+    $stmt = $dbh->prepare(
+        "SELECT feature,
+                COUNT(*) AS calls,
+                SUM(success) AS successes,
+                ROUND(AVG(latency_ms)) AS avg_latency_ms,
+                SUM(COALESCE(total_tokens,0)) AS total_tokens
+         FROM tbl_ai_telemetry
+         WHERE created_at > DATE_SUB(NOW(), INTERVAL 7 DAY)
+         GROUP BY feature
+         ORDER BY calls DESC"
+    );
+    $stmt->execute();
+    $telemetryByFeature = $stmt->fetchAll(PDO::FETCH_OBJ);
+} catch (Exception $e) { $telemetryByFeature = []; }
+
+try {
+    $stmt = $dbh->prepare(
+        "SELECT COUNT(*) AS calls, SUM(success) AS successes, ROUND(AVG(latency_ms)) AS avg_latency_ms
+         FROM tbl_ai_telemetry WHERE created_at > DATE_SUB(NOW(), INTERVAL 7 DAY) AND cached = 0"
+    );
+    $stmt->execute();
+    $telemetrySummary = $stmt->fetch(PDO::FETCH_OBJ) ?: null;
+} catch (Exception $e) { $telemetrySummary = null; }
+$telemetryCalls       = $telemetrySummary ? (int)$telemetrySummary->calls : 0;
+$telemetrySuccessRate = $telemetryCalls > 0 ? round(100 * (int)$telemetrySummary->successes / $telemetryCalls) : null;
+$telemetryAvgLatency  = $telemetrySummary && $telemetrySummary->avg_latency_ms !== null ? (int)$telemetrySummary->avg_latency_ms : null;
+
+// Which provider is actually live right now -- read straight from config
+// rather than instantiating AIClient, since the dashboard only needs to
+// display this, not call the AI.
+$activeProviderName  = defined('AI_PROVIDER') ? AI_PROVIDER : 'gemini';
+if ($activeProviderName === 'openai') {
+    $activeProviderModel = defined('OPENAI_MODEL') ? OPENAI_MODEL : '';
+    $activeProviderReady = defined('OPENAI_API_KEY') && OPENAI_API_KEY !== '';
+} else {
+    $activeProviderModel = defined('GEMINI_MODEL') ? GEMINI_MODEL : '';
+    $activeProviderReady = defined('GEMINI_API_KEY') && GEMINI_API_KEY !== '' && GEMINI_API_KEY !== 'YOUR_GEMINI_API_KEY_HERE';
+}
+
+// Round 35 -- eval run history for the panel below.
+$recentEvalRuns = (new AIEvaluator($dbh))->recentRuns(8);
 
 // Recent AI itineraries
 try {
@@ -378,7 +479,17 @@ html[data-theme="dark"] [style*="background:#fff"], html[data-theme="dark"] [sty
 
 <div class="ai-page-header">
   <div class="ai-page-title"><i class="fa fa-magic"></i> AI System Dashboard</div>
-  <div class="ai-status"><span class="ai-status-dot"></span> AI Engine Active — Google Gemini</div>
+  <?php
+    // Round 34: this used to hardcode "Google Gemini" regardless of what was
+    // actually configured -- now that AI_PROVIDER can select a different
+    // vendor, a hardcoded label here would make the dashboard lie about
+    // which one is live the moment anyone changes it.
+    $activeProviderLabel = $activeProviderName === 'openai' ? 'OpenAI' : 'Google Gemini';
+  ?>
+  <div class="ai-status">
+    <span class="ai-status-dot" style="<?= $activeProviderReady ? '' : 'background:#dc2626;' ?>"></span>
+    AI Engine <?= $activeProviderReady ? 'Active' : 'NOT CONFIGURED' ?> — <?= htmlspecialchars($activeProviderLabel) ?><?= $activeProviderModel ? ' (' . htmlspecialchars($activeProviderModel) . ')' : '' ?>
+  </div>
 </div>
 
 <div class="content-wrap">
@@ -420,6 +531,12 @@ html[data-theme="dark"] [style*="background:#fff"], html[data-theme="dark"] [sty
       <a href="?action=analyse_reviews" class="btn-admin warning" style="margin-top:8px;padding:5px 10px;font-size:11px;">Analyse Now</a>
       <?php endif; ?>
     </div>
+    <div class="stat-card">
+      <div class="stat-icon" style="background:#f0f9ff;">📡</div>
+      <div class="stat-value"><?= $telemetrySuccessRate !== null ? $telemetrySuccessRate . '%' : '—' ?></div>
+      <div class="stat-label">AI Success Rate (7d, live calls)</div>
+      <div class="stat-trend" style="color:#718096;"><?= $telemetryAvgLatency !== null ? number_format($telemetryAvgLatency) . ' ms avg latency' : 'No calls logged yet' ?></div>
+    </div>
   </div>
 
   <!-- AI Insights -->
@@ -429,6 +546,18 @@ html[data-theme="dark"] [style*="background:#fff"], html[data-theme="dark"] [sty
       <button class="btn-admin primary" onclick="getInsights()" id="insightsBtn"><i class="fa fa-magic"></i> Generate Insights</button>
     </div>
     <div class="insights-output" id="insightsOutput"></div>
+  </div>
+
+  <!-- AI Evaluation Suite (Round 35, item 22) -->
+  <div class="insights-panel">
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;">
+      <div style="font-size:15px;font-weight:800;color:#1a202c;display:flex;align-items:center;gap:8px;"><i class="fa fa-flask" style="color:#667eea;"></i> AI Evaluation Suite</div>
+      <button class="btn-admin primary" onclick="runEvalSuite()" id="evalSuiteBtn"><i class="fa fa-play"></i> Run Eval Suite</button>
+    </div>
+    <div style="font-size:12px;color:#718096;margin-top:6px;">
+      Runs 9 real calls (recommender, itinerary, sentiment, budget optimizer, packing list, crowd predictor, package generator, site assistant, NL search parser) against the live <?= htmlspecialchars($activeProviderLabel) ?> provider and checks whether each one genuinely succeeded -- not just that a graceful fallback covered for it. Uses real API quota and can take 1-3 minutes (paced with short gaps between calls to avoid tripping a free-tier provider's own per-minute limit); run manually when checking a provider/prompt change, not on a schedule.
+    </div>
+    <div class="insights-output" id="evalSuiteOutput" style="display:none;white-space:pre-wrap;"></div>
   </div>
 
   <!-- Main grid -->
@@ -673,6 +802,61 @@ html[data-theme="dark"] [style*="background:#fff"], html[data-theme="dark"] [sty
       </div>
     </div>
 
+    <!-- AI Telemetry by Feature (Round 34, item 21) -->
+    <div class="panel">
+      <div class="panel-header">
+        <div class="panel-title"><i class="fa fa-tachometer"></i> AI Telemetry by Feature (7 days)</div>
+      </div>
+      <div class="panel-body" style="padding:0;">
+        <div class="table-responsive"><table class="ai-table">
+          <thead><tr><th>Feature</th><th>Calls</th><th>Success</th><th>Avg Latency</th><th>Tokens</th></tr></thead>
+          <tbody>
+            <?php foreach ($telemetryByFeature as $t):
+                $rate = (int)$t->calls > 0 ? round(100 * (int)$t->successes / (int)$t->calls) : 0;
+            ?>
+            <tr>
+              <td><?= htmlspecialchars($t->feature) ?></td>
+              <td><strong><?= (int)$t->calls ?></strong></td>
+              <td style="color:<?= $rate >= 90 ? '#16a34a' : ($rate >= 60 ? '#d97706' : '#dc2626') ?>;"><?= $rate ?>%</td>
+              <td style="font-size:11px;color:#718096;"><?= $t->avg_latency_ms !== null ? number_format((int)$t->avg_latency_ms) . ' ms' : '—' ?></td>
+              <td style="font-size:11px;color:#718096;"><?= $t->total_tokens > 0 ? number_format((int)$t->total_tokens) : '—' ?></td>
+            </tr>
+            <?php endforeach; ?>
+            <?php if (empty($telemetryByFeature)): ?>
+            <tr><td colspan="5" style="text-align:center;color:#a0aec0;padding:20px;">No telemetry logged yet -- generates as AI features are used</td></tr>
+            <?php endif; ?>
+          </tbody>
+        </table></div>
+      </div>
+    </div>
+
+    <!-- Recent Eval Suite Runs (Round 35, item 22) -->
+    <div class="panel">
+      <div class="panel-header">
+        <div class="panel-title"><i class="fa fa-flask"></i> Recent Eval Suite Runs</div>
+      </div>
+      <div class="panel-body" style="padding:0;">
+        <div class="table-responsive"><table class="ai-table">
+          <thead><tr><th>Date</th><th>Provider</th><th>Result</th><th>Run By</th></tr></thead>
+          <tbody>
+            <?php foreach ($recentEvalRuns as $run):
+                $runRate = (int)$run->total_cases > 0 ? round(100 * (int)$run->passed_cases / (int)$run->total_cases) : 0;
+            ?>
+            <tr>
+              <td style="font-size:11px;color:#718096;"><?= date('M j H:i', strtotime($run->created_at)) ?></td>
+              <td style="font-size:11px;color:#718096;"><?= htmlspecialchars($run->provider . ' (' . $run->model . ')') ?></td>
+              <td style="color:<?= $runRate >= 90 ? '#16a34a' : ($runRate >= 60 ? '#d97706' : '#dc2626') ?>;"><strong><?= (int)$run->passed_cases ?>/<?= (int)$run->total_cases ?></strong></td>
+              <td style="font-size:11px;color:#718096;"><?= htmlspecialchars(substr($run->run_by, 0, 20)) ?></td>
+            </tr>
+            <?php endforeach; ?>
+            <?php if (empty($recentEvalRuns)): ?>
+            <tr><td colspan="4" style="text-align:center;color:#a0aec0;padding:20px;">No eval runs yet -- use the "Run Eval Suite" button above</td></tr>
+            <?php endif; ?>
+          </tbody>
+        </table></div>
+      </div>
+    </div>
+
     <!-- Recent Itineraries -->
     <div class="panel">
       <div class="panel-header">
@@ -725,19 +909,30 @@ html[data-theme="dark"] [style*="background:#fff"], html[data-theme="dark"] [sty
         <div class="panel-title"><i class="fa fa-shield"></i> Safety Alerts</div>
         <button class="btn-admin primary" style="font-size:11px;padding:5px 10px;" onclick="addAlert()">+ Add Alert</button>
       </div>
+      <?php if ($alertFlashMsg): ?>
+      <div style="padding:10px 16px;background:#eff6ff;color:#1e40af;font-size:12.5px;border-bottom:1px solid #dbeafe;"><i class="fa fa-info-circle"></i> <?= $alertFlashMsg ?></div>
+      <?php endif; ?>
       <div class="panel-body" style="padding:0;">
         <div class="table-responsive"><table class="ai-table">
-          <thead><tr><th>Destination</th><th>Type</th><th>Severity</th></tr></thead>
+          <thead><tr><th>Destination</th><th>Type</th><th>Severity</th><th>Message</th><th></th></tr></thead>
           <tbody>
             <?php foreach ($safetyAlerts as $alert): ?>
             <tr>
               <td><?= htmlspecialchars($alert->destination) ?></td>
               <td><?= htmlspecialchars($alert->alert_type) ?></td>
               <td><span class="sev-badge <?= $alert->severity ?>"><?= $alert->severity ?></span></td>
+              <td style="max-width:260px;font-size:12px;color:#4a5568;"><?= htmlspecialchars($alert->message) ?></td>
+              <td>
+                <form method="post" style="display:inline;" onsubmit="return confirm('Dismiss this alert? Travelers will stop seeing it.');">
+                  <?php tms_csrf_field(); ?>
+                  <input type="hidden" name="dismiss_alert" value="<?= (int)$alert->id ?>">
+                  <button type="submit" class="btn-admin" style="font-size:11px;padding:3px 8px;background:#fee2e2;color:#991b1b;"><i class="fa fa-times"></i> Dismiss</button>
+                </form>
+              </td>
             </tr>
             <?php endforeach; ?>
             <?php if (empty($safetyAlerts)): ?>
-            <tr><td colspan="3" style="text-align:center;color:#48bb78;padding:20px;"><i class="fa fa-check-circle"></i> No active alerts</td></tr>
+            <tr><td colspan="5" style="text-align:center;color:#48bb78;padding:20px;"><i class="fa fa-check-circle"></i> No active alerts</td></tr>
             <?php endif; ?>
           </tbody>
         </table></div>
@@ -759,6 +954,7 @@ html[data-theme="dark"] [style*="background:#fff"], html[data-theme="dark"] [sty
 </div>
 
 <script>
+const TMS_CSRF_TOKEN = <?= json_encode(tms_csrf_token()) ?>;
 async function getInsights() {
   const btn    = document.getElementById('insightsBtn');
   const output = document.getElementById('insightsOutput');
@@ -778,17 +974,53 @@ async function getInsights() {
   btn.disabled  = false;
 }
 
-function addAlert() {
-  const dest = prompt('Destination:');
-  const type = prompt('Alert type (weather/safety/road):');
-  const msg  = prompt('Alert message:');
-  if (dest && type && msg) {
-    fetch('', {
+async function runEvalSuite() {
+  const btn    = document.getElementById('evalSuiteBtn');
+  const output = document.getElementById('evalSuiteOutput');
+  btn.innerHTML = '<i class="fa fa-spinner fa-spin"></i> Running (up to ~3 min)…';
+  btn.disabled  = true;
+  output.style.display = 'block';
+  output.textContent   = 'Running 8 real AI calls against the live provider -- this can take a minute or two, especially the itinerary case…';
+
+  try {
+    const res = await fetch('', {
       method: 'POST',
       headers: {'Content-Type':'application/x-www-form-urlencoded'},
-      body: `add_alert=1&destination=${encodeURIComponent(dest)}&alert_type=${encodeURIComponent(type)}&message=${encodeURIComponent(msg)}&severity=warning`
-    }).then(() => location.reload());
+      body: `run_eval_suite=1&csrf_token=${encodeURIComponent(TMS_CSRF_TOKEN)}`
+    });
+    const json = await res.json();
+    const lines = [`${json.passed}/${json.total} cases passed — provider: ${json.provider} (${json.model})`, ''];
+    (json.cases || []).forEach(c => {
+      const mark = c.passed ? '✅' : '❌';
+      const cachedNote = (c.telemetry && Number(c.telemetry.cached) === 1) ? ' [cached]' : '';
+      const sanityNote = c.passed && !c.sanity_ok ? ' (⚠ succeeded but response shape looked off)' : '';
+      const errNote = !c.passed ? ' — ' + (c.run_error || (c.telemetry ? c.telemetry.error_message : 'no telemetry recorded for this call')) : '';
+      lines.push(`${mark} ${c.label}${cachedNote} (${c.wall_ms} ms)${sanityNote}${errNote}`);
+    });
+    output.textContent = lines.join('\n');
+  } catch (e) {
+    output.textContent = 'Eval suite failed to run. Please try again.';
   }
+  btn.innerHTML = '<i class="fa fa-play"></i> Run Eval Suite';
+  btn.disabled  = false;
+}
+
+function addAlert() {
+  const dest = prompt('Destination:');
+  if (!dest) return;
+  const type = prompt('Alert type (weather/safety/road):');
+  if (!type) return;
+  const msg  = prompt('Alert message:');
+  if (!msg) return;
+  // Round 20 fix (item 17 -- Travel Alert System): this used to POST to
+  // nowhere -- there was no server-side handler for add_alert at all, so
+  // the button silently did nothing. Now posts with the page's own CSRF
+  // token to the real handler at the top of this file.
+  fetch('', {
+    method: 'POST',
+    headers: {'Content-Type':'application/x-www-form-urlencoded'},
+    body: `add_alert=1&csrf_token=${encodeURIComponent(TMS_CSRF_TOKEN)}&destination=${encodeURIComponent(dest)}&alert_type=${encodeURIComponent(type)}&message=${encodeURIComponent(msg)}&severity=warning`
+  }).then(() => location.reload());
 }
 
 function tmsMiniToggleTheme() {

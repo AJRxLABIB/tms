@@ -19,56 +19,93 @@
         </li>";
     }
     ?>
+    <?php
+    // Round 20 RBAC (item 46): show a link only if the logged-in admin's
+    // role actually has server-side access to it (tms_admin_can() is the
+    // exact same check tms_admin_require_role() enforces on the page
+    // itself, so this can't silently drift out of sync with what's really
+    // allowed -- a link the sidebar hides was never a real permission
+    // anyway, since the page would 403 it either way).
+    $canSee = function (array $roles) use ($dbh) {
+        return isset($dbh) && tms_admin_can($dbh, $roles);
+    };
+    ?>
     <div class="nav-section-label">Main</div>
     <ul style="list-style:none;padding:0;">
       <?php navItem('dashboard.php','tachometer','Dashboard',$cur); ?>
+      <?php if ($canSee(['operations', 'manager'])): ?>
+        <?php navItem('operations-dashboard.php','exclamation-circle','Operations',$cur); ?>
+      <?php endif; ?>
     </ul>
 
     <div class="nav-section-label">Packages</div>
     <ul style="list-style:none;padding:0;">
-      <?php navItem('manage-packages.php','briefcase','All Packages',$cur); ?>
-      <?php navItem('add-package.php','plus-circle','Add Package',$cur); ?>
+      <?php if ($canSee(['package_manager', 'manager'])): ?>
+        <?php navItem('manage-packages.php','briefcase','All Packages',$cur); ?>
+        <?php navItem('add-package.php','plus-circle','Add Package',$cur); ?>
+      <?php endif; ?>
     </ul>
 
     <div class="nav-section-label">Bookings & Users</div>
     <ul style="list-style:none;padding:0;">
-      <?php navItem('manage-bookings.php','calendar-check-o','Manage Bookings',$cur); ?>
-      <?php navItem('booking-calendar.php','calendar','Booking Calendar',$cur); ?>
-      <?php navItem('manage-users.php','users','Manage Users',$cur); ?>
+      <?php if ($canSee(['booking_manager', 'operations', 'manager'])): ?>
+        <?php navItem('manage-bookings.php','calendar-check-o','Manage Bookings',$cur); ?>
+        <?php navItem('booking-calendar.php','calendar','Booking Calendar',$cur); ?>
+        <?php navItem('manage-marketplace-bookings.php','suitcase','Marketplace Bookings',$cur); ?>
+      <?php endif; ?>
+      <?php if ($canSee(['support', 'manager'])): ?>
+        <?php navItem('manage-users.php','users','Manage Users',$cur); ?>
+      <?php endif; ?>
     </ul>
 
     <div class="nav-section-label">Communication</div>
     <ul style="list-style:none;padding:0;">
-      <?php navItem('manage-enquiries.php','envelope','Enquiries',$cur); ?>
-      <?php navItem('manage-issues.php','exclamation-triangle','Support Issues',$cur); ?>
-      <?php navItem('live-chat.php','comments','Live Chat',$cur); ?>
+      <?php if ($canSee(['support', 'manager'])): ?>
+        <?php navItem('manage-enquiries.php','envelope','Enquiries',$cur); ?>
+        <?php navItem('manage-issues.php','exclamation-triangle','Support Issues',$cur); ?>
+        <?php navItem('live-chat.php','comments','Live Chat',$cur); ?>
+      <?php endif; ?>
     </ul>
 
     <div class="nav-section-label">Content</div>
     <ul style="list-style:none;padding:0;">
-      <?php navItem('manage-pages.php','file-text','Manage Pages',$cur); ?>
-      <?php navItem('manage-blog.php','pencil-square-o','Blog Posts',$cur); ?>
-      <?php navItem('manage-reviews.php','star','Reviews',$cur); ?>
-      <?php navItem('manage-custom-trips.php','map-o','Custom Trips',$cur); ?>
+      <?php if ($canSee(['content_manager', 'manager'])): ?>
+        <?php navItem('manage-pages.php','file-text','Manage Pages',$cur); ?>
+        <?php navItem('manage-blog.php','pencil-square-o','Blog Posts',$cur); ?>
+      <?php endif; ?>
+      <?php if ($canSee(['content_manager', 'support', 'manager'])): ?>
+        <?php navItem('manage-reviews.php','star','Reviews',$cur); ?>
+      <?php endif; ?>
+      <?php if ($canSee(['operations', 'booking_manager', 'manager'])): ?>
+        <?php navItem('manage-custom-trips.php','map-o','Custom Trips',$cur); ?>
+      <?php endif; ?>
     </ul>
 
     <div class="nav-section-label">Analytics & Tools</div>
     <ul style="list-style:none;padding:0;">
-      <?php $__tmsRole = isset($dbh) ? tms_admin_role($dbh) : 'superadmin'; ?>
-      <?php if ($__tmsRole === 'superadmin'): ?>
+      <?php if ($canSee(['finance'])): ?>
         <?php navItem('revenue-analytics.php','bar-chart','Revenue Analytics',$cur); ?>
-        <?php navItem('user-analytics.php','users','User Analytics',$cur); ?>
-        <?php navItem('popular-destinations.php','map-marker','Popular Destinations',$cur); ?>
-        <?php /* ai-dashboard.php existed already (573 lines — AI usage stats,
-                 sentiment breakdown, top AI users) but had no link anywhere
-                 in the admin, so it was only reachable by typing the URL. */ ?>
-        <?php navItem('ai-dashboard.php','magic','AI Usage Dashboard',$cur); ?>
         <?php navItem('export-report.php','download','Export Reports',$cur); ?>
       <?php endif; ?>
-      <?php navItem('manage-coupons.php','tag','Coupons',$cur); ?>
-      <?php navItem('manage-emergency.php','phone','Emergency Contacts',$cur); ?>
-      <?php navItem('manage-translations.php','language','Translations',$cur); ?>
-      <?php navItem('activity-log.php','history','Activity Log',$cur); ?>
+      <?php if ($canSee(['operations', 'finance'])): ?>
+        <?php navItem('user-analytics.php','users','User Analytics',$cur); ?>
+      <?php endif; ?>
+      <?php if ($canSee(['package_manager'])): ?>
+        <?php navItem('popular-destinations.php','map-marker','Popular Destinations',$cur); ?>
+      <?php endif; ?>
+      <?php if ($canSee(['ai_manager', 'manager'])): ?>
+        <?php navItem('ai-dashboard.php','magic','AI Usage Dashboard',$cur); ?>
+      <?php endif; ?>
+      <?php if ($canSee(['finance', 'package_manager', 'manager'])): ?>
+        <?php navItem('manage-coupons.php','tag','Coupons',$cur); ?>
+      <?php endif; ?>
+      <?php if ($canSee(['operations', 'manager'])): ?>
+        <?php navItem('manage-emergency.php','phone','Emergency Contacts',$cur); ?>
+        <?php navItem('activity-log.php','history','Activity Log',$cur); ?>
+      <?php endif; ?>
+      <?php if ($canSee(['content_manager', 'manager'])): ?>
+        <?php navItem('manage-translations.php','language','Translations',$cur); ?>
+      <?php endif; ?>
     </ul>
 
     <div class="nav-section-label">Account</div>

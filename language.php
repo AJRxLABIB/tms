@@ -32,8 +32,14 @@ if (isset($_POST['setlang'])) {
 
 if (isset($_GET['lang'])) {
     if (tms_persist_language($dbh, tms_clean($_GET['lang']), $allowedLangs)) {
-        $redirect = isset($_GET['redirect']) ? $_GET['redirect'] : 'index.php';
-        header('location: ' . $redirect);
+        // FIX (Round 14): this redirected to any URL supplied in the query
+        // string, so language.php?lang=en&redirect=https://evil.example sent the
+        // visitor straight off-site from a trusted page. login.php already had
+        // the correct guard; this reuses it.
+        $redirect = isset($_GET['redirect']) ? (string)$_GET['redirect'] : 'index.php';
+        $safeRedirect = ($redirect !== '' && !str_starts_with($redirect, '//') && !str_contains($redirect, '://'))
+            ? $redirect : 'index.php';
+        header('location: ' . $safeRedirect);
         exit;
     }
 }

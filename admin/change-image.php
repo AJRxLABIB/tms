@@ -32,6 +32,7 @@ header('location:index.php');
 exit; // SECURITY FIX (Round 11): missing exit meant this redirect never actually stopped execution
 }
 else{
+	tms_admin_require_role($dbh, ['package_manager', 'manager']); // Round 20 RBAC (item 46)
 	$imgid=intval($_GET['imgid']);
 if(isset($_POST['submit']))
 {

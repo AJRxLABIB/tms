@@ -5,7 +5,14 @@ include('includes/config.php');
 require_once __DIR__ . '/includes/ExploreService.php';
 
 // Explore Mode is a logged-in feature (matches "after a user logs in, show two options")
-tms_require_user();
+// LIVE BUG FIX (customer-facing audit): this page is real browsing/
+// marketing content -- it's explicitly allowed in robots.txt and listed
+// in sitemap.php for search engines -- but a blanket "require login
+// everywhere" change (see includes/config.php's tms_require_user())
+// silently gated it too, so Google (and any signed-out visitor) was
+// redirected to the homepage instead of seeing this page. Intentionally
+// left public; booking/account actions on this page still check
+// $_SESSION['login'] individually where needed.
 
 $service = new ExploreService($dbh);
 $recent  = $service->getRecentHistory($_SESSION['login'] ?? '', 6);

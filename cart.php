@@ -104,7 +104,21 @@ html[data-theme="dark"] .summary-row.total { color: var(--text) !important; }
           <div class="meta" style="color:#b45309;font-weight:600;"><i class="fa fa-users"></i> Only <?php echo $itSeatsLeft; ?> seats left for this package</div>
           <?php endif; ?>
         </div>
-        <div class="price"><?php echo tms_currency((float)$it->EffectivePrice); ?></div>
+        <?php /* FIX (Round 14): this showed the PER-PERSON price while the Total
+                 multiplies by NoOfPersons — and the traveller count appeared nowhere
+                 on the page. One item for 3 people read "৳12,000" beside a total of
+                 "৳36,000" with nothing explaining the difference, which reads as an
+                 overcharge. ticket.php already did this correctly. */
+           $pax = max(1, (int)$it->NoOfPersons); ?>
+        <div class="price">
+          <?php echo tms_currency((float)$it->EffectivePrice); ?>
+          <div style="font-weight:400;font-size:12px;opacity:.75;">
+            × <?php echo $pax; ?> traveller<?php echo $pax > 1 ? 's' : ''; ?>
+            <?php if ($pax > 1): ?>
+              = <strong><?php echo tms_currency((float)$it->EffectivePrice * $pax); ?></strong>
+            <?php endif; ?>
+          </div>
+        </div>
         <button class="cart-remove" onclick="if(confirm('Remove this item from your cart?')) window.location='cart.php?remove=<?php echo (int)$it->id; ?>'"><i class="fa fa-trash"></i></button>
       </div>
       <?php endforeach; ?>

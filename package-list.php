@@ -2,7 +2,14 @@
 session_start();
 error_reporting(E_ALL); ini_set('display_errors', '0'); ini_set('log_errors', '1');
 include('includes/config.php');
-tms_require_user(); // Batch 1 (landing/auth gating): whole app now requires login
+// LIVE BUG FIX (customer-facing audit): this page is real browsing/
+// marketing content -- it's explicitly allowed in robots.txt and listed
+// in sitemap.php for search engines -- but a blanket "require login
+// everywhere" change (see includes/config.php's tms_require_user())
+// silently gated it too, so Google (and any signed-out visitor) was
+// redirected to the homepage instead of seeing this page. Intentionally
+// left public; booking/account actions on this page still check
+// $_SESSION['login'] individually where needed.
 
 // ─── Pagination & filter params ───────────────────────────────────────────────
 $perPage    = 6;
@@ -13,6 +20,26 @@ $filterType = tms_clean($_GET['type']   ?? '');
 $sortBy     = in_array($_GET['sort'] ?? '', ['price_asc','price_desc','name']) ? $_GET['sort'] : 'default';
 $quick      = tms_clean($_GET['quick'] ?? '');
 $maxPrice   = isset($_GET['max_price']) && is_numeric($_GET['max_price']) ? max(0, (float)$_GET['max_price']) : null;
+// Round 36 (item 30, structured search) -- a duration range in days, from
+// either the manual "Duration" dropdown below or the natural-language
+// search box's parsed output (includes/ai/NLSearchParser.php). Both
+// produce the same [min, max] shape; a single value (min===max) is an
+// exact-day request, a real range is a bucket like "3-4 days".
+$durationMin = isset($_GET['dur_min']) && is_numeric($_GET['dur_min']) ? max(0, min(60, (int)$_GET['dur_min'])) : null;
+$durationMax = isset($_GET['dur_max']) && is_numeric($_GET['dur_max']) ? max(0, min(60, (int)$_GET['dur_max'])) : null;
+// The manual "Duration" dropdown below submits a single bucket value
+// ("2-3") instead of two separate params -- parse it into the same
+// [min, max] shape when dur_min/dur_max weren't already given directly
+// (that path is only used by the NL search box's redirect).
+if ($durationMin === null && $durationMax === null && !empty($_GET['dur']) && preg_match('/^(\d{1,2})-(\d{1,2})$/', (string)$_GET['dur'], $dm)) {
+    $durationMin = max(0, min(60, (int)$dm[1]));
+    $durationMax = max($durationMin, min(60, (int)$dm[2]));
+}
+if ($durationMin !== null && $durationMax === null) { $durationMax = $durationMin; }
+if ($durationMax !== null && $durationMin === null) { $durationMin = $durationMax; }
+// An informational note surfaced by the NL search box (e.g. "December"
+// wasn't usable as a filter) -- display-only, never used in the query.
+$nlNote = mb_substr(tms_clean($_GET['nl_note'] ?? ''), 0, 300);
 
 // ─── Smart Search quick filters ────────────────────────────────────────────────
 // Deliberately grounded in columns that actually exist and hold real data,
@@ -22,14 +49,44 @@ $maxPrice   = isset($_GET['max_price']) && is_numeric($_GET['max_price']) ? max(
 // meaningful as prices change.
 $avgPriceRow = $dbh->query("SELECT AVG(PackagePrice) FROM tbltourpackages WHERE Status=1")->fetchColumn();
 $avgPrice = $avgPriceRow ? (float)$avgPriceRow : 0;
+// FIX (Round 14): the Family / Couple / Group chips matched
+// `PackageType LIKE '%Family%'` etc. Only the nine original demo rows use those
+// words — the 400-package catalogue that ships in data/packages_seed.json uses
+// types like Adventure, Beach, Heritage, Island, Mountain, Nature, Wildlife. So
+// "Couple" returned 1 result out of 413 and "Family" returned 4, which reads as
+// a broken filter. The audience chips are replaced with chips built from the
+// types the catalogue actually contains, so every chip is guaranteed to return
+// results and the set stays correct as the catalogue changes.
 $quickFilters = [
     'cheap'   => ['label' => 'Budget-Friendly', 'icon' => 'fa-tag'],
     'premium' => ['label' => 'Premium',         'icon' => 'fa-gem'],
-    'family'  => ['label' => 'Family',          'icon' => 'fa-users'],
-    'couple'  => ['label' => 'Couple',          'icon' => 'fa-heart'],
-    'group'   => ['label' => 'Group',           'icon' => 'fa-user-friends'],
     'rated'   => ['label' => 'Highly Rated',    'icon' => 'fa-star'],
 ];
+
+$typeIcons = [
+    'adventure' => 'fa-hiking',    'beach'    => 'fa-umbrella-beach', 'island'  => 'fa-water',
+    'mountain'  => 'fa-mountain',  'heritage' => 'fa-landmark',       'nature'  => 'fa-tree',
+    'wildlife'  => 'fa-paw',       'religious'=> 'fa-place-of-worship','city'   => 'fa-city',
+    'wetland'   => 'fa-water',     'scenic drive' => 'fa-road',       'family'  => 'fa-users',
+    'couple'    => 'fa-heart',     'group'    => 'fa-user-friends',
+];
+try {
+    $typeRows = $dbh->query(
+        "SELECT PackageType, COUNT(*) AS n FROM tbltourpackages
+         WHERE Status=1 AND PackageType IS NOT NULL AND PackageType <> ''
+         GROUP BY PackageType HAVING n > 0 ORDER BY n DESC LIMIT 8"
+    )->fetchAll(PDO::FETCH_ASSOC) ?: [];
+    foreach ($typeRows as $t) {
+        $slug  = 'type:' . strtolower($t['PackageType']);
+        $first = strtolower(trim(explode('/', $t['PackageType'])[0]));
+        $quickFilters[$slug] = [
+            'label' => $t['PackageType'] . ' (' . $t['n'] . ')',
+            'icon'  => $typeIcons[$first] ?? 'fa-suitcase',
+        ];
+    }
+} catch (Exception $e) {
+    error_log('[TMS] package type chips failed: ' . $e->getMessage());
+}
 
 // ─── Build query ──────────────────────────────────────────────────────────────
 $where  = [];
@@ -55,17 +112,15 @@ if ($quick !== '' && isset($quickFilters[$quick])) {
             $where[] = "PackagePrice > :avgprice2";
             $params[':avgprice2'] = $avgPrice;
             break;
-        case 'family':
-            $where[] = "PackageType LIKE '%Family%'";
-            break;
-        case 'couple':
-            $where[] = "PackageType LIKE '%Couple%'";
-            break;
-        case 'group':
-            $where[] = "PackageType LIKE '%Group%'";
-            break;
         case 'rated':
             $where[] = "AvgRating >= 4";
+            break;
+        default:
+            // Chips generated from the catalogue's own types (see above).
+            if (str_starts_with($quick, 'type:')) {
+                $where[] = "LOWER(PackageType) = :quicktype";
+                $params[':quicktype'] = substr($quick, 5);
+            }
             break;
     }
 }
@@ -82,20 +137,42 @@ $orderSQL = match($sortBy) {
     default      => 'ORDER BY PackageId DESC',
 };
 
-// Total count for pagination
-$countQ = $dbh->prepare("SELECT COUNT(*) FROM tbltourpackages $whereSQL");
-$countQ->execute($params);
-$totalRows  = (int)$countQ->fetchColumn();
-$totalPages = (int)ceil($totalRows / $perPage);
+if ($durationMin !== null) {
+    // PackageDuration is free text ("3-4 Days", "Half Day"), not a numeric
+    // column, so it can't be pushed into the SQL WHERE the way price/type
+    // are -- see NLSearchParser::durationOverlaps(). With ~400 packages in
+    // this catalog, fetching every row matching the OTHER filters and doing
+    // the duration check + pagination in PHP is simple and fast (Rule 73);
+    // it would need revisiting well before the catalog reached a size where
+    // that stopped being true.
+    require_once __DIR__ . '/includes/ai/NLSearchParser.php';
+    $sql   = "SELECT * FROM tbltourpackages $whereSQL $orderSQL";
+    $query = $dbh->prepare($sql);
+    foreach ($params as $k => $v) { $query->bindValue($k, $v, PDO::PARAM_STR); }
+    $query->execute();
+    $allMatches = array_values(array_filter(
+        $query->fetchAll(PDO::FETCH_OBJ),
+        fn($r) => NLSearchParser::durationOverlaps($r->PackageDuration ?? '', $durationMin, $durationMax)
+    ));
+    $totalRows  = count($allMatches);
+    $totalPages = (int)ceil($totalRows / $perPage);
+    $results    = array_slice($allMatches, $offset, $perPage);
+} else {
+    // Total count for pagination
+    $countQ = $dbh->prepare("SELECT COUNT(*) FROM tbltourpackages $whereSQL");
+    $countQ->execute($params);
+    $totalRows  = (int)$countQ->fetchColumn();
+    $totalPages = (int)ceil($totalRows / $perPage);
 
-// Paginated results
-$sql   = "SELECT * FROM tbltourpackages $whereSQL $orderSQL LIMIT :limit OFFSET :offset";
-$query = $dbh->prepare($sql);
-foreach ($params as $k => $v) { $query->bindValue($k, $v, PDO::PARAM_STR); }
-$query->bindValue(':limit',  $perPage, PDO::PARAM_INT);
-$query->bindValue(':offset', $offset,  PDO::PARAM_INT);
-$query->execute();
-$results = $query->fetchAll(PDO::FETCH_OBJ);
+    // Paginated results
+    $sql   = "SELECT * FROM tbltourpackages $whereSQL $orderSQL LIMIT :limit OFFSET :offset";
+    $query = $dbh->prepare($sql);
+    foreach ($params as $k => $v) { $query->bindValue($k, $v, PDO::PARAM_STR); }
+    $query->bindValue(':limit',  $perPage, PDO::PARAM_INT);
+    $query->bindValue(':offset', $offset,  PDO::PARAM_INT);
+    $query->execute();
+    $results = $query->fetchAll(PDO::FETCH_OBJ);
+}
 
 // Batch-fetch wishlist membership for the current page's results in ONE query
 // (previously ran a separate SELECT per card in the loop below — a classic N+1 pattern)
@@ -220,6 +297,75 @@ html[data-theme="dark"] .btn-reset { background: #232b37 !important; color: var(
 html[data-theme="dark"] .results-info { color: var(--text-muted) !important; }
 html[data-theme="dark"] .no-results { color: var(--text-light) !important; }
         .nearby-tab.active{background:var(--secondary);border-color:var(--secondary);color:#fff;}</style>
+        <!-- ── Natural-language search (Round 36, item 30) ── -->
+        <div class="pkg-toolbar wow fadeInDown" data-wow-delay=".05s" style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;">
+            <div style="flex:1;min-width:240px;">
+                <label style="font-size:13px;font-weight:600;color:#555;margin-bottom:4px;display:block;">
+                    <i class="fa fa-magic"></i> Describe the trip you want
+                </label>
+                <input type="text" id="nlSearchInput" class="form-control"
+                       placeholder="e.g. cheap 3-day beach trip under &#2547;20,000"
+                       maxlength="300">
+            </div>
+            <button type="button" id="nlSearchBtn" class="btn-search" onclick="tmsNlSearch()">
+                <i class="fa fa-magic"></i> Find it
+            </button>
+            <div id="nlSearchStatus" style="width:100%;font-size:12.5px;color:#888;"></div>
+        </div>
+        <script>
+        const TMS_NL_CSRF = <?php echo json_encode(tms_csrf_token()); ?>;
+        function tmsNlSearch() {
+            var input = document.getElementById('nlSearchInput');
+            var status = document.getElementById('nlSearchStatus');
+            var q = (input.value || '').trim();
+            if (!q) { status.textContent = 'Type a description of the trip you want first.'; return; }
+            status.textContent = 'Reading your request…';
+            fetch('api/ai.php?action=nl_search', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+                body: 'query=' + encodeURIComponent(q) + '&csrf_token=' + encodeURIComponent(TMS_NL_CSRF)
+            })
+            .then(function(r) { return r.json(); })
+            .then(function(res) {
+                if (!res.success) { status.textContent = res.error || 'Could not read that request. Try the filters below instead.'; return; }
+                var f = res.data.filters;
+                var params = new URLSearchParams();
+                // The AI only ever chooses filter VALUES -- this page's own
+                // existing, trusted query (above) is what actually runs.
+                // Deliberately NOT falling back to the raw sentence as a
+                // keyword search: most valid requests ("cheap 3-day beach
+                // trip") have no place name in them at all, and LIKE-matching
+                // the whole sentence against PackageName/Location/Country
+                // would just return zero results instead of using type/price/
+                // duration, which are exactly the filters that DO apply.
+                if (f.keyword)    { params.set('search', f.keyword); }
+                if (f.type)       { params.set('type', f.type); }
+                if (f.max_price)  { params.set('max_price', f.max_price); }
+                if (f.duration_min !== null && f.duration_min !== undefined) {
+                    params.set('dur_min', f.duration_min);
+                    params.set('dur_max', f.duration_max);
+                }
+                if (f.rated_only) { params.set('quick', 'rated'); }
+                var note = res.data.note;
+                if (!note && params.toString() === '') {
+                    note = "Couldn't pick out specific filters from that description -- showing all packages instead.";
+                }
+                if (note) { params.set('nl_note', note); }
+                window.location.href = 'package-list.php?' + params.toString();
+            })
+            .catch(function() { status.textContent = 'Something went wrong -- try the filters below instead.'; });
+        }
+        document.getElementById('nlSearchInput').addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') { e.preventDefault(); tmsNlSearch(); }
+        });
+        </script>
+
+        <?php if ($nlNote !== ''): ?>
+        <div class="wow fadeIn" style="background:#fff8e1;border:1px solid #ffe082;color:#8d6e00;border-radius:8px;padding:10px 16px;margin-bottom:16px;font-size:13px;">
+            <i class="fa fa-info-circle"></i> <?php echo htmlspecialchars($nlNote, ENT_QUOTES, 'UTF-8'); ?>
+        </div>
+        <?php endif; ?>
+
         <!-- ── Search & filter bar ── -->
         <div class="pkg-toolbar wow fadeInDown" data-wow-delay=".1s">
             <form method="get" action="package-list.php">
@@ -242,6 +388,33 @@ html[data-theme="dark"] .no-results { color: var(--text-light) !important; }
                                 <option value="<?php echo htmlspecialchars($t, ENT_QUOTES, 'UTF-8'); ?>"
                                     <?php echo ($filterType === $t) ? 'selected' : ''; ?>>
                                     <?php echo htmlspecialchars($t, ENT_QUOTES, 'UTF-8'); ?>
+                                </option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+                    <div class="col-md-3" style="flex:0 0 170px;">
+                        <label style="font-size:13px;font-weight:600;color:#555;margin-bottom:4px;">
+                            <i class="fa fa-clock-o"></i> Duration
+                        </label>
+                        <?php
+                        // Round 36 -- buckets built from the real PackageDuration
+                        // text shapes seen in the catalog (see NLSearchParser's
+                        // durationOverlaps()), not invented labels.
+                        $durationBuckets = [
+                            ''      => 'Any Duration',
+                            '0-1'   => 'Half / 1 Day',
+                            '2-3'   => '2-3 Days',
+                            '4-5'   => '4-5 Days',
+                            '6-8'   => '6-8 Days',
+                            '9-60'  => '9+ Days',
+                        ];
+                        $currentBucket = ($durationMin !== null) ? ($durationMin . '-' . $durationMax) : '';
+                        ?>
+                        <select name="dur" class="form-control">
+                            <?php foreach ($durationBuckets as $bval => $blabel): ?>
+                                <option value="<?php echo htmlspecialchars($bval, ENT_QUOTES, 'UTF-8'); ?>"
+                                    <?php echo ($currentBucket === $bval) ? 'selected' : ''; ?>>
+                                    <?php echo htmlspecialchars($blabel, ENT_QUOTES, 'UTF-8'); ?>
                                 </option>
                             <?php endforeach; ?>
                         </select>
@@ -271,11 +444,14 @@ html[data-theme="dark"] .no-results { color: var(--text-light) !important; }
             <!-- ── Results summary ── -->
             <div class="results-info" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;">
                 <div>
-                <?php if ($search !== '' || $filterType !== ''): ?>
+                <?php if ($search !== '' || $filterType !== '' || $durationMin !== null): ?>
                     Showing <strong><?php echo $totalRows; ?></strong> result<?php echo $totalRows !== 1 ? 's' : ''; ?>
                     <?php echo $search !== '' ? 'for "<strong>' . htmlspecialchars($search, ENT_QUOTES, 'UTF-8') . '</strong>"' : ''; ?>
                     <?php echo $filterType !== '' ? '· Type: <strong>' . htmlspecialchars($filterType, ENT_QUOTES, 'UTF-8') . '</strong>' : ''; ?>
                     <?php echo $maxPrice !== null ? '· Under <strong>' . tms_currency($maxPrice) . '</strong>' : ''; ?>
+                    <?php if ($durationMin !== null): ?>
+                    · <strong><?php echo ($durationMin === $durationMax) ? $durationMin : $durationMin.'–'.$durationMax; ?> day<?php echo $durationMax !== 1 ? 's' : ''; ?></strong>
+                    <?php endif; ?>
                 <?php else: ?>
                     <strong><?php echo $totalRows; ?></strong> package<?php echo $totalRows !== 1 ? 's' : ''; ?> available
                 <?php endif; ?>
@@ -446,7 +622,7 @@ function tmsSwitchView(view) {
             TMS_MAP_POINTS.forEach(function(p) {
                 var m = L.marker([p.lat, p.lng]).addTo(tmsPkgMap)
                     .bindPopup('<strong>' + p.name.replace(/</g,'&lt;') + '</strong><br>' + p.price +
-                        '<br><a href="package-details.php?id=' + p.id + '">View package</a>');
+                        '<br><a href="package-details.php?pkgid=' + p.id + '">View package</a>');
                 bounds.push([p.lat, p.lng]);
             });
             tmsPkgMap.fitBounds(bounds, { padding: [40, 40], maxZoom: 12 });

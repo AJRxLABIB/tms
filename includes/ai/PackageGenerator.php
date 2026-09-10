@@ -123,7 +123,7 @@ Generate ONE complete package. No other text.
 MSG;
 
         $cacheKey = md5('package_' . json_encode($prefs));
-        $result   = $this->ai->ask($system, $userMsg, $cacheKey, $email);
+        $result   = $this->ai->ask($system, $userMsg, $cacheKey, $email, feature: 'package_gen');
 
         if (!$result['success']) {
             return $this->fallbackPackage($prefs);

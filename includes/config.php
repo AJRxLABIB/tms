@@ -21,25 +21,74 @@ tms_load_dotenv(__DIR__ . '/../.env');
 require_once __DIR__ . '/mailer.php';
 require_once __DIR__ . '/totp.php';
 
-// ─── AI Configuration (Google Gemini — FREE) ──────────────────────────────────
+// ─── AI Configuration ──────────────────────────────────────────────────────
+// Round 34 (item 21, "AI Provider Abstraction"): AIClient.php used to talk
+// to Google Gemini directly with no seam to swap or add a vendor. It now
+// delegates to a small provider object (includes/ai/providers/) chosen by
+// AI_PROVIDER. Default stays 'gemini' -- an existing .env with only
+// GEMINI_API_KEY set (and no AI_PROVIDER line at all) behaves exactly as
+// before this round.
+define('AI_PROVIDER',     strtolower(trim((string) tms_env('AI_PROVIDER', 'gemini'))));
+
 define('GEMINI_API_KEY',  tms_env('GEMINI_API_KEY', ''));
 define('GEMINI_MODEL',    tms_env('GEMINI_MODEL', 'gemini-2.5-flash')); // free-tier model as of mid-2026 (gemini-1.5-flash is shut down)
-define('AI_MAX_TOKENS',   (int) tms_env('AI_MAX_TOKENS', 2000));
+
+// OpenAI (or any OpenAI-Chat-Completions-compatible endpoint -- point
+// OPENAI_BASE_URL at a compatible provider instead of api.openai.com if
+// needed). Implemented against OpenAI's long-documented Chat Completions
+// shape; this session's web access was blocked when trying to re-verify it
+// against current docs, and there is no OPENAI_API_KEY configured in this
+// environment to test against a real account -- verify against
+// https://platform.openai.com/docs/api-reference/chat before relying on
+// this in production. See includes/ai/providers/OpenAIProvider.php and
+// SESSION_SUMMARY_INDEX.md #34.
+define('OPENAI_API_KEY',  tms_env('OPENAI_API_KEY', ''));
+define('OPENAI_MODEL',    tms_env('OPENAI_MODEL', 'gpt-4o-mini'));
+define('OPENAI_BASE_URL', rtrim((string) tms_env('OPENAI_BASE_URL', 'https://api.openai.com/v1'), '/'));
+
+define('AI_MAX_TOKENS',   (int) tms_env('AI_MAX_TOKENS', 32768));
 define('AI_CACHE_TTL',    (int) tms_env('AI_CACHE_TTL', 3600));   // Cache AI responses for 1 hour
 define('AI_RATE_LIMIT',   (int) tms_env('AI_RATE_LIMIT', 30));    // Max AI calls per user per hour
+
+// ─── Commercial guard rails ──────────────────────────────────────────────────
+// The largest discount any single coupon may apply. Loyalty redemption used to
+// be uncapped (floor(points/500)*10 with no ceiling), so 5,000 points minted a
+// 100%-off coupon and 6,000 points produced 120%. Applied both when a coupon is
+// created and again when it is redeemed, so an existing bad row can't be used.
+define('TMS_MAX_LOYALTY_DISCOUNT', (int) tms_env('TMS_MAX_LOYALTY_DISCOUNT', 40));
 
 // ─── Backward-compat aliases (so existing code using ANTHROPIC_* still works) ─
 define('ANTHROPIC_API_KEY', GEMINI_API_KEY);
 define('ANTHROPIC_MODEL',   GEMINI_MODEL);
 
-// Diagnostic only — a valid Google AI Studio key normally starts with "AIza".
-// This does NOT block the app (some proxied/alternate key formats exist),
-// it just logs so "AI features silently return 503" isn't a total mystery.
-if (GEMINI_API_KEY !== '' && !str_starts_with(GEMINI_API_KEY, 'AIza')) {
-    error_log('[TMS Config] GEMINI_API_KEY does not look like a standard Google AI Studio key '
-        . '(those normally start with "AIza"). If AI-powered features (Explore Mode overview, '
-        . 'AI Recommender, chatbots) are failing, regenerate a fresh key at '
-        . 'https://aistudio.google.com and update .env.');
+// Diagnostic only — gated to whichever provider AI_PROVIDER actually
+// selects (Round 34), so switching to OpenAI no longer logs a misleading
+// "GEMINI_API_KEY is empty" warning about a provider the site isn't using.
+if (AI_PROVIDER === 'openai') {
+    if (OPENAI_API_KEY === '') {
+        error_log('[TMS Config] AI_PROVIDER=openai but OPENAI_API_KEY is empty — every AI '
+            . 'feature (chatbot, Explore overview, AI Recommender, planner, packing assistant) '
+            . 'will return its non-AI fallback. Set OPENAI_API_KEY in .env. See .env.example.');
+    }
+} else {
+    // A valid Google AI Studio key normally starts with "AIza". This does
+    // NOT block the app (some proxied/alternate key formats exist), it just
+    // logs so "AI features silently return 503" isn't a total mystery.
+    if (GEMINI_API_KEY === '') {
+        // FIX (Round 14): the diagnostic below only fired for a MALFORMED key, so the
+        // far more common "no .env at all" case logged nothing and every AI feature
+        // silently degraded to canned fallback text with no clue why.
+        error_log('[TMS Config] GEMINI_API_KEY is empty — every AI feature (chatbot, Explore '
+            . 'overview, AI Recommender, planner, packing assistant) will return its non-AI '
+            . 'fallback. Create a .env file in the project root containing GEMINI_API_KEY=... '
+            . '(get a free key at https://aistudio.google.com). See .env.example.');
+    }
+    if (GEMINI_API_KEY !== '' && !str_starts_with(GEMINI_API_KEY, 'AIza')) {
+        error_log('[TMS Config] GEMINI_API_KEY does not look like a standard Google AI Studio key '
+            . '(those normally start with "AIza"). If AI-powered features (Explore Mode overview, '
+            . 'AI Recommender, chatbots) are failing, regenerate a fresh key at '
+            . 'https://aistudio.google.com and update .env.');
+    }
 }
 
 // ─── Weather Configuration (OpenWeatherMap — FREE, 1000 calls/day) ───────────
@@ -192,6 +241,13 @@ if (empty($_SESSION['tms_api_tables'])) {
     $_SESSION['tms_api_tables'] = true;
 }
 
+// Round 37 (items 12/13) -- Hotel System + Activities Marketplace as
+// standalone bookable products, separate from tbltourpackages.
+if (empty($_SESSION['tms_marketplace_tables'])) {
+    _tms_run_marketplace_migrations($dbh);
+    $_SESSION['tms_marketplace_tables'] = true;
+}
+
 // ─── Schema-drift repair (NOT session-gated — see note below) ─────────────────
 // ROOT-CAUSE FIX (audit finding, July 2026):
 // Several tables (tbltourpackages, tblusers, tblbooking, tblissues, tblpages)
@@ -296,6 +352,20 @@ function _tms_repair_schema_drift(PDO $dbh): void {
         'Language' => "Language VARCHAR(10) DEFAULT 'en'",
         'ReferralCode' => 'ReferralCode VARCHAR(12) DEFAULT NULL',
         'ReferredBy'   => 'ReferredBy VARCHAR(100) DEFAULT NULL',
+        // NEW (Round 20, spec item 48 -- Privacy): backs privacy.php's
+        // notification/personalization toggles and the account-deletion
+        // flow. NotificationsEnabled gates only the non-critical booking-
+        // status emails sent via tms_notify_booking_owner() -- security/
+        // transactional mail (password reset, the original booking
+        // confirmation) is never gated by this, on purpose, so turning
+        // notifications off can't accidentally lock someone out of a
+        // password reset. PersonalizationEnabled gates whether
+        // TravelRecommender pulls past-booking history into its prompts.
+        // DeletedAt marks an anonymized (soft-deleted) account -- see
+        // privacy.php's delete flow and tms_anonymize_user() below.
+        'NotificationsEnabled'   => 'NotificationsEnabled TINYINT(1) DEFAULT 1',
+        'PersonalizationEnabled' => 'PersonalizationEnabled TINYINT(1) DEFAULT 1',
+        'DeletedAt'              => 'DeletedAt TIMESTAMP NULL DEFAULT NULL',
     ]);
     tms_ensure_columns($dbh, 'tblbooking', [
         'MobileNumber'    => 'MobileNumber VARCHAR(20) DEFAULT NULL',
@@ -314,6 +384,18 @@ function _tms_repair_schema_drift(PDO $dbh): void {
         'RefundStatus'       => 'RefundStatus VARCHAR(20) DEFAULT NULL',
         'RefundNote'         => 'RefundNote VARCHAR(255) DEFAULT NULL',
         'VerificationCode'   => 'VerificationCode VARCHAR(20) DEFAULT NULL',
+        // Payment architecture (see PAYMENTS.md). Self-healing here (like
+        // every other column in this function) means the new payment.php
+        // flow works immediately on any install, local or already-hosted,
+        // without anyone having to remember to run a separate migration
+        // step -- consistent with how every other column in this project
+        // has always been added. database/migrate.php still exists and
+        // tracks this same change explicitly for anyone who wants an
+        // auditable schema history (Rule 39); both mechanisms agreeing is
+        // fine since ALTER TABLE ADD COLUMN here is itself guarded by the
+        // existing-column check at the top of tms_ensure_columns().
+        'PaymentStatus'      => "PaymentStatus VARCHAR(20) DEFAULT 'unpaid'",
+        'PaymentId'          => 'PaymentId INT DEFAULT NULL',
     ]);
     // DATA-REPAIR FIX (customer-facing audit): BookingDate was added as a
     // self-healing column above, but nothing that creates a booking ever
@@ -328,10 +410,97 @@ function _tms_repair_schema_drift(PDO $dbh): void {
     // the schema checks above: safe to run on every request (it only
     // touches rows still NULL, so it's a no-op once caught up) and safe to
     // run on a database that already has this fixed (nothing left to touch).
+    // Seed real emergency numbers once. tblemergencycontacts has always been
+    // created by the migrations and never populated, so emergency.php — a page
+    // whose entire purpose is those numbers — rendered the red SOS banner, a
+    // search box that filtered nothing, and then a blank gap. These are the
+    // official public emergency lines for the countries this catalogue covers.
+    try {
+        $hasContacts = (int)$dbh->query("SELECT COUNT(*) FROM tblemergencycontacts")->fetchColumn();
+        if ($hasContacts === 0) {
+            $seedContacts = [
+                ['Bangladesh',  '999', '999', '999', '333',
+                 'Nearest embassy or high commission in Dhaka — check your own government\'s travel advisory page.',
+                 'One national number (999) covers police, ambulance and fire. 333 is the government information and tourist helpline. Keep a photocopy of your passport separate from the original.'],
+                ['India',       '112', '108', '101', '1363',
+                 'Your country\'s embassy is in New Delhi; several also have consulates in Mumbai, Chennai and Kolkata.',
+                 '112 is the single emergency number nationwide; 108 reaches an ambulance directly in most states. 1363 is the national tourist helpline (multilingual, 24 hours).'],
+                ['Nepal',       '100', '102', '101', '1144',
+                 'Most embassies are in Kathmandu.',
+                 'Mobile coverage is patchy on trekking routes — register your route with your guesthouse. Altitude sickness is the most common serious problem; descend rather than wait it out.'],
+                ['Bhutan',      '113', '112', '110', '1345',
+                 'Very few countries have an embassy in Thimphu; India\'s embassy handles many consular matters.',
+                 'Travel is normally through a licensed operator — your guide is your first point of contact in any emergency and can reach services faster than you can.'],
+                ['Thailand',    '191', '1669', '199', '1672',
+                 'Embassies are concentrated in Bangkok.',
+                 '1672 is the Tourist Authority of Thailand call centre (English, 8am-8pm). The dedicated Tourist Police number is 1155 and is English-speaking, 24 hours.'],
+                ['Indonesia',   '110', '118', '113', '112',
+                 'Embassies are in Jakarta; many countries also have a consulate in Bali (Denpasar).',
+                 '112 works from mobiles nationwide. In Bali, the tourist police can be reached on 0361 224111. Traffic accidents are the single most common cause of tourist injury.'],
+                ['Malaysia',    '999', '999', '994', '1300885050',
+                 'Embassies are in Kuala Lumpur.',
+                 '999 covers police and ambulance (112 from a mobile also works). Tourism Malaysia\'s infoline is 1300 88 5050.'],
+                ['Singapore',   '999', '995', '995', '1800736 2000',
+                 'Embassies and high commissions are throughout the city.',
+                 '999 for police, 995 for ambulance and fire. Non-emergency medical advice is available at any polyclinic.'],
+                ['United Arab Emirates', '999', '998', '997', '800555',
+                 'Embassies are in Abu Dhabi; most also have a consulate in Dubai.',
+                 '800 555 is the Dubai Police non-emergency line. Public behaviour rules are stricter than many visitors expect — read your operator\'s briefing.'],
+                ['France',      '17', '15', '18', '112',
+                 'Embassies are in Paris.',
+                 '112 works anywhere in the EU, from any phone, in English. 114 is the SMS emergency number for the deaf and hard of hearing.'],
+                ['Switzerland', '117', '144', '118', '112',
+                 'Embassies are in Bern; several countries also have a consulate in Geneva or Zurich.',
+                 '1414 reaches Rega, the air-rescue service, which matters in the mountains. 112 also works everywhere.'],
+                ['United Kingdom', '999', '999', '999', '101',
+                 'Embassies and high commissions are in London.',
+                 '999 (or 112) for emergencies, 101 for non-urgent police, 111 for urgent-but-not-emergency medical advice.'],
+                ['Maldives',    '119', '102', '118', '1418',
+                 'Very few embassies are resident in Malé; most cover the Maldives from Colombo or New Delhi.',
+                 'On a resort island, tell reception first — they coordinate the seaplane or speedboat evacuation. Decompression illness after diving needs the chamber in Malé.'],
+            ];
+            $ins = $dbh->prepare(
+                "INSERT INTO tblemergencycontacts
+                 (Country, PoliceNumber, AmbulanceNumber, FireNumber, TouristHelpline, Embassy, SafetyTips)
+                 VALUES (?,?,?,?,?,?,?)"
+            );
+            foreach ($seedContacts as $row) { $ins->execute($row); }
+        }
+    } catch (Exception $e) {
+        error_log('[TMS Schema] emergency contacts seed failed: ' . $e->getMessage());
+    }
+
     try {
         $dbh->exec("UPDATE tblbooking SET BookingDate = FromDate WHERE BookingDate IS NULL AND FromDate IS NOT NULL AND FromDate != ''");
     } catch (Exception $e) {
         error_log('[TMS Schema] BookingDate backfill failed: ' . $e->getMessage());
+    }
+
+    // Persistent history for the site-wide chatbot widget. Keyed by chat_uid
+    // (the tms_chat_uid cookie, see tms_chat_uid() below) rather than by the PHP
+    // session, so a visitor's conversation survives a page navigation, a refresh
+    // AND a logout — the session dying mid-conversation is exactly why history
+    // used to vanish. user_email is recorded alongside when known, purely so an
+    // admin can trace a conversation back to an account. Created here rather
+    // than in the once-per-session $aiTables list, because a visitor with an
+    // already-active session would otherwise never get the table.
+    try {
+        $dbh->exec("
+            CREATE TABLE IF NOT EXISTS tbl_site_chat_messages (
+                id INT(11) NOT NULL AUTO_INCREMENT,
+                chat_uid VARCHAR(40) NOT NULL,
+                user_email VARCHAR(100) DEFAULT NULL,
+                role ENUM('user','assistant') NOT NULL,
+                message LONGTEXT DEFAULT NULL,
+                created_at TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+                PRIMARY KEY (id),
+                INDEX idx_site_chat_uid (chat_uid, id),
+                INDEX idx_site_chat_created (created_at),
+                INDEX idx_site_chat_email (user_email)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+        ");
+    } catch (Exception $e) {
+        error_log('[TMS] tbl_site_chat_messages migration failed: ' . $e->getMessage());
     }
 
     // A unique index, not just a column — two bookings sharing a
@@ -435,6 +604,16 @@ function _tms_repair_schema_drift(PDO $dbh): void {
     tms_ensure_columns($dbh, 'tblwishlist', [
         'PriceAtAdd' => 'PriceAtAdd INT DEFAULT NULL',
     ]);
+    // Travel Wallet document expiry reminders -- previously the "Notes"
+    // field's own placeholder text suggested typing "Expires March 2027" by
+    // hand, with nothing ever reading it back out. A real, structured date
+    // lets scripts/check_wallet_expiry.php actually notify someone before
+    // their passport/visa/insurance expires, instead of relying on them to
+    // remember a note they wrote themselves months earlier.
+    tms_ensure_columns($dbh, 'tbltraveldocuments', [
+        'ExpiryDate'      => 'ExpiryDate DATE DEFAULT NULL',
+        'ExpiryNotifiedAt' => 'ExpiryNotifiedAt TIMESTAMP NULL DEFAULT NULL',
+    ]);
     // Feature Phase 2c: persist the issues/highlights the AI was already
     // being asked for (and silently discarding), plus lightweight fake-review
     // flagging fields.
@@ -460,6 +639,39 @@ function _tms_repair_schema_drift(PDO $dbh): void {
     try {
         $dbh->exec("ALTER TABLE admin ADD UNIQUE KEY uq_admin_username (UserName)");
     } catch (Exception $e) { /* already exists, or (rare) pre-existing duplicate usernames — non-fatal either way */ }
+
+    // FIX (live testing, round 20): the exact "phantom column" drift this
+    // function exists to repair (see the class doc-comment above) had never
+    // actually been applied to tblcustomtrips itself. It pre-existed with
+    // only `id` and `AiItinerary` (the latter added by a one-off ALTER at
+    // tms_backfill... time), so the full CREATE TABLE IF NOT EXISTS further
+    // down in this file -- which declares UserEmail, TripName, Destination,
+    // StartDate, EndDate, Budget, TravelersCount, Accommodation, Transport,
+    // Activities, MealPlan, SpecialRequests, Status, AdminNote, CreatedAt --
+    // was always a silent no-op against the already-existing table. Nobody
+    // caught this because custom-trip.php's own INSERT is only reachable via
+    // a real form POST, and its "my past trips" SELECT (the one that throws)
+    // only runs for a signed-in visitor -- this page had never actually been
+    // live-tested signed-in before. Confirmed via a real PDOException:
+    // "Column not found: 1054 Unknown column 'UserEmail' in 'where clause'
+    // in custom-trip.php:72".
+    tms_ensure_columns($dbh, 'tblcustomtrips', [
+        'UserEmail'       => 'UserEmail VARCHAR(100) DEFAULT NULL',
+        'TripName'        => 'TripName VARCHAR(200) DEFAULT NULL',
+        'Destination'     => 'Destination VARCHAR(200) DEFAULT NULL',
+        'StartDate'       => 'StartDate DATE DEFAULT NULL',
+        'EndDate'         => 'EndDate DATE DEFAULT NULL',
+        'Budget'          => 'Budget INT(11) DEFAULT NULL',
+        'TravelersCount'  => 'TravelersCount INT(11) DEFAULT NULL',
+        'Accommodation'   => 'Accommodation VARCHAR(100) DEFAULT NULL',
+        'Transport'       => 'Transport VARCHAR(100) DEFAULT NULL',
+        'Activities'      => 'Activities MEDIUMTEXT DEFAULT NULL',
+        'MealPlan'        => 'MealPlan VARCHAR(100) DEFAULT NULL',
+        'SpecialRequests' => 'SpecialRequests MEDIUMTEXT DEFAULT NULL',
+        'Status'          => "Status VARCHAR(50) DEFAULT 'Pending'",
+        'AdminNote'       => 'AdminNote MEDIUMTEXT DEFAULT NULL',
+        'CreatedAt'       => 'CreatedAt TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP',
+    ]);
 
     // Backfill PriceAtAdd for wishlist rows added before this column existed,
     // so price-drop comparisons don't show a false 100% drop for old entries.
@@ -814,6 +1026,97 @@ function _tms_run_core_migrations(PDO $dbh): void {
   `CreatedAt` timestamp NULL DEFAULT current_timestamp(),
   PRIMARY KEY (`id`), INDEX idx_cart_email (`UserEmail`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4",
+
+// Payment ledger (see PAYMENTS.md / database/migrations/002_payments.sql —
+// identical definitions, kept in both places deliberately: self-healing
+// here means it Just Works on every install with zero manual steps, and
+// the migration file gives an explicit, auditable, Rule-39 schema history
+// for anyone who wants to know exactly what changed and when).
+"CREATE TABLE IF NOT EXISTS `tblpayments` (
+  `PaymentId` INT(11) NOT NULL AUTO_INCREMENT,
+  `BookingId` INT(11) NOT NULL,
+  `Provider` VARCHAR(30) NOT NULL,
+  `ProviderMode` VARCHAR(10) NOT NULL DEFAULT 'sandbox',
+  `ProviderTransactionId` VARCHAR(120) DEFAULT NULL,
+  `AmountMinor` BIGINT(20) NOT NULL,
+  `Currency` VARCHAR(3) NOT NULL DEFAULT 'BDT',
+  `Status` VARCHAR(20) NOT NULL DEFAULT 'pending',
+  `IdempotencyKey` VARCHAR(64) NOT NULL,
+  `RawRequest` MEDIUMTEXT DEFAULT NULL,
+  `RawResponse` MEDIUMTEXT DEFAULT NULL,
+  `CreatedAt` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `UpdatedAt` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`PaymentId`), UNIQUE KEY `uq_idempotency` (`IdempotencyKey`),
+  KEY `idx_booking` (`BookingId`), KEY `idx_status` (`Status`)
+) ENGINE=InnoDB DEFAULT CHARSET=latin1",
+
+"CREATE TABLE IF NOT EXISTS `tblpayment_events` (
+  `EventId` INT(11) NOT NULL AUTO_INCREMENT,
+  `PaymentId` INT(11) DEFAULT NULL, `Provider` VARCHAR(30) NOT NULL,
+  `EventType` VARCHAR(60) NOT NULL, `SignatureValid` TINYINT(1) NOT NULL DEFAULT 0,
+  `Payload` MEDIUMTEXT DEFAULT NULL, `ProcessedAt` TIMESTAMP NULL DEFAULT NULL,
+  `ReceivedAt` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`EventId`), KEY `idx_payment` (`PaymentId`)
+) ENGINE=InnoDB DEFAULT CHARSET=latin1",
+
+"CREATE TABLE IF NOT EXISTS `tblpayment_refunds` (
+  `RefundId` INT(11) NOT NULL AUTO_INCREMENT,
+  `PaymentId` INT(11) NOT NULL, `AmountMinor` BIGINT(20) NOT NULL,
+  `Reason` VARCHAR(255) DEFAULT NULL, `Status` VARCHAR(20) NOT NULL DEFAULT 'pending',
+  `RequestedBy` VARCHAR(100) DEFAULT NULL, `CreatedAt` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `ProcessedAt` TIMESTAMP NULL DEFAULT NULL,
+  PRIMARY KEY (`RefundId`), KEY `idx_payment` (`PaymentId`)
+) ENGINE=InnoDB DEFAULT CHARSET=latin1",
+
+// Price / availability alerts (Rule 26/27). One-shot: IsActive flips to 0
+// the moment the condition is met and a notification is fired, so a
+// customer isn't renotified every hour the price stays low.
+"CREATE TABLE IF NOT EXISTS `tbl_price_alerts` (
+  `id` INT(11) NOT NULL AUTO_INCREMENT, `UserEmail` VARCHAR(100) NOT NULL,
+  `PackageId` INT(11) NOT NULL, `TargetPrice` DECIMAL(12,2) NOT NULL,
+  `IsActive` TINYINT(1) NOT NULL DEFAULT 1, `NotifiedAt` TIMESTAMP NULL DEFAULT NULL,
+  `CreatedAt` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`), KEY `idx_active` (`IsActive`), KEY `idx_package` (`PackageId`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4",
+
+"CREATE TABLE IF NOT EXISTS `tbl_availability_alerts` (
+  `id` INT(11) NOT NULL AUTO_INCREMENT, `UserEmail` VARCHAR(100) NOT NULL,
+  `PackageId` INT(11) NOT NULL,
+  `IsActive` TINYINT(1) NOT NULL DEFAULT 1, `NotifiedAt` TIMESTAMP NULL DEFAULT NULL,
+  `CreatedAt` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`), KEY `idx_active` (`IsActive`), KEY `idx_package` (`PackageId`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4",
+
+// Group travel + expense splitting (Rule 24/25). Money here is
+// AmountMinor (integer minor units) from the start -- unlike
+// tblbooking.TotalCost's inherited float debt (see DATABASE.md), this is
+// new code with no legacy float callers to stay compatible with, so it
+// does the integer-money rule properly from day one.
+"CREATE TABLE IF NOT EXISTS `tblgroup_trips` (
+  `GroupId` INT(11) NOT NULL AUTO_INCREMENT,
+  `Name` VARCHAR(150) NOT NULL,
+  `PackageId` INT(11) DEFAULT NULL COMMENT 'optional link to a package this group is booking together',
+  `CreatedBy` VARCHAR(100) NOT NULL,
+  `Currency` VARCHAR(3) NOT NULL DEFAULT 'BDT',
+  `CreatedAt` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`GroupId`), KEY `idx_creator` (`CreatedBy`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4",
+
+"CREATE TABLE IF NOT EXISTS `tblgroup_members` (
+  `id` INT(11) NOT NULL AUTO_INCREMENT,
+  `GroupId` INT(11) NOT NULL, `UserEmail` VARCHAR(100) NOT NULL,
+  `Role` VARCHAR(20) NOT NULL DEFAULT 'member' COMMENT 'organizer | member',
+  `JoinedAt` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`), UNIQUE KEY `uq_group_member` (`GroupId`,`UserEmail`), KEY `idx_email` (`UserEmail`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4",
+
+"CREATE TABLE IF NOT EXISTS `tblgroup_expenses` (
+  `id` INT(11) NOT NULL AUTO_INCREMENT,
+  `GroupId` INT(11) NOT NULL, `PaidByEmail` VARCHAR(100) NOT NULL,
+  `Description` VARCHAR(200) NOT NULL, `AmountMinor` BIGINT(20) NOT NULL,
+  `CreatedAt` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`), KEY `idx_group` (`GroupId`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4",
     ];
 
     foreach ($tables as $sql) {
@@ -1016,6 +1319,55 @@ function _tms_run_ai_migrations(PDO $dbh): void {
   `created_at` timestamp NULL DEFAULT current_timestamp(),
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4",
+
+// Round 34 (item 21, "AI Provider Abstraction + telemetry"): one row per
+// AIClient call (any provider), separate from tbl_ai_usage_log (which
+// exists purely to power the per-user rate limiter and is left untouched)
+// and from tbl_ai_analytics (a metric_key/metric_value cache with a UNIQUE
+// key per metric -- the wrong shape for a per-call event log, and still
+// unused by anything; flagged as its own dead-schema cleanup candidate
+// rather than silently repurposed here). Lets the admin AI dashboard show
+// real per-feature success rate, latency and token usage instead of only
+// a raw call count.
+"CREATE TABLE IF NOT EXISTS `tbl_ai_telemetry` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `provider` varchar(30) DEFAULT NULL,
+  `model` varchar(80) DEFAULT NULL,
+  `feature` varchar(60) DEFAULT NULL,
+  `user_email` varchar(100) DEFAULT NULL,
+  `success` tinyint(1) NOT NULL DEFAULT 0,
+  `cached` tinyint(1) NOT NULL DEFAULT 0,
+  `latency_ms` int(11) DEFAULT NULL,
+  `prompt_tokens` int(11) DEFAULT NULL,
+  `completion_tokens` int(11) DEFAULT NULL,
+  `total_tokens` int(11) DEFAULT NULL,
+  `error_message` varchar(255) DEFAULT NULL,
+  `created_at` timestamp NULL DEFAULT current_timestamp(),
+  PRIMARY KEY (`id`),
+  INDEX idx_telemetry_time (`created_at`),
+  INDEX idx_telemetry_feature (`feature`),
+  INDEX idx_telemetry_provider (`provider`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4",
+
+// Round 35 (item 22, "AI Evaluation suite"): one row per admin-triggered
+// run of includes/ai/AIEvaluator.php -- a pass/fail snapshot across a
+// representative slice of real AI features, so a provider or prompt change
+// (e.g. switching AI_PROVIDER, Round 34) can be checked for regressions
+// before/after rather than only found by a customer hitting a broken
+// feature. results_json holds the full per-case detail; the four scalar
+// columns are just for a fast history list without parsing JSON.
+"CREATE TABLE IF NOT EXISTS `tbl_ai_eval_runs` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `provider` varchar(30) DEFAULT NULL,
+  `model` varchar(80) DEFAULT NULL,
+  `total_cases` int(11) DEFAULT NULL,
+  `passed_cases` int(11) DEFAULT NULL,
+  `results_json` longtext DEFAULT NULL,
+  `run_by` varchar(100) DEFAULT NULL,
+  `created_at` timestamp NULL DEFAULT current_timestamp(),
+  PRIMARY KEY (`id`),
+  INDEX idx_eval_time (`created_at`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4",
     ];
 
     foreach ($aiTables as $sql) {
@@ -1104,6 +1456,165 @@ function _tms_run_api_migrations(PDO $dbh): void {
         INDEX `idx_api_token_email` (`UserEmail`)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4";
     try { $dbh->exec($sql); } catch (Exception $e) {}
+}
+
+/**
+ * Round 37 (items 12/13) -- Hotel System + Activities Marketplace as their
+ * own standalone bookable products, not attributes bolted onto
+ * tbltourpackages (which already had HotelName/HotelRating/MealPlan columns,
+ * but only as read-only description text on a tour package, never a
+ * separately browsable/bookable listing).
+ *
+ * RULE 3 (never fabricate real-world data): this project has no real hotel
+ * or activity supplier feed, contract, or API. Every row `tms_seed_hotels_
+ * activities()` inserts is clearly-synthetic sample/demo inventory --
+ * `IsSampleData` is hardcoded 1 on every seeded row, and hotels.php/
+ * activities.php/their detail pages render a persistent "Sample Listing"
+ * badge and an explanatory banner rather than presenting these as real,
+ * bookable-today properties. A booking against one of these still writes a
+ * real row (so the feature is genuinely functional end-to-end, not a static
+ * mockup), but nothing here should ever be read by a user as "book last
+ * night's actual hotel room" -- it demonstrates the marketplace shape
+ * against a real, live-data-source integration point
+ * (tms_seed_hotels_activities) that could later be swapped for a real
+ * supplier feed without touching the browse/booking pages at all.
+ *
+ * Separate booking tables (tblhotel_bookings/tblactivity_bookings) rather
+ * than trying to generalize tblbooking (which hardcodes a single PackageId
+ * FK, no product-type column) -- that would be a much larger, riskier
+ * schema change touching every existing package-booking code path for a
+ * benefit this round doesn't need (Rule 8: no casual/broad schema changes).
+ */
+function _tms_run_marketplace_migrations(PDO $dbh): void {
+    $tables = [
+"CREATE TABLE IF NOT EXISTS `tblhotels` (
+  `HotelId` int(11) NOT NULL AUTO_INCREMENT,
+  `HotelName` varchar(200) NOT NULL,
+  `City` varchar(100) DEFAULT NULL,
+  `Country` varchar(100) DEFAULT NULL,
+  `StarRating` tinyint(1) DEFAULT NULL COMMENT '1-5',
+  `PricePerNight` int(11) DEFAULT NULL,
+  `Amenities` varchar(500) DEFAULT NULL,
+  `Description` mediumtext DEFAULT NULL,
+  `HotelImage` varchar(300) DEFAULT NULL,
+  `AvgRating` decimal(3,1) DEFAULT 0.0,
+  `IsSampleData` tinyint(1) NOT NULL DEFAULT 1 COMMENT 'Rule 3 -- always 1 until a real supplier feed exists',
+  `Status` int(1) DEFAULT 1,
+  `CreatedAt` timestamp NOT NULL DEFAULT current_timestamp(),
+  PRIMARY KEY (`HotelId`), INDEX idx_hotel_city (`City`), INDEX idx_hotel_status (`Status`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4",
+
+"CREATE TABLE IF NOT EXISTS `tblactivities` (
+  `ActivityId` int(11) NOT NULL AUTO_INCREMENT,
+  `ActivityName` varchar(200) NOT NULL,
+  `City` varchar(100) DEFAULT NULL,
+  `Country` varchar(100) DEFAULT NULL,
+  `Category` varchar(100) DEFAULT NULL,
+  `PricePerPerson` int(11) DEFAULT NULL,
+  `DurationHours` decimal(4,1) DEFAULT NULL,
+  `Description` mediumtext DEFAULT NULL,
+  `ActivityImage` varchar(300) DEFAULT NULL,
+  `AvgRating` decimal(3,1) DEFAULT 0.0,
+  `IsSampleData` tinyint(1) NOT NULL DEFAULT 1 COMMENT 'Rule 3 -- always 1 until a real supplier feed exists',
+  `Status` int(1) DEFAULT 1,
+  `CreatedAt` timestamp NOT NULL DEFAULT current_timestamp(),
+  PRIMARY KEY (`ActivityId`), INDEX idx_activity_city (`City`), INDEX idx_activity_status (`Status`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4",
+
+"CREATE TABLE IF NOT EXISTS `tblhotel_bookings` (
+  `BookingId` int(11) NOT NULL AUTO_INCREMENT,
+  `HotelId` int(11) NOT NULL,
+  `UserEmail` varchar(100) NOT NULL,
+  `CheckInDate` date DEFAULT NULL,
+  `CheckOutDate` date DEFAULT NULL,
+  `NumRooms` int(11) DEFAULT 1,
+  `NumGuests` int(11) DEFAULT 1,
+  `MobileNumber` varchar(20) DEFAULT NULL,
+  `Comment` mediumtext DEFAULT NULL,
+  `TotalCost` int(11) DEFAULT NULL,
+  `VerificationCode` varchar(20) DEFAULT NULL,
+  `status` int(1) DEFAULT 0 COMMENT '0=Pending,1=Confirmed,2=Cancelled -- same convention as tblbooking.status',
+  `RegDate` timestamp NOT NULL DEFAULT current_timestamp(),
+  PRIMARY KEY (`BookingId`), INDEX idx_hb_hotel (`HotelId`), INDEX idx_hb_user (`UserEmail`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4",
+
+"CREATE TABLE IF NOT EXISTS `tblactivity_bookings` (
+  `BookingId` int(11) NOT NULL AUTO_INCREMENT,
+  `ActivityId` int(11) NOT NULL,
+  `UserEmail` varchar(100) NOT NULL,
+  `ActivityDate` date DEFAULT NULL,
+  `NumParticipants` int(11) DEFAULT 1,
+  `MobileNumber` varchar(20) DEFAULT NULL,
+  `Comment` mediumtext DEFAULT NULL,
+  `TotalCost` int(11) DEFAULT NULL,
+  `VerificationCode` varchar(20) DEFAULT NULL,
+  `status` int(1) DEFAULT 0 COMMENT '0=Pending,1=Confirmed,2=Cancelled -- same convention as tblbooking.status',
+  `RegDate` timestamp NOT NULL DEFAULT current_timestamp(),
+  PRIMARY KEY (`BookingId`), INDEX idx_ab_activity (`ActivityId`), INDEX idx_ab_user (`UserEmail`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4",
+    ];
+    foreach ($tables as $sql) {
+        try { $dbh->exec($sql); } catch (Exception $e) {}
+    }
+    tms_seed_hotels_activities($dbh);
+}
+
+/**
+ * Loads data/hotels_seed.json and data/activities_seed.json (clearly
+ * synthetic sample listings -- see _tms_run_marketplace_migrations()'s
+ * docblock) and inserts any not already present (matched by name), so
+ * re-running this on every request is always safe and never duplicates.
+ * Mirrors tms_seed_tourism_packages()'s exact dedupe-by-name approach.
+ */
+function tms_seed_hotels_activities(PDO $dbh): void {
+    try {
+        $hotelsPath = __DIR__ . '/../data/hotels_seed.json';
+        if (file_exists($hotelsPath)) {
+            $rows = json_decode(file_get_contents($hotelsPath), true);
+            if (is_array($rows)) {
+                $check = $dbh->prepare("SELECT HotelId FROM tblhotels WHERE HotelName=:n LIMIT 1");
+                $ins = $dbh->prepare("INSERT INTO tblhotels
+                    (HotelName, City, Country, StarRating, PricePerNight, Amenities, Description, HotelImage, AvgRating, IsSampleData, Status)
+                    VALUES (:name,:city,:country,:stars,:price,:amenities,:desc,:img,:rating,1,1)");
+                foreach ($rows as $row) {
+                    $check->execute([':n' => $row['HotelName']]);
+                    if ($check->fetch()) continue;
+                    $ins->execute([
+                        ':name' => $row['HotelName'], ':city' => $row['City'], ':country' => $row['Country'],
+                        ':stars' => $row['StarRating'], ':price' => $row['PricePerNight'],
+                        ':amenities' => $row['Amenities'] ?? '', ':desc' => $row['Description'] ?? '',
+                        ':img' => $row['HotelImage'] ?? '', ':rating' => $row['AvgRating'] ?? 4.0,
+                    ]);
+                }
+            }
+        }
+    } catch (Exception $e) {
+        error_log('[TMS Seed] Hotel seed failed: ' . $e->getMessage());
+    }
+
+    try {
+        $activitiesPath = __DIR__ . '/../data/activities_seed.json';
+        if (file_exists($activitiesPath)) {
+            $rows = json_decode(file_get_contents($activitiesPath), true);
+            if (is_array($rows)) {
+                $check = $dbh->prepare("SELECT ActivityId FROM tblactivities WHERE ActivityName=:n LIMIT 1");
+                $ins = $dbh->prepare("INSERT INTO tblactivities
+                    (ActivityName, City, Country, Category, PricePerPerson, DurationHours, Description, ActivityImage, AvgRating, IsSampleData, Status)
+                    VALUES (:name,:city,:country,:cat,:price,:hours,:desc,:img,:rating,1,1)");
+                foreach ($rows as $row) {
+                    $check->execute([':n' => $row['ActivityName']]);
+                    if ($check->fetch()) continue;
+                    $ins->execute([
+                        ':name' => $row['ActivityName'], ':city' => $row['City'], ':country' => $row['Country'],
+                        ':cat' => $row['Category'], ':price' => $row['PricePerPerson'], ':hours' => $row['DurationHours'],
+                        ':desc' => $row['Description'] ?? '', ':img' => $row['ActivityImage'] ?? '', ':rating' => $row['AvgRating'] ?? 4.0,
+                    ]);
+                }
+            }
+        }
+    } catch (Exception $e) {
+        error_log('[TMS Seed] Activity seed failed: ' . $e->getMessage());
+    }
 }
 
 /**
@@ -1497,6 +2008,146 @@ function tms_verify_password(string $plain, string $stored, ?int $recordId, PDO 
     return false;
 }
 
+// ══════════════════════════════════════════════════════════════════════════════
+// PRIVACY (Round 20, spec item 48) -- data export + account deletion
+// ══════════════════════════════════════════════════════════════════════════════
+
+/**
+ * Single source of truth for "every table that stores a row keyed to one
+ * customer's email", used by BOTH privacy.php's data export and the account-
+ * deletion anonymization below -- so the two can never drift out of sync
+ * with each other (export something, forget to also scrub it on deletion,
+ * or vice versa). Built by systematically grepping every CREATE TABLE in
+ * this project for a UserEmail/user_email column, not from memory -- see
+ * SESSION_SUMMARY_INDEX.md's Round 20 entry for how this list was produced.
+ * Not claimed to be exhaustive forever: a new table with a user-email column
+ * added later needs adding here too (nothing enforces that automatically).
+ *
+ * @return array<int, array{0:string,1:string}> [table, columnName] pairs.
+ */
+function tms_privacy_tables(): array {
+    return [
+        ['tblbooking', 'UserEmail'],
+        ['tblissues', 'UserEmail'],
+        ['tblreviews', 'UserEmail'],
+        ['tblwishlist', 'UserEmail'],
+        ['tblrecentlyviewed', 'UserEmail'],
+        ['tblcoupons', 'UserEmail'],
+        ['tblbudgetplans', 'UserEmail'],
+        ['tblcustomtrips', 'UserEmail'],
+        ['tblloyalty', 'UserEmail'],
+        ['tblloyalty_log', 'UserEmail'],
+        ['tbl_notifications', 'UserEmail'],
+        ['tblcart', 'UserEmail'],
+        ['tbl_price_alerts', 'UserEmail'],
+        ['tbl_availability_alerts', 'UserEmail'],
+        ['tblgroup_members', 'UserEmail'],
+        ['tblrecommendations', 'UserEmail'],
+        ['tblchat_messages', 'UserEmail'],
+        ['tblchat_threads', 'UserEmail'],
+        ['tblapi_tokens', 'UserEmail'],
+        ['tbltraveldocuments', 'UserEmail'],
+        ['tblhotel_bookings', 'UserEmail'], // Round 37 -- Hotel System bookings
+        ['tblactivity_bookings', 'UserEmail'], // Round 37 -- Activities Marketplace bookings
+        ['tbl_ai_usage_log', 'user_email'],
+        ['tbl_ai_telemetry', 'user_email'], // Round 34 -- new AI telemetry log, same treatment as tbl_ai_usage_log
+        ['tbl_ai_itineraries', 'user_email'],
+        ['tbl_ai_packages', 'user_email'],
+        ['tbl_copilot_sessions', 'user_email'],
+        ['tbl_travel_memories', 'user_email'],
+        ['tbl_user_profile', 'user_email'],
+        ['tbl_explore_history', 'user_email'],
+        ['tbl_explore_chat', 'user_email'],
+    ];
+}
+
+/**
+ * Assembles everything this project stores about one customer into a plain
+ * array, ready to json_encode() for privacy.php's "export my data" download.
+ * Reads only -- never modifies anything. Tables that don't exist yet on an
+ * older install are skipped rather than erroring (tms_ensure_columns-style
+ * defensiveness), so this never breaks a partially-migrated database.
+ */
+function tms_export_user_data(PDO $dbh, string $email): array {
+    $out = ['exported_at' => date('c'), 'account_email' => $email];
+
+    try {
+        $stmt = $dbh->prepare("SELECT id, FullName, MobileNumber, EmailId, RegDate, Language FROM tblusers WHERE EmailId = ? LIMIT 1");
+        $stmt->execute([$email]);
+        $out['profile'] = $stmt->fetch(PDO::FETCH_ASSOC) ?: null;
+    } catch (Exception $e) {
+        $out['profile'] = null;
+    }
+
+    foreach (tms_privacy_tables() as [$table, $col]) {
+        try {
+            $stmt = $dbh->prepare("SELECT * FROM `$table` WHERE `$col` = ?");
+            $stmt->execute([$email]);
+            $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            if ($rows) $out[$table] = $rows;
+        } catch (Exception $e) {
+            // Table doesn't exist on this install, or a column mismatch --
+            // skip it rather than failing the whole export over one table.
+            continue;
+        }
+    }
+
+    return $out;
+}
+
+/**
+ * Right-to-erasure account deletion, implemented as anonymization rather
+ * than a hard DELETE. Why: tblbooking/tblpayments and friends are this
+ * project's financial/audit record (Rule 2 -- never silently remove
+ * working functionality, which a cascading hard-delete of a paid booking
+ * history effectively would, and most jurisdictions' consumer/tax law
+ * expects transaction records to survive an account closure anyway). What
+ * this DOES do: replace every trace of real PII (name, phone, email,
+ * password) with an anonymous, unusable placeholder, consistently across
+ * every table in tms_privacy_tables() -- so the original email/name/phone
+ * are not recoverable from this database afterward, while row counts (and
+ * therefore admin financial reporting, loyalty history, etc.) stay intact
+ * against the new anonymous identifier. Locks the account out (unusable
+ * random password hash + DeletedAt set) rather than leaving it loggable-into.
+ *
+ * @return bool true on success (all writes committed), false on failure
+ *              (transaction rolled back, nothing changed).
+ */
+function tms_anonymize_user(PDO $dbh, string $email, int $userId): bool {
+    $anonEmail = 'deleted-user-' . $userId . '-' . substr(bin2hex(random_bytes(4)), 0, 8) . '@deleted.invalid';
+    $lockedPassword = tms_hash_password(bin2hex(random_bytes(32))); // unguessable, unusable
+
+    try {
+        $dbh->beginTransaction();
+
+        $dbh->prepare(
+            "UPDATE tblusers SET FullName = 'Deleted User', MobileNumber = NULL,
+             EmailId = :anon, Password = :pw, DeletedAt = NOW() WHERE id = :id"
+        )->execute([':anon' => $anonEmail, ':pw' => $lockedPassword, ':id' => $userId]);
+
+        foreach (tms_privacy_tables() as [$table, $col]) {
+            try {
+                $dbh->prepare("UPDATE `$table` SET `$col` = :anon WHERE `$col` = :old")
+                    ->execute([':anon' => $anonEmail, ':old' => $email]);
+            } catch (Exception $e) {
+                // Most likely cause: this table doesn't exist on an older/
+                // partial install. Log and move on to the next table rather
+                // than aborting the whole deletion over one missing table --
+                // the tblusers row itself (the actual account/login) is
+                // already anonymized above regardless of what happens here.
+                error_log("[TMS Privacy] Could not anonymize `$table`.`$col` for user {$userId}: " . $e->getMessage());
+            }
+        }
+
+        $dbh->commit();
+        return true;
+    } catch (Exception $e) {
+        if ($dbh->inTransaction()) $dbh->rollBack();
+        error_log('[TMS Privacy] Account anonymization failed for user ' . $userId . ': ' . $e->getMessage());
+        return false;
+    }
+}
+
 /**
  * Given whatever tms_package_image_src() resolved to, returns a ready-to-
  * echo ' srcset="..." sizes="..."' string when that source is one of the
@@ -1575,6 +2226,9 @@ function tms_active_currency(): string {
  * needed. Falls back to BDT (never a blank/broken price) if the live-rate
  * API is unreachable.
  */
+/** The symbol of the currency amounts are STORED in (the base currency). */
+define('TMS_BASE_SYMBOL', TMS_CURRENCIES['BDT']['symbol']);
+
 function tms_currency(float $amount): string {
     $code = tms_active_currency();
     $meta = TMS_CURRENCIES[$code];
@@ -1591,6 +2245,95 @@ function tms_currency(float $amount): string {
     }
 
     return $meta['symbol'] . ' ' . number_format($amount, $meta['decimals']);
+}
+
+/**
+ * The active currency as a small array for client-side rendering:
+ * ['code','symbol','decimals','rate'] where rate converts a BDT amount into the
+ * active currency. Several pages (budget-planner.php, image-analyzer.php) build
+ * prices in JavaScript and used to hardcode a Taka symbol — so a visitor who had
+ * chosen EUR saw "৳5,000" in the planner beside "€ 38" for the same saved plan.
+ */
+function tms_currency_js(): array {
+    $code = tms_active_currency();
+    $meta = TMS_CURRENCIES[$code];
+    $rate = 1.0;
+    if ($code !== 'BDT') {
+        global $tmsCache;
+        $fx = tms_get_fx_rates($tmsCache instanceof CacheService ? $tmsCache : null);
+        if ($fx['ok'] && !empty($fx['rates'][$code])) {
+            $rate = (float)$fx['rates'][$code];
+        } else {
+            $code = 'BDT';
+            $meta = TMS_CURRENCIES['BDT'];
+        }
+    }
+    return ['code' => $code, 'symbol' => $meta['symbol'], 'decimals' => (int)$meta['decimals'], 'rate' => $rate];
+}
+
+/**
+ * NEW (Round 20, spec item 53 — SEO): echoes a canonical URL, OpenGraph
+ * tags, and an optional JSON-LD structured-data block, from whatever real
+ * data the caller has on hand — nothing here is invented if a field is
+ * missing (an empty/absent value is simply omitted from the output, never
+ * filled with a placeholder). Call once inside a page's own <head>, after
+ * its <title> tag; every page here builds its own <head> individually
+ * (there is no single shared head include), so this is opt-in per page
+ * rather than sitewide by default — only wired into the highest-SEO-value
+ * page types for now (destination listing, package details, blog posts),
+ * per the spec's own named examples. Extending it to the rest of the ~60
+ * page files is the same one-line pattern, just not done yet everywhere.
+ *
+ * @param array $o {
+ *   string $title        Required. Plain text page title (no site suffix).
+ *   string $description  Optional. Plain text description/summary.
+ *   string $image        Optional. Absolute or site-relative image URL.
+ *   string $type         Optional. og:type, default 'website'.
+ *   string $canonical    Optional. Absolute canonical URL; defaults to the
+ *                        current request's scheme+host+path (query string
+ *                        stripped, so filtered/paginated views canonicalize
+ *                        to their base page rather than each combination of
+ *                        filters counting as a separate page).
+ *   array  $jsonld       Optional. A pre-built schema.org array to emit as
+ *                        JSON-LD. Only pass fields backed by real data.
+ * }
+ */
+function tms_seo_meta(array $o): void {
+    $title = trim($o['title'] ?? '');
+    if ($title === '') return;
+
+    $scheme    = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
+    $host      = $_SERVER['HTTP_HOST'] ?? 'localhost';
+    $path      = strtok($_SERVER['REQUEST_URI'] ?? '/', '?');
+    $canonical = $o['canonical'] ?? ($scheme . '://' . $host . $path);
+    $description = trim($o['description'] ?? '');
+    $image     = trim($o['image'] ?? '');
+    $type      = $o['type'] ?? 'website';
+
+    echo '<link rel="canonical" href="' . htmlspecialchars($canonical, ENT_QUOTES, 'UTF-8') . '">' . "\n";
+    echo '<meta property="og:site_name" content="TMS">' . "\n";
+    echo '<meta property="og:type" content="' . htmlspecialchars($type, ENT_QUOTES, 'UTF-8') . '">' . "\n";
+    echo '<meta property="og:title" content="' . htmlspecialchars($title, ENT_QUOTES, 'UTF-8') . '">' . "\n";
+    echo '<meta property="og:url" content="' . htmlspecialchars($canonical, ENT_QUOTES, 'UTF-8') . '">' . "\n";
+
+    if ($description !== '') {
+        echo '<meta name="description" content="' . htmlspecialchars($description, ENT_QUOTES, 'UTF-8') . '">' . "\n";
+        echo '<meta property="og:description" content="' . htmlspecialchars($description, ENT_QUOTES, 'UTF-8') . '">' . "\n";
+    }
+    if ($image !== '') {
+        // Social crawlers don't run from this domain, so a site-relative
+        // path (e.g. "images/1.jpg") has to be resolved to absolute or the
+        // image simply won't load in the share preview.
+        if (!preg_match('#^https?://#i', $image)) {
+            $image = $scheme . '://' . $host . '/' . ltrim($image, '/');
+        }
+        echo '<meta property="og:image" content="' . htmlspecialchars($image, ENT_QUOTES, 'UTF-8') . '">' . "\n";
+    }
+    if (!empty($o['jsonld']) && is_array($o['jsonld'])) {
+        echo '<script type="application/ld+json">'
+            . json_encode($o['jsonld'], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE)
+            . '</script>' . "\n";
+    }
 }
 
 /**
@@ -1678,10 +2421,20 @@ function tms_require_admin(): void {
 // ══════════════════════════════════════════════════════════════════════════════
 
 /**
- * Returns the logged-in admin's role ('superadmin' or 'manager'), looked up
- * fresh from the DB each call (cheap single-row lookup by primary-key-backed
- * username) rather than trusted from the session, so a role change takes
- * effect on the admin's very next page load instead of only their next login.
+ * Returns the logged-in admin's role, looked up fresh from the DB each call
+ * (cheap single-row lookup by primary-key-backed username) rather than
+ * trusted from the session, so a role change takes effect on the admin's
+ * very next page load instead of only their next login.
+ *
+ * Valid values (master prompt spec item 46 -- granular RBAC, Round 20):
+ *   superadmin | booking_manager | package_manager | finance | support |
+ *   content_manager | ai_manager | operations
+ * Plus one legacy value kept working for any admin created before this
+ * round: 'manager' -- broad access (same set it always had: everything
+ * except the handful of pages that were already superadmin-only). Not
+ * offered for NEW admins any more (see manage-admins.php) since the 8
+ * roles above are strictly more specific, but an existing manager account
+ * is never silently broken (Rule 2).
  */
 function tms_admin_role(PDO $dbh): string {
     if (empty($_SESSION['alogin'])) return '';
@@ -1697,15 +2450,50 @@ function tms_admin_role(PDO $dbh): string {
 }
 
 /**
+ * The 8 granular admin roles from the master prompt spec (item 46), plus
+ * the pre-existing 'superadmin' and legacy 'manager' values, mapped to a
+ * human-readable label for admin UI (create/change-role dropdowns, role
+ * badges). Single source of truth so the dropdown and the badge colors
+ * can't drift from what tms_admin_can() actually enforces.
+ */
+function tms_admin_role_labels(): array {
+    return [
+        'superadmin'      => 'Super Admin',
+        'booking_manager' => 'Booking Manager',
+        'package_manager' => 'Package Manager',
+        'finance'         => 'Finance',
+        'support'         => 'Support',
+        'content_manager' => 'Content Manager',
+        'ai_manager'      => 'AI Manager',
+        'operations'      => 'Operations',
+        'manager'         => 'Manager (legacy, broad access)',
+    ];
+}
+
+/**
+ * Does the logged-in admin's role satisfy $allowedRoles? superadmin always
+ * passes regardless of what's listed (single place this is true, so no
+ * page gate can accidentally lock superadmins out by forgetting to list
+ * it -- see tms_admin_require_role()). Used both to enforce a page (below)
+ * and to decide whether to show a nav link for it (sidebarmenu.php), so
+ * the two can never disagree.
+ */
+function tms_admin_can(PDO $dbh, array $allowedRoles): bool {
+    $role = tms_admin_role($dbh);
+    if ($role === 'superadmin') return true;
+    return in_array($role, $allowedRoles, true);
+}
+
+/**
  * Gate a page to specific admin roles. Call tms_require_admin() first (or
  * rely on this calling it), then this. Shows a friendly 403 page instead of
- * a blank screen or silent redirect, since a manager clicking a link they
+ * a blank screen or silent redirect, since an admin clicking a link they
  * can't see (if the sidebar somehow still shows it) deserves an explanation.
+ * superadmin is always implicitly allowed -- see tms_admin_can().
  */
 function tms_admin_require_role(PDO $dbh, array $allowedRoles): void {
     tms_require_admin();
-    $role = tms_admin_role($dbh);
-    if (!in_array($role, $allowedRoles, true)) {
+    if (!tms_admin_can($dbh, $allowedRoles)) {
         http_response_code(403);
         echo '<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><title>Access Restricted</title>'
            . '<style>body{font-family:Inter,Segoe UI,sans-serif;background:#0f172a;color:#e2e8f0;display:flex;'
@@ -1716,7 +2504,7 @@ function tms_admin_require_role(PDO $dbh, array $allowedRoles): void {
            . '.box p{color:#94a3b8;font-size:14px;margin:0 0 20px;}'
            . '.box a{color:#60a5fa;text-decoration:none;font-weight:600;}</style></head><body>'
            . '<div class="box"><i class="fa fa-lock">&#128274;</i><h2>Access Restricted</h2>'
-           . '<p>Your admin role (' . htmlspecialchars($role, ENT_QUOTES, 'UTF-8') . ') doesn\'t include '
+           . '<p>Your admin role (' . htmlspecialchars(tms_admin_role_labels()[tms_admin_role($dbh)] ?? tms_admin_role($dbh), ENT_QUOTES, 'UTF-8') . ') doesn\'t include '
            . 'permission to view this page. Contact a super-admin if you need access.</p>'
            . '<a href="dashboard.php">&#8592; Back to Dashboard</a></div></body></html>';
         exit;
@@ -1795,6 +2583,20 @@ function tms_record_failed_login(PDO $dbh, string $email, string $ip): void {
     try {
         $dbh->prepare("INSERT INTO tbl_login_attempts(Email, IPAddress) VALUES(:e, :ip)")
             ->execute([':e' => $email, ':ip' => $ip]);
+
+        // Opportunistic cleanup: rows older than a day are useless forever
+        // (the lockout window is 15 minutes -- see TMS_LOGIN_LOCKOUT_MINS
+        // above), and nothing else ever deletes a failed-attempt row that
+        // never led to a successful login (tms_clear_login_attempts only
+        // clears the matching email/IP). Without this, tbl_login_attempts
+        // grows without bound under sustained failed-login traffic. A random
+        // 2% chance per call keeps this from adding a DELETE to every single
+        // failed login while still bounding growth over time -- a full cron
+        // job for a single housekeeping DELETE would be overengineering for
+        // what this is (Rule 73).
+        if (random_int(1, 100) <= 2) {
+            $dbh->exec("DELETE FROM tbl_login_attempts WHERE CreatedAt < DATE_SUB(NOW(), INTERVAL 1 DAY)");
+        }
     } catch (Exception $e) {
         error_log('[TMS Login] Could not record failed attempt: ' . $e->getMessage());
     }
@@ -1820,6 +2622,116 @@ function tms_generate_referral_code(PDO $dbh): string {
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
+// SITE CHATBOT IDENTITY & HISTORY
+// ══════════════════════════════════════════════════════════════════════════════
+
+/**
+ * Persistent chat-widget identity: deliberately a long-lived COOKIE, not the PHP
+ * session. The session dies on logout/expiry, and tying chat history to it was
+ * exactly why the conversation disappeared after a refresh or a logout. A cookie
+ * survives both, so the same browser keeps its history whether the visitor is
+ * signed in, signed out, or mid-conversation. Signed-in turns are additionally
+ * tagged with the user's email (see tbl_site_chat_messages) for admin lookups —
+ * retrieval is always by this cookie, never by login state.
+ *
+ * Must be called before output is sent; the chat API calls it before echoing.
+ */
+function tms_chat_uid(): string {
+    if (!empty($_COOKIE['tms_chat_uid']) && preg_match('/^[a-f0-9]{32}$/', $_COOKIE['tms_chat_uid'])) {
+        return $_COOKIE['tms_chat_uid'];
+    }
+    $uid = bin2hex(random_bytes(16));
+    if (!headers_sent()) {
+        setcookie('tms_chat_uid', $uid, [
+            'expires'  => time() + 400 * 86400,
+            'path'     => '/',
+            'httponly' => true,
+            'samesite' => 'Lax',
+            'secure'   => !empty($_SERVER['HTTPS']),
+        ]);
+    }
+    $_COOKIE['tms_chat_uid'] = $uid; // usable immediately on this same request
+    return $uid;
+}
+
+/**
+ * Read the recent turns for one chat_uid, oldest-first, ready to hand to the
+ * model. Bounded by design: history is written by an unauthenticated cookie, so
+ * it must never be able to grow the prompt (or the table) without limit.
+ */
+function tms_chat_history(PDO $dbh, string $chatUid, int $limit = 12): array {
+    try {
+        $st = $dbh->prepare(
+            "SELECT role, message FROM tbl_site_chat_messages
+             WHERE chat_uid = :uid ORDER BY id DESC LIMIT :lim"
+        );
+        $st->bindValue(':uid', $chatUid, PDO::PARAM_STR);
+        $st->bindValue(':lim', $limit, PDO::PARAM_INT);
+        $st->execute();
+        $rows = array_reverse($st->fetchAll(PDO::FETCH_ASSOC) ?: []);
+        return array_map(fn($r) => ['role' => $r['role'], 'content' => (string)$r['message']], $rows);
+    } catch (Throwable $e) {
+        error_log('[TMS Chat] history read failed: ' . $e->getMessage());
+        return [];
+    }
+}
+
+/** Append one turn, then keep this visitor's history to a sane size. */
+function tms_chat_save(PDO $dbh, string $chatUid, string $role, string $message, ?string $email = null): void {
+    try {
+        $st = $dbh->prepare(
+            "INSERT INTO tbl_site_chat_messages (chat_uid, user_email, role, message)
+             VALUES (:uid, :em, :role, :msg)"
+        );
+        $st->execute([
+            ':uid'  => $chatUid,
+            ':em'   => ($email && $email !== 'guest') ? $email : null,
+            ':role' => $role === 'assistant' ? 'assistant' : 'user',
+            ':msg'  => mb_substr($message, 0, 8000),
+        ]);
+        // Per-visitor cap: keep the newest 50 turns for this cookie.
+        $dbh->prepare(
+            "DELETE FROM tbl_site_chat_messages
+             WHERE chat_uid = :uid AND id <= (
+                 SELECT keep_id FROM (
+                     SELECT MIN(id) AS keep_id FROM (
+                         SELECT id FROM tbl_site_chat_messages
+                         WHERE chat_uid = :uid2 ORDER BY id DESC LIMIT 50
+                     ) recent
+                 ) bound
+             ) AND id NOT IN (
+                 SELECT id FROM (
+                     SELECT id FROM tbl_site_chat_messages
+                     WHERE chat_uid = :uid3 ORDER BY id DESC LIMIT 50
+                 ) keeprows
+             )"
+        )->execute([':uid' => $chatUid, ':uid2' => $chatUid, ':uid3' => $chatUid]);
+    } catch (Throwable $e) {
+        error_log('[TMS Chat] history write failed: ' . $e->getMessage());
+    }
+}
+
+/**
+ * Global housekeeping for the write-heavy chat/AI log tables. None of these were
+ * ever pruned, so every one of them grew without bound. Runs at most once an
+ * hour (guarded by a cache flag) so it costs nothing on a normal request.
+ */
+function tms_prune_ai_logs(PDO $dbh): void {
+    global $tmsCache;
+    if (isset($tmsCache) && $tmsCache->get('ai_log_prune') !== null) return;
+    if (isset($tmsCache)) $tmsCache->set('ai_log_prune', 1, 3600);
+    $jobs = [
+        "DELETE FROM tbl_site_chat_messages WHERE created_at < DATE_SUB(NOW(), INTERVAL 30 DAY)",
+        "DELETE FROM tbl_ai_usage_log       WHERE created_at < DATE_SUB(NOW(), INTERVAL 7 DAY)",
+        "DELETE FROM tbl_explore_chat       WHERE created_at < DATE_SUB(NOW(), INTERVAL 30 DAY)",
+        "DELETE FROM tbl_copilot_sessions   WHERE created_at < DATE_SUB(NOW(), INTERVAL 90 DAY)",
+    ];
+    foreach ($jobs as $sql) {
+        try { $dbh->exec($sql); } catch (Throwable $e) { /* table may not exist yet */ }
+    }
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
 // WEATHER (OpenWeatherMap) — real live weather + 5-day forecast, DB-cached
 // ══════════════════════════════════════════════════════════════════════════════
 
@@ -1830,8 +2742,16 @@ function tms_generate_referral_code(PDO $dbh): string {
  * Never throws — always returns a usable array so the page can render gracefully.
  */
 function tms_get_weather(PDO $dbh, float $lat, float $lng, string $label = ''): array {
-    if (!$lat && !$lng) {
+    // FIX (Round 14): this was `if (!$lat && !$lng)` — it required BOTH to be
+    // zero, so a package with only one coordinate set (or a bad value) was sent
+    // to the weather API as a real point and the reading was rendered as that
+    // destination's live weather. Now either missing coordinate, or an
+    // out-of-range one, is reported honestly.
+    if (abs($lat) < 0.0001 && abs($lng) < 0.0001) {
         return ['ok' => false, 'error' => 'no_coords'];
+    }
+    if ($lat < -90 || $lat > 90 || $lng < -180 || $lng > 180) {
+        return ['ok' => false, 'error' => 'bad_coords'];
     }
 
     $cacheKey = 'owm_' . round($lat, 3) . '_' . round($lng, 3);
@@ -1884,16 +2804,28 @@ function tms_get_weather(PDO $dbh, float $lat, float $lng, string $label = ''): 
         $forecast = [];
         $fcJson = _tms_http_get($fcUrl);
         $fc = $fcJson ? json_decode($fcJson, true) : null;
+        // FIX (Round 14): days used to be bucketed with date() — i.e. in the
+        // SERVER's timezone — so for any destination in a different zone the
+        // daily highs/lows blended two local days, and the "skip partial today"
+        // test could skip the wrong day or nothing at all. Bucket in the
+        // destination's own offset instead (OWM returns it as `timezone`).
+        $fcTzOffset = (int)($cur['timezone'] ?? 0);
+        $localToday = gmdate('Y-m-d', time() + $fcTzOffset);
         if ($fc && !empty($fc['list'])) {
             $byDay = [];
             foreach ($fc['list'] as $slot) {
-                $day = date('Y-m-d', $slot['dt']);
+                if (empty($slot['dt'])) { continue; }
+                $day = gmdate('Y-m-d', (int)$slot['dt'] + $fcTzOffset);
                 $byDay[$day][] = $slot;
             }
-            $i = 0;
             foreach ($byDay as $day => $slots) {
-                if ($i === 0 && $day === date('Y-m-d')) { continue; } // skip partial today
-                $temps = array_column(array_column($slots, 'main'), 'temp');
+                if ($day === $localToday) { continue; } // skip the partial current day
+                // array_column silently drops slots with no 'main', so this can
+                // legitimately come back empty on a degraded payload — and
+                // max([])/min([]) throw a ValueError (an Error, NOT an Exception,
+                // so the catch below would not have caught it: uncaught fatal).
+                $temps = array_filter(array_column(array_column($slots, 'main'), 'temp'), 'is_numeric');
+                if (!$temps) { continue; }
                 $midSlot = $slots[intval(count($slots) / 2)];
                 $forecast[] = [
                     'date'      => $day,
@@ -1903,7 +2835,6 @@ function tms_get_weather(PDO $dbh, float $lat, float $lng, string $label = ''): 
                     'condition' => $midSlot['weather'][0]['main'] ?? '',
                     'icon'      => $midSlot['weather'][0]['icon'] ?? '01d',
                 ];
-                $i++;
                 if (count($forecast) >= 5) break;
             }
         }
@@ -1919,10 +2850,14 @@ function tms_get_weather(PDO $dbh, float $lat, float $lng, string $label = ''): 
         $result = [
             'ok'         => true,
             'source'     => 'openweathermap',
-            'city'       => $cur['name'] ?: $label,
-            'temp'       => round($cur['main']['temp']),
-            'feels_like' => round($cur['main']['feels_like']),
-            'humidity'   => $cur['main']['humidity'],
+            // FIX (Round 14): these four were the only unguarded reads in the
+            // block (wind/weather already used ??). A degraded payload produced
+            // "Undefined array key" warnings plus round(null) deprecations and a
+            // blank temperature on screen.
+            'city'       => ($cur['name'] ?? '') ?: $label,
+            'temp'       => round($cur['main']['temp'] ?? 0),
+            'feels_like' => round($cur['main']['feels_like'] ?? ($cur['main']['temp'] ?? 0)),
+            'humidity'   => $cur['main']['humidity'] ?? null,
             'wind_speed' => round($cur['wind']['speed'] ?? 0, 1),
             'condition'  => $cur['weather'][0]['main'] ?? 'Clear',
             'description'=> ucfirst($cur['weather'][0]['description'] ?? ''),
@@ -1938,9 +2873,11 @@ function tms_get_weather(PDO $dbh, float $lat, float $lng, string $label = ''): 
             $tmsCache->set($cacheKey, $result, WEATHER_CACHE_TTL);
         }
 
-    } catch (Exception $e) {
-        // Even an unexpected exception from the OWM path falls back to the
-        // free API rather than giving up on real weather entirely.
+    } catch (Throwable $e) {
+        // Even an unexpected error from the OWM path falls back to the free API
+        // rather than giving up on real weather entirely. (Throwable, not
+        // Exception: PHP 8 throws ValueError/TypeError, which are Errors.)
+        error_log('[TMS Weather] OpenWeatherMap path failed: ' . $e->getMessage());
         return tms_get_weather_openmeteo($dbh, $lat, $lng, $label, $cacheKey, $tmsCache ?? null);
     }
 
@@ -1968,7 +2905,11 @@ function tms_get_weather_openmeteo(PDO $dbh, float $lat, float $lng, string $lab
         ]);
         $json = _tms_http_get($url);
         $w = $json ? json_decode($json, true) : null;
-        if (!$w || !isset($w['current'])) {
+        // FIX (Round 14): this only checked that `current` existed, so a partial
+        // payload returned ok:true with temp = null — rendering "°C" with no
+        // number on weather.php and a fabricated "0°C" on compare.php.
+        if (!$w || !isset($w['current']) || !isset($w['current']['temperature_2m'])) {
+            if ($tmsCache) { $tmsCache->set($cacheKey, $result, 120); }
             return $result;
         }
 
@@ -2011,8 +2952,17 @@ function tms_get_weather_openmeteo(PDO $dbh, float $lat, float $lng, string $lab
         if ($tmsCache) {
             $tmsCache->set($cacheKey, $result, WEATHER_CACHE_TTL);
         }
-    } catch (Exception $e) {
+    } catch (Throwable $e) {
+        error_log('[TMS Weather] Open-Meteo path failed: ' . $e->getMessage());
         $result = ['ok' => false, 'error' => 'exception'];
+    }
+    // FIX (Round 14): failures used to be left uncached, so during an outage
+    // EVERY page load re-attempted the call — up to 6s each, and compare.php
+    // looped it over 3 packages (up to 36s), blowing max_execution_time and
+    // replacing the whole page with the generic fatal-error screen. A short
+    // negative TTL keeps the site responsive while an API is down.
+    if (!$result['ok'] && $tmsCache) {
+        $tmsCache->set($cacheKey, $result, 120);
     }
     return $result;
 }
@@ -2060,10 +3010,34 @@ function _tms_http_get(string $url): ?string {
         CURLOPT_TIMEOUT        => 6,
         CURLOPT_SSL_VERIFYPEER => true,
     ]);
-    $res = curl_exec($ch);
-    $err = curl_errno($ch);
+    $res  = curl_exec($ch);
+    $err  = curl_errno($ch);
+    $emsg = curl_error($ch);
+    $code = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
     curl_close($ch);
-    return ($err === 0 && $res !== false) ? $res : null;
+
+    if ($err !== 0 || $res === false) {
+        error_log('[TMS HTTP] request failed: ' . $emsg . ' — ' . parse_url($url, PHP_URL_HOST));
+        return null;
+    }
+
+    // FIX (Round 14): this used to return the body regardless of status, so an
+    // OpenWeatherMap 401 (bad key) or 429 (quota exceeded) looked like success,
+    // json_decode gave an array with no 'main', and the code silently fell back
+    // to Open-Meteo forever — no user message, no log line. A deployer who typos
+    // their key had no way to find out.
+    if ($code >= 400) {
+        $host = parse_url($url, PHP_URL_HOST);
+        if ($code === 401 || $code === 403) {
+            error_log("[TMS HTTP] {$host} rejected the API key (HTTP {$code}). Check the matching key in .env.");
+        } elseif ($code === 429) {
+            error_log("[TMS HTTP] {$host} rate limit / quota exceeded (HTTP 429).");
+        } else {
+            error_log("[TMS HTTP] {$host} returned HTTP {$code}.");
+        }
+        return null;
+    }
+    return $res;
 }
 
 /**
@@ -2078,16 +3052,30 @@ function _tms_http_get(string $url): ?string {
  * gracefully rather than showing a broken/blank converter.
  */
 function tms_get_fx_rates(?CacheService $tmsCache = null): array {
+    // FIX (Round 14): tms_currency() calls this for EVERY price it formats when
+    // the visitor picked a non-BDT currency, and only successes were cached. With
+    // the FX API unreachable that meant one 6-second cURL call per price on the
+    // page — a package list would hang for a minute or hit max_execution_time.
+    // A per-request memo plus a short negative TTL fixes both.
+    static $memo = null;
+    if ($memo !== null) return $memo;
+
     $cacheKey = 'fx:bdt_rates';
     if ($tmsCache) {
         $cached = $tmsCache->get($cacheKey);
-        if ($cached !== null) return $cached;
+        if ($cached !== null) { $memo = $cached; return $memo; }
     }
     $raw = _tms_http_get('https://open.er-api.com/v6/latest/BDT');
-    if ($raw === null) return ['ok' => false];
+    if ($raw === null) {
+        $memo = ['ok' => false];
+        if ($tmsCache) $tmsCache->set($cacheKey, $memo, 300);
+        return $memo;
+    }
     $data = json_decode($raw, true);
     if (!is_array($data) || ($data['result'] ?? '') !== 'success' || empty($data['rates'])) {
-        return ['ok' => false];
+        $memo = ['ok' => false];
+        if ($tmsCache) $tmsCache->set($cacheKey, $memo, 300);
+        return $memo;
     }
     $result = [
         'ok'         => true,
@@ -2096,6 +3084,7 @@ function tms_get_fx_rates(?CacheService $tmsCache = null): array {
         'updated'    => $data['time_last_update_utc'] ?? null,
     ];
     if ($tmsCache) $tmsCache->set($cacheKey, $result, 12 * 3600);
+    $memo = $result;
     return $result;
 }
 

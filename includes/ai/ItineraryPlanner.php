@@ -33,7 +33,7 @@ class ItineraryPlanner {
      * @param string $email     User email
      * @return array            Full structured itinerary
      */
-    public function generate(array $tripData, string $email = 'guest'): array {
+    public function generate(array $tripData, string $email = 'guest', ?int $bookingId = null): array {
         $dest      = $tripData['destination'] ?? 'Unknown';
         $duration  = $tripData['duration'] ?? 5;
         $startDate = $tripData['start_date'] ?? date('Y-m-d', strtotime('+7 days'));
@@ -155,16 +155,36 @@ MSG;
         // fresh itinerary instead of silently reusing a stale cached one —
         // see buildWeatherContext()'s $cacheBucket for what this covers.
         $cacheKey = md5('itinerary_' . json_encode($tripData) . '_' . $weatherContext['cache_bucket']);
-        $result   = $this->ai->ask($system, $userMessage, $cacheKey, $email);
+        $result   = $this->ai->ask($system, $userMessage, $cacheKey, $email, 90, 85, feature: 'itinerary'); // FIX (live testing, round 19): longer budget than the interactive-chat default -- a full itinerary genuinely needs it, see AIClient::send().
 
         if (!$result['success']) {
-            return $this->fallbackItinerary($tripData);
+            // FIX (live testing, round 19): this used to `return` here directly,
+            // which skipped saveItinerary() below entirely. The AJAX response
+            // still came back {success:true} (the fallback template IS a valid
+            // itinerary shape), so my-trip.php's JS reloaded the page expecting
+            // to see it -- but nothing was ever written to tbl_ai_itineraries,
+            // so the reload always landed back on "No itinerary generated for
+            // this trip yet." with zero error shown to the user. Every fallback
+            // itinerary is now saved too, so a real AI outage still leaves the
+            // traveler with the honest, clearly-labeled template (see ai_notes
+            // below) instead of the button silently doing nothing.
+            $itinerary = $this->fallbackItinerary($tripData);
+            $this->saveItinerary($itinerary, $tripData, $email, $bookingId);
+            return $itinerary;
         }
 
         $itinerary = $this->ai->parseJson($result['content']);
 
+
         if (!$itinerary || empty($itinerary['days'])) {
-            return $this->fallbackItinerary($tripData);
+            // Same fix as above: a response that came back but didn't parse
+            // into valid JSON (e.g. truncated by the output token limit on a
+            // long multi-day itinerary) must not be saved silently as if it
+            // succeeded -- but it must still be saved as a fallback so the
+            // trip page has something to show instead of nothing.
+            $itinerary = $this->fallbackItinerary($tripData);
+            $this->saveItinerary($itinerary, $tripData, $email, $bookingId);
+            return $itinerary;
         }
 
         // Deterministic, threshold-based alerts (heat/rain/wind) straight from
@@ -174,7 +194,7 @@ MSG;
         $itinerary['live_weather_alerts'] = $weatherContext['risk_alerts'];
 
         // Save to database for future reference
-        $this->saveItinerary($itinerary, $tripData, $email);
+        $this->saveItinerary($itinerary, $tripData, $email, $bookingId);
 
         return $itinerary;
     }
@@ -318,13 +338,19 @@ MSG;
         }
     }
 
-    private function saveItinerary(array $itinerary, array $tripData, string $email): void {
+    private function saveItinerary(array $itinerary, array $tripData, string $email, ?int $bookingId = null): void {
         try {
+            // $bookingId links this AI-generated plan to a real, paid-for
+            // booking (see my-trip.php) so getByBookingId() below actually
+            // has something to find -- before this, nothing in the codebase
+            // ever passed a booking_id here (custom-trip.php's ad-hoc trip
+            // planner has no real booking to link to), so every row was
+            // saved with booking_id NULL and getByBookingId() was dead code.
             $stmt = $this->db->prepare(
-                "INSERT INTO tbl_ai_itineraries (user_email, itinerary_json, ai_version, created_at)
-                 VALUES (?, ?, ?, NOW())"
+                "INSERT INTO tbl_ai_itineraries (booking_id, user_email, itinerary_json, ai_version, created_at)
+                 VALUES (?, ?, ?, ?, NOW())"
             );
-            $stmt->execute([$email, json_encode($itinerary), defined('GEMINI_MODEL') ? GEMINI_MODEL : 'gemini-1.5-flash']);
+            $stmt->execute([$bookingId, $email, json_encode($itinerary), defined('GEMINI_MODEL') ? GEMINI_MODEL : 'gemini-1.5-flash']);
         } catch (Exception $e) {
             error_log('[TMS AI] Failed to save itinerary: ' . $e->getMessage());
         }

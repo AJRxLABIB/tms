@@ -47,7 +47,7 @@ class TripCopilot {
         }
         $messages[] = ['role' => 'user', 'content' => $userMsg];
 
-        $result = $this->ai->call($system, $messages, '', $email);
+        $result = $this->ai->call($system, $messages, '', $email, feature: 'trip_copilot');
 
         if (!$result['success']) {
             return [
@@ -92,7 +92,7 @@ class TripCopilot {
 
         $userMsg = "Trip context: " . $this->buildTripBriefing($booking) . " Current time: " . date('Y-m-d H:i') . ". Generate a relevant proactive alert if warranted. If nothing urgent, return {\"type\":\"tip\",\"title\":\"Travel Tip\",\"message\":\"<general useful tip>\",\"urgency\":\"low\"}.";
 
-        $result = $this->ai->ask($system, $userMsg, '', $email);
+        $result = $this->ai->ask($system, $userMsg, '', $email, feature: 'trip_copilot_alert');
         if (!$result['success']) return null;
 
         $alert = $this->ai->parseJson($result['content']);
@@ -107,11 +107,12 @@ class TripCopilot {
         try {
             $stmt = $this->db->prepare(
                 "SELECT role, message, created_at FROM tbl_copilot_sessions
-                 WHERE booking_id = ? ORDER BY id DESC LIMIT ?"
+                 WHERE booking_id = ? ORDER BY id DESC LIMIT " . (int)$limit
             );
-            $stmt->execute([$bookingId, $limit]);
+            $stmt->execute([$bookingId]);
             return array_reverse($stmt->fetchAll(PDO::FETCH_OBJ));
         } catch (Exception $e) {
+            error_log('[TMS] ' . __METHOD__ . ' failed: ' . $e->getMessage());
             return [];
         }
     }
@@ -134,6 +135,7 @@ class TripCopilot {
             $stmt->execute([$email]);
             return $stmt->fetch(PDO::FETCH_OBJ) ?: null;
         } catch (Exception $e) {
+            error_log('[TMS] ' . __METHOD__ . ' failed: ' . $e->getMessage());
             return null;
         }
     }
@@ -243,6 +245,7 @@ SYSTEM;
 
             return $row;
         } catch (Exception $e) {
+            error_log('[TMS] ' . __METHOD__ . ' failed: ' . $e->getMessage());
             return null;
         }
     }

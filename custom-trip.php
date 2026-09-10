@@ -2,13 +2,20 @@
 session_start();
 error_reporting(E_ALL); ini_set('display_errors', '0'); ini_set('log_errors', '1');
 include('includes/config.php');
-tms_require_user(); // Batch 1 (landing/auth gating): whole app now requires login
+// LIVE BUG FIX (customer-facing audit): this page is real browsing/
+// marketing content -- it's explicitly allowed in robots.txt and listed
+// in sitemap.php for search engines -- but a blanket "require login
+// everywhere" change (see includes/config.php's tms_require_user())
+// silently gated it too, so Google (and any signed-out visitor) was
+// redirected to the homepage instead of seeing this page. Intentionally
+// left public; booking/account actions on this page still check
+// $_SESSION['login'] individually where needed.
 
 $error = ''; $success = '';
 
 if(isset($_POST['submittrip'])) {
     tms_csrf_validate();
-    if(!$_SESSION['login']) {
+    if(empty($_SESSION['login'])) {
         $error = 'Please sign in to submit a custom trip request.';
     } else {
         $userEmail = $_SESSION['login'];
@@ -30,6 +37,30 @@ if(isset($_POST['submittrip'])) {
         $aiItinerary = $_POST['ai_itinerary_json'] ?? '';
         $q->bindParam(':ai',$aiItinerary);
         $q->execute();
+
+        // FIX (Round 14): loyalty.php advertises "Custom trip request = 30 pts"
+        // and nothing here ever awarded them, so users earned nothing and saw no
+        // entry in Points History. Awarded now — but rate-limited to once every
+        // 24 hours, because this form has no submit limit and would otherwise be
+        // an unlimited points farm (points can be redeemed for discounts).
+        try {
+            $recent = $dbh->prepare(
+                "SELECT COUNT(*) FROM tblloyalty_log
+                 WHERE UserEmail = :e AND Description = 'Custom trip request'
+                   AND CreatedAt > DATE_SUB(NOW(), INTERVAL 1 DAY)"
+            );
+            $recent->execute([':e' => $userEmail]);
+            if ((int)$recent->fetchColumn() === 0) {
+                $dbh->prepare("INSERT INTO tblloyalty(UserEmail,Points,TotalEarned) VALUES(:e,30,30)
+                    ON DUPLICATE KEY UPDATE Points=Points+30, TotalEarned=TotalEarned+30")
+                    ->execute([':e' => $userEmail]);
+                $dbh->prepare("INSERT INTO tblloyalty_log(UserEmail,Points,Description) VALUES(:e,30,:d)")
+                    ->execute([':e' => $userEmail, ':d' => 'Custom trip request']);
+            }
+        } catch (Exception $e) {
+            error_log('[TMS Loyalty] custom-trip points failed (request still saved): ' . $e->getMessage());
+        }
+
         $success = 'Your custom trip request has been submitted! Our team will contact you within 24 hours.';
     }
 }
@@ -396,7 +427,11 @@ function generateAiItinerary() {
         accommodation: document.getElementById('accommodation').value,
         transport: document.getElementById('transport').value,
         activities: document.getElementById('activitiesInput').value || 'sightseeing',
-        special_requests: document.querySelector('[name="specialrequests"]').value || ''
+        special_requests: document.querySelector('[name="specialrequests"]').value || '',
+        // SECURITY (round 20): api/ai.php's itinerary action now requires a CSRF
+        // token; this page already renders one (tms_csrf_field()) for its own
+        // form further down -- reuse that same value here.
+        csrf_token: (document.querySelector('[name="csrf_token"]') || {}).value || ''
     });
 
     fetch('api/ai.php?action=itinerary', { method: 'POST', body: body })

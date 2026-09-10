@@ -4,7 +4,12 @@ error_reporting(E_ALL);
 ini_set('display_errors', 0);
 ini_set('log_errors', 1);
 include('includes/config.php');
+require_once(__DIR__ . '/../includes/payments/PaymentProviderInterface.php');
+require_once(__DIR__ . '/../includes/payments/SandboxProvider.php');
+require_once(__DIR__ . '/../includes/payments/PaymentService.php');
 tms_require_admin();
+tms_admin_require_role($dbh, ['booking_manager', 'operations', 'manager']); // Round 20 RBAC (item 46)
+$paymentService = new PaymentService($dbh);
 ?>
 <!DOCTYPE html>
 <html lang="<?php echo htmlspecialchars(tms_active_language(), ENT_QUOTES, 'UTF-8'); ?>">
@@ -92,10 +97,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'], $_POST['id'
             $msgType = 'success';
             break;
         case 'approve_mod':
-            $bq = $dbh->prepare("SELECT RequestedFromDate, RequestedToDate FROM tblbooking WHERE BookingId=:id");
+            // GUARD (Round 20, caught in live testing): a customer cancelling
+            // a booking that still had a pending date-change request used to
+            // leave the request pending, so approving it here would silently
+            // rewrite FromDate/ToDate on an already-cancelled booking. That
+            // stale-data path is now closed at the source (tour-history.php's
+            // cancel_booking clears the request), but this check stays as a
+            // second line of defense against acting on a cancelled booking.
+            $bq = $dbh->prepare("SELECT RequestedFromDate, RequestedToDate, status FROM tblbooking WHERE BookingId=:id");
             $bq->execute([':id'=>$bid]);
             $row = $bq->fetch(PDO::FETCH_OBJ);
-            if ($row && $row->RequestedFromDate && $row->RequestedToDate) {
+            if ($row && (int)$row->status === 2) {
+                $msg = "Booking #BK$bid is cancelled — its date-change request can no longer be applied.";
+                $msgType = 'error';
+            } elseif ($row && $row->RequestedFromDate && $row->RequestedToDate) {
                 $dbh->prepare("UPDATE tblbooking SET FromDate=:f, ToDate=:t, RequestedFromDate=NULL, RequestedToDate=NULL, ModificationStatus='approved', ModificationNote=NULL WHERE BookingId=:id")
                     ->execute([':f'=>$row->RequestedFromDate, ':t'=>$row->RequestedToDate, ':id'=>$bid]);
                 $ref = 'BK'.str_pad($bid,3,'0',STR_PAD_LEFT);
@@ -122,6 +137,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'], $_POST['id'
             break;
         case 'refund_processed':
             $dbh->prepare("UPDATE tblbooking SET RefundStatus='processed' WHERE BookingId=:id")->execute([':id'=>$bid]);
+            // Keeps tblpayments/tblpayment_refunds truthful when this booking
+            // was actually paid through payment.php's sandbox flow; a no-op
+            // otherwise (see PaymentService::markRefundProcessed()).
+            $paymentService->markRefundProcessed($bid);
             $ref = 'BK'.str_pad($bid,3,'0',STR_PAD_LEFT);
             tms_notify_booking_owner($dbh, $bid, "Your refund for booking #$ref has been processed.",
                 "Refund processed for #$ref",
@@ -132,6 +151,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'], $_POST['id'
         case 'refund_rejected':
             $note = tms_clean($_POST['note'] ?? '') ?: 'Refund could not be verified.';
             $dbh->prepare("UPDATE tblbooking SET RefundStatus='rejected', RefundNote=:n WHERE BookingId=:id")->execute([':n'=>$note, ':id'=>$bid]);
+            $paymentService->markRefundRejected($bid, $note);
             $ref = 'BK'.str_pad($bid,3,'0',STR_PAD_LEFT);
             tms_notify_booking_owner($dbh, $bid, "Your refund request for booking #$ref was declined: $note",
                 "Refund request declined for #$ref",
@@ -146,15 +166,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'], $_POST['id'
 function tms_notify_booking_owner(PDO $dbh, int $bookingId, string $message, string $emailSubject = '', string $emailHtml = ''): void {
     try {
         $stmt = $dbh->prepare(
-            "SELECT b.UserEmail, u.FullName FROM tblbooking b
+            "SELECT b.UserEmail, u.FullName, u.NotificationsEnabled FROM tblbooking b
              LEFT JOIN tblusers u ON u.EmailId = b.UserEmail
              WHERE b.BookingId=:id"
         );
         $stmt->execute([':id' => $bookingId]);
         $row = $stmt->fetch(PDO::FETCH_OBJ);
         if ($row && $row->UserEmail) {
+            // Always leave the in-app notification (bell icon) -- it's not
+            // an interruption the way email is, and losing your only record
+            // that a booking status changed would be a worse outcome than
+            // this preference intends. Only the email half is gated by
+            // NotificationsEnabled (Round 20, spec item 48 -- Privacy),
+            // and only for this non-critical status-update category: a
+            // NULL NotificationsEnabled (no tblusers row, e.g. a booking
+            // made without an account) defaults to sending, matching the
+            // column's own DEFAULT 1 rather than silently going quiet.
             tms_notify($dbh, $row->UserEmail, $message, 'tour-history.php');
-            if ($emailSubject && $emailHtml) {
+            $wantsEmail = $row->NotificationsEnabled === null || (int)$row->NotificationsEnabled === 1;
+            if ($emailSubject && $emailHtml && $wantsEmail) {
                 tms_send_email($row->UserEmail, $row->FullName ?: $row->UserEmail, $emailSubject, tms_email_template($emailSubject, $emailHtml));
             }
         }

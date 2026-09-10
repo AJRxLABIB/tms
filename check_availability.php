@@ -16,10 +16,18 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 // Validate CSRF (uses the token from the session, same token that was embedded in the form)
 tms_csrf_validate();
 
+// FIX (Round 14): this returned an HTML snippet, and the caller decided whether
+// to disable the "Create My Account" button by searching that snippet for the
+// substring "red". The CSRF failure message — "Invalid or expired form
+// submission..." — contains "red" inside "expired", so ANY failure here
+// permanently disabled the signup button. Return structured JSON instead, so the
+// caller never has to guess from prose.
+header('Content-Type: application/json; charset=utf-8');
+
 $email = tms_validate_email($_POST['emailid'] ?? '');
 
 if (empty($email)) {
-    echo "<span style='color:#e74c3c;font-size:12px;'><i class='fa fa-times-circle'></i> Please enter a valid email address.</span>";
+    echo json_encode(['ok' => true, 'available' => false, 'message' => 'Please enter a valid email address.']);
     exit;
 }
 
@@ -28,7 +36,7 @@ $q->bindParam(':email', $email, PDO::PARAM_STR);
 $q->execute();
 
 if ($q->rowCount() > 0) {
-    echo "<span style='color:#e74c3c;font-size:12px;'><i class='fa fa-times-circle'></i> This email is already registered.</span>";
+    echo json_encode(['ok' => true, 'available' => false, 'message' => 'This email is already registered. Try signing in instead.']);
 } else {
-    echo "<span style='color:#27ae60;font-size:12px;'><i class='fa fa-check-circle'></i> Email is available.</span>";
+    echo json_encode(['ok' => true, 'available' => true, 'message' => 'Email is available.']);
 }

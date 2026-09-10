@@ -3,6 +3,7 @@ session_start();
 error_reporting(E_ALL); ini_set('display_errors', 0); ini_set('log_errors', 1);
 include('includes/config.php');
 tms_require_admin();
+tms_admin_require_role($dbh, ['booking_manager', 'operations', 'manager']); // Round 20 RBAC (item 46)
 
 // Which month to display (defaults to current month)
 $monthParam = $_GET['month'] ?? date('Y-m');

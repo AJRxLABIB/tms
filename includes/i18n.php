@@ -51,6 +51,16 @@ $TMS_TRANSLATIONS = [
         'heading_booking_history'=>'Booking History','msg_no_packages_found'=>'No packages found',
         'msg_no_results'=>'No results found.','msg_success'=>'Success!','msg_error'=>'Something went wrong. Please try again.',
         'msg_page_not_found'=>'Page not found','msg_loading'=>'Loading...','msg_package_not_found'=>'Package not found',
+        'modal_sign_in_title'=>'Sign In','ph_email_address'=>'Your Email Address','link_forgot_password'=>'Forgot password?',
+        'msg_no_account_yet'=>'No account yet?','link_create_account'=>'Create one free',
+        'msg_agree_terms'=>'By logging in you agree to our','link_terms'=>'Terms','link_privacy_policy'=>'Privacy Policy','conj_and'=>'and',
+        'heading_how_can_we_help'=>'How Can We Help You','opt_select_issue'=>'Select Issue','opt_booking_issues'=>'Booking Issues',
+        'opt_cancellation'=>'Cancellation','opt_refund'=>'Refund','opt_other'=>'Other','ph_description'=>'Description',
+        'modal_welcome_back'=>'Welcome Back','modal_signin_subtitle'=>'Sign in to your TMS account','lbl_email_address'=>'Email Address',
+        'ph_your_password'=>'Your password','modal_join_tms'=>'Join TMS','modal_signup_subtitle'=>'Start planning your dream trip today',
+        'lbl_mobile_number'=>'Mobile Number','lbl_confirm_password'=>'Confirm Password','ph_full_name'=>'Your full name',
+        'ph_min_6_chars'=>'Minimum 6 characters','ph_repeat_password'=>'Repeat your password','btn_create_account'=>'Create My Account',
+        'msg_already_have_account'=>'Already have an account?',
     ],
     'bn' => [
         'nav_home'=>'হোম','nav_profile'=>'আমার প্রোফাইল','nav_bookings'=>'আমার বুকিং','nav_wishlist'=>'পছন্দের তালিকা',
@@ -75,6 +85,16 @@ $TMS_TRANSLATIONS = [
         'heading_booking_history'=>'বুকিং ইতিহাস','msg_no_packages_found'=>'কোনো প্যাকেজ পাওয়া যায়নি',
         'msg_no_results'=>'কোনো ফলাফল পাওয়া যায়নি।','msg_success'=>'সফল হয়েছে!','msg_error'=>'কিছু ভুল হয়েছে। আবার চেষ্টা করুন।',
         'msg_page_not_found'=>'পৃষ্ঠা পাওয়া যায়নি','msg_loading'=>'লোড হচ্ছে...','msg_package_not_found'=>'প্যাকেজ পাওয়া যায়নি',
+        'modal_sign_in_title'=>'সাইন ইন','ph_email_address'=>'আপনার ইমেইল ঠিকানা','link_forgot_password'=>'পাসওয়ার্ড ভুলে গেছেন?',
+        'msg_no_account_yet'=>'এখনো অ্যাকাউন্ট নেই?','link_create_account'=>'বিনামূল্যে একটি তৈরি করুন',
+        'msg_agree_terms'=>'লগইন করার মাধ্যমে আপনি আমাদের','link_terms'=>'শর্তাবলী','link_privacy_policy'=>'গোপনীয়তা নীতি','conj_and'=>'এবং',
+        'heading_how_can_we_help'=>'আমরা কীভাবে সাহায্য করতে পারি','opt_select_issue'=>'সমস্যা নির্বাচন করুন','opt_booking_issues'=>'বুকিং সমস্যা',
+        'opt_cancellation'=>'বাতিলকরণ','opt_refund'=>'ফেরত','opt_other'=>'অন্যান্য','ph_description'=>'বিবরণ',
+        'modal_welcome_back'=>'ফিরে আসার জন্য স্বাগতম','modal_signin_subtitle'=>'আপনার TMS অ্যাকাউন্টে সাইন ইন করুন','lbl_email_address'=>'ইমেইল ঠিকানা',
+        'ph_your_password'=>'আপনার পাসওয়ার্ড','modal_join_tms'=>'TMS-এ যোগ দিন','modal_signup_subtitle'=>'আজই আপনার স্বপ্নের ভ্রমণের পরিকল্পনা শুরু করুন',
+        'lbl_mobile_number'=>'মোবাইল নম্বর','lbl_confirm_password'=>'পাসওয়ার্ড নিশ্চিত করুন','ph_full_name'=>'আপনার পূর্ণ নাম',
+        'ph_min_6_chars'=>'ন্যূনতম ৬ অক্ষর','ph_repeat_password'=>'আপনার পাসওয়ার্ড পুনরায় লিখুন','btn_create_account'=>'অ্যাকাউন্ট তৈরি করুন',
+        'msg_already_have_account'=>'ইতিমধ্যে অ্যাকাউন্ট আছে?',
     ],
     'hi' => [
         'nav_home'=>'होम','nav_profile'=>'मेरी प्रोफ़ाइल','nav_bookings'=>'मेरी बुकिंग','nav_wishlist'=>'विशलिस्ट',
@@ -99,6 +119,16 @@ $TMS_TRANSLATIONS = [
         'heading_booking_history'=>'बुकिंग इतिहास','msg_no_packages_found'=>'कोई पैकेज नहीं मिला',
         'msg_no_results'=>'कोई परिणाम नहीं मिला।','msg_success'=>'सफल!','msg_error'=>'कुछ गलत हो गया। कृपया पुनः प्रयास करें।',
         'msg_page_not_found'=>'पेज नहीं मिला','msg_loading'=>'लोड हो रहा है...','msg_package_not_found'=>'पैकेज नहीं मिला',
+        'modal_sign_in_title'=>'साइन इन','ph_email_address'=>'आपका ईमेल पता','link_forgot_password'=>'पासवर्ड भूल गए?',
+        'msg_no_account_yet'=>'अभी तक खाता नहीं है?','link_create_account'=>'मुफ़्त में एक बनाएं',
+        'msg_agree_terms'=>'लॉगिन करके आप हमारी','link_terms'=>'शर्तों','link_privacy_policy'=>'गोपनीयता नीति','conj_and'=>'और',
+        'heading_how_can_we_help'=>'हम आपकी कैसे मदद कर सकते हैं','opt_select_issue'=>'समस्या चुनें','opt_booking_issues'=>'बुकिंग समस्याएं',
+        'opt_cancellation'=>'रद्दीकरण','opt_refund'=>'धनवापसी','opt_other'=>'अन्य','ph_description'=>'विवरण',
+        'modal_welcome_back'=>'वापसी पर स्वागत है','modal_signin_subtitle'=>'अपने TMS खाते में साइन इन करें','lbl_email_address'=>'ईमेल पता',
+        'ph_your_password'=>'आपका पासवर्ड','modal_join_tms'=>'TMS से जुड़ें','modal_signup_subtitle'=>'आज ही अपनी सपनों की यात्रा की योजना बनाना शुरू करें',
+        'lbl_mobile_number'=>'मोबाइल नंबर','lbl_confirm_password'=>'पासवर्ड की पुष्टि करें','ph_full_name'=>'आपका पूरा नाम',
+        'ph_min_6_chars'=>'न्यूनतम 6 अक्षर','ph_repeat_password'=>'अपना पासवर्ड दोबारा लिखें','btn_create_account'=>'मेरा खाता बनाएं',
+        'msg_already_have_account'=>'पहले से खाता है?',
     ],
     'ar' => [
         'nav_home'=>'الرئيسية','nav_profile'=>'ملفي الشخصي','nav_bookings'=>'حجوزاتي','nav_wishlist'=>'المفضلة',
@@ -123,6 +153,16 @@ $TMS_TRANSLATIONS = [
         'heading_booking_history'=>'سجل الحجوزات','msg_no_packages_found'=>'لم يتم العثور على باقات',
         'msg_no_results'=>'لا توجد نتائج.','msg_success'=>'تم بنجاح!','msg_error'=>'حدث خطأ ما. يرجى المحاولة مرة أخرى.',
         'msg_page_not_found'=>'الصفحة غير موجودة','msg_loading'=>'جارٍ التحميل...','msg_package_not_found'=>'الباقة غير موجودة',
+        'modal_sign_in_title'=>'تسجيل الدخول','ph_email_address'=>'عنوان بريدك الإلكتروني','link_forgot_password'=>'نسيت كلمة المرور؟',
+        'msg_no_account_yet'=>'ليس لديك حساب بعد؟','link_create_account'=>'أنشئ حسابًا مجانًا',
+        'msg_agree_terms'=>'بتسجيل الدخول، فإنك توافق على','link_terms'=>'الشروط','link_privacy_policy'=>'سياسة الخصوصية','conj_and'=>'و',
+        'heading_how_can_we_help'=>'كيف يمكننا مساعدتك','opt_select_issue'=>'اختر المشكلة','opt_booking_issues'=>'مشاكل الحجز',
+        'opt_cancellation'=>'الإلغاء','opt_refund'=>'استرداد الأموال','opt_other'=>'أخرى','ph_description'=>'الوصف',
+        'modal_welcome_back'=>'مرحبًا بعودتك','modal_signin_subtitle'=>'سجّل الدخول إلى حساب TMS الخاص بك','lbl_email_address'=>'البريد الإلكتروني',
+        'ph_your_password'=>'كلمة المرور الخاصة بك','modal_join_tms'=>'انضم إلى TMS','modal_signup_subtitle'=>'ابدأ التخطيط لرحلة أحلامك اليوم',
+        'lbl_mobile_number'=>'رقم الجوال','lbl_confirm_password'=>'تأكيد كلمة المرور','ph_full_name'=>'اسمك الكامل',
+        'ph_min_6_chars'=>'6 أحرف على الأقل','ph_repeat_password'=>'أعد كتابة كلمة المرور','btn_create_account'=>'إنشاء حسابي',
+        'msg_already_have_account'=>'لديك حساب بالفعل؟',
     ],
     'fr' => [
         'nav_home'=>'Accueil','nav_profile'=>'Mon Profil','nav_bookings'=>'Mes Réservations','nav_wishlist'=>'Liste de souhaits',
@@ -147,6 +187,16 @@ $TMS_TRANSLATIONS = [
         'heading_booking_history'=>'Historique des réservations','msg_no_packages_found'=>'Aucun forfait trouvé',
         'msg_no_results'=>'Aucun résultat trouvé.','msg_success'=>'Succès !','msg_error'=>"Une erreur s'est produite. Veuillez réessayer.",
         'msg_page_not_found'=>'Page non trouvée','msg_loading'=>'Chargement...','msg_package_not_found'=>'Forfait non trouvé',
+        'modal_sign_in_title'=>'Connexion','ph_email_address'=>'Votre adresse e-mail','link_forgot_password'=>'Mot de passe oublié ?',
+        'msg_no_account_yet'=>'Pas encore de compte ?','link_create_account'=>'Créer un compte gratuit',
+        'msg_agree_terms'=>'En vous connectant, vous acceptez nos','link_terms'=>'Conditions','link_privacy_policy'=>'Politique de confidentialité','conj_and'=>'et',
+        'heading_how_can_we_help'=>'Comment pouvons-nous vous aider','opt_select_issue'=>'Sélectionner un problème','opt_booking_issues'=>'Problèmes de réservation',
+        'opt_cancellation'=>'Annulation','opt_refund'=>'Remboursement','opt_other'=>'Autre','ph_description'=>'Description',
+        'modal_welcome_back'=>'Content de vous revoir','modal_signin_subtitle'=>'Connectez-vous à votre compte TMS','lbl_email_address'=>'Adresse e-mail',
+        'ph_your_password'=>'Votre mot de passe','modal_join_tms'=>'Rejoindre TMS','modal_signup_subtitle'=>"Commencez à planifier le voyage de vos rêves dès aujourd'hui",
+        'lbl_mobile_number'=>'Numéro de mobile','lbl_confirm_password'=>'Confirmer le mot de passe','ph_full_name'=>'Votre nom complet',
+        'ph_min_6_chars'=>'Minimum 6 caractères','ph_repeat_password'=>'Répétez votre mot de passe','btn_create_account'=>'Créer mon compte',
+        'msg_already_have_account'=>'Vous avez déjà un compte ?',
     ],
     'zh' => [
         'nav_home'=>'首页','nav_profile'=>'我的资料','nav_bookings'=>'我的预订','nav_wishlist'=>'心愿单',
@@ -171,6 +221,16 @@ $TMS_TRANSLATIONS = [
         'heading_booking_history'=>'预订历史','msg_no_packages_found'=>'未找到套餐',
         'msg_no_results'=>'未找到结果。','msg_success'=>'成功！','msg_error'=>'出现错误，请重试。',
         'msg_page_not_found'=>'页面未找到','msg_loading'=>'加载中...','msg_package_not_found'=>'未找到套餐',
+        'modal_sign_in_title'=>'登录','ph_email_address'=>'您的电子邮箱地址','link_forgot_password'=>'忘记密码？',
+        'msg_no_account_yet'=>'还没有账户？','link_create_account'=>'免费创建一个',
+        'msg_agree_terms'=>'登录即表示您同意我们的','link_terms'=>'条款','link_privacy_policy'=>'隐私政策','conj_and'=>'和',
+        'heading_how_can_we_help'=>'我们能为您提供什么帮助','opt_select_issue'=>'选择问题类型','opt_booking_issues'=>'预订问题',
+        'opt_cancellation'=>'取消','opt_refund'=>'退款','opt_other'=>'其他','ph_description'=>'描述',
+        'modal_welcome_back'=>'欢迎回来','modal_signin_subtitle'=>'登录您的 TMS 账户','lbl_email_address'=>'电子邮箱地址',
+        'ph_your_password'=>'您的密码','modal_join_tms'=>'加入 TMS','modal_signup_subtitle'=>'立即开始规划您的梦想之旅',
+        'lbl_mobile_number'=>'手机号码','lbl_confirm_password'=>'确认密码','ph_full_name'=>'您的姓名',
+        'ph_min_6_chars'=>'至少6个字符','ph_repeat_password'=>'请再次输入密码','btn_create_account'=>'创建我的账户',
+        'msg_already_have_account'=>'已有账户？',
     ],
     'es' => [
         'nav_home'=>'Inicio','nav_profile'=>'Mi Perfil','nav_bookings'=>'Mis Reservas','nav_wishlist'=>'Lista de deseos',
@@ -195,6 +255,16 @@ $TMS_TRANSLATIONS = [
         'heading_booking_history'=>'Historial de reservas','msg_no_packages_found'=>'No se encontraron paquetes',
         'msg_no_results'=>'No se encontraron resultados.','msg_success'=>'¡Éxito!','msg_error'=>'Algo salió mal. Inténtalo de nuevo.',
         'msg_page_not_found'=>'Página no encontrada','msg_loading'=>'Cargando...','msg_package_not_found'=>'Paquete no encontrado',
+        'modal_sign_in_title'=>'Iniciar sesión','ph_email_address'=>'Tu dirección de correo','link_forgot_password'=>'¿Olvidaste tu contraseña?',
+        'msg_no_account_yet'=>'¿Aún no tienes cuenta?','link_create_account'=>'Crea una gratis',
+        'msg_agree_terms'=>'Al iniciar sesión aceptas nuestros','link_terms'=>'Términos','link_privacy_policy'=>'Política de privacidad','conj_and'=>'y',
+        'heading_how_can_we_help'=>'¿Cómo podemos ayudarte?','opt_select_issue'=>'Selecciona un problema','opt_booking_issues'=>'Problemas de reserva',
+        'opt_cancellation'=>'Cancelación','opt_refund'=>'Reembolso','opt_other'=>'Otro','ph_description'=>'Descripción',
+        'modal_welcome_back'=>'Bienvenido de nuevo','modal_signin_subtitle'=>'Inicia sesión en tu cuenta de TMS','lbl_email_address'=>'Correo electrónico',
+        'ph_your_password'=>'Tu contraseña','modal_join_tms'=>'Únete a TMS','modal_signup_subtitle'=>'Empieza a planear el viaje de tus sueños hoy',
+        'lbl_mobile_number'=>'Número de móvil','lbl_confirm_password'=>'Confirmar contraseña','ph_full_name'=>'Tu nombre completo',
+        'ph_min_6_chars'=>'Mínimo 6 caracteres','ph_repeat_password'=>'Repite tu contraseña','btn_create_account'=>'Crear mi cuenta',
+        'msg_already_have_account'=>'¿Ya tienes una cuenta?',
     ],
     'de' => [
         'nav_home'=>'Startseite','nav_profile'=>'Mein Profil','nav_bookings'=>'Meine Buchungen','nav_wishlist'=>'Wunschliste',
@@ -219,6 +289,16 @@ $TMS_TRANSLATIONS = [
         'heading_booking_history'=>'Buchungsverlauf','msg_no_packages_found'=>'Keine Pakete gefunden',
         'msg_no_results'=>'Keine Ergebnisse gefunden.','msg_success'=>'Erfolgreich!','msg_error'=>'Etwas ist schiefgelaufen. Bitte versuchen Sie es erneut.',
         'msg_page_not_found'=>'Seite nicht gefunden','msg_loading'=>'Wird geladen...','msg_package_not_found'=>'Paket nicht gefunden',
+        'modal_sign_in_title'=>'Anmelden','ph_email_address'=>'Ihre E-Mail-Adresse','link_forgot_password'=>'Passwort vergessen?',
+        'msg_no_account_yet'=>'Noch kein Konto?','link_create_account'=>'Kostenlos registrieren',
+        'msg_agree_terms'=>'Mit der Anmeldung stimmen Sie unseren','link_terms'=>'Nutzungsbedingungen','link_privacy_policy'=>'Datenschutzrichtlinie','conj_and'=>'und',
+        'heading_how_can_we_help'=>'Wie können wir Ihnen helfen','opt_select_issue'=>'Problem auswählen','opt_booking_issues'=>'Buchungsprobleme',
+        'opt_cancellation'=>'Stornierung','opt_refund'=>'Rückerstattung','opt_other'=>'Sonstiges','ph_description'=>'Beschreibung',
+        'modal_welcome_back'=>'Willkommen zurück','modal_signin_subtitle'=>'Melden Sie sich bei Ihrem TMS-Konto an','lbl_email_address'=>'E-Mail-Adresse',
+        'ph_your_password'=>'Ihr Passwort','modal_join_tms'=>'TMS beitreten','modal_signup_subtitle'=>'Beginnen Sie noch heute mit der Planung Ihrer Traumreise',
+        'lbl_mobile_number'=>'Handynummer','lbl_confirm_password'=>'Passwort bestätigen','ph_full_name'=>'Ihr vollständiger Name',
+        'ph_min_6_chars'=>'Mindestens 6 Zeichen','ph_repeat_password'=>'Passwort wiederholen','btn_create_account'=>'Mein Konto erstellen',
+        'msg_already_have_account'=>'Bereits ein Konto?',
     ],
 ];
 
@@ -303,6 +383,19 @@ function tms_translate_batch(array $texts, string $lang, PDO $dbh): array {
     // language was selected — exactly the kind of blank/broken page this whole
     // audit has been fixing. Loaded lazily here so English-only requests (the
     // majority) pay zero extra cost.
+    // FIX (Round 14): a failed translation was never remembered, so with the AI
+    // unreachable EVERY page render re-attempted the call and waited for it —
+    // which, with the old 30s-per-attempt / 3-attempt transport, meant listing
+    // pages could hang past max_execution_time and return the generic fatal
+    // page. A short circuit-breaker means one failure costs one wait, not one
+    // wait per page view, and the page still renders in the original language.
+    global $tmsCache;
+    $breakerKey = 'i18n_fail_' . $lang;
+    if (isset($tmsCache) && $tmsCache->get($breakerKey) !== null) {
+        foreach ($misses as $key => $text) { $result[$key] = $text; }
+        return $result;
+    }
+
     require_once __DIR__ . '/ai/AIClient.php';
     try {
         $ai = new AIClient($dbh);
@@ -331,8 +424,10 @@ function tms_translate_batch(array $texts, string $lang, PDO $dbh): array {
             }
         }
         error_log('[TMS i18n] Batch translation to ' . $lang . ' failed or malformed: ' . ($res['error'] ?? 'unexpected AI response shape'));
+        if (isset($tmsCache)) $tmsCache->set($breakerKey, 1, 300);
     } catch (Throwable $e) {
         error_log('[TMS i18n] Batch translation error: ' . $e->getMessage());
+        if (isset($tmsCache)) $tmsCache->set($breakerKey, 1, 300);
     }
 
     // AI unavailable/failed — fall back to the original text so the page still renders correctly.

@@ -74,6 +74,11 @@ Body: `email`, `password`, `device` (optional label, e.g. `"iPhone app"`).
 }}
 ```
 
+Protected by the same brute-force lockout as the website's own sign-in form:
+5 failed attempts (by email or IP) locks that email/IP out for 15 minutes,
+returning `429` with a message stating the wait time. Successful login
+clears the counter.
+
 ### `POST ?action=logout` — auth required
 Invalidates the token used in the request.
 
@@ -121,6 +126,7 @@ admins in Manage Bookings.
 | 404 | Resource not found (package, booking, or unknown `action`) |
 | 405 | Wrong HTTP method (most write actions require POST) |
 | 409 | Valid request, but not allowed right now (e.g. cancel within 24h) |
+| 429 | Too many failed login attempts for this email/IP — wait and retry |
 | 500 | Server error — check the PHP error log |
 
 ## About versioning

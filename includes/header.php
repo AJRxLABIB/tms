@@ -52,7 +52,10 @@ $currentPage = basename($_SERVER['PHP_SELF']);
             <a href="dashboard.php"><i class="fa fa-th-large"></i> Dashboard</a>
             <a href="profile.php"><i class="fa fa-user-circle"></i> <?php echo tms_t('nav_profile','My Profile'); ?></a>
             <a href="tour-history.php"><i class="fa fa-suitcase"></i> <?php echo tms_t('nav_bookings','My Bookings'); ?></a>
+            <a href="alerts.php"><i class="fa fa-bell"></i> Price Alerts</a>
+            <a href="group-trips.php"><i class="fa fa-users"></i> Group Trips</a>
             <a href="referral.php"><i class="fa fa-gift"></i> Refer Friends</a>
+            <a href="privacy.php"><i class="fa fa-lock"></i> Privacy &amp; My Data</a>
             <?php else: ?>
             <span class="tms-topbar-divider"></span>
             <a href="admin/index.php"><i class="fa fa-shield"></i> Admin</a>
@@ -119,7 +122,7 @@ $currentPage = basename($_SERVER['PHP_SELF']);
                  dismissible banner. Hidden until the browser actually confirms
                  installability via 'beforeinstallprompt' (see footer.php) —
                  never shown as a fake/always-on button. -->
-            <button type="button" id="tmsInstallBtn" class="tms-install-btn" style="display:none;" title="Install TMS as an app">
+            <button type="button" id="tmsInstallBtn" class="tms-install-btn" style="display:none;" title="Install TMS as an app" aria-label="Install TMS as an app">
                 <i class="fa fa-download"></i> <span>Install App</span>
             </button>
             <span class="tms-topbar-divider" id="tmsInstallDivider" style="display:none;"></span>
@@ -153,8 +156,8 @@ $currentPage = basename($_SERVER['PHP_SELF']);
 
         <?php if (!empty($tms_landing_mode)): ?>
         <div style="display:flex;gap:10px;align-items:center;">
-            <a href="javascript:void(0)" onclick="openModal('signupModal')" class="btn-topbar-signup" style="background:var(--secondary);color:#fff;padding:9px 20px;border-radius:24px;font-weight:600;font-size:13.5px;"><i class="fa fa-user-plus"></i> Sign Up</a>
-            <a href="javascript:void(0)" onclick="openModal('signinModal')" class="btn-topbar-login" style="background:var(--primary);color:#fff;padding:9px 20px;border-radius:24px;font-weight:600;font-size:13.5px;"><i class="fa fa-sign-in"></i> Sign In</a>
+            <a href="javascript:void(0)" onclick="openModal('signupModal')" class="btn-topbar-signup" style="background:var(--secondary);color:#fff;padding:9px 20px;border-radius:24px;font-weight:600;font-size:13.5px;"><i class="fa fa-user-plus"></i> <?php echo tms_t('nav_signup','Sign Up'); ?></a>
+            <a href="javascript:void(0)" onclick="openModal('signinModal')" class="btn-topbar-login" style="background:var(--primary);color:#fff;padding:9px 20px;border-radius:24px;font-weight:600;font-size:13.5px;"><i class="fa fa-sign-in"></i> <?php echo tms_t('nav_signin','Sign In'); ?></a>
         </div>
         <?php else: ?>
 
@@ -173,6 +176,12 @@ $currentPage = basename($_SERVER['PHP_SELF']);
             </li>
             <li <?php echo $currentPage=='package-list.php'?'class="active"':''; ?>>
                 <a href="package-list.php"><?php echo tms_t('nav_packages','Tour Packages'); ?></a>
+            </li>
+            <li <?php echo $currentPage=='hotels.php'||$currentPage=='hotel-details.php'?'class="active"':''; ?>>
+                <a href="hotels.php"><?php echo tms_t('nav_hotels','Hotels'); ?></a>
+            </li>
+            <li <?php echo $currentPage=='activities.php'||$currentPage=='activity-details.php'?'class="active"':''; ?>>
+                <a href="activities.php"><?php echo tms_t('nav_activities','Activities'); ?></a>
             </li>
             <li <?php echo $currentPage=='destinations.php'?'class="active"':''; ?>>
                 <a href="destinations.php"><i class="fa fa-map-marker" style="font-size:12px;"></i> <?php echo tms_t('nav_destinations','Destinations'); ?></a>
@@ -323,11 +332,11 @@ $currentPage = basename($_SERVER['PHP_SELF']);
 <!-- ═══════════════════════════════════════════ SIGN IN MODAL ═══════════════════════════════════════════ -->
 <div id="signinModal" class="tms-modal-overlay" onclick="if(event.target===this)closeModal('signinModal')">
     <div class="tms-modal-box">
-        <button class="tms-modal-close" onclick="closeModal('signinModal')">&times;</button>
+        <button class="tms-modal-close" onclick="closeModal('signinModal')" aria-label="Close sign-in dialog">&times;</button>
         <div class="tms-modal-header">
             <div class="tms-modal-icon"><i class="fa fa-sign-in"></i></div>
-            <h3>Welcome Back</h3>
-            <p>Sign in to your TMS account</p>
+            <h3><?php echo tms_t('modal_welcome_back','Welcome Back'); ?></h3>
+            <p><?php echo tms_t('modal_signin_subtitle','Sign in to your TMS account'); ?></p>
         </div>
         <?php if(isset($_SESSION['login_error'])): ?>
         <div class="tms-alert tms-alert-error"><i class="fa fa-exclamation-circle"></i> <?php echo htmlspecialchars($_SESSION['login_error']); unset($_SESSION['login_error']); ?></div>
@@ -336,66 +345,70 @@ $currentPage = basename($_SERVER['PHP_SELF']);
             <?php tms_csrf_field(); ?>
             <input type="hidden" name="redirect" value="<?php echo htmlspecialchars($_SESSION['post_login_redirect'] ?? $_SERVER['PHP_SELF']); ?>">
             <div class="tms-field">
-                <label>Email Address</label>
+                <label><?php echo tms_t('lbl_email_address','Email Address'); ?></label>
                 <div class="tms-input-wrap"><i class="fa fa-envelope"></i><input type="email" name="EmailId" placeholder="your@email.com" required></div>
             </div>
             <div class="tms-field">
-                <label>Password</label>
-                <div class="tms-input-wrap"><i class="fa fa-lock"></i><input type="password" name="Password" placeholder="Your password" required></div>
+                <label><?php echo tms_t('lbl_password','Password'); ?></label>
+                <div class="tms-input-wrap"><i class="fa fa-lock"></i><input type="password" name="Password" placeholder="<?php echo htmlspecialchars(tms_t('ph_your_password','Your password'), ENT_QUOTES, 'UTF-8'); ?>" required></div>
             </div>
-            <div style="text-align:right;margin-bottom:20px;"><a href="forgot-password.php" style="font-size:13px;color:var(--secondary);">Forgot password?</a></div>
-            <button type="submit" name="signin" class="tms-btn-modal">Sign In <i class="fa fa-arrow-right"></i></button>
+            <div style="text-align:right;margin-bottom:20px;"><a href="forgot-password.php" style="font-size:13px;color:var(--secondary);"><?php echo tms_t('link_forgot_password','Forgot password?'); ?></a></div>
+            <button type="submit" name="signin" class="tms-btn-modal"><?php echo tms_t('nav_signin','Sign In'); ?> <i class="fa fa-arrow-right"></i></button>
         </form>
-        <p class="tms-modal-switch">No account? <a href="javascript:void(0)" onclick="closeModal('signinModal');openModal('signupModal')">Create one free →</a></p>
+        <p class="tms-modal-switch"><?php echo tms_t('msg_no_account_yet','No account yet?'); ?> <a href="javascript:void(0)" onclick="closeModal('signinModal');openModal('signupModal')"><?php echo tms_t('link_create_account','Create one free'); ?> →</a></p>
     </div>
 </div>
 
 <!-- ═══════════════════════════════════════════ SIGN UP MODAL ═══════════════════════════════════════════ -->
 <div id="signupModal" class="tms-modal-overlay" onclick="if(event.target===this)closeModal('signupModal')">
     <div class="tms-modal-box">
-        <button class="tms-modal-close" onclick="closeModal('signupModal')">&times;</button>
+        <button class="tms-modal-close" onclick="closeModal('signupModal')" aria-label="Close sign-up dialog">&times;</button>
         <div class="tms-modal-header">
             <div class="tms-modal-icon" style="background:linear-gradient(135deg,var(--secondary),var(--primary));"><i class="fa fa-user-plus"></i></div>
-            <h3>Join TMS</h3>
-            <p>Start planning your dream trip today</p>
+            <h3><?php echo tms_t('modal_join_tms','Join TMS'); ?></h3>
+            <p><?php echo tms_t('modal_signup_subtitle','Start planning your dream trip today'); ?></p>
         </div>
         <?php if(isset($_SESSION['reg_error'])): ?>
         <div class="tms-alert tms-alert-error"><i class="fa fa-exclamation-circle"></i> <?php echo htmlspecialchars($_SESSION['reg_error']); unset($_SESSION['reg_error']); ?></div>
         <?php endif; ?>
         <form method="post" action="register.php">
-            <?php tms_csrf_field(); ?>
+            <?php /* id="signupCsrf" matters: checkEmailLive() below reads the token
+                     from this element. It used to call tms_csrf_field(), which emits
+                     no id, so the live email check always posted an empty token,
+                     always got a 403, and always disabled the submit button. */ ?>
+            <input type="hidden" name="csrf_token" id="signupCsrf" value="<?php echo htmlspecialchars(tms_csrf_token(), ENT_QUOTES, 'UTF-8'); ?>">
             <input type="hidden" name="ref" value="<?php echo htmlspecialchars($_COOKIE['tms_ref'] ?? '', ENT_QUOTES, 'UTF-8'); ?>">
             <div class="tms-field">
-                <label>Full Name *</label>
-                <div class="tms-input-wrap"><i class="fa fa-user"></i><input type="text" name="FullName" placeholder="Your full name" required autocomplete="off" minlength="3"></div>
+                <label><?php echo tms_t('lbl_full_name','Full Name'); ?> *</label>
+                <div class="tms-input-wrap"><i class="fa fa-user"></i><input type="text" name="FullName" placeholder="<?php echo htmlspecialchars(tms_t('ph_full_name','Your full name'), ENT_QUOTES, 'UTF-8'); ?>" required autocomplete="off" minlength="3"></div>
             </div>
             <div class="tms-field">
-                <label>Mobile Number *</label>
+                <label><?php echo tms_t('lbl_mobile_number','Mobile Number'); ?> *</label>
                 <div class="tms-input-wrap"><i class="fa fa-phone"></i><input type="text" name="MobileNumber" placeholder="e.g. 01712345678" maxlength="15" required></div>
             </div>
             <div class="tms-field">
-                <label>Email Address *</label>
+                <label><?php echo tms_t('lbl_email_address','Email Address'); ?> *</label>
                 <div class="tms-input-wrap"><i class="fa fa-envelope"></i><input type="email" name="EmailId" id="regEmailField" placeholder="your@email.com" required autocomplete="off" onblur="checkEmailLive(this.value)"></div>
                 <div id="emailCheckResult" style="font-size:12px;margin-top:4px;"></div>
             </div>
             <div class="tms-field">
-                <label>Password *</label>
-                <div class="tms-input-wrap"><i class="fa fa-lock"></i><input type="password" name="Password" placeholder="Minimum 6 characters" required minlength="6"></div>
+                <label><?php echo tms_t('lbl_password','Password'); ?> *</label>
+                <div class="tms-input-wrap"><i class="fa fa-lock"></i><input type="password" name="Password" placeholder="<?php echo htmlspecialchars(tms_t('ph_min_6_chars','Minimum 6 characters'), ENT_QUOTES, 'UTF-8'); ?>" required minlength="6"></div>
             </div>
             <div class="tms-field">
-                <label>Confirm Password *</label>
-                <div class="tms-input-wrap"><i class="fa fa-lock"></i><input type="password" name="CPassword" placeholder="Repeat your password" required minlength="6"></div>
+                <label><?php echo tms_t('lbl_confirm_password','Confirm Password'); ?> *</label>
+                <div class="tms-input-wrap"><i class="fa fa-lock"></i><input type="password" name="CPassword" placeholder="<?php echo htmlspecialchars(tms_t('ph_repeat_password','Repeat your password'), ENT_QUOTES, 'UTF-8'); ?>" required minlength="6"></div>
             </div>
-            <button type="submit" name="submit" id="regSubmitBtn" class="tms-btn-modal" style="background:linear-gradient(135deg,var(--secondary),var(--primary));">Create My Account <i class="fa fa-arrow-right"></i></button>
+            <button type="submit" name="submit" id="regSubmitBtn" class="tms-btn-modal" style="background:linear-gradient(135deg,var(--secondary),var(--primary));"><?php echo tms_t('btn_create_account','Create My Account'); ?> <i class="fa fa-arrow-right"></i></button>
         </form>
-        <p class="tms-modal-switch">Already have an account? <a href="javascript:void(0)" onclick="closeModal('signupModal');openModal('signinModal')">Sign In →</a></p>
+        <p class="tms-modal-switch"><?php echo tms_t('msg_already_have_account','Already have an account?'); ?> <a href="javascript:void(0)" onclick="closeModal('signupModal');openModal('signinModal')"><?php echo tms_t('nav_signin','Sign In'); ?> →</a></p>
     </div>
 </div>
 
 <?php if(isset($_SESSION['reg_success'])): ?>
 <div id="successBanner" style="background:linear-gradient(135deg,#00b09b,#96c93d);color:#fff;padding:14px 20px;text-align:center;font-size:15px;font-weight:600;">
     <i class="fa fa-check-circle"></i> <?php echo htmlspecialchars($_SESSION['reg_success']); unset($_SESSION['reg_success']); ?>
-    <button onclick="document.getElementById('successBanner').style.display='none'" style="background:none;border:none;float:right;cursor:pointer;color:#fff;font-size:18px;">&times;</button>
+    <button onclick="document.getElementById('successBanner').style.display='none'" style="background:none;border:none;float:right;cursor:pointer;color:#fff;font-size:18px;" aria-label="Dismiss">&times;</button>
 </div>
 <?php endif; ?>
 
@@ -598,6 +611,24 @@ html[data-theme="dark"] {
     --shadow-sm: 0 2px 8px rgba(0,0,0,0.35);
     --shadow-md: 0 8px 30px rgba(0,0,0,0.45);
     --shadow-lg: 0 20px 60px rgba(0,0,0,0.55);
+    /* NEW (Round 20, spec item 33): dark-mode half of the token pairs added
+       to css/modern-theme.css's :root. Borders get lighter (a light-mode
+       border needs to show up against a near-black surface, not a
+       near-white one). The status "-bg"/"-text" pairs invert from a pale
+       tint + dark ink (readable on the light --white surface) to a dark
+       tint + pale ink (readable on the dark --white surface) -- kept as
+       genuinely distinct hues per status, not just one gray, so a status
+       badge still differs by color (not just position/label) in dark mode. */
+    --border: #2b3542;
+    --success: #4ADE80;
+    --success-bg: #14321F;
+    --success-text: #86EFAC;
+    --warning: #FBBF24;
+    --warning-bg: #3A2A0A;
+    --warning-text: #FCD34D;
+    --danger: #F87171;
+    --danger-bg: #3A1414;
+    --danger-text: #FCA5A5;
 }
 html[data-theme="dark"] body {
     background:
@@ -933,23 +964,45 @@ document.addEventListener('keydown', function(e) {
 window.addEventListener('scroll', function() {
     document.getElementById('tmsNavbar').classList.toggle('scrolled', window.scrollY > 20);
 });
+// FIX (Round 14): this used to decide whether to disable the signup button by
+// searching the response text for "already" or "red" — and the CSRF error
+// message contains "red" (inside "expired"), so every failure locked the form.
+// It also read the token from #signupCsrf, an id that did not exist on the live
+// modal, so the request failed CSRF validation every single time. Nobody could
+// register from the site-wide Sign Up modal at all. Both are fixed: the endpoint
+// returns JSON, and the token element now exists.
 function checkEmailLive(email) {
-    if(!email || email.length < 5) return;
     var result = document.getElementById('emailCheckResult');
-    result.innerHTML = '<span style="color:#888">Checking...</span>';
-    var xhr = new XMLHttpRequest();
-    xhr.open('POST', 'check_availability.php', true);
-    xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
-    xhr.onload = function() {
-        result.innerHTML = xhr.responseText;
-        document.getElementById('regSubmitBtn').disabled = (xhr.responseText.indexOf('already') > -1 || xhr.responseText.indexOf('red') > -1);
-    };
-    // Reuses the same session CSRF token already embedded in the signup
-    // modal's hidden #signupCsrf field, so this AJAX call passes the same
-    // strict tms_csrf_validate() check that endpoint uses.
+    var btn = document.getElementById('regSubmitBtn');
+    if (!result) return;
+    if (!email || email.length < 5) { result.innerHTML = ''; if (btn) btn.disabled = false; return; }
+
+    result.innerHTML = '<span style="color:#888;font-size:12px;">Checking...</span>';
+
+    var form = new URLSearchParams();
+    form.set('emailid', email);
     var csrfEl = document.getElementById('signupCsrf');
-    var csrfTok = csrfEl ? csrfEl.value : '';
-    xhr.send('emailid=' + encodeURIComponent(email) + '&csrf_token=' + encodeURIComponent(csrfTok));
+    form.set('csrf_token', csrfEl ? csrfEl.value : '');
+
+    fetch('check_availability.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: form.toString()
+    }).then(function (r) {
+        if (!r.ok) throw new Error('http ' + r.status);
+        return r.json();
+    }).then(function (data) {
+        var available = !!data.available;
+        result.innerHTML = '<span style="color:' + (available ? '#27ae60' : '#e74c3c') + ';font-size:12px;">' +
+            '<i class="fa ' + (available ? 'fa-check-circle' : 'fa-times-circle') + '"></i> ' +
+            String(data.message || '').replace(/[<>]/g, '') + '</span>';
+        if (btn) btn.disabled = !available;
+    }).catch(function () {
+        // Never block signup because a convenience check failed — the server
+        // validates the email properly on submit anyway.
+        result.innerHTML = '';
+        if (btn) btn.disabled = false;
+    });
 }
 <?php if(isset($_SESSION['login_error'])): ?>
 window.onload = function(){ openModal('signinModal'); };

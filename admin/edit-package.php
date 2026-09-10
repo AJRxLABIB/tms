@@ -25,6 +25,7 @@ include('includes/config.php');
 
 <?php
 tms_require_admin(); // SECURITY FIX (Round 11): old check had no exit/else, so an unauthenticated POST could edit any package
+tms_admin_require_role($dbh, ['package_manager', 'manager']); // Round 20 RBAC (item 46)
 
 $error = '';
 $success = '';

@@ -1,0 +1,8 @@
+# Block direct web access to raw migration SQL files (they're not secret,
+# but there's no reason for them to be web-fetchable). migrate.php itself
+# stays reachable so it can be run from a browser -- it enforces its own
+# super-admin session check (see the top of that file) rather than relying
+# on this .htaccess alone (defense in depth, same pattern as uploads/wallet).
+<FilesMatch "\.sql$">
+    Require all denied
+</FilesMatch>

@@ -2,7 +2,14 @@
 session_start();
 error_reporting(E_ALL); ini_set('display_errors', '0'); ini_set('log_errors', '1');
 include('includes/config.php');
-tms_require_user(); // Batch 1 (landing/auth gating): whole app now requires login
+// LIVE BUG FIX (customer-facing audit): this page is real browsing/
+// marketing content -- it's explicitly allowed in robots.txt and listed
+// in sitemap.php for search engines -- but a blanket "require login
+// everywhere" change (see includes/config.php's tms_require_user())
+// silently gated it too, so Google (and any signed-out visitor) was
+// redirected to the homepage instead of seeing this page. Intentionally
+// left public; booking/account actions on this page still check
+// $_SESSION['login'] individually where needed.
 
 $error = '';
 $msg   = '';
@@ -84,15 +91,29 @@ if (isset($_POST['submit2']) || isset($_POST['addcart'])) {
                     $cq->execute([':c' => $couponRaw, ':e' => $email]);
                     $coupon = $cq->fetch(PDO::FETCH_OBJ);
                     if ($coupon) {
-                        // Atomic claim: the UPDATE itself re-checks IsUsed=0, so
-                        // two simultaneous requests for the same coupon can't
-                        // both succeed — only one gets rowCount()===1. The
-                        // earlier SELECT was just to compute the discount %,
-                        // not the actual guarantee of exclusivity.
-                        $claim = $dbh->prepare("UPDATE tblcoupons SET IsUsed=1 WHERE id=:id AND IsUsed=0");
-                        $claim->execute([':id' => $coupon->id]);
-                        if ($claim->rowCount() === 1) {
-                            $discountAmt = round($subtotal * ((float)$coupon->DiscountPercent / 100), 2);
+                        // FIX (Round 14): a coupon with UserEmail IS NULL is a
+                        // SITE-WIDE promo — admin/manage-coupons.php broadcasts
+                        // those to every registered user with tms_notify_all().
+                        // But this claimed them with the same single IsUsed flag
+                        // as a personal coupon, so the FIRST customer to book
+                        // consumed the code for everybody and everyone else saw
+                        // "Invalid or expired coupon code". The seeded WELCOME10 /
+                        // SUMMER20 / TMS2026 codes had this out of the box.
+                        // Personal coupons still burn on use; global ones don't.
+                        $isGlobal = ($coupon->UserEmail === null || $coupon->UserEmail === '');
+                        $claimed  = true;
+                        if (!$isGlobal) {
+                            // Atomic claim: the UPDATE re-checks IsUsed=0, so two
+                            // simultaneous requests can't both succeed.
+                            $claim = $dbh->prepare("UPDATE tblcoupons SET IsUsed=1 WHERE id=:id AND IsUsed=0");
+                            $claim->execute([':id' => $coupon->id]);
+                            $claimed = ($claim->rowCount() === 1);
+                        }
+                        if ($claimed) {
+                            // Clamp: never trust a stored percentage. A legacy row
+                            // written before the cap existed could be 100 or 120.
+                            $pct = max(0, min((float)$coupon->DiscountPercent, (float)TMS_MAX_LOYALTY_DISCOUNT));
+                            $discountAmt = round($subtotal * ($pct / 100), 2);
                             $couponCode  = $couponRaw;
                         } else {
                             $error = 'Note: coupon code was just used by another request, so it was not applied.';
@@ -236,6 +257,57 @@ if (!empty($pkg) && $totalReviewCount >= 3) {
 <meta name="theme-color" content="#0B2B3C">
 <link rel="apple-touch-icon" href="images/icon-192.png">
 <title>TMS | <?php echo $pkg ? htmlspecialchars($pkgNameT ?? $pkg->PackageName,ENT_QUOTES,'UTF-8') : 'Package Details'; ?></title>
+<?php
+// NEW (Round 20, spec item 53 — SEO): only emitted when a real package was
+// found. Rating is only included when real reviews exist ($totalReviewCount
+// > 0) -- never fabricates a rating from nothing. Price/currency are the
+// package's own real stored values, not estimates.
+if ($pkg) {
+    $seoDesc = trim((string)($pkgDescT ?? $pkg->PackageDetails ?? ''));
+    $seoDesc = trim(preg_replace('/\s+/', ' ', strip_tags($seoDesc)));
+    if (mb_strlen($seoDesc) > 200) { $seoDesc = mb_substr($seoDesc, 0, 197) . '...'; }
+    $jsonld = [
+        '@context'    => 'https://schema.org',
+        '@type'       => 'TouristTrip',
+        'name'        => $pkgNameT ?? $pkg->PackageName,
+        'description' => $seoDesc,
+        'offers'      => [
+            '@type'         => 'Offer',
+            'price'         => (string)$pkg->PackagePrice,
+            'priceCurrency' => 'BDT',
+            'availability'  => 'https://schema.org/InStock',
+        ],
+    ];
+    if ($totalReviewCount > 0 && !empty($pkg->AvgRating)) {
+        $jsonld['aggregateRating'] = [
+            '@type'       => 'AggregateRating',
+            'ratingValue' => (string)$pkg->AvgRating,
+            'reviewCount' => (string)$totalReviewCount,
+        ];
+    }
+    // FIX (caught in live testing): tms_seo_meta()'s default canonical
+    // strips the whole query string, which is correct for a filter/listing
+    // page (destinations.php) but wrong here -- ?pkgid= IS this page's
+    // resource identifier, not a filter. Stripping it made every package
+    // canonicalize to the same bare URL, which would tell search engines
+    // all packages are duplicates of one page. Rebuild the canonical from
+    // the real request path (not hardcoded, so this still works whatever
+    // subfolder the app is installed under) with only pkgid kept -- drops
+    // any other incidental query params (utm_*, session leftovers, etc.)
+    // without inventing a URL structure that doesn't exist.
+    $scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
+    $host   = $_SERVER['HTTP_HOST'] ?? 'localhost';
+    $path   = strtok($_SERVER['REQUEST_URI'] ?? '/', '?');
+    tms_seo_meta([
+        'title'       => ($pkgNameT ?? $pkg->PackageName) . ' — ' . $pkg->PackageLocation,
+        'description' => $seoDesc,
+        'image'       => $gallery[0] ?? '',
+        'type'        => 'product',
+        'canonical'   => $scheme . '://' . $host . $path . '?pkgid=' . (int)$pkg->PackageId,
+        'jsonld'      => $jsonld,
+    ]);
+}
+?>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
 <link href="css/bootstrap.min2.css" rel='stylesheet'/>
@@ -578,7 +650,60 @@ if (!empty($pkg) && $totalReviewCount >= 3) {
                      (rural/remote destinations may have none); the iframe
                      itself handles that gracefully with Google's own "no
                      imagery available" message rather than us guessing. -->
-                <?php if(!empty($pkg->MapLat) && !empty($pkg->MapLng) && defined('GOOGLE_MAPS_API_KEY') && GOOGLE_MAPS_API_KEY !== ''): ?>
+                <?php
+                // LIVE BUG FIX (customer-facing screenshot): this section already
+                // correctly hid itself with no key configured, but once a key
+                // IS configured and something is wrong with it on Google's side
+                // (the Embed API not activated for that Cloud project, an
+                // invalid key, a referrer restriction...), Google's own iframe
+                // response is a raw, technical error banner -- "Google Maps
+                // Platform rejected your request..." -- shown directly to a
+                // paying customer looking at a tour package. That's exactly the
+                // kind of raw third-party error this project stopped exposing
+                // everywhere else this round. A JS-side fix can't detect this:
+                // the iframe is cross-origin, so the page can never read what's
+                // actually inside it. Instead, do one real check server-side and
+                // cache the verdict for an hour (same pattern as the weather and
+                // i18n circuit breakers elsewhere in this file) -- and fail OPEN
+                // (assume it's fine) if the check itself can't run, so a slow or
+                // blocked outbound request never hides a perfectly working
+                // feature.
+                $tmsStreetViewOk = true;
+                if (!empty($pkg->MapLat) && !empty($pkg->MapLng) && defined('GOOGLE_MAPS_API_KEY') && GOOGLE_MAPS_API_KEY !== '') {
+                    $tmsSvCacheKey = 'streetview_embed_health';
+                    $tmsSvCached = isset($tmsCache) ? $tmsCache->get($tmsSvCacheKey) : null;
+                    if ($tmsSvCached !== null) {
+                        $tmsStreetViewOk = (bool)$tmsSvCached;
+                    } else {
+                        try {
+                            $ch = curl_init('https://www.google.com/maps/embed/v1/streetview?key=' . urlencode(GOOGLE_MAPS_API_KEY) . '&location=0,0');
+                            curl_setopt_array($ch, [
+                                CURLOPT_RETURNTRANSFER => true,
+                                CURLOPT_TIMEOUT        => 5,
+                                CURLOPT_CONNECTTIMEOUT => 3,
+                            ]);
+                            $tmsSvBody = curl_exec($ch);
+                            curl_close($ch);
+                            if ($tmsSvBody === false) {
+                                // Couldn't reach Google at all right now -- not the
+                                // same thing as the key being broken. Fail open and
+                                // don't cache a guess either way.
+                                $tmsStreetViewOk = true;
+                            } else {
+                                $tmsStreetViewOk = !preg_match(
+                                    '/rejected your request|ApiNotActivatedMapError|InvalidKeyMapError|RefererNotAllowedMapError|MissingKeyMapError/i',
+                                    $tmsSvBody
+                                );
+                                if (isset($tmsCache)) $tmsCache->set($tmsSvCacheKey, $tmsStreetViewOk, 3600);
+                            }
+                        } catch (Throwable $e) {
+                            error_log('[TMS] Street View health check failed: ' . $e->getMessage());
+                            $tmsStreetViewOk = true; // fail open
+                        }
+                    }
+                }
+                ?>
+                <?php if(!empty($pkg->MapLat) && !empty($pkg->MapLng) && defined('GOOGLE_MAPS_API_KEY') && GOOGLE_MAPS_API_KEY !== '' && $tmsStreetViewOk): ?>
                 <div class="pkg-card wow fadeInUp" style="padding:24px;">
                     <h4 style="font-weight:700;margin-bottom:4px;"><i class="fa fa-street-view" style="color:#7c3aed"></i> Virtual Preview</h4>
                     <p style="font-size:12.5px;color:#94a3b8;margin-bottom:14px;">Real 360° street-level imagery of this destination — drag to look around.</p>
@@ -718,10 +843,23 @@ html[data-theme="dark"] .meta-row { color: var(--text-muted) !important; }
                             .then(function(res){
                                 // api/explore.php wraps its response as
                                 // {success, data:{places, source}, ts}.
-                                var results = (res && res.success && res.data && res.data.places) ? res.data.places : [];
-                                window.tmsLastPlaceSource = (res && res.data && res.data.source) || 'openstreetmap';
+                                // FIX (Round 14): a failed lookup used to be turned into an
+                                // empty array here and then reported as "No hotels found
+                                // nearby yet" — asserting a fact about the world when what
+                                // actually happened was an upstream outage. Overpass
+                                // rate-limits aggressively, so this fired regularly. The API
+                                // already returns a real message; show it.
+                                if (!res || !res.success) {
+                                    document.getElementById('nearbyList').innerHTML =
+                                        '<div style="text-align:center;padding:16px;color:#e11d48;">' +
+                                        escHtml((res && res.error) || 'Nearby places are temporarily unavailable — please try again shortly.') +
+                                        '</div>';
+                                    return;
+                                }
+                                var results = (res.data && res.data.places) ? res.data.places : [];
+                                window.tmsLastPlaceSource = (res.data && res.data.source) || 'openstreetmap';
                                 if (!results.length) {
-                                    document.getElementById('nearbyList').innerHTML = '<div style="text-align:center;padding:16px;color:#aaa;">No ' + label + ' found nearby yet.</div>';
+                                    document.getElementById('nearbyList').innerHTML = '<div style="text-align:center;padding:16px;color:#aaa;">No ' + label + ' found within a few kilometres of this destination.</div>';
                                     return;
                                 }
                                 var listEl = document.getElementById('nearbyList');
@@ -743,9 +881,15 @@ html[data-theme="dark"] .meta-row { color: var(--text-muted) !important; }
                                         '<div class="dist">' + distKm + '</div>';
                                     row.addEventListener('click', function(){ openPlaceDetails(p); });
                                     listEl.appendChild(row);
-                                    var m = L.marker([p.lat, p.lng]).addTo(map).bindPopup(escHtml(p.name));
-                                    m.on('click', function(){ openPlaceDetails(p); });
-                                    markers.push(m);
+                                    // Round 14: L.marker() with a null lat/lng throws
+                                    // "Invalid LatLng object", which aborted the rest of
+                                    // the list render. Google Places results can legitimately
+                                    // arrive without coordinates.
+                                    if (typeof p.lat === 'number' && typeof p.lng === 'number') {
+                                        var m = L.marker([p.lat, p.lng]).addTo(map).bindPopup(escHtml(p.name));
+                                        m.on('click', function(){ openPlaceDetails(p); });
+                                        markers.push(m);
+                                    }
                                 });
                             })
                             .catch(function(){
@@ -837,14 +981,39 @@ html[data-theme="dark"] .meta-row { color: var(--text-muted) !important; }
                             <?php tms_csrf_field(); ?>
                             <div class="form-group">
                                 <label style="font-weight:600;font-size:13px;">Departure Date</label>
-                                <input type="text" name="fromdate" class="form-control date"
-                                       id="datepicker" placeholder="dd-mm-yyyy" required>
+                                <?php /* FIX (Round 14): these were bare text boxes with a
+                                         "dd-mm-yyyy" placeholder and NO datepicker — js/jquery-ui.js
+                                         ships in the repo but no page ever loads it, and nothing
+                                         calls .datepicker(). Anyone typing 12/03/2026 or their own
+                                         locale format lost the whole form to a validation error
+                                         after a full round-trip. A native date input needs no
+                                         library, gives a real calendar on desktop and mobile, and
+                                         submits Y-m-d — which the handler above already accepts. */ ?>
+                                <input type="date" name="fromdate" class="form-control date"
+                                       id="datepicker" min="<?php echo date('Y-m-d', strtotime('+1 day')); ?>" required>
                             </div>
                             <div class="form-group">
                                 <label style="font-weight:600;font-size:13px;">Return Date</label>
-                                <input type="text" name="todate" class="form-control date"
-                                       id="datepicker1" placeholder="dd-mm-yyyy" required>
+                                <input type="date" name="todate" class="form-control date"
+                                       id="datepicker1" min="<?php echo date('Y-m-d', strtotime('+1 day')); ?>" required>
                             </div>
+                            <script>
+                            // Keep the return date at or after the departure date, so an
+                            // impossible range can't be submitted at all (the server still
+                            // validates it — this just stops the pointless round-trip).
+                            document.addEventListener('DOMContentLoaded', function () {
+                                var from = document.getElementById('datepicker');
+                                var to   = document.getElementById('datepicker1');
+                                if (!from || !to) return;
+                                from.addEventListener('change', function () {
+                                    if (!from.value) return;
+                                    var next = new Date(from.value);
+                                    next.setDate(next.getDate() + 1);
+                                    to.min = next.toISOString().slice(0, 10);
+                                    if (to.value && to.value <= from.value) to.value = to.min;
+                                });
+                            });
+                            </script>
                             <div class="form-group">
                                 <label style="font-weight:600;font-size:13px;">Number of Travelers</label>
                                 <input type="number" name="persons" id="personsInput" class="form-control" value="1" min="1" max="20" required>
@@ -926,7 +1095,7 @@ if (!empty($_SESSION['login']) && $pkg) {
             <h4 style="font-weight:700;margin-bottom:16px;"><i class="fa fa-history" style="color:var(--secondary)"></i> Recently Viewed</h4>
             <div style="display:flex;gap:16px;overflow-x:auto;padding-bottom:8px;">
                 <?php foreach ($recentlyViewed as $rv): ?>
-                <a href="package-details.php?id=<?php echo (int)$rv->PackageId; ?>"
+                <a href="package-details.php?pkgid=<?php echo (int)$rv->PackageId; ?>"
                    style="flex:0 0 200px;background:var(--white);border-radius:var(--radius-sm);box-shadow:var(--shadow-sm);overflow:hidden;text-decoration:none;color:inherit;transition:var(--transition);"
                    onmouseover="this.style.transform='translateY(-4px)';this.style.boxShadow='var(--shadow-md)';"
                    onmouseout="this.style.transform='none';this.style.boxShadow='var(--shadow-sm)';">

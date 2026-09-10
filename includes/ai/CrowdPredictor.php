@@ -123,7 +123,7 @@ class CrowdPredictor {
             $userMsg = "Destination: {$destination}. Give a general best-time-to-visit estimate (weather, festivals, crowds) since we don't have platform booking history for this one yet.";
         }
 
-        $result = $this->ai->ask($system, $userMsg, $cacheKey, $email);
+        $result = $this->ai->ask($system, $userMsg, $cacheKey, $email, feature: 'crowd');
         if (!$result['success']) {
             return $hasRealData
                 ? "Based on actual booking activity, {$busiest[0]} tends to be the busiest month and {$quietest[0]} the quietest for {$destination}."

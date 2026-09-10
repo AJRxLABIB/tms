@@ -58,9 +58,32 @@ function goToDestination(name, lat, lng, country) {
         spin.style.display = 'inline-block';
         exploreGet('search', { q: val }).then(function (res) {
             spin.style.display = 'none';
-            if (!res.success) return;
-            renderSuggestions(res.data.results || []);
-        }).catch(function () { spin.style.display = 'none'; });
+            // FIX (Round 14): this was `if (!res.success) return;` — the spinner
+            // stopped and absolutely nothing appeared, so typing a city and
+            // getting no reaction at all was the failure mode for the entry
+            // point of the whole feature (Nominatim rate-limits aggressively).
+            if (!res.success) {
+                box.innerHTML = '<div class="explore-suggestion-item" style="cursor:default;opacity:.8;">' +
+                    '<i class="fa fa-exclamation-triangle"></i> ' +
+                    escapeHtml(res.error || 'Destination search is unavailable right now — please try again in a moment.') +
+                    '</div>';
+                box.style.display = 'block';
+                return;
+            }
+            var results = res.data.results || [];
+            if (!results.length) {
+                box.innerHTML = '<div class="explore-suggestion-item" style="cursor:default;opacity:.8;">' +
+                    '<i class="fa fa-search"></i> No matching destination found. Try a city or country name.</div>';
+                box.style.display = 'block';
+                return;
+            }
+            renderSuggestions(results);
+        }).catch(function () {
+            spin.style.display = 'none';
+            box.innerHTML = '<div class="explore-suggestion-item" style="cursor:default;opacity:.8;">' +
+                '<i class="fa fa-plug"></i> Could not reach the destination search service. Check your connection and try again.</div>';
+            box.style.display = 'block';
+        });
     }, 350);
 
     input.addEventListener('input', function () { doSearch(this.value); });
@@ -252,9 +275,16 @@ function goToDestination(name, lat, lng, country) {
         return L.divIcon({ className: '', html: '<div style="background:#e74c3c;width:20px;height:20px;border-radius:50%;border:3px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,.4);"></div>', iconSize:[20,20], iconAnchor:[10,10] });
     }
 
+    // Prefer the site-wide toast (defined in includes/header.php) over alert(),
+    // which blocks the page and looks broken on mobile.
+    function exploreNotify(msg) {
+        if (typeof tmsToast === 'function') { tmsToast(msg, 'info'); }
+        else { alert(msg); }
+    }
+
     window.exploreLocateMe = function () {
         var btn = document.getElementById('locateBtn');
-        if (!navigator.geolocation) { alert('Geolocation is not supported by your browser.'); return; }
+        if (!navigator.geolocation) { exploreNotify('Your browser does not support location sharing. You can still browse the map manually.'); return; }
         btn.innerHTML = '<i class="fa fa-spinner fa-spin"></i> Locating...';
         navigator.geolocation.getCurrentPosition(function (pos) {
             state.userLoc = { lat: pos.coords.latitude, lng: pos.coords.longitude };
@@ -266,8 +296,19 @@ function goToDestination(name, lat, lng, country) {
             exploreDrawRoute('driving');
         }, function () {
             btn.innerHTML = '<i class="fa fa-location-arrow"></i> Locate Me';
-            alert('Could not get your location. Please allow location access and try again.');
+            exploreNotify('Could not get your location. Allow location access in your browser, then tap "Locate Me" again.');
         }, { enableHighAccuracy: true, timeout: 10000 });
+    };
+
+    // Clearing navTarget puts routing back on the destination itself. Without
+    // this, viewing directions to one nearby cafe meant every subsequent
+    // "Locate Me" or travel-mode switch kept routing to that cafe forever.
+    window.exploreRouteToDestination = function () {
+        state.navTarget = null;
+        if (state.navMarker) { state.map.removeLayer(state.navMarker); state.navMarker = null; }
+        if (state.map) state.map.setView([DEST.lat, DEST.lng], 12);
+        var activeBtn = document.querySelector('.map-mode-btn.active');
+        exploreDrawRoute(activeBtn ? activeBtn.dataset.mode : 'driving');
     };
 
     window.exploreDrawRoute = function (mode) {
@@ -290,7 +331,11 @@ function goToDestination(name, lat, lng, country) {
                 '<span class="item"><i class="fa fa-map-marker"></i> To ' + escapeHtml(target.name || DEST.name) + '</span>' +
                 '<span class="item"><i class="fa fa-road"></i> ' + escapeHtml(route.distance_text) + '</span>' +
                 '<span class="item"><i class="fa fa-clock"></i> ' + escapeHtml(route.duration_text) + '</span>' +
-                '<span class="item"><i class="fa fa-signal"></i> via ' + (route.source === 'osrm' ? 'OSRM' : 'Google Directions') + '</span>';
+                '<span class="item"><i class="fa fa-signal"></i> via ' + (route.source === 'osrm' ? 'OSRM' : 'Google Directions') + '</span>' +
+                (state.navTarget
+                    ? '<span class="item"><a href="#" onclick="exploreRouteToDestination();return false;">' +
+                      '<i class="fa fa-undo"></i> Route back to ' + escapeHtml(DEST.name) + '</a></span>'
+                    : '');
 
             if (state.routeLayer) state.map.removeLayer(state.routeLayer);
             if (route.geometry && route.geometry.length) {
@@ -312,7 +357,10 @@ function goToDestination(name, lat, lng, country) {
     // just now reusable for any nearby place instead of only the destination.
     window.exploreNavigateToPlace = function (lat, lng, name) {
         lat = parseFloat(lat); lng = parseFloat(lng);
-        if (!lat || !lng) return;
+        if (!lat || !lng) {
+            exploreNotify('We don\'t have exact coordinates for this place, so directions aren\'t available for it.');
+            return;
+        }
         state.navTarget = { lat: lat, lng: lng, name: name || 'this place' };
 
         exploreSwitchTab('map');
@@ -382,7 +430,7 @@ function goToDestination(name, lat, lng, country) {
     });
 
     function renderPlaceCard(p, idx) {
-        var distKm = p.distance_m ? (p.distance_m / 1000).toFixed(1) + ' km away' : '';
+        var distKm = (typeof p.distance_m === 'number') ? (p.distance_m / 1000).toFixed(1) + ' km away' : '';
         return '<div class="place-card">' +
             '<a href="#" class="place-card-open" data-idx="' + idx + '">' +
             (p.photo ? '<img class="photo" src="' + p.photo + '" alt="' + escapeHtml(p.name) + '">' : '') +
@@ -448,46 +496,74 @@ function goToDestination(name, lat, lng, country) {
     });
 
     function renderPlaceDetail(pl) {
-        var gallery = '<div class="pd-gallery">' + (pl.images || []).map(function (src) {
-            return '<img src="' + src + '" alt="' + escapeHtml(pl.name) + '" loading="lazy">';
-        }).join('') + '</div>';
+        // ROOT-CAUSE FIX (Round 14): this renderer assumed every field was always
+        // present, because the backend used to invent any it didn't have — an
+        // email, a website, Facebook and Instagram profiles, a star rating with a
+        // review count, a definitive Open/Closed badge, and five stock photos,
+        // all derived from a hash of the place's name and shown as fact. The
+        // backend now returns null for anything the map data doesn't actually
+        // contain, so this renders "not listed" instead of a plausible lie, and
+        // omits links entirely rather than pointing at a domain the business
+        // does not own.
+        var gallery = (pl.images && pl.images.length)
+            ? '<div class="pd-gallery">' + pl.images.map(function (src) {
+                  return '<img src="' + escapeHtml(src) + '" alt="' + escapeHtml(pl.name) + '" loading="lazy">';
+              }).join('') + '</div>'
+            : '';
 
         var badges = '<div class="pd-badges">' +
             '<span class="pd-badge"><i class="fa fa-tag"></i> ' + escapeHtml(pl.category_label) + '</span>' +
-            (pl.rating ? '<span class="pd-badge pd-rating"><i class="fa fa-star"></i> ' + pl.rating + ' (' + pl.review_count + ')</span>' : '') +
-            '<span class="pd-badge ' + (pl.is_open_now ? 'pd-open' : 'pd-closed') + '"><i class="fa fa-clock"></i> ' + (pl.is_open_now ? 'Open Now' : 'Closed Now') + '</span>' +
+            (pl.rating ? '<span class="pd-badge pd-rating"><i class="fa fa-star"></i> ' + pl.rating +
+                (pl.review_count ? ' (' + pl.review_count + ')' : '') + '</span>' : '') +
+            // is_open_now is now true / false / null, where null means the map
+            // data didn't say — in which case no badge at all, rather than
+            // asserting "Closed Now" on a place we know nothing about.
+            (pl.is_open_now === true
+                ? '<span class="pd-badge pd-open"><i class="fa fa-clock"></i> Open now</span>'
+                : pl.is_open_now === false
+                    ? '<span class="pd-badge pd-closed"><i class="fa fa-clock"></i> Closed now</span>'
+                    : '') +
             (pl.distance_km != null ? '<span class="pd-badge"><i class="fa fa-route"></i> ' + pl.distance_km + ' km away</span>' : '') +
             '</div>';
 
-        // SAFETY FIX: pl.phone is intentionally left blank by the backend
-        // for hospital/police when there's no real number on file (see
-        // PlaceDetailsService::buildCommon) rather than inventing one that
-        // looks real. Show real guidance instead of a blank line for those.
+        function row(icon, value, missingText) {
+            return value
+                ? '<div class="pd-contact-item"><i class="fa ' + icon + '"></i> ' + escapeHtml(value) + '</div>'
+                : '<div class="pd-contact-item pd-missing"><i class="fa ' + icon + '"></i> ' + escapeHtml(missingText) + '</div>';
+        }
+
         var phoneRow = pl.phone
-            ? '<div class="pd-contact-item"><i class="fa fa-phone"></i> ' + escapeHtml(pl.phone) + '</div>'
+            ? '<div class="pd-contact-item"><i class="fa fa-phone"></i> <a href="tel:' + escapeHtml(pl.phone.replace(/[^+\d]/g, '')) + '">' + escapeHtml(pl.phone) + '</a></div>'
             : (pl.category === 'hospital' || pl.category === 'police')
-                ? '<div class="pd-contact-item pd-missing"><i class="fa fa-phone"></i> No number on file — call your local emergency number</div>'
+                ? '<div class="pd-contact-item pd-missing"><i class="fa fa-phone"></i> No number in the map data — in an emergency call your local emergency number</div>'
                 : '<div class="pd-contact-item pd-missing"><i class="fa fa-phone"></i> Phone not listed</div>';
 
         var contact = '<div class="pd-contact-grid">' +
-            '<div class="pd-contact-item"><i class="fa fa-map-marker"></i> ' + escapeHtml(pl.address) + '</div>' +
+            row('fa-map-marker', pl.address, 'Address not listed — see the map below') +
             phoneRow +
-            '<div class="pd-contact-item"><i class="fa fa-envelope"></i> ' + escapeHtml(pl.email) + '</div>' +
-            '<div class="pd-contact-item"><i class="fa fa-clock"></i> ' + escapeHtml(pl.opening_hours) + '</div>' +
-            '<div class="pd-contact-item"><a href="' + escapeHtml(pl.website) + '" target="_blank" rel="noopener"><i class="fa fa-globe"></i> Website</a></div>' +
+            row('fa-clock', pl.opening_hours, 'Opening hours not listed') +
+            (pl.website
+                ? '<div class="pd-contact-item"><a href="' + escapeHtml(pl.website) + '" target="_blank" rel="noopener nofollow"><i class="fa fa-globe"></i> Official website</a></div>'
+                : '<div class="pd-contact-item pd-missing"><i class="fa fa-globe"></i> No website listed</div>') +
             '<div class="pd-contact-item"><a href="' + escapeHtml(pl.map_url) + '" target="_blank" rel="noopener"><i class="fa fa-map"></i> Open in Google Maps</a></div>' +
-            '<div class="pd-contact-item"><a href="' + escapeHtml(pl.social.facebook) + '" target="_blank" rel="noopener"><i class="fa fa-brands fa-facebook"></i> Facebook</a></div>' +
-            '<div class="pd-contact-item"><a href="' + escapeHtml(pl.social.instagram) + '" target="_blank" rel="noopener"><i class="fa fa-brands fa-instagram"></i> Instagram</a></div>' +
+            (pl.osm_url
+                ? '<div class="pd-contact-item"><a href="' + escapeHtml(pl.osm_url) + '" target="_blank" rel="noopener"><i class="fa fa-map-o"></i> View / correct on OpenStreetMap</a></div>'
+                : '') +
             '</div>';
 
         var map = '<div class="pd-map"><iframe src="' + escapeHtml(pl.map_embed_url) + '" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe></div>';
 
         var sections = (pl.sections || []).map(renderSection).join('');
 
-        return '<div class="pd-hero" style="background-image:url(\'' + pl.hero_image + '\')"></div>' +
+        // No hero image is better than a random stock photo of somewhere else.
+        var hero = pl.hero_image
+            ? '<div class="pd-hero" style="background-image:url(\'' + escapeHtml(pl.hero_image) + '\')"></div>'
+            : '';
+
+        return hero +
             '<div class="pd-header"><h2>' + escapeHtml(pl.name) + '</h2>' + badges + '</div>' +
             gallery +
-            '<div class="explore-card"><h4><i class="fa fa-address-card"></i> Contact & Location</h4>' + contact + map + '</div>' +
+            '<div class="explore-card"><h4><i class="fa fa-address-card"></i> Contact &amp; Location</h4>' + contact + map + '</div>' +
             sections;
     }
 
@@ -566,29 +642,40 @@ function goToDestination(name, lat, lng, country) {
         }).join('');
 
         var daily = (w.daily || []).map(function (d) {
-            var dt = new Date(d.date);
+            // FIX (Round 14): `new Date("2026-09-04")` is parsed as UTC midnight
+            // but formatted in local time, so every row was labelled with the
+            // previous weekday for any viewer at a negative UTC offset.
+            var parts = String(d.date).split('-');
+            var dt = new Date(+parts[0], (+parts[1] || 1) - 1, +parts[2] || 1);
             var dayName = dt.toLocaleDateString(undefined, { weekday: 'short' });
             return '<div class="daily-row"><span class="day">' + dayName + '</span><i class="fa ' + weatherIcon(d.code) + '"></i>' +
                 '<span>' + Math.round(d.tmax) + '° / ' + Math.round(d.tmin) + '°</span>' +
                 '<span class="range">' + (d.pop != null ? d.pop + '% rain' : '') + '</span></div>';
         }).join('');
 
+        // FIX (Round 14): the backend's aqiLabel(0) returns "Good", so a
+        // location where the air-quality endpoint returned nothing was shown as
+        // "— · Good" — a positive health claim next to a missing value.
         var aq = w.air_quality;
-        var aqHtml = aq ? '<div class="weather-stat"><div class="lbl">Air Quality</div><div class="val">' + (aq.us_aqi ?? '—') + '</div><div class="lbl">' + escapeHtml(aq.label) + '</div></div>' : '';
+        var aqHtml = (aq && aq.us_aqi != null)
+            ? '<div class="weather-stat"><div class="lbl">Air Quality</div><div class="val">' + aq.us_aqi +
+              '</div><div class="lbl">' + escapeHtml(aq.label || '') + '</div></div>'
+            : '';
 
         document.getElementById('weatherContent').innerHTML =
             '<div class="weather-hero-card">' +
                 '<i class="fa ' + weatherIcon(c.code) + '" style="font-size:2em;"></i>' +
-                '<div class="temp">' + Math.round(c.temp) + '°C</div>' +
-                '<div class="desc">' + escapeHtml(c.description) + ' · Feels like ' + Math.round(c.feels_like) + '°C</div>' +
+                '<div class="temp">' + (c.temp != null ? Math.round(c.temp) + '°C' : '—') + '</div>' +
+                '<div class="desc">' + escapeHtml(c.description || '') +
+                    (c.feels_like != null ? ' · Feels like ' + Math.round(c.feels_like) + '°C' : '') + '</div>' +
                 '<div class="weather-stat-grid">' +
-                    '<div class="weather-stat"><div class="lbl">Humidity</div><div class="val">' + c.humidity + '%</div></div>' +
-                    '<div class="weather-stat"><div class="lbl">Wind</div><div class="val">' + Math.round(c.wind_speed) + ' km/h</div></div>' +
+                    '<div class="weather-stat"><div class="lbl">Humidity</div><div class="val">' + (c.humidity != null ? c.humidity + '%' : '—') + '</div></div>' +
+                    '<div class="weather-stat"><div class="lbl">Wind</div><div class="val">' + (c.wind_speed != null ? Math.round(c.wind_speed) + ' km/h' : '—') + '</div></div>' +
                     aqHtml +
                 '</div>' +
             '</div>' +
             (alerts ? '<div class="explore-card"><h4><i class="fa fa-bell"></i> Weather Alerts</h4>' + alerts + '</div>' : '') +
-            '<div class="explore-card"><h4><i class="fa fa-clock"></i> Hourly Forecast (next 24h)</h4><div class="hourly-scroll">' + hourly + '</div></div>' +
+            '<div class="explore-card"><h4><i class="fa fa-clock"></i> Hourly Forecast</h4><div class="hourly-scroll">' + hourly + '</div></div>' +
             '<div class="explore-card"><h4><i class="fa fa-calendar-week"></i> 7-Day Forecast</h4>' + daily + '</div>';
     }
 

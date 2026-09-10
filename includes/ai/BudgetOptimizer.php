@@ -120,7 +120,7 @@ Return this exact JSON:
 MSG;
 
         $cacheKey = md5('budget_' . json_encode($tripParams));
-        $result   = $this->ai->ask($system, $userMsg, $cacheKey, $email);
+        $result   = $this->ai->ask($system, $userMsg, $cacheKey, $email, feature: 'budget');
 
         if (!$result['success']) {
             return $this->fallbackBudget($tripParams);
@@ -216,7 +216,7 @@ MSG;
             $userMsg = "Package" . ($ownName ? " '{$ownName}'" : '') . " priced at " . ($ownPrice ?: 'TBD')
                      . " BDT. Comparable packages (" . $result['comparable_count'] . " matched by {$matchBasis}): "
                      . "min {$min}, median {$median}, avg {$avg}, max {$max} BDT. One sentence of pricing advice:";
-            $aiResult = $this->ai->ask($system, $userMsg, '', $email);
+            $aiResult = $this->ai->ask($system, $userMsg, '', $email, feature: 'budget_pricing');
             if ($aiResult['success']) {
                 $result['ai_verdict'] = trim($aiResult['content']);
             }
@@ -237,7 +237,7 @@ MSG;
         $userMsg = "Budget for {$destination}: " . json_encode($userBudget) . " Total: {$totalBudget} BDT.
 Analyze this allocation and return: {\"overall_assessment\":\"<good/tight/generous>\",\"overspent_categories\":[\"<cat>\"],\"underspent_categories\":[\"<cat>\"],\"recommendations\":[{\"category\":\"<cat>\",\"current\":<amt>,\"suggested\":<amt>,\"reason\":\"<why>\"}],\"potential_savings\":<BDT>,\"savings_percentage\":<pct>}";
 
-        $result = $this->ai->ask($system, $userMsg, '', $email);
+        $result = $this->ai->ask($system, $userMsg, '', $email, feature: 'budget_optimize');
         if (!$result['success']) return ['overall_assessment' => 'Looks reasonable', 'recommendations' => []];
 
         return $this->ai->parseJson($result['content']) ?? ['overall_assessment' => 'Looks reasonable', 'recommendations' => []];
@@ -256,7 +256,7 @@ Analyze this allocation and return: {\"overall_assessment\":\"<good/tight/genero
 Return: {\"essentials\":[{\"item\":\"<item>\",\"quantity\":\"<qty>\",\"priority\":\"must|should|nice\"}],\"clothing\":[...],\"toiletries\":[...],\"electronics\":[...],\"documents\":[...],\"medicines\":[...],\"destination_specific\":[{\"item\":\"<item>\",\"reason\":\"<why needed here>\"}],\"packing_tips\":[\"<tip>\"]}";
 
         $cacheKey = md5('packing_' . json_encode($tripParams));
-        $result   = $this->ai->ask($system, $userMsg, $cacheKey, $email);
+        $result   = $this->ai->ask($system, $userMsg, $cacheKey, $email, feature: 'budget_packing');
 
         if (!$result['success']) {
             return [

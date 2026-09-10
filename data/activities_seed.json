@@ -1,0 +1,178 @@
+[
+  {
+    "ActivityName": "Sunset Catamaran Cruise",
+    "City": "Cox's Bazar",
+    "Country": "Bangladesh",
+    "Category": "Water Sports",
+    "PricePerPerson": 1800,
+    "DurationHours": 3,
+    "Description": "A catamaran sail along Cox's Bazar's coastline timed to reach open water for sunset.",
+    "ActivityImage": "https://images.unsplash.com/photo-1500375592092-40eb2168fd21?w=800&q=80",
+    "AvgRating": 4.4
+  },
+  {
+    "ActivityName": "Balinese Rice Terrace Trek",
+    "City": "Bali",
+    "Country": "Indonesia",
+    "Category": "Adventure",
+    "PricePerPerson": 2500,
+    "DurationHours": 5,
+    "Description": "A guided walk through Tegalalang's tiered rice terraces with a local farming guide.",
+    "ActivityImage": "https://images.unsplash.com/photo-1546484475-7f7bd55792da?w=800&q=80",
+    "AvgRating": 4.6
+  },
+  {
+    "ActivityName": "Backwater Houseboat Day Trip",
+    "City": "Kerala",
+    "Country": "India",
+    "Category": "Cultural",
+    "PricePerPerson": 3200,
+    "DurationHours": 6,
+    "Description": "A day cruising Alleppey's backwaters aboard a traditional kettuvallam houseboat, lunch included.",
+    "ActivityImage": "https://images.unsplash.com/photo-1602216056096-3b40cc0c9944?w=800&q=80",
+    "AvgRating": 4.5
+  },
+  {
+    "ActivityName": "Tiger's Nest Monastery Hike",
+    "City": "Paro",
+    "Country": "Bhutan",
+    "Category": "Adventure",
+    "PricePerPerson": 2800,
+    "DurationHours": 7,
+    "Description": "A guided hike up to Paro Taktsang (Tiger's Nest), Bhutan's iconic cliffside monastery.",
+    "ActivityImage": "https://images.unsplash.com/photo-1553856622-b6a68a03bd53?w=800&q=80",
+    "AvgRating": 4.8
+  },
+  {
+    "ActivityName": "Desert Dune Safari & BBQ",
+    "City": "Dubai",
+    "Country": "UAE",
+    "Category": "Adventure",
+    "PricePerPerson": 6500,
+    "DurationHours": 5,
+    "Description": "A dune-bashing 4x4 safari followed by a BBQ dinner and live entertainment at a desert camp.",
+    "ActivityImage": "https://images.unsplash.com/photo-1451337516015-6b6e9a44a8a3?w=800&q=80",
+    "AvgRating": 4.5
+  },
+  {
+    "ActivityName": "Phi Phi Islands Snorkeling Tour",
+    "City": "Phuket",
+    "Country": "Thailand",
+    "Category": "Water Sports",
+    "PricePerPerson": 3400,
+    "DurationHours": 8,
+    "Description": "A speedboat day trip to the Phi Phi Islands with three snorkeling stops and lunch on the beach.",
+    "ActivityImage": "https://images.unsplash.com/photo-1544551763-46a013bb70d5?w=800&q=80",
+    "AvgRating": 4.6
+  },
+  {
+    "ActivityName": "Antalya Old Town Walking Tour",
+    "City": "Antalya",
+    "Country": "Turkey",
+    "Category": "Cultural",
+    "PricePerPerson": 1500,
+    "DurationHours": 3,
+    "Description": "A walking tour through Kaleici's old town, from the Roman harbor to Hadrian's Gate.",
+    "ActivityImage": "https://images.unsplash.com/photo-1566073771259-6a8506099945?w=800&q=80",
+    "AvgRating": 4.2
+  },
+  {
+    "ActivityName": "Jungfrau Cable Car & Glacier Walk",
+    "City": "Interlaken",
+    "Country": "Switzerland",
+    "Category": "Adventure",
+    "PricePerPerson": 9500,
+    "DurationHours": 6,
+    "Description": "A cable-car ascent to the Jungfraujoch \"Top of Europe\" with a short guided glacier walk.",
+    "ActivityImage": "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=800&q=80",
+    "AvgRating": 4.7
+  },
+  {
+    "ActivityName": "Seine River Dinner Cruise",
+    "City": "Paris",
+    "Country": "France",
+    "Category": "Food & Drink",
+    "PricePerPerson": 8000,
+    "DurationHours": 3,
+    "Description": "A three-course dinner cruise past the Eiffel Tower and Notre-Dame as they light up at night.",
+    "ActivityImage": "https://images.unsplash.com/photo-1499856871958-5b9627545d1a?w=800&q=80",
+    "AvgRating": 4.3
+  },
+  {
+    "ActivityName": "Boracay Island Hopping",
+    "City": "Boracay",
+    "Country": "Philippines",
+    "Category": "Water Sports",
+    "PricePerPerson": 2200,
+    "DurationHours": 6,
+    "Description": "A traditional paraw sailboat tour to Crystal Cove and Crocodile Island with snorkeling stops.",
+    "ActivityImage": "https://images.unsplash.com/photo-1544551763-46a013bb70d5?w=800&q=80",
+    "AvgRating": 4.4
+  },
+  {
+    "ActivityName": "Marrakech Souk & Spice Market Tour",
+    "City": "Marrakech",
+    "Country": "Morocco",
+    "Category": "Cultural",
+    "PricePerPerson": 1800,
+    "DurationHours": 4,
+    "Description": "A guided walk through Marrakech's souks and spice markets, ending at Jemaa el-Fnaa square.",
+    "ActivityImage": "https://images.unsplash.com/photo-1548013146-72479768bada?w=800&q=80",
+    "AvgRating": 4.3
+  },
+  {
+    "ActivityName": "Amalfi Coast Boat Tour",
+    "City": "Amalfi Coast",
+    "Country": "Italy",
+    "Category": "Water Sports",
+    "PricePerPerson": 7000,
+    "DurationHours": 5,
+    "Description": "A private boat tour along the Amalfi Coast with stops at Positano and the Emerald Grotto.",
+    "ActivityImage": "https://images.unsplash.com/photo-1533104816931-20fa691ff6ca?w=800&q=80",
+    "AvgRating": 4.7
+  },
+  {
+    "ActivityName": "Great Barrier Reef Diving Excursion",
+    "City": "Gold Coast",
+    "Country": "Australia",
+    "Category": "Water Sports",
+    "PricePerPerson": 12000,
+    "DurationHours": 8,
+    "Description": "A full-day dive boat trip to the outer reef, with two guided dives for certified divers.",
+    "ActivityImage": "https://images.unsplash.com/photo-1546026423-cc4642628d2b?w=800&q=80",
+    "AvgRating": 4.8
+  },
+  {
+    "ActivityName": "Annapurna Foothills Day Hike",
+    "City": "Pokhara",
+    "Country": "Nepal",
+    "Category": "Adventure",
+    "PricePerPerson": 2000,
+    "DurationHours": 6,
+    "Description": "A day hike into the Annapurna foothills to Australian Camp for panoramic mountain views.",
+    "ActivityImage": "https://images.unsplash.com/photo-1544984243-ec57ea16fe25?w=800&q=80",
+    "AvgRating": 4.5
+  },
+  {
+    "ActivityName": "Sundarbans Mangrove Wildlife Safari",
+    "City": "Khulna",
+    "Country": "Bangladesh",
+    "Category": "Wildlife",
+    "PricePerPerson": 2800,
+    "DurationHours": 8,
+    "Description": "A boat safari through the Sundarbans mangrove channels, spotting deer, birds, and river life.",
+    "ActivityImage": "https://images.unsplash.com/photo-1516426122078-c23e76319801?w=800&q=80",
+    "AvgRating": 4.4
+  },
+  {
+    "ActivityName": "Sylhet Tea Garden Cycling Tour",
+    "City": "Sylhet",
+    "Country": "Bangladesh",
+    "Category": "Adventure",
+    "PricePerPerson": 1200,
+    "DurationHours": 4,
+    "Description": "A guided cycling route through Sylhet's tea estates, with a stop at a working tea factory.",
+    "ActivityImage": "https://images.unsplash.com/photo-1441974231531-c6227db76b6e?w=800&q=80",
+    "AvgRating": 4.2
+  }
+]

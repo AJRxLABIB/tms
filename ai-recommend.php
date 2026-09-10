@@ -2,11 +2,31 @@
 session_start();
 error_reporting(E_ALL); ini_set('display_errors', '0'); ini_set('log_errors', '1');
 include('includes/config.php');
-tms_require_user(); // Batch 1 (landing/auth gating): whole app now requires login
+// LIVE BUG FIX (customer-facing audit): this page is real browsing/
+// marketing content -- it's explicitly allowed in robots.txt and listed
+// in sitemap.php for search engines -- but a blanket "require login
+// everywhere" change (see includes/config.php's tms_require_user())
+// silently gated it too, so Google (and any signed-out visitor) was
+// redirected to the homepage instead of seeing this page. Intentionally
+// left public; booking/account actions on this page still check
+// $_SESSION['login'] individually where needed.
 
 $recommendations = [];
 $searched = false;
+$totalPackagesConsidered = 0;
 
+// FIX (Round 20 audit, spec items 31/66): this page used to run its own
+// flat point-scoring loop (budget/type/climate/duration/rating, each a
+// fixed +N) that never showed its work beyond one blended "match %". A
+// separate, better-built engine -- includes/ai/TravelRecommender.php --
+// already existed with per-dimension scores (budget/weather/style/safety/
+// experience), a "why recommended" explanation, warnings, and highlights
+// (the transparency the spec explicitly asks for), reachable only via
+// api/ai.php?action=recommend, which nothing on this site ever called. It
+// was dead code. Wired this page to it instead of maintaining two
+// recommendation engines; its own AIClient failure path already falls back
+// to a deterministic rule-based scorer (same shape as the AI path) if the
+// AI call fails, so this is not a new single point of failure.
 if(isset($_POST['recommend'])) {
     tms_csrf_validate();
     $searched = true;
@@ -15,72 +35,33 @@ if(isset($_POST['recommend'])) {
     $duration = intval($_POST['duration']);
     $climate = $_POST['climate'];
     $travelers = intval($_POST['travelers']);
+    $activities = trim($_POST['activities'] ?? '');
+    $accommodation = $_POST['accommodation'] ?? 'any';
 
-    // Smart scoring algorithm - only fetch active packages
-    $sql = "SELECT * FROM tbltourpackages WHERE Status = 1 ORDER BY PackageId DESC LIMIT 200";
-    $query = $dbh->prepare($sql);
-    $query->execute();
-    $allPackages = $query->fetchAll(PDO::FETCH_OBJ);
-
-    foreach($allPackages as $pkg) {
-        $score = 0;
-
-        // Budget scoring (within 50% above budget = valid)
-        $pricePerPerson = $pkg->PackagePrice;
-        $totalCost = $pricePerPerson * $travelers;
-        if($totalCost <= $budget) $score += 40;
-        elseif($totalCost <= $budget * 1.2) $score += 20;
-        elseif($totalCost <= $budget * 1.5) $score += 5;
-
-        // Travel type scoring
-        $typeMap = [
-            'family' => ['Family Package'],
-            'couple' => ['Couple Package'],
-            'group' => ['Group Package', 'Group'],
-            'solo' => ['Domestic Packages'],
-            'adventure' => ['Group Package', 'Domestic Packages']
-        ];
-        if(isset($typeMap[$traveltype])) {
-            foreach($typeMap[$traveltype] as $t) {
-                if(stripos($pkg->PackageType, $t) !== false) { $score += 30; break; }
-            }
-        }
-
-        // Climate scoring based on location
-        $hotDestinations = ['Dubai','Thailand','Bali','Kerala','Indonesia'];
-        $coldDestinations = ['Switzerland','Bhutan','Sikkim','Darjeeling','Lachung'];
-        $beachDestinations = ['Bali','Kerala','Dubai','Goa'];
-        $mountainDestinations = ['Bhutan','Sikkim','Darjeeling','Lachung','Switzerland'];
-
-        $locationMatch = false;
-        if($climate === 'hot') {
-            foreach($hotDestinations as $d) if(stripos($pkg->PackageLocation, $d)!==false) { $score+=20; $locationMatch=true; break; }
-        } elseif($climate === 'cold') {
-            foreach($coldDestinations as $d) if(stripos($pkg->PackageLocation, $d)!==false) { $score+=20; $locationMatch=true; break; }
-        } elseif($climate === 'beach') {
-            foreach($beachDestinations as $d) if(stripos($pkg->PackageLocation, $d)!==false) { $score+=20; $locationMatch=true; break; }
-        } elseif($climate === 'mountain') {
-            foreach($mountainDestinations as $d) if(stripos($pkg->PackageLocation, $d)!==false) { $score+=20; $locationMatch=true; break; }
-        } else {
-            $score += 10; // 'any' preference
-        }
-
-        // Duration scoring - loose match
-        if($duration >= 5 && $duration <= 10) $score += 10;
-        elseif($duration > 10) $score += 5;
-
-        // Rating boost
-        if(isset($pkg->AvgRating) && $pkg->AvgRating >= 4) $score += 10;
-
-        $pkg->score = $score;
-        $pkg->matchPercent = min(100, round(($score / 100) * 100));
-        $pkg->estimatedTotal = $pricePerPerson * $travelers;
-        $recommendations[] = $pkg;
+    try {
+        $totalPackagesConsidered = (int)$dbh->query("SELECT COUNT(*) FROM tbltourpackages WHERE Status = 1")->fetchColumn();
+    } catch (Exception $e) {
+        $totalPackagesConsidered = 0;
     }
 
-    // Sort by score descending
-    usort($recommendations, function($a, $b) { return $b->score - $a->score; });
-    $recommendations = array_slice($recommendations, 0, 6);
+    require_once __DIR__ . '/includes/ai/TravelRecommender.php';
+    $recommender = new TravelRecommender($dbh);
+    $prefs = [
+        'budget'        => $budget,
+        'travelers'     => $travelers,
+        // No specific dates are collected on this quick-recommender form
+        // (that happens later, at booking) -- say so honestly rather than
+        // inventing a date range the user never chose.
+        'start_date'    => 'Flexible / not yet chosen',
+        'end_date'      => 'Flexible / not yet chosen',
+        'duration'      => $duration,
+        'travel_type'   => $traveltype,
+        'climate'       => $climate,
+        'activities'    => $activities !== '' ? $activities : 'No specific preference',
+        'accommodation' => $accommodation,
+    ];
+    $emailForRec = !empty($_SESSION['login']) ? $_SESSION['login'] : 'guest';
+    $recommendations = $recommender->recommend($prefs, $emailForRec);
 
     // Save preference if logged in
     if(!empty($_SESSION['login'])) {
@@ -229,6 +210,23 @@ html[data-theme="dark"] .input-group-icon .fa { color: var(--text-muted) !import
                         </select>
                     </div>
                 </div>
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label><i class="fa fa-bed"></i> Accommodation Preference</label>
+                        <select name="accommodation" class="form-control">
+                            <option value="any">No preference</option>
+                            <option value="budget" <?php echo (isset($_POST['accommodation'])&&$_POST['accommodation']=='budget')?'selected':''; ?>>Budget</option>
+                            <option value="mid-range" <?php echo (isset($_POST['accommodation'])&&$_POST['accommodation']=='mid-range')?'selected':''; ?>>Mid-range</option>
+                            <option value="luxury" <?php echo (isset($_POST['accommodation'])&&$_POST['accommodation']=='luxury')?'selected':''; ?>>Luxury</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label><i class="fa fa-star-o"></i> Activities You Enjoy (optional)</label>
+                        <input type="text" name="activities" class="form-control" placeholder="e.g. hiking, museums, beach relaxation" value="<?php echo isset($_POST['activities'])?htmlentities($_POST['activities']):''; ?>">
+                    </div>
+                </div>
             </div>
             <button type="submit" name="recommend" class="btn-ai">
                 <i class="fa fa-magic"></i> &nbsp; Find My Perfect Tour
@@ -241,30 +239,62 @@ html[data-theme="dark"] .input-group-icon .fa { color: var(--text-muted) !import
         <?php if(count($recommendations) > 0): ?>
         <div class="ai-tip">
             <i class="fa fa-lightbulb-o"></i>
-            <strong>AI Tip:</strong> We analyzed <?php echo count($allPackages); ?> packages and found
+            <strong>AI Tip:</strong> We considered <?php echo (int)$totalPackagesConsidered; ?> active packages and found
             <strong><?php echo count($recommendations); ?></strong> matches based on your budget of
             <strong><?php echo tms_currency($budget); ?></strong> for
             <strong><?php echo (int)$travelers; ?></strong> traveler(s).
-            Top matches are highlighted in green.
+            Each match below shows exactly why it was recommended.
         </div>
         <h3 style="margin-bottom:25px;"><i class="fa fa-star" style="color:#f0ad4e"></i> Recommended Packages</h3>
         <div class="row">
         <?php foreach($recommendations as $pkg):
-            $matchClass = $pkg->matchPercent >= 70 ? 'match-high' : ($pkg->matchPercent >= 40 ? 'match-med' : 'match-low');
-            $matchLabel = $pkg->matchPercent >= 70 ? 'Great Match' : ($pkg->matchPercent >= 40 ? 'Good Match' : 'Partial Match');
+            $overall = (int)($pkg['overall_match'] ?? 0);
+            $matchClass = $overall >= 70 ? 'match-high' : ($overall >= 40 ? 'match-med' : 'match-low');
+            $matchLabel = $overall >= 70 ? 'Great Match' : ($overall >= 40 ? 'Good Match' : 'Partial Match');
+            $scores = $pkg['scores'] ?? [];
+            // FIX (spec items 31/66, "recommendation transparency"): show the
+            // actual per-dimension scores as a checklist, not just one blended
+            // percentage -- this is real data from the engine's own $scores
+            // array, not invented for display.
+            $scoreLabels = [
+                'budget_match'         => 'Budget compatible',
+                'weather_suitability'  => 'Good season/weather fit',
+                'style_match'          => 'Matches your travel style',
+                'safety'               => 'Good safety profile',
+                'experience'           => 'Strong experience rating',
+            ];
         ?>
         <div class="col-md-4 wow fadeInUp">
             <div class="pkg-card">
-                <img loading="lazy" src="<?php echo htmlentities(tms_package_image_src($pkg->PackageImage)); ?>" onerror="this.src='images/no-image-placeholder.jpg'" alt="<?php echo htmlentities($pkg->PackageName); ?>">
+                <img loading="lazy" src="<?php echo htmlentities(tms_package_image_src($pkg['image'] ?? '')); ?>" onerror="this.src='images/no-image-placeholder.jpg'" alt="<?php echo htmlentities($pkg['package_name'] ?? ''); ?>">
                 <div class="pkg-card-body">
-                    <span class="match-badge <?php echo $matchClass; ?>"><i class="fa fa-check-circle"></i> <?php echo $matchLabel; ?> <?php echo $pkg->matchPercent; ?>%</span>
-                    <div class="match-bar-wrap"><div class="match-bar" style="width:<?php echo $pkg->matchPercent; ?>%"></div></div>
-                    <h4><?php echo htmlentities($pkg->PackageName); ?></h4>
-                    <p><i class="fa fa-map-marker" style="color:#e74c3c"></i> <?php echo htmlentities($pkg->PackageLocation); ?></p>
-                    <p><i class="fa fa-tag" style="color:#3498db"></i> <?php echo htmlentities($pkg->PackageType); ?></p>
-                    <p class="price-tag"><?php echo tms_currency($pkg->PackagePrice); ?> <small style="font-size:12px;color:#999">/ person</small></p>
-                    <p style="font-size:12px;color:#27ae60;font-weight:600">Total for <?php echo (int)$travelers; ?> traveler(s): <?php echo tms_currency($pkg->estimatedTotal); ?></p>
-                    <a href="package-details.php?pkgid=<?php echo $pkg->PackageId; ?>" class="btn-view">View & Book <i class="fa fa-arrow-right"></i></a>
+                    <span class="match-badge <?php echo $matchClass; ?>"><i class="fa fa-check-circle"></i> <?php echo $matchLabel; ?> <?php echo $overall; ?>%</span>
+                    <div class="match-bar-wrap"><div class="match-bar" style="width:<?php echo $overall; ?>%"></div></div>
+                    <h4><?php echo htmlentities($pkg['package_name'] ?? 'Package'); ?></h4>
+                    <p><i class="fa fa-map-marker" style="color:#e74c3c"></i> <?php echo htmlentities($pkg['destination'] ?? ''); ?></p>
+                    <?php if (!empty($pkg['why_recommended'])): ?>
+                    <p style="font-size:13px;color:#555;font-style:italic;">"<?php echo htmlentities($pkg['why_recommended']); ?>"</p>
+                    <?php endif; ?>
+                    <?php if ($scores): ?>
+                    <ul style="list-style:none;padding:0;margin:8px 0;font-size:12px;">
+                        <?php foreach ($scoreLabels as $key => $label): if (!isset($scores[$key])) continue;
+                            $good = (int)$scores[$key] >= 60; ?>
+                        <li style="color:<?php echo $good ? '#27ae60' : '#aaa'; ?>;margin-bottom:2px;">
+                            <i class="fa <?php echo $good ? 'fa-check-circle' : 'fa-minus-circle'; ?>"></i>
+                            <?php echo htmlentities($label); ?> (<?php echo (int)$scores[$key]; ?>%)
+                        </li>
+                        <?php endforeach; ?>
+                    </ul>
+                    <?php endif; ?>
+                    <?php if (!empty($pkg['warnings']) && is_array($pkg['warnings'])): foreach ($pkg['warnings'] as $w): ?>
+                    <p style="font-size:12px;color:#c0392b;"><i class="fa fa-exclamation-triangle"></i> <?php echo htmlentities($w); ?></p>
+                    <?php endforeach; endif; ?>
+                    <p class="price-tag"><?php echo tms_currency($pkg['price'] ?? 0); ?> <small style="font-size:12px;color:#999">/ person</small></p>
+                    <p style="font-size:12px;color:#27ae60;font-weight:600">Total for <?php echo (int)$travelers; ?> traveler(s): <?php echo tms_currency($pkg['estimated_total_cost'] ?? (($pkg['price'] ?? 0) * $travelers)); ?></p>
+                    <?php if (!empty($pkg['cost_savings_tip'])): ?>
+                    <p style="font-size:12px;color:#888;"><i class="fa fa-piggy-bank"></i> <?php echo htmlentities($pkg['cost_savings_tip']); ?></p>
+                    <?php endif; ?>
+                    <a href="<?php echo htmlentities($pkg['package_url'] ?? ('package-details.php?pkgid=' . (int)($pkg['package_id'] ?? 0))); ?>" class="btn-view">View & Book <i class="fa fa-arrow-right"></i></a>
                 </div>
             </div>
         </div>

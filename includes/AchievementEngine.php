@@ -139,11 +139,12 @@ class AchievementEngine {
                  LEFT JOIN tblusers u ON u.EmailId = a.UserEmail
                  GROUP BY a.UserEmail
                  ORDER BY achievement_count DESC, latest_unlock ASC
-                 LIMIT ?"
+                 LIMIT " . (int)$limit
             );
-            $stmt->execute([$limit]);
+            $stmt->execute();
             return $stmt->fetchAll(PDO::FETCH_OBJ);
         } catch (Exception $e) {
+            error_log('[TMS] ' . __METHOD__ . ' failed: ' . $e->getMessage());
             return [];
         }
     }
@@ -181,13 +182,17 @@ class AchievementEngine {
     }
 
     private function countReferrals(string $email): int {
-        $stmt = $this->db->prepare("SELECT ReferralCode FROM tblusers WHERE EmailId = ? LIMIT 1");
+        // FIX (Round 14): this looked up the user's ReferralCode and then counted
+        // rows WHERE ReferredBy = <that code> — but ReferredBy stores the
+        // referrer's EMAIL, not their code (register.php and
+        // user-register-ajax.php both resolve the code to an email before
+        // inserting, and referral.php queries it by email). So the count was
+        // always 0 and the "Social Butterfly — refer 3 friends" achievement was
+        // permanently unearnable, even for a user whose Refer a Friend page
+        // listed ten referrals.
+        $stmt = $this->db->prepare("SELECT COUNT(*) FROM tblusers WHERE ReferredBy = ?");
         $stmt->execute([$email]);
-        $code = $stmt->fetchColumn();
-        if (!$code) return 0;
-        $stmt2 = $this->db->prepare("SELECT COUNT(*) FROM tblusers WHERE ReferredBy = ?");
-        $stmt2->execute([$code]);
-        return (int)$stmt2->fetchColumn();
+        return (int)$stmt->fetchColumn();
     }
 
     private function totalSpend(string $email): int {
@@ -211,6 +216,7 @@ class AchievementEngine {
             $stmt->execute([$email]);
             return (int)$stmt->fetchColumn() >= 1;
         } catch (Exception $e) {
+            error_log('[TMS] ' . __METHOD__ . ' failed: ' . $e->getMessage());
             return false;
         }
     }

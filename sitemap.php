@@ -35,6 +35,8 @@ echo '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">' . "\n";
 $staticPages = [
     ['index.php', 'daily', 1.0],
     ['package-list.php', 'daily', 0.9],
+    ['hotels.php', 'daily', 0.8],
+    ['activities.php', 'daily', 0.8],
     ['destinations.php', 'daily', 0.8],
     ['explore.php', 'daily', 0.7],
     ['blog.php', 'daily', 0.7],
@@ -77,5 +79,21 @@ try {
         echo tms_sitemap_url("$base/blog-post.php?id=" . (int)$bid, 'monthly', 0.6);
     }
 } catch (Exception $e) { /* skip quietly */ }
+
+// Hotels (Round 37 sample-data marketplace)
+try {
+    $hotels = $dbh->query("SELECT HotelId FROM tblhotels WHERE Status=1 ORDER BY HotelId DESC")->fetchAll(PDO::FETCH_COLUMN);
+    foreach ($hotels as $hid) {
+        echo tms_sitemap_url("$base/hotel-details.php?id=" . (int)$hid, 'weekly', 0.6);
+    }
+} catch (Exception $e) { /* table not present yet — skip quietly */ }
+
+// Activities (Round 37 sample-data marketplace)
+try {
+    $activities = $dbh->query("SELECT ActivityId FROM tblactivities WHERE Status=1 ORDER BY ActivityId DESC")->fetchAll(PDO::FETCH_COLUMN);
+    foreach ($activities as $aid) {
+        echo tms_sitemap_url("$base/activity-details.php?id=" . (int)$aid, 'weekly', 0.6);
+    }
+} catch (Exception $e) { /* table not present yet — skip quietly */ }
 
 echo '</urlset>' . "\n";

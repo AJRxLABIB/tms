@@ -2,7 +2,14 @@
 session_start();
 error_reporting(E_ALL); ini_set('display_errors', '0'); ini_set('log_errors', '1');
 include('includes/config.php');
-tms_require_user(); // Batch 1 (landing/auth gating): whole app now requires login
+// LIVE BUG FIX (customer-facing audit): this page is real browsing/
+// marketing content -- it's explicitly allowed in robots.txt and listed
+// in sitemap.php for search engines -- but a blanket "require login
+// everywhere" change (see includes/config.php's tms_require_user())
+// silently gated it too, so Google (and any signed-out visitor) was
+// redirected to the homepage instead of seeing this page. Intentionally
+// left public; booking/account actions on this page still check
+// $_SESSION['login'] individually where needed.
 
 $id = tms_int($_GET['id'] ?? 0, 1);
 $q = $dbh->prepare("SELECT b.*,a.UserName as AuthorName FROM tblblog b LEFT JOIN admin a ON b.AuthorId=a.id WHERE b.id=:id LIMIT 1");
@@ -15,6 +22,37 @@ if (!$post) { header('Location: blog.php'); exit; }
 <meta name="theme-color" content="#0B2B3C">
 <link rel="apple-touch-icon" href="images/icon-192.png">
 <title>TMS | <?= htmlspecialchars($post->Title) ?></title>
+<?php
+// NEW (Round 20, spec item 53 — SEO): real data only — description is the
+// post's own content (truncated to a plain-text excerpt, not invented),
+// image is the post's own uploaded cover (omitted if it has none), and the
+// JSON-LD Article fields are all pulled from the same $post row already
+// loaded above.
+$plainExcerpt = trim(preg_replace('/\s+/', ' ', strip_tags($post->Content)));
+if (mb_strlen($plainExcerpt) > 200) { $plainExcerpt = mb_substr($plainExcerpt, 0, 197) . '...'; }
+// FIX (same bug as package-details.php, caught in live testing): ?id= is
+// this page's resource identifier, not a filter -- tms_seo_meta()'s default
+// canonical (query string stripped) would make every blog post canonicalize
+// to the same bare blog-post.php URL. Pass it explicitly, built from the
+// real request path so it still works under any install subfolder.
+$scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
+$host   = $_SERVER['HTTP_HOST'] ?? 'localhost';
+$path   = strtok($_SERVER['REQUEST_URI'] ?? '/', '?');
+tms_seo_meta([
+    'title'       => $post->Title,
+    'description' => $plainExcerpt,
+    'image'       => $post->CoverImage ? ('admin/blogimages/' . $post->CoverImage) : '',
+    'type'        => 'article',
+    'canonical'   => $scheme . '://' . $host . $path . '?id=' . (int)$post->id,
+    'jsonld'      => [
+        '@context'      => 'https://schema.org',
+        '@type'         => 'Article',
+        'headline'      => $post->Title,
+        'datePublished' => date('c', strtotime($post->CreatedAt)),
+        'author'        => ['@type' => 'Person', 'name' => $post->AuthorName ?? 'TMS'],
+    ],
+]);
+?>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <link href="css/bootstrap.min2.css" rel='stylesheet'/>
 <link href="css/style.min.css" rel='stylesheet'/>

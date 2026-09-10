@@ -2,7 +2,14 @@
 session_start();
 error_reporting(E_ALL); ini_set('display_errors', '0'); ini_set('log_errors', '1');
 include('includes/config.php');
-tms_require_user(); // Batch 1 (landing/auth gating): whole app now requires login
+// LIVE BUG FIX (customer-facing audit): this page is real browsing/
+// marketing content -- it's explicitly allowed in robots.txt and listed
+// in sitemap.php for search engines -- but a blanket "require login
+// everywhere" change (see includes/config.php's tms_require_user())
+// silently gated it too, so Google (and any signed-out visitor) was
+// redirected to the homepage instead of seeing this page. Intentionally
+// left public; booking/account actions on this page still check
+// $_SESSION['login'] individually where needed.
 
 // Add/remove from compare
 if (isset($_POST['add_compare'])) {
@@ -50,13 +57,18 @@ $fields = [
 // helper already proven on weather.php/package-details.php (OpenWeatherMap
 // if a key is configured, otherwise the free Open-Meteo fallback — never
 // simulated data, see the comments in includes/config.php).
+// Round 14: this used to collapse "this package has no map location" and "the
+// weather API just timed out" into the same null, and the cell then said
+// "not available for this destination YET" — telling the user the destination
+// is missing data when the real cause may be a transient outage that a refresh
+// would fix. Keep the reason and let the cell say which it is.
 $compareWeather = [];
 foreach ($packages as $p) {
     if (!empty($p->MapLat) && !empty($p->MapLng)) {
         $w = tms_get_weather($dbh, (float)$p->MapLat, (float)$p->MapLng, $p->PackageLocation ?? '');
-        $compareWeather[$p->PackageId] = $w['ok'] ? $w : null;
+        $compareWeather[$p->PackageId] = $w['ok'] ? $w : ['ok' => false, 'error' => $w['error'] ?? 'fetch_failed'];
     } else {
-        $compareWeather[$p->PackageId] = null;
+        $compareWeather[$p->PackageId] = ['ok' => false, 'error' => 'no_coords'];
     }
 }
 ?>
@@ -182,7 +194,7 @@ foreach ($packages as $p) {
       <td class="field-name">Current Weather</td>
       <?php foreach ($packages as $p): $w = $compareWeather[$p->PackageId] ?? null; ?>
       <td>
-        <?php if ($w): ?>
+        <?php if ($w && !empty($w['ok'])): ?>
           <div class="compare-weather">
             <?php if (($w['source'] ?? '') === 'openweathermap'): ?>
               <img src="https://openweathermap.org/img/wn/<?= htmlspecialchars($w['icon'],ENT_QUOTES,'UTF-8') ?>.png" alt="" width="32" height="32">
@@ -190,12 +202,14 @@ foreach ($packages as $p) {
               <i class="fa <?= htmlspecialchars($w['icon'] ?? 'fa-cloud', ENT_QUOTES, 'UTF-8') ?>" style="font-size:22px;color:var(--secondary);"></i>
             <?php endif; ?>
             <div>
-              <div class="temp"><?= (int)$w['temp'] ?>&deg;C</div>
+              <div class="temp"><?= isset($w['temp']) && $w['temp'] !== null ? (int)$w['temp'] . '&deg;C' : '&mdash;' ?></div>
               <div class="cond"><?= htmlspecialchars($w['description'] ?? $w['condition'] ?? '', ENT_QUOTES,'UTF-8') ?></div>
             </div>
           </div>
         <?php else: ?>
-          <span class="compare-na">Live weather not available for this destination yet</span>
+          <span class="compare-na"><?= (($w['error'] ?? '') === 'no_coords')
+              ? 'No map location saved for this destination yet'
+              : 'Live weather unavailable right now — try refreshing' ?></span>
         <?php endif; ?>
       </td>
       <?php endforeach; ?>

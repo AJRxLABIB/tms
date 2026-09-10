@@ -2,7 +2,14 @@
 session_start();
 error_reporting(E_ALL); ini_set('display_errors', '0'); ini_set('log_errors', '1');
 include('includes/config.php');
-tms_require_user(); // Batch 1 (landing/auth gating): whole app now requires login
+// LIVE BUG FIX (customer-facing audit): this page is real browsing/
+// marketing content -- it's explicitly allowed in robots.txt and listed
+// in sitemap.php for search engines -- but a blanket "require login
+// everywhere" change (see includes/config.php's tms_require_user())
+// silently gated it too, so Google (and any signed-out visitor) was
+// redirected to the homepage instead of seeing this page. Intentionally
+// left public; booking/account actions on this page still check
+// $_SESSION['login'] individually where needed.
 
 // ─── Filter params ──────────────────────────────────────────────────────────
 $country  = tms_clean($_GET['country']  ?? '');
@@ -87,6 +94,20 @@ function destUrl(array $overrides = []): string {
 <meta name="theme-color" content="#0B2B3C">
 <link rel="apple-touch-icon" href="images/icon-192.png">
 <title>TMS | Explore Destinations</title>
+<?php
+// NEW (Round 20, spec item 53 — SEO): canonical intentionally always points
+// at the base listing URL (query string stripped by tms_seo_meta's default)
+// so every filter/search combination doesn't count as separate duplicate
+// content -- only the title/description vary with the active filter, for a
+// nicer social-share preview.
+$seoTitleParts = array_filter([$category ?: null, $region ?: null, $country ?: null]);
+tms_seo_meta([
+    'title'       => $seoTitleParts ? ('Destinations: ' . implode(', ', $seoTitleParts)) : 'Explore Destinations',
+    'description' => $totalRows > 0
+        ? "Browse {$totalRows} tour packages across our destinations."
+        : 'Browse tour packages across our destinations.',
+]);
+?>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
 <link href="css/bootstrap.min2.css" rel='stylesheet' type='text/css' />

@@ -136,7 +136,8 @@ class ExpenseAnalyst {
             "You are a personal travel finance advisor. Be concise and specific, referencing the real numbers given.",
             $prompt,
             $cacheKey,
-            $email
+            $email,
+            feature: 'expense'
         );
 
         if ($result['success']) return trim($result['content']);

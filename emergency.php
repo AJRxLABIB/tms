@@ -2,7 +2,14 @@
 session_start();
 error_reporting(E_ALL); ini_set('display_errors', '0'); ini_set('log_errors', '1');
 include('includes/config.php');
-tms_require_user(); // Batch 1 (landing/auth gating): whole app now requires login
+// LIVE BUG FIX (customer-facing audit): this page is real browsing/
+// marketing content -- it's explicitly allowed in robots.txt and listed
+// in sitemap.php for search engines -- but a blanket "require login
+// everywhere" change (see includes/config.php's tms_require_user())
+// silently gated it too, so Google (and any signed-out visitor) was
+// redirected to the homepage instead of seeing this page. Intentionally
+// left public; booking/account actions on this page still check
+// $_SESSION['login'] individually where needed.
 
 $sql = "SELECT * FROM tblemergencycontacts ORDER BY Country";
 $query = $dbh->prepare($sql);
@@ -130,6 +137,22 @@ html[data-theme="dark"] .country-card h4 { color: var(--text) !important; }
                 </div>
             </div>
             <?php endforeach; ?>
+            <?php if (!$contacts): ?>
+            <?php /* Round 14: the foreach had no else, so with an unseeded table this
+                     page showed the SOS banner, a search box that filtered nothing,
+                     and then simply nothing — no explanation at all. */ ?>
+            <div class="emergency-card" style="text-align:center;padding:30px 20px;">
+                <i class="fa fa-info-circle" style="font-size:34px;color:#94a3b8;"></i>
+                <h4 style="margin-top:12px;">Country contacts aren't loaded yet</h4>
+                <p style="color:#64748b;max-width:520px;margin:8px auto 0;">
+                    In any emergency, dial your destination's national emergency number —
+                    <strong>999</strong> in Bangladesh and the UK, <strong>911</strong> in the US and Canada,
+                    <strong>112</strong> across the EU and from any mobile phone worldwide,
+                    <strong>112</strong> or <strong>108</strong> in India. Your travel insurer's
+                    24-hour assistance line is on your policy card.
+                </p>
+            </div>
+            <?php endif; ?>
         </div>
 
         <!-- General Safety Tips Sidebar -->

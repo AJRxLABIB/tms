@@ -4,7 +4,7 @@ error_reporting(E_ALL);
 ini_set('display_errors', 0);
 ini_set('log_errors', 1);
 include('includes/config.php');
-tms_admin_require_role($dbh, ['superadmin']);
+tms_admin_require_role($dbh, ['superadmin', 'package_manager']);
 ?>
 <!DOCTYPE html>
 <html lang="<?php echo htmlspecialchars(tms_active_language(), ENT_QUOTES, 'UTF-8'); ?>">

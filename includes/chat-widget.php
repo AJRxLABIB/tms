@@ -50,7 +50,7 @@ if (empty($_SESSION['login'])) return;
 }
 </style>
 
-<button id="tmsHumanChatToggle" title="Chat with our team" onclick="tmsHumanChatToggle()">
+<button id="tmsHumanChatToggle" title="Chat with our team" aria-label="Chat with our team" onclick="tmsHumanChatToggle()">
     <i class="fa fa-comments"></i>
     <span class="tms-chat-badge" id="tmsHumanChatBadge"></span>
 </button>
@@ -64,7 +64,7 @@ if (empty($_SESSION['login'])) return;
     <form id="tmsHumanChatForm" onsubmit="return tmsHumanChatSend(event)">
         <?php tms_csrf_field(); ?>
         <input type="text" id="tmsHumanChatInput" placeholder="Type a message…" autocomplete="off" oninput="tmsHumanChatTypingPing()">
-        <button type="submit"><i class="fa fa-paper-plane"></i></button>
+        <button type="submit" aria-label="Send message"><i class="fa fa-paper-plane"></i></button>
     </form>
 </div>
 <script>

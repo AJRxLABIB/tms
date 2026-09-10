@@ -41,7 +41,14 @@ tms_require_user(); // Batch 1 (landing/auth gating): whole app now requires log
 			<div class="con-top animated wow fadeInUp animated" data-wow-duration="400ms" data-wow-delay=".1s" style="visibility: visible; animation-duration: 1200ms; animation-delay: 500ms; animation-name: fadeInUp;">
 	
 
-              <h4>  <?php echo htmlentities($_SESSION['msg']);?></h4>
+              <h4><?php
+                  // Round 14: $_SESSION['msg'] is only ever set by
+                  // includes/write-us.php, so a direct visit (or a refresh after
+                  // it was consumed) raised "Undefined array key" plus an
+                  // htmlentities(null) deprecation and printed an empty heading.
+                  echo htmlentities($_SESSION['msg'] ?? "Thanks — we've received your message and will get back to you shortly.");
+                  unset($_SESSION['msg']);
+              ?></h4>
             
 			</div>
 		

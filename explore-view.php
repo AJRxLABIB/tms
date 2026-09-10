@@ -2,7 +2,14 @@
 session_start();
 error_reporting(E_ALL); ini_set('display_errors', '0'); ini_set('log_errors', '1');
 include('includes/config.php');
-tms_require_user();
+// LIVE BUG FIX (customer-facing audit): this page is real browsing/
+// marketing content -- it's explicitly allowed in robots.txt and listed
+// in sitemap.php for search engines -- but a blanket "require login
+// everywhere" change (see includes/config.php's tms_require_user())
+// silently gated it too, so Google (and any signed-out visitor) was
+// redirected to the homepage instead of seeing this page. Intentionally
+// left public; booking/account actions on this page still check
+// $_SESSION['login'] individually where needed.
 
 $destName = tms_clean($_GET['name'] ?? '');
 $lat      = isset($_GET['lat']) ? (float)$_GET['lat'] : null;
@@ -78,12 +85,20 @@ if ($destName === '' || $lat === null || $lng === null) {
                     <button class="map-mode-btn active" data-mode="driving" onclick="exploreDrawRoute('driving')"><i class="fa fa-car"></i> Driving</button>
                     <button class="map-mode-btn" data-mode="walking" onclick="exploreDrawRoute('walking')"><i class="fa fa-walking"></i> Walking</button>
                     <button class="map-mode-btn" data-mode="cycling" onclick="exploreDrawRoute('cycling')"><i class="fa fa-bicycle"></i> Cycling</button>
+                    <?php /* Round 14: this button used to return an error that promised
+                             "Showing driving/walking directions instead" and then showed
+                             nothing, parking the user on a mode that could never work.
+                             It now genuinely falls back to the driving route
+                             (ExploreService::getRoute), and is only offered at all when a
+                             Google Maps key makes real transit routing possible. */ ?>
+                    <?php if (defined('GOOGLE_MAPS_API_KEY') && GOOGLE_MAPS_API_KEY !== ''): ?>
                     <button class="map-mode-btn" data-mode="transit" onclick="exploreDrawRoute('transit')"><i class="fa fa-bus"></i> Public Transport</button>
+                    <?php endif; ?>
                 </div>
                 <div id="exploreMap"></div>
                 <div class="route-summary" id="routeSummary"></div>
                 <p style="font-size:12px;color:var(--text-muted);margin-top:10px;">
-                    <i class="fa fa-camera"></i> Teal pins show real nearby tourist attractions from OpenStreetMap. Click "Locate Me" for turn-by-turn distance &amp; ETA to <?php echo htmlspecialchars($destName); ?>.
+                    <i class="fa fa-camera"></i> Teal pins show real nearby tourist attractions from OpenStreetMap. Click "Locate Me" for distance &amp; ETA to <?php echo htmlspecialchars($destName); ?>.
                 </p>
             </div>
         </div>
