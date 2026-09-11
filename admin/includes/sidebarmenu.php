@@ -33,9 +33,7 @@
     <div class="nav-section-label">Main</div>
     <ul style="list-style:none;padding:0;">
       <?php navItem('dashboard.php','tachometer','Dashboard',$cur); ?>
-      <?php if ($canSee(['operations', 'manager'])): ?>
-        <?php navItem('operations-dashboard.php','exclamation-circle','Operations',$cur); ?>
-      <?php endif; ?>
+      <?php navItem('operations-dashboard.php','exclamation-circle','Operations',$cur); ?>
     </ul>
 
     <div class="nav-section-label">Packages</div>

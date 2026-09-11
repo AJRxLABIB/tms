@@ -8,7 +8,6 @@ require_once(__DIR__ . '/../includes/payments/PaymentProviderInterface.php');
 require_once(__DIR__ . '/../includes/payments/SandboxProvider.php');
 require_once(__DIR__ . '/../includes/payments/PaymentService.php');
 tms_require_admin();
-tms_admin_require_role($dbh, ['booking_manager', 'operations', 'manager']); // Round 20 RBAC (item 46)
 $paymentService = new PaymentService($dbh);
 ?>
 <!DOCTYPE html>

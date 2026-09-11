@@ -54,11 +54,7 @@ const TMS_AI_GUEST_ACTIONS = ['chatbot', 'recommend', 'itinerary', 'budget', 'pa
                               // virtual_guide (used by virtual-guide.php, now a public page) had no
                               // rate limit at all for guests before this -- unlimited free Gemini
                               // calls from anyone, logged in or not.
-                              'virtual_guide',
-                              // nl_search (Round 36): package-list.php's search box is public
-                              // browsing, same as the rest of that page -- a signed-out visitor
-                              // must be able to use it, just under the same guest hourly cap.
-                              'nl_search'];
+                              'virtual_guide'];
 if ($userEmail === 'guest' && in_array($action, TMS_AI_GUEST_ACTIONS, true)) {
     $hour = date('YmdH');
     $bucket = $_SESSION['ai_guest_calls'] ?? ['hour' => $hour, 'count' => 0];

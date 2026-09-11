@@ -61,34 +61,23 @@ define('TMS_MAX_LOYALTY_DISCOUNT', (int) tms_env('TMS_MAX_LOYALTY_DISCOUNT', 40)
 define('ANTHROPIC_API_KEY', GEMINI_API_KEY);
 define('ANTHROPIC_MODEL',   GEMINI_MODEL);
 
-// Diagnostic only — gated to whichever provider AI_PROVIDER actually
-// selects (Round 34), so switching to OpenAI no longer logs a misleading
-// "GEMINI_API_KEY is empty" warning about a provider the site isn't using.
-if (AI_PROVIDER === 'openai') {
-    if (OPENAI_API_KEY === '') {
-        error_log('[TMS Config] AI_PROVIDER=openai but OPENAI_API_KEY is empty — every AI '
-            . 'feature (chatbot, Explore overview, AI Recommender, planner, packing assistant) '
-            . 'will return its non-AI fallback. Set OPENAI_API_KEY in .env. See .env.example.');
-    }
-} else {
-    // A valid Google AI Studio key normally starts with "AIza". This does
-    // NOT block the app (some proxied/alternate key formats exist), it just
-    // logs so "AI features silently return 503" isn't a total mystery.
-    if (GEMINI_API_KEY === '') {
-        // FIX (Round 14): the diagnostic below only fired for a MALFORMED key, so the
-        // far more common "no .env at all" case logged nothing and every AI feature
-        // silently degraded to canned fallback text with no clue why.
-        error_log('[TMS Config] GEMINI_API_KEY is empty — every AI feature (chatbot, Explore '
-            . 'overview, AI Recommender, planner, packing assistant) will return its non-AI '
-            . 'fallback. Create a .env file in the project root containing GEMINI_API_KEY=... '
-            . '(get a free key at https://aistudio.google.com). See .env.example.');
-    }
-    if (GEMINI_API_KEY !== '' && !str_starts_with(GEMINI_API_KEY, 'AIza')) {
-        error_log('[TMS Config] GEMINI_API_KEY does not look like a standard Google AI Studio key '
-            . '(those normally start with "AIza"). If AI-powered features (Explore Mode overview, '
-            . 'AI Recommender, chatbots) are failing, regenerate a fresh key at '
-            . 'https://aistudio.google.com and update .env.');
-    }
+// Diagnostic only — a valid Google AI Studio key normally starts with "AIza".
+// This does NOT block the app (some proxied/alternate key formats exist),
+// it just logs so "AI features silently return 503" isn't a total mystery.
+if (GEMINI_API_KEY === '') {
+    // FIX (Round 14): the diagnostic below only fired for a MALFORMED key, so the
+    // far more common "no .env at all" case logged nothing and every AI feature
+    // silently degraded to canned fallback text with no clue why.
+    error_log('[TMS Config] GEMINI_API_KEY is empty — every AI feature (chatbot, Explore '
+        . 'overview, AI Recommender, planner, packing assistant) will return its non-AI '
+        . 'fallback. Create a .env file in the project root containing GEMINI_API_KEY=... '
+        . '(get a free key at https://aistudio.google.com). See .env.example.');
+}
+if (GEMINI_API_KEY !== '' && !str_starts_with(GEMINI_API_KEY, 'AIza')) {
+    error_log('[TMS Config] GEMINI_API_KEY does not look like a standard Google AI Studio key '
+        . '(those normally start with "AIza"). If AI-powered features (Explore Mode overview, '
+        . 'AI Recommender, chatbots) are failing, regenerate a fresh key at '
+        . 'https://aistudio.google.com and update .env.');
 }
 
 // ─── Weather Configuration (OpenWeatherMap — FREE, 1000 calls/day) ───────────
@@ -2269,71 +2258,6 @@ function tms_currency_js(): array {
         }
     }
     return ['code' => $code, 'symbol' => $meta['symbol'], 'decimals' => (int)$meta['decimals'], 'rate' => $rate];
-}
-
-/**
- * NEW (Round 20, spec item 53 — SEO): echoes a canonical URL, OpenGraph
- * tags, and an optional JSON-LD structured-data block, from whatever real
- * data the caller has on hand — nothing here is invented if a field is
- * missing (an empty/absent value is simply omitted from the output, never
- * filled with a placeholder). Call once inside a page's own <head>, after
- * its <title> tag; every page here builds its own <head> individually
- * (there is no single shared head include), so this is opt-in per page
- * rather than sitewide by default — only wired into the highest-SEO-value
- * page types for now (destination listing, package details, blog posts),
- * per the spec's own named examples. Extending it to the rest of the ~60
- * page files is the same one-line pattern, just not done yet everywhere.
- *
- * @param array $o {
- *   string $title        Required. Plain text page title (no site suffix).
- *   string $description  Optional. Plain text description/summary.
- *   string $image        Optional. Absolute or site-relative image URL.
- *   string $type         Optional. og:type, default 'website'.
- *   string $canonical    Optional. Absolute canonical URL; defaults to the
- *                        current request's scheme+host+path (query string
- *                        stripped, so filtered/paginated views canonicalize
- *                        to their base page rather than each combination of
- *                        filters counting as a separate page).
- *   array  $jsonld       Optional. A pre-built schema.org array to emit as
- *                        JSON-LD. Only pass fields backed by real data.
- * }
- */
-function tms_seo_meta(array $o): void {
-    $title = trim($o['title'] ?? '');
-    if ($title === '') return;
-
-    $scheme    = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
-    $host      = $_SERVER['HTTP_HOST'] ?? 'localhost';
-    $path      = strtok($_SERVER['REQUEST_URI'] ?? '/', '?');
-    $canonical = $o['canonical'] ?? ($scheme . '://' . $host . $path);
-    $description = trim($o['description'] ?? '');
-    $image     = trim($o['image'] ?? '');
-    $type      = $o['type'] ?? 'website';
-
-    echo '<link rel="canonical" href="' . htmlspecialchars($canonical, ENT_QUOTES, 'UTF-8') . '">' . "\n";
-    echo '<meta property="og:site_name" content="TMS">' . "\n";
-    echo '<meta property="og:type" content="' . htmlspecialchars($type, ENT_QUOTES, 'UTF-8') . '">' . "\n";
-    echo '<meta property="og:title" content="' . htmlspecialchars($title, ENT_QUOTES, 'UTF-8') . '">' . "\n";
-    echo '<meta property="og:url" content="' . htmlspecialchars($canonical, ENT_QUOTES, 'UTF-8') . '">' . "\n";
-
-    if ($description !== '') {
-        echo '<meta name="description" content="' . htmlspecialchars($description, ENT_QUOTES, 'UTF-8') . '">' . "\n";
-        echo '<meta property="og:description" content="' . htmlspecialchars($description, ENT_QUOTES, 'UTF-8') . '">' . "\n";
-    }
-    if ($image !== '') {
-        // Social crawlers don't run from this domain, so a site-relative
-        // path (e.g. "images/1.jpg") has to be resolved to absolute or the
-        // image simply won't load in the share preview.
-        if (!preg_match('#^https?://#i', $image)) {
-            $image = $scheme . '://' . $host . '/' . ltrim($image, '/');
-        }
-        echo '<meta property="og:image" content="' . htmlspecialchars($image, ENT_QUOTES, 'UTF-8') . '">' . "\n";
-    }
-    if (!empty($o['jsonld']) && is_array($o['jsonld'])) {
-        echo '<script type="application/ld+json">'
-            . json_encode($o['jsonld'], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE)
-            . '</script>' . "\n";
-    }
 }
 
 /**

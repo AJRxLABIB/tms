@@ -38,7 +38,7 @@
                                 <input type="submit" name="signin" value="<?php echo htmlspecialchars(tms_t('nav_signin','SIGN IN'), ENT_QUOTES, 'UTF-8'); ?>">
                             </form>
                             <p style="text-align:center;margin-top:12px;font-size:13px;color:#666;">
-                                <?php echo tms_t('msg_no_account_yet','No account yet?'); ?>
+                                No account yet?
                                 <?php /* Round 14: this pointed at #myModal, which exists
                                          nowhere in the codebase (the only file that
                                          would have defined it, includes/signup.php, is
@@ -46,7 +46,7 @@
                                          box and opened nothing. The real signup modal
                                          lives in includes/header.php. */ ?>
                                 <a href="#" onclick="if(typeof closeModal==='function'){closeModal('signinModal');openModal('signupModal');}else{window.location='register.php';}return false;"
-                                   style="color:#3F84B1;font-weight:600;"><?php echo tms_t('link_create_account','Create one free'); ?></a>
+                                   style="color:#3F84B1;font-weight:600;">Create one free</a>
                             </p>
                         </div>
                         <div class="clearfix"></div>
