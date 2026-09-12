@@ -39,7 +39,7 @@ if (PHP_SAPI !== 'cli') {
     die('This script is CLI-only.');
 }
 
-require __DIR__ . '/../includes/config.php';
+require __DIR__ . '/../backend/config.php';
 
 $backupDir = __DIR__ . '/../backups';
 $args = $argv;
@@ -155,10 +155,19 @@ if (in_array('--restore', $args, true)) {
     unset($plain); // don't hold the whole plaintext dump in memory longer than needed
 
     $mysqlBin = tms_env('MYSQL_PATH', '') ?: 'mysql';
+    // Same fix as backup_database.php (Round 51): quote every value in the
+    // option file. An unquoted '#' in DB_USER/DB_PASS/DB_HOST is treated as
+    // a comment by MySQL's option-file parser and silently truncates the
+    // rest of the line -- found by actually running this restore path
+    // end-to-end for the first time, not by inspection.
+    $escUser = str_replace(["\\", "\""], ["\\\\", "\\\""], DB_USER);
+    $escPass = str_replace(["\\", "\""], ["\\\\", "\\\""], DB_PASS);
+    $escHost = str_replace(["\\", "\""], ["\\\\", "\\\""], DB_HOST);
     $credFile = tempnam(sys_get_temp_dir(), 'tmsrestorecred_');
-    file_put_contents($credFile, "[client]\nuser=" . DB_USER . "\n"
-        . "password=" . str_replace(["\\", "\""], ["\\\\", "\\\""], DB_PASS) . "\n"
-        . "host=" . DB_HOST . "\n");
+    file_put_contents($credFile, "[client]\n"
+        . "user=\"" . $escUser . "\"\n"
+        . "password=\"" . $escPass . "\"\n"
+        . "host=\"" . $escHost . "\"\n");
     @chmod($credFile, 0600);
 
     try {

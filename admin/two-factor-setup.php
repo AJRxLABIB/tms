@@ -99,7 +99,7 @@ $qrUrl  = $otpUri ? tms_totp_qr_url($otpUri) : '';
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Plus+Jakarta+Sans:wght@600;700;800&display=swap" rel="stylesheet">
 <link href="css/font-awesome.css" rel="stylesheet">
 <link href="css/bootstrap.min.css" rel="stylesheet">
-<link href="css/admin-v6.css" rel="stylesheet">
+<link href="<?php echo tms_asset_ver('css/admin-v6.css'); ?>" rel="stylesheet">
 <style>
 .page-title-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;flex-wrap:wrap;gap:12px;}
 .page-title-row h2{font-family:'Plus Jakarta Sans',sans-serif;font-size:22px;font-weight:800;color:#0f172a;margin:0;}
@@ -160,8 +160,8 @@ $qrUrl  = $otpUri ? tms_totp_qr_url($otpUri) : '';
     <form method="post" style="margin-top:16px;">
       <?php tms_csrf_field(); ?>
       <div class="form-row">
-        <label>Enter the 6-digit code from your app to confirm</label>
-        <input type="text" name="totp_code" inputmode="numeric" pattern="[0-9]*" maxlength="6" required autocomplete="one-time-code">
+        <label for="tfa_totp_code">Enter the 6-digit code from your app to confirm</label>
+        <input type="text" id="tfa_totp_code" name="totp_code" inputmode="numeric" pattern="[0-9]*" maxlength="6" required autocomplete="one-time-code">
       </div>
       <button type="submit" name="confirm_enable" class="btn-primary-sm"><i class="fa fa-check"></i> Confirm &amp; Enable</button>
     </form>
@@ -181,12 +181,12 @@ $qrUrl  = $otpUri ? tms_totp_qr_url($otpUri) : '';
     <form method="post">
       <?php tms_csrf_field(); ?>
       <div class="form-row">
-        <label>Current Password</label>
-        <input type="password" name="confirm_password" required autocomplete="current-password">
+        <label for="tfa_confirm_password">Current Password</label>
+        <input type="password" id="tfa_confirm_password" name="confirm_password" required autocomplete="current-password">
       </div>
       <div class="form-row">
-        <label>Current 2FA Code</label>
-        <input type="text" name="disable_totp_code" inputmode="numeric" pattern="[0-9]*" maxlength="6" required autocomplete="one-time-code">
+        <label for="tfa_disable_totp_code">Current 2FA Code</label>
+        <input type="text" id="tfa_disable_totp_code" name="disable_totp_code" inputmode="numeric" pattern="[0-9]*" maxlength="6" required autocomplete="one-time-code">
       </div>
       <button type="submit" name="disable_2fa" class="btn-danger-sm" onclick="return confirm('Disable two-factor authentication on your account?')"><i class="fa fa-ban"></i> Disable 2FA</button>
     </form>

@@ -1,0 +1,206 @@
+openapi: 3.0.3
+info:
+  title: TMS REST API
+  version: "1"
+  description: >
+    Tourism Management System REST API. Every request goes through one
+    entry point with an `action` parameter (query string for GET, POST
+    field for POST) — see api/index.php's own top-of-file comment and
+    API_DOCUMENTATION.md for the full human-readable version this spec
+    is generated to match. Reachable at both the legacy unversioned path
+    and the versioned /api/v1/ path (Round 71); both behave identically.
+  contact:
+    name: TMS Project
+externalDocs:
+  description: Full human-readable API documentation
+  url: ../API_DOCUMENTATION.md
+
+servers:
+  - url: /tms/api/v1
+    description: Versioned (recommended for new integrations)
+  - url: /tms/api
+    description: Legacy unversioned path (kept working indefinitely)
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      description: >
+        Token returned by the `login` action. Opaque 64-char hex string,
+        valid 30 days, stored server-side only as a SHA-256 hash.
+  schemas:
+    SuccessEnvelope:
+      type: object
+      properties:
+        success: { type: boolean, example: true }
+        data: {}
+        meta:
+          type: object
+          properties:
+            version: { type: string, example: "1" }
+            versioned_path: { type: boolean }
+    ErrorEnvelope:
+      type: object
+      properties:
+        success: { type: boolean, example: false }
+        error: { type: string }
+    Package:
+      type: object
+      properties:
+        PackageId: { type: integer }
+        PackageName: { type: string }
+        PackageType: { type: string }
+        PackageLocation: { type: string }
+        PackagePrice: { type: number }
+        PackageImage: { type: string }
+        AvgRating: { type: number, nullable: true }
+    Booking:
+      type: object
+      properties:
+        BookingId: { type: integer }
+        PackageId: { type: integer }
+        PackageName: { type: string }
+        PackageLocation: { type: string }
+        FromDate: { type: string, format: date }
+        ToDate: { type: string, format: date }
+        status: { type: integer, description: "0=pending, 1=confirmed, 2=cancelled" }
+        NoOfPersons: { type: integer }
+        TotalCost: { type: number }
+        RegDate: { type: string }
+        VerificationCode: { type: string }
+  responses:
+    RateLimited:
+      description: Too many requests for this endpoint/IP in the current window
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorEnvelope' }
+    Unauthorized:
+      description: Missing, malformed, invalid, or expired bearer token
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorEnvelope' }
+
+security: []
+
+paths:
+  /:
+    get:
+      summary: Read-only actions (packages, package, types)
+      parameters:
+        - name: action
+          in: query
+          required: true
+          schema: { type: string, enum: [packages, package, types] }
+        - name: search
+          in: query
+          schema: { type: string }
+          description: packages only — matches PackageName or PackageLocation
+        - name: type
+          in: query
+          schema: { type: string }
+          description: packages only — exact PackageType match
+        - name: page
+          in: query
+          schema: { type: integer, default: 1 }
+          description: packages only
+        - name: limit
+          in: query
+          schema: { type: integer, default: 12, maximum: 50 }
+          description: packages only
+        - name: sort
+          in: query
+          schema: { type: string, enum: [price_asc, price_desc, name] }
+          description: packages only
+        - name: id
+          in: query
+          schema: { type: integer }
+          description: package only — required, the PackageId
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SuccessEnvelope' }
+        '400': { description: Missing/invalid parameters }
+        '404': { description: Package not found, or unknown action }
+        '429': { $ref: '#/components/responses/RateLimited' }
+    post:
+      summary: Public write actions (check_email, login) and auth-required actions (logout, book, cancel_booking)
+      parameters:
+        - name: action
+          in: query
+          schema: { type: string, enum: [check_email, login, logout, book, cancel_booking] }
+      security:
+        - bearerAuth: []
+        - {}
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              properties:
+                emailid: { type: string, description: "check_email" }
+                email: { type: string, description: "login" }
+                password: { type: string, description: "login" }
+                device: { type: string, description: "login, optional device label" }
+                package_id: { type: integer, description: "book" }
+                from_date: { type: string, format: date, description: "book, YYYY-MM-DD" }
+                to_date: { type: string, format: date, description: "book, YYYY-MM-DD" }
+                persons: { type: integer, description: "book, default 1, max 20" }
+                mobile: { type: string, description: "book, optional" }
+                comment: { type: string, description: "book, optional" }
+                coupon_code: { type: string, description: "book, optional" }
+                booking_id: { type: integer, description: "cancel_booking" }
+      responses:
+        '200': { description: OK }
+        '201': { description: Booking created (book only) }
+        '400': { description: Missing/invalid parameters }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { description: Resource not found }
+        '405': { description: Wrong HTTP method — POST required }
+        '409': { description: "Valid request, not allowed right now (e.g. cancel within 24h of departure)" }
+        '429':
+          description: Too many failed login attempts (login), or rate-limited (any action)
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorEnvelope' }
+        '500': { description: Server error }
+
+  /me:
+    get:
+      summary: Current authenticated user's profile
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SuccessEnvelope' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+  /my_bookings:
+    get:
+      summary: Current authenticated user's bookings
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items: { $ref: '#/components/schemas/Booking' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+  # NOTE: /me and /my_bookings above are documented as their own paths for
+  # readability; on the wire they are still ?action=me / ?action=my_bookings
+  # against the same "/" entry point as everything else — this file does
+  # not do real path-based routing (see api/v1/index.php's own comment for
+  # why that's a deliberate, documented choice, not an oversight).

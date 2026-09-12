@@ -1,7 +1,14 @@
 # TMS REST API — v1
 
-Base URL: `http://<your-host>/tms/api/index.php` (or `/api/` if your server
-routes directory requests to `index.php` automatically).
+Base URL: `http://<your-host>/tms/api/v1/` (recommended — see "About
+versioning" below), or the original `http://<your-host>/tms/api/`
+(`/tms/api/index.php` also works directly if your server doesn't route
+directory requests to `index.php` automatically). Both paths behave
+identically.
+
+**Interactive docs:** `/tms/api/docs.php` renders the machine-readable
+OpenAPI spec (`api/openapi.yaml`) as a browsable, "Try it out"-capable
+Swagger UI page — useful alongside this file, not instead of it.
 
 All requests go through this one file with an `action` parameter — either
 as a query string (`?action=packages`) or a POST field. This matches how
@@ -126,19 +133,35 @@ admins in Manage Bookings.
 | 404 | Resource not found (package, booking, or unknown `action`) |
 | 405 | Wrong HTTP method (most write actions require POST) |
 | 409 | Valid request, but not allowed right now (e.g. cancel within 24h) |
-| 429 | Too many failed login attempts for this email/IP — wait and retry |
+| 429 | Too many failed login attempts for this email/IP (login), or too many requests to this endpoint in the current window (any action) — wait and retry |
 | 500 | Server error — check the PHP error log |
+
+## Rate limiting (Round 71)
+
+Every action is throttled to 120 requests/60 seconds per IP address. The
+`check_email` action additionally has its own stricter limit of 20/60s,
+since — unlike `login` — it had no other abuse protection and is a plain
+account-enumeration oracle if hammered (email in, "already registered?"
+out). Both return `429` with a human-readable message on the response
+body when exceeded; the limiter fails **open** on any internal DB error
+(same philosophy as the login lockout), so a limiter bug can never take
+the whole API down.
 
 ## About versioning
 
-This API doesn't use a `/v1/` URL prefix. `api/ai.php` and `api/explore.php`
-already exist as siblings of `api/index.php`, and restructuring into
-`api/v1/index.php` would mean either breaking those two or duplicating
-routing logic to keep them working — more risk than benefit for a first
-version. Instead, every response carries `meta.version`, so a client can
-check it. If a real breaking v2 is ever needed, the plan would be a new
-`api/v2/` directory living alongside this one, with `api/index.php`
-continuing to serve v1 clients unchanged — not replacing this file.
+This API is reachable at a real `/api/v1/` path (Round 71) — `api/v1/index.php`
+contains nothing but a one-line `require` of the original `api/index.php`,
+so the two paths run identical code by construction and can never drift
+apart; there's no second copy of the routing/handler logic to maintain.
+`api/ai.php` and `api/explore.php`, the two siblings a naive directory
+restructure would have broken, are completely untouched. Every response
+also carries `meta.version` (`"1"`) and `meta.versioned_path` (a boolean
+confirming which path was actually hit) so a client can check either way.
+If a real *breaking* v2 is ever needed, the plan is still a new `api/v2/`
+directory with its own real implementation, living alongside this one —
+`api/index.php` (and the `/api/v1/` alias) would keep serving existing
+consumers unchanged, per this same requirement's instruction not to break
+them.
 
 ## Example: full booking flow (curl)
 

@@ -37,14 +37,14 @@ declare(strict_types=1);
 $isCli = (PHP_SAPI === 'cli');
 
 if (!$isCli) {
-    // Reuses the project's own existing RBAC helper (includes/config.php)
+    // Reuses the project's own existing RBAC helper (backend/config.php)
     // instead of inventing a parallel admin-check -- tms_admin_require_role()
     // already handles session start, the "not logged in" redirect, and the
     // 403 page for a logged-in admin who isn't a superadmin.
-    require __DIR__ . '/../includes/config.php';
+    require __DIR__ . '/../backend/config.php';
     tms_admin_require_role($dbh, ['superadmin']);
 } else {
-    require __DIR__ . '/../includes/config.php'; // gives us $dbh (PDO) via the app's own DB config
+    require __DIR__ . '/../backend/config.php'; // gives us $dbh (PDO) via the app's own DB config
 }
 
 $statusOnly = in_array('--status', $argv ?? [], true) || isset($_GET['status']);

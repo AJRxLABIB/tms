@@ -19,10 +19,10 @@
 
 session_start();
 error_reporting(E_ALL); ini_set('display_errors', '0'); ini_set('log_errors', '1');
-require_once dirname(__DIR__) . '/includes/config.php';
-require_once dirname(__DIR__) . '/includes/ai/AIClient.php';
-require_once dirname(__DIR__) . '/includes/ExploreService.php';
-require_once dirname(__DIR__) . '/includes/PlaceDetailsService.php';
+require_once dirname(__DIR__) . '/backend/config.php';
+require_once dirname(__DIR__) . '/backend/ai/AIClient.php';
+require_once dirname(__DIR__) . '/backend/ExploreService.php';
+require_once dirname(__DIR__) . '/backend/PlaceDetailsService.php';
 
 header('Content-Type: application/json; charset=utf-8');
 header('X-Content-Type-Options: nosniff');
@@ -111,8 +111,18 @@ function handleInfo(PDO $dbh, ExploreService $service, string $email): void {
 
     $ai  = new AIClient($dbh);
     $res = $service->getDestinationInfo($ai, $name, $lat, $lng, $country, $email);
-    $res['success'] ? apiSuccess(['info' => $res['data'], 'cached' => $res['cached'] ?? false])
-                     : apiError(503, $res['error'] ?? 'Could not load destination information.');
+    // NEW (Round 79, master prompt item 6 -- Destination System, "Travel"
+    // tier): local_inventory (real packages/hotels/activities this system
+    // actually sells for this country) is returned alongside the AI
+    // overview, and now also on failure -- see ExploreService::
+    // getDestinationInfo()'s comments -- so the client can still show real
+    // bookable options even when the AI overview call itself failed (e.g.
+    // no AI key configured).
+    if ($res['success']) {
+        apiSuccess(['info' => $res['data'], 'cached' => $res['cached'] ?? false, 'local_inventory' => $res['local_inventory'] ?? null]);
+    } else {
+        apiError(503, $res['error'] ?? 'Could not load destination information.', ['local_inventory' => $res['local_inventory'] ?? null]);
+    }
 }
 
 function handleWeather(ExploreService $service): void {
@@ -293,8 +303,12 @@ function apiSuccess(array $data): void {
     exit;
 }
 
-function apiError(int $code, string $message): void {
+function apiError(int $code, string $message, array $extra = []): void {
     http_response_code($code);
-    echo json_encode(['success' => false, 'error' => $message], JSON_UNESCAPED_UNICODE);
+    // $extra (NEW, Round 79): optional additional top-level fields merged
+    // into the error body -- e.g. handleInfo() below still wants to return
+    // real local_inventory even when the AI overview call failed. Every
+    // existing 2-argument call site is unaffected ($extra defaults to none).
+    echo json_encode(array_merge(['success' => false, 'error' => $message], $extra), JSON_UNESCAPED_UNICODE);
     exit;
 }

@@ -26,9 +26,22 @@ use PHPMailer\PHPMailer\Exception as PHPMailerException;
  * @return bool true if the email was actually sent
  */
 function tms_send_email(string $toEmail, string $toName, string $subject, string $htmlBody): bool {
+    // Master prompt item 56 (monitoring): "Email" is one of the seven
+    // systems this item explicitly asks to track, and until now a send
+    // failure only ever reached error_log -- no admin page could show
+    // "how many emails failed this week". $dbh is read as a global here
+    // (rather than adding a parameter to every one of this function's ~6
+    // call sites across register.php/forgot-password.php/manage-bookings.php/
+    // etc.) because config.php -- which defines $dbh at file/global scope --
+    // is always loaded before this file (see the require order in
+    // config.php itself), and logging is wrapped in its own try/catch
+    // inside tms_log_system_event() so it can never turn a send failure (or
+    // success) into a fatal error.
+    global $dbh;
     $host = tms_env('SMTP_HOST', '');
     if (!$host) {
         error_log("[TMS Mailer] SMTP not configured — skipped email to $toEmail: $subject");
+        if ($dbh instanceof PDO) tms_log_system_event($dbh, 'email', 'not_configured', false, 'SMTP_HOST not set');
         return false;
     }
 
@@ -53,12 +66,15 @@ function tms_send_email(string $toEmail, string $toName, string $subject, string
         $mail->AltBody = trim(strip_tags(str_replace(['<br>', '<br/>', '<br />'], "\n", $htmlBody)));
 
         $mail->send();
+        if ($dbh instanceof PDO) tms_log_system_event($dbh, 'email', 'send', true);
         return true;
     } catch (PHPMailerException $e) {
         error_log('[TMS Mailer] Send failed to ' . $toEmail . ': ' . $mail->ErrorInfo);
+        if ($dbh instanceof PDO) tms_log_system_event($dbh, 'email', 'send', false, $mail->ErrorInfo);
         return false;
     } catch (Exception $e) {
         error_log('[TMS Mailer] Unexpected error sending to ' . $toEmail . ': ' . $e->getMessage());
+        if ($dbh instanceof PDO) tms_log_system_event($dbh, 'email', 'send', false, $e->getMessage());
         return false;
     }
 }

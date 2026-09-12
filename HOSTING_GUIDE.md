@@ -96,7 +96,7 @@ Once the site is live at its new public URL:
 2. Verify ownership. Search Console will offer a few methods; the simplest
    here is **"HTML tag"** — it gives you a `<meta name="google-site-
    verification" ...>` snippet. Send it to me and I'll add it to
-   `includes/header.php` so it's on every page, or you can paste it in
+   `backend/header.php` so it's on every page, or you can paste it in
    yourself if you're doing the file editing.
 3. Once verified, go to **Sitemaps** in the left sidebar and submit:
    `sitemap.php` (your project already generates this dynamically — package

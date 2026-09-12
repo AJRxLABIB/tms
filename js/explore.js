@@ -179,16 +179,76 @@ function goToDestination(name, lat, lng, country) {
     function loadOverview() {
         var elOverview = document.getElementById('overviewContent');
         exploreGet('info', { name: DEST.name, lat: DEST.lat, lng: DEST.lng, country: DEST.country }).then(function (res) {
+            // NEW (Round 79, master prompt item 6 -- Destination System,
+            // "Travel" tier): local_inventory (real packages/hotels/
+            // activities this system sells for DEST.country) is unrelated to
+            // whether the AI overview call succeeded, and api/explore.php now
+            // returns it either way (nested under res.data on success, at the
+            // top level alongside the error on failure -- see apiError()'s
+            // new $extra parameter). Render it regardless, so a visitor still
+            // sees real bookable options even when the AI text fails (the
+            // documented common case with no AI key configured).
+            var inventory = res.success ? (res.data && res.data.local_inventory) : res.local_inventory;
             if (!res.success) {
                 elOverview.innerHTML = '<div class="explore-error"><i class="fa fa-exclamation-triangle"></i> ' + escapeHtml(res.error) + '</div>';
+                renderLocalInventory(inventory);
                 return;
             }
             state.info = res.data.info;
             renderOverview(state.info);
+            renderLocalInventory(inventory);
             updateExploreContext();
         }).catch(function () {
             elOverview.innerHTML = '<div class="explore-error"><i class="fa fa-exclamation-triangle"></i> Could not load destination information. Please check your connection and try again.</div>';
         });
+    }
+
+    // ── Local inventory: real packages/hotels/activities TMS actually
+    //    sells for this destination's country (master prompt item 6) ──
+    function renderLocalInventory(inventory) {
+        var el = document.getElementById('localInventoryContent');
+        if (!el) return;
+        inventory = inventory || {};
+        var packages   = inventory.packages   || [];
+        var hotels     = inventory.hotels     || [];
+        var activities = inventory.activities || [];
+
+        if (!packages.length && !hotels.length && !activities.length) {
+            el.innerHTML = '<div class="explore-card"><h4><i class="fa fa-suitcase-rolling"></i> Book This Destination</h4>' +
+                '<p class="text-muted">No packages, hotels, or activities are currently listed for ' + escapeHtml(DEST.country || 'this destination') + ' in our catalog.</p></div>';
+            return;
+        }
+
+        function row(href, img, title, meta, price, sample) {
+            return '<a class="inventory-item" href="' + href + '">' +
+                '<img loading="lazy" src="' + (img || 'images/no-image-placeholder.jpg') + '" alt="">' +
+                '<div class="inventory-item-body"><strong>' + escapeHtml(title) + '</strong>' +
+                (sample ? ' <span class="tms-sample-badge"><i class="fa fa-flask"></i> Sample</span>' : '') +
+                '<span>' + escapeHtml(meta) + '</span></div>' +
+                (price ? '<div class="inventory-item-price">' + escapeHtml(price) + '</div>' : '') +
+                '</a>';
+        }
+
+        var pkgHtml = packages.map(function (p) {
+            return row('package-details.php?pkgid=' + encodeURIComponent(p.PackageId), p.PackageImage, p.PackageName,
+                p.PackageLocation || '', p.PackagePrice ? ('৳ ' + Number(p.PackagePrice).toLocaleString()) : '', false);
+        }).join('') || '<p class="text-muted">No packages currently listed for ' + escapeHtml(DEST.country || 'here') + '.</p>';
+
+        var hotelHtml = hotels.map(function (h) {
+            var meta = (h.City || '') + (h.StarRating ? ' · ' + h.StarRating + '★' : '');
+            return row('hotel-details.php?id=' + encodeURIComponent(h.HotelId), h.HotelImage, h.HotelName,
+                meta, h.PricePerNight ? ('৳ ' + Number(h.PricePerNight).toLocaleString() + '/night') : '', !!Number(h.IsSampleData));
+        }).join('') || '<p class="text-muted">No hotels currently listed for ' + escapeHtml(DEST.country || 'here') + '.</p>';
+
+        var activityHtml = activities.map(function (a) {
+            return row('activity-details.php?id=' + encodeURIComponent(a.ActivityId), a.ActivityImage, a.ActivityName,
+                a.Category || (a.City || ''), a.PricePerPerson ? ('৳ ' + Number(a.PricePerPerson).toLocaleString() + '/person') : '', !!Number(a.IsSampleData));
+        }).join('') || '<p class="text-muted">No activities currently listed for ' + escapeHtml(DEST.country || 'here') + '.</p>';
+
+        el.innerHTML =
+            '<div class="explore-card"><h4><i class="fa fa-box-open"></i> Packages in ' + escapeHtml(DEST.country || 'this destination') + '</h4>' + pkgHtml + '</div>' +
+            '<div class="explore-card"><h4><i class="fa fa-bed"></i> Hotels</h4>' + hotelHtml + '</div>' +
+            '<div class="explore-card"><h4><i class="fa fa-hiking"></i> Activities</h4>' + activityHtml + '</div>';
     }
 
     function renderOverview(info) {
@@ -434,6 +494,12 @@ function goToDestination(name, lat, lng, country) {
         return '<div class="place-card">' +
             '<a href="#" class="place-card-open" data-idx="' + idx + '">' +
             (p.photo ? '<img class="photo" src="' + p.photo + '" alt="' + escapeHtml(p.name) + '">' : '') +
+            // PROVENANCE (Round 73, master prompt item 65): Google's Places API
+            // terms require showing each photo's attribution whenever the photo
+            // itself is shown. This is Google's own html_attributions string
+            // (server-fetched, never user-supplied), so it's rendered as-is
+            // rather than escaped -- only ever present alongside a real photo.
+            (p.photo && p.photo_attribution ? '<div class="photo-credit">Photo: ' + p.photo_attribution + '</div>' : '') +
             '<h6>' + escapeHtml(p.name) + '</h6>' +
             '</a>' +
             (p.rating ? '<div class="rating"><i class="fa fa-star"></i> ' + p.rating + ' / 5</div>' : '') +

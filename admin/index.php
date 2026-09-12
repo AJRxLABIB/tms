@@ -46,22 +46,36 @@ if (isset($_POST['btn-verify-2fa'])) {
     }
 
     $lockoutKey = '2fa:' . strtolower($pendingUser);
-    $q = $dbh->prepare("SELECT id, TwoFASecret FROM admin WHERE UserName=:u AND TwoFAEnabled=1 LIMIT 1");
-    $q->execute([':u' => $pendingUser]);
-    $row = $q->fetch(PDO::FETCH_OBJ);
 
-    if ($row && $row->TwoFASecret && tms_totp_verify($row->TwoFASecret, $code)) {
-        tms_clear_login_attempts($dbh, $lockoutKey, $ip);
-        unset($_SESSION['a2fa_pending']);
-        $_SESSION['alogin'] = $pendingUser;
-        session_regenerate_id(true);
-        tms_log_activity($dbh, $pendingUser, 'Admin Login', 'Successful admin sign-in (2FA verified)');
-        header('location:dashboard.php');
-        exit;
+    // FIX (Round 66, master prompt item 44): tms_record_failed_login() below
+    // was already filling tbl_login_attempts for this key on every wrong
+    // TOTP code, but nothing ever called tms_login_lockout_minutes_remaining()
+    // to actually check it first -- the exact same gap the password branch
+    // below had. An attacker who got past step 1 (or brute-forced a 2FA
+    // code directly, which is only ~1,000,000 possibilities) could try
+    // unlimited codes with zero throttling.
+    $waitMinutes = tms_login_lockout_minutes_remaining($dbh, $lockoutKey, $ip);
+    if ($waitMinutes > 0) {
+        $error = "Too many failed attempts. Please try again in {$waitMinutes} minute"
+               . ($waitMinutes === 1 ? '' : 's') . '.';
     } else {
-        tms_record_failed_login($dbh, $lockoutKey, $ip);
-        tms_log_activity($dbh, $pendingUser, 'Admin 2FA Failed', 'Invalid TOTP code');
-        $error = 'Invalid or expired code. Please try again.';
+        $q = $dbh->prepare("SELECT id, TwoFASecret FROM admin WHERE UserName=:u AND TwoFAEnabled=1 LIMIT 1");
+        $q->execute([':u' => $pendingUser]);
+        $row = $q->fetch(PDO::FETCH_OBJ);
+
+        if ($row && $row->TwoFASecret && tms_totp_verify($row->TwoFASecret, $code)) {
+            tms_clear_login_attempts($dbh, $lockoutKey, $ip);
+            unset($_SESSION['a2fa_pending']);
+            $_SESSION['alogin'] = $pendingUser;
+            session_regenerate_id(true);
+            tms_log_activity($dbh, $pendingUser, 'Admin Login', 'Successful admin sign-in (2FA verified)');
+            header('location:dashboard.php');
+            exit;
+        } else {
+            tms_record_failed_login($dbh, $lockoutKey, $ip);
+            tms_log_activity($dbh, $pendingUser, 'Admin 2FA Failed', 'Invalid TOTP code');
+            $error = 'Invalid or expired code. Please try again.';
+        }
     }
 }
 
@@ -99,6 +113,20 @@ if(isset($_POST['btn-login'])){
     if(!$uname || !$upass){
         $error = 'Please enter username and password.';
     } else {
+        // FIX (Round 66, master prompt item 44): tms_record_failed_login()
+        // and tms_clear_login_attempts() were both already being called
+        // correctly below -- tbl_login_attempts was filling up with real
+        // "admin:" rows -- but nothing on this page ever called
+        // tms_login_lockout_minutes_remaining() to check them before
+        // attempting a password verification. The customer-facing
+        // login.php has checked this since Round 14; this admin login
+        // never did, so admin accounts had zero real brute-force
+        // protection despite every attempt being dutifully recorded.
+        $waitMinutes = tms_login_lockout_minutes_remaining($dbh, $lockoutKey, $ip);
+        if ($waitMinutes > 0) {
+            $error = "Too many failed sign-in attempts. Please try again in {$waitMinutes} minute"
+                   . ($waitMinutes === 1 ? '' : 's') . '.';
+        } else {
         try {
             $q = $dbh->prepare("SELECT * FROM admin WHERE UserName=:u LIMIT 1");
             $q->execute([':u'=>$uname]);
@@ -138,6 +166,7 @@ if(isset($_POST['btn-login'])){
         } catch(Exception $e) {
             error_log('Admin login error: ' . $e->getMessage());
             $error = 'A server error occurred. Please try again.';
+        }
         }
     }
 }

@@ -29,6 +29,8 @@ if (isset($_POST['update_translation'])) {
         try {
             $dbh->prepare("UPDATE tbl_translation_cache SET translated=:t WHERE source_hash=:h AND lang=:l")
                 ->execute([':t' => $newText, ':h' => $hash, ':l' => $lang]);
+            // Audit log coverage (Round 52).
+            tms_log_activity($dbh, $_SESSION['alogin'], 'Translation Edited', "lang=$lang, hash=$hash");
             $msg = "Translation updated."; $msgType = 'success';
         } catch (Exception $e) { $msg = "Error: " . $e->getMessage(); $msgType = 'error'; }
     } else {
@@ -40,8 +42,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'delet
     // Deleting just clears the cache entry — tms_translate_batch() will
     // silently re-request it from the AI the next time that string is
     // needed in that language, rather than deleting content outright.
+    $tHash = tms_clean($_POST['hash']); $tLang = tms_clean($_POST['lang']);
     $dbh->prepare("DELETE FROM tbl_translation_cache WHERE source_hash=:h AND lang=:l")
-        ->execute([':h' => tms_clean($_POST['hash']), ':l' => tms_clean($_POST['lang'])]);
+        ->execute([':h' => $tHash, ':l' => $tLang]);
+    tms_log_activity($dbh, $_SESSION['alogin'], 'Translation Cache Cleared', "lang=$tLang, hash=$tHash");
     $msg = "Cleared — will be re-translated on next view."; $msgType = 'success';
 }
 
@@ -99,7 +103,7 @@ if (isset($TMS_TRANSLATIONS) && is_array($TMS_TRANSLATIONS)) {
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Plus+Jakarta+Sans:wght@600;700;800&display=swap" rel="stylesheet">
 <link href="css/font-awesome.css" rel="stylesheet">
 <link href="css/bootstrap.min.css" rel="stylesheet">
-<link href="css/admin-v6.css" rel="stylesheet">
+<link href="<?php echo tms_asset_ver('css/admin-v6.css'); ?>" rel="stylesheet">
 <style>
 .page-title-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;flex-wrap:wrap;gap:12px;}
 .page-title-row h2{font-family:'Plus Jakarta Sans',sans-serif;font-size:22px;font-weight:800;color:#0f172a;margin:0;}
@@ -159,10 +163,10 @@ html[data-theme="dark"] .cov-bar { background:#2b3542 !important; }
     translation directly, or clear it to force a fresh AI re-translation next time that page is viewed in that language.
   </p>
   <form method="get" style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;margin-bottom:4px;">
-    <div><label style="font-size:12px;font-weight:500;color:#64748b;display:block;margin-bottom:4px;">Search</label>
-    <input type="text" name="q" value="<?= htmlspecialchars($searchQ) ?>" placeholder="Search source or translated text..." style="padding:8px 12px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:13px;min-width:240px;"></div>
-    <div><label style="font-size:12px;font-weight:500;color:#64748b;display:block;margin-bottom:4px;">Language</label>
-    <select name="lang_filter" style="padding:8px 12px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:13px;">
+    <div><label style="font-size:12px;font-weight:500;color:#64748b;display:block;margin-bottom:4px;" for="tr_q">Search</label>
+    <input type="text" id="tr_q" name="q" value="<?= htmlspecialchars($searchQ) ?>" placeholder="Search source or translated text..." style="padding:8px 12px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:13px;min-width:240px;"></div>
+    <div><label style="font-size:12px;font-weight:500;color:#64748b;display:block;margin-bottom:4px;" for="tr_lang_filter">Language</label>
+    <select id="tr_lang_filter" name="lang_filter" style="padding:8px 12px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:13px;">
       <option value="">All languages</option>
       <?php foreach ($langCounts as $lc => $cnt): ?>
       <option value="<?= htmlspecialchars($lc) ?>" <?= $langFilter === $lc ? 'selected' : '' ?>><?= htmlspecialchars($lc) ?> (<?= $cnt ?>)</option>

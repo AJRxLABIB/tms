@@ -194,6 +194,15 @@ html[data-theme="dark"] .tms-notif-msg { color: #eef2f7; }
   font-weight: 700 !important;
   padding: 5px 14px !important;
   border-radius: 20px !important;
+  /* Round 54 (master prompt item 61) tried adding white-space:nowrap here
+     to stop "Sign In"/"Sign Up" wrapping to two lines on narrow phones --
+     reverted: the topbar flex row has no spare width at 320-374px, so
+     forcing one line just pushed the button 40px past the viewport edge
+     instead, which is a real overflow bug and strictly worse than the
+     harmless two-line wrap it was meant to fix (Rule 73 -- don't trade a
+     cosmetic nit for an actual defect). Left as-is; a real fix would need
+     to free up topbar width first (e.g. shrinking the logo wordmark at
+     this breakpoint), which is a separate, more invasive change. */
 }
 .btn-topbar-login:hover { background: var(--accent-dark) !important; transform: translateY(-1px); }
 .btn-topbar-signup {
@@ -259,6 +268,15 @@ html[data-theme="dark"] .tms-notif-msg { color: #eef2f7; }
   font-weight: 400;
   font-size: 26px;
   margin-top: -2px;
+  /* ACCESSIBILITY FIX (Round 69, WCAG 2.5.8 target size): with zero padding
+     (button.close{padding:0} from bootstrap.css) the bare "x" glyph alone
+     rendered a clickable width of roughly 13-18px -- well under the 24px
+     minimum -- even though the 26px line-height already gave it enough
+     height. min-width plus centering guarantee a full 24px-wide box without
+     changing the glyph's visual size or its float:right position. */
+  display: inline-block;
+  min-width: 24px;
+  text-align: center;
 }
 .modal-header .close:hover { opacity: 1; }
 .modal-body { padding: 22px 24px; }
@@ -1393,9 +1411,64 @@ html[data-theme="dark"] .tms-notif-msg { color: #eef2f7; }
   .tms-topbar-left a span,
   .tms-topbar-welcome { display: none; }
   .tms-topbar-left, .tms-topbar-right { gap: 8px; }
-}
-@media (max-width: 992px) {
+  /* RESPONSIVE FIX (Round 54, master prompt item 61): a logged-in
+     customer's topbar-left renders 8 plain-text links (Home + Dashboard /
+     My Profile / My Bookings / Price Alerts / Group Trips / Refer Friends /
+     Privacy & My Data -- see backend/header.php) totaling ~753px. None of
+     that text is wrapped in a <span>, so the "hide span text" rule just
+     above never actually applied to it, and this whole block collapsing
+     to icon-only-first-link previously only kicked in below 992px (see the
+     removed max-width:992px block this replaces) -- leaving every width
+     from ~993px up to 1300px with a topbar that visibly overflowed past
+     the right edge of the page. Found at the master prompt's own 1024px
+     breakpoint while testing an authenticated session, which this round's
+     earlier guest-only sweep never exercised (a guest's topbar-left is
+     just Home + Admin -- 2 short links that already fit here). Moving the
+     "keep only the first link" rule up to this same 1300px threshold
+     closes the gap for logged-in users and changes nothing for guests,
+     whose topbar already fit at every width tested. */
   .tms-topbar-left a:not(:first-child) { display: none; }
+}
+/* RESPONSIVE FIX (Round 54, master prompt item 61): .tms-nav-menu has 11
+   top-level items (Home/About/Tour Packages/Hotels/Activities/
+   Destinations/Explore/Features/Blog/Compare/Contact) that measure ~960px
+   wide on their own, before the logo and topbar icons either side even
+   get counted. The only breakpoint that switched it to the hamburger/
+   mobile-menu layout was max-width:768px, which left a real gap: at every
+   width from 769px up to ~1150px the full horizontal nav is still shown
+   but doesn't fit, and the menu visibly overflows past the right edge of
+   the page. Found by actually measuring layout at the master prompt's own
+   listed breakpoints -- it reproduced cleanly at exactly 1024px, one of
+   the 9 widths item 61 calls out by name, and also at 1100px; it was
+   already clean by 1150px/1280px. Rather than touch the existing
+   max-width:768px block (which is correctly tuned for actual phone
+   layout -- hero font size, grid columns, etc. -- and works fine there),
+   this repeats just the nav/hamburger/mega-menu toggle at a wider
+   threshold, so tablet-and-narrow-laptop widths get the same working
+   hamburger menu a phone gets, without changing anything else about how
+   those widths already render. */
+@media (min-width: 769px) and (max-width: 1179px) {
+  .tms-hamburger { display: flex; }
+  .tms-nav-menu {
+    display: none;
+    position: absolute;
+    top: 70px;
+    left: 0;
+    right: 0;
+    background: #fff;
+    flex-direction: column;
+    align-items: stretch;
+    padding: 16px;
+    box-shadow: var(--shadow-md);
+    gap: 4px;
+    z-index: 999;
+  }
+  .tms-nav-menu.mobile-open { display: flex; }
+  .tms-nav-menu > li > a { padding: 12px 16px; }
+  .tms-mega-menu { position: static; transform: none; width: 100%; border-radius: var(--radius-sm); box-shadow: none; border: none; padding: 12px; }
+  .tms-mega-menu::before { display: none; }
+  .tms-mega-menu.open { animation: none; }
+  .tms-mega-grid { grid-template-columns: 1fr; gap: 4px; }
 }
 @media (max-width: 768px) {
   html, body, html[data-theme="dark"] body { background-attachment: scroll, scroll; }
@@ -1422,7 +1495,14 @@ html[data-theme="dark"] .tms-notif-msg { color: #eef2f7; }
   .tms-mega-menu.open { animation: none; }
   .tms-mega-grid { grid-template-columns: 1fr; gap: 4px; }
   .tms-hero h1 { font-size: 36px; }
-  .tms-hero-stats { gap: 24px; }
+  /* RESPONSIVE FIX (Round 54, master prompt item 61): .tms-hero-stats is a
+     4-item flex row with no wrap anywhere, so on any phone width it forced
+     the page to overflow horizontally instead of ever breaking to a second
+     line -- found by actually measuring layout at 320-414px widths, not by
+     eyeballing a screenshot. flex-wrap is harmless above this breakpoint
+     (it simply never triggers there, since the row already fits) and lets
+     the 4 stats wrap to two rows of two on narrow phones instead. */
+  .tms-hero-stats { gap: 24px; flex-wrap: wrap; justify-content: center; }
   .tms-hero-search { flex-direction: column; }
   .tms-search-divider { width: 100%; height: 1px; }
   .tms-search-btn { width: 100%; justify-content: center; }
@@ -1671,4 +1751,23 @@ html[data-theme="dark"] .tms-sample-banner {
   background: #2a2400;
   border-color: #5c4a00;
   color: #ffd76a;
+}
+
+/* ACCESSIBILITY FIX (Round 69, WCAG 2.5.8 target size): Bootstrap's stock
+   .btn-xs (padding:1px 5px; font-size:12px; line-height:1.5, from
+   bootstrap.css) renders a clickable box only ~20px tall regardless of
+   content, and this site's icon-only .btn-xs instances -- the
+   remove-from-compare button on compare.php, the document-delete button
+   on wallet.php, and the delete-expense button on expense-tracker.php
+   (which further zeroes its own padding) -- also come out narrower than
+   24px, since there's no text to pad the width out. min-height/min-width
+   guarantee a full 24x24 box for all of them without changing the visible
+   button style. This only reaches pages that load this stylesheet after
+   bootstrap.min2.css (every affected page does); the two admin pages that
+   also use .btn-xs (add-package.php/edit-package.php) use it only on a
+   text-labelled "Use ৳X" button that already clears both dimensions, and
+   don't load this stylesheet at all. */
+.btn-xs {
+  min-height: 24px;
+  min-width: 24px;
 }

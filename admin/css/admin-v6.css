@@ -177,6 +177,17 @@ html, body {
   flex-direction: column;
   min-height: 100vh;
   transition: var(--transition);
+  /* RESPONSIVE FIX (Round 54, master prompt item 61): .tms-shell is
+     display:flex and .tms-sidebar is position:fixed (taken out of flow),
+     so .tms-main is effectively the shell's only flex item. A flex item's
+     automatic minimum width defaults to its own min-content size (not 0),
+     so unshrinkable content anywhere inside it -- the topbar's user badge,
+     a wide stat card, etc. -- silently set a floor under .tms-main's width
+     and forced the whole page to overflow at every phone width (found at
+     320px: .tms-main measured 599px wide against a 320px viewport). This
+     is the standard fix for that trap, not a visual change at any width
+     that already fit.  */
+  min-width: 0;
 }
 .tms-main.expanded { margin-left: var(--sidebar-collapsed-w); }
 
@@ -289,6 +300,21 @@ html, body {
 }
 .stat-card-label { font-size: 13px; font-weight: 500; color: var(--text-secondary); }
 .stat-card-sub { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+
+/* ── Dashboard two-column layout (Round 54, master prompt item 61) ──
+   Was an inline style on admin/dashboard.php (grid-template-columns:1fr
+   320px), which no media query could reach -- see the responsive fix
+   comment there. Same two values, just reachable from CSS now. */
+.tms-dashboard-grid { display: grid; grid-template-columns: 1fr 320px; gap: 20px; }
+/* RESPONSIVE FIX (Round 54, master prompt item 61): a grid item's
+   automatic minimum width defaults to its min-content size, same trap as
+   .tms-main above. The "Recent Bookings" card's table forced this column
+   to demand ~590px even after the track itself was set to 1fr, because
+   nothing told the item it was allowed to shrink below its content.
+   .table-responsive's own overflow-x:auto (already present in the markup)
+   is exactly what should absorb that width once the column can actually
+   shrink to it. */
+.tms-dashboard-grid > * { min-width: 0; }
 
 /* ── Generic Card ─────────────────────────────────── */
 .card {
@@ -436,6 +462,44 @@ html, body {
   .tms-main { margin-left: 0 !important; }
   .tms-content { padding: 16px; }
   .stats-grid { grid-template-columns: 1fr 1fr; }
+  /* RESPONSIVE FIX (Round 54, master prompt item 61): stack the
+     dashboard's two-column layout -- the fixed 320px side column has no
+     room to sit next to the main column below tablet width. */
+  .tms-dashboard-grid { grid-template-columns: 1fr; }
+  /* RESPONSIVE FIX (Round 54, master prompt item 61): .tms-topbar's own
+     28px side padding plus its unshrinkable topbar-right content (user
+     badge + date pill + sign-out button, none of which wrap) overflowed
+     the page at every width this block already covers -- found at 320px,
+     where topbar-right alone measured 339-354px against ~264px of
+     available room. Trim the topbar's padding to match .tms-content's,
+     and drop the two lowest-value items (the "signed in as" name text and
+     the date pill both duplicate information already visible elsewhere:
+     the sidebar user footer and the page header) rather than the sign-out
+     control itself. */
+  .tms-topbar { padding: 0 16px; }
+  .topbar-date { display: none; }
+  .topbar-user span { display: none; }
+  .topbar-user { padding: 6px 8px; gap: 0; }
+}
+/* RESPONSIVE FIX (Round 54, master prompt item 61): even after the
+   768px block above trims the topbar down, a real phone width (found at
+   320px) still doesn't have room for the theme toggle + avatar + a
+   "Logout" text label all at once alongside the breadcrumb -- the
+   remaining ~264px of usable topbar width is a few dozen px short.
+   Dropping the Logout button's text label (the icon + its "Logout"
+   tooltip/title attribute both still communicate what it does) closes
+   the gap without touching anything above 480px, where it already fits. */
+@media (max-width: 480px) {
+  .topbar-logout-label { display: none; }
+}
+/* RESPONSIVE FIX (Round 54, master prompt item 61): stat cards on a real
+   phone (≤480px) are still cramped in 2 columns once real values are
+   substituted in (currency amounts, longer labels like "Support Issues")
+   -- go to a single column here, one step narrower than the existing
+   768px breakpoint so tablets keep the 2-column layout that already fits
+   them. */
+@media (max-width: 480px) {
+  .stats-grid { grid-template-columns: 1fr; }
 }
 
 /* ── Accessibility (Section 12 audit) ────────────────

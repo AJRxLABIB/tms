@@ -50,7 +50,15 @@ if (empty($_SESSION['login'])) return;
 }
 </style>
 
-<button id="tmsHumanChatToggle" title="Chat with our team" aria-label="Chat with our team" onclick="tmsHumanChatToggle()">
+<!-- ACCESSIBILITY FIX (Round 67, master prompt item 32): this toggle never
+     exposed open/closed state (no aria-expanded, unlike a native
+     disclosure widget), and the message stream below had no
+     role/aria-live at all -- an incoming support reply was announced to
+     nowhere for a screen-reader user, unlike the AI assistant widget
+     (backend/chatbot.php), which already has role="log" aria-live="polite"
+     on its own message list. Both are fixed to match that existing,
+     already-correct pattern. -->
+<button id="tmsHumanChatToggle" title="Chat with our team" aria-label="Chat with our team" aria-haspopup="true" aria-expanded="false" aria-controls="tmsHumanChatPanel" onclick="tmsHumanChatToggle()">
     <i class="fa fa-comments"></i>
     <span class="tms-chat-badge" id="tmsHumanChatBadge"></span>
 </button>
@@ -59,7 +67,7 @@ if (empty($_SESSION['login'])) return;
         <div class="t"><i class="fa fa-headset"></i> Chat with our team</div>
         <div class="s">Usually replies within a few minutes</div>
     </div>
-    <div id="tmsHumanChatBody"><div id="tmsHumanChatEmpty">Say hello — a real member of our team will reply here.</div></div>
+    <div id="tmsHumanChatBody" role="log" aria-live="polite" aria-atomic="false"><div id="tmsHumanChatEmpty">Say hello — a real member of our team will reply here.</div></div>
     <div id="tmsHumanTyping"><i class="fa fa-ellipsis-h"></i> Support is typing…</div>
     <form id="tmsHumanChatForm" onsubmit="return tmsHumanChatSend(event)">
         <?php tms_csrf_field(); ?>
@@ -75,6 +83,8 @@ if (empty($_SESSION['login'])) return;
     window.tmsHumanChatToggle = function(){
         panelOpen = !panelOpen;
         document.getElementById('tmsHumanChatPanel').style.display = panelOpen ? 'flex' : 'none';
+        var toggleBtn = document.getElementById('tmsHumanChatToggle');
+        if (toggleBtn) toggleBtn.setAttribute('aria-expanded', panelOpen ? 'true' : 'false');
         if (panelOpen) {
             markRead();
             document.getElementById('tmsHumanChatBadge').style.display = 'none';

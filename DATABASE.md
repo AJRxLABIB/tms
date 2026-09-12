@@ -30,71 +30,8 @@ runner touches a database, so they are never re-run.
 |---|---|
 | `tbltourpackages` | The product catalog — packages, price, location, capacity (`SeatsAvailable`, nullable = uncapped) |
 | `tblbooking` | One row per booked package per traveler group. `status`: 0=Pending, 1=Confirmed, 2=Cancelled. `PaymentStatus` (new): unpaid\|pending\|paid\|failed\|refunded\|partially_refunded |
-| `tblpayments` / `tblpayment_events` / `tblpayment_refunds` | New (this round) — the payment ledger. See `PAYMENTS.md` |
-| `tblusers` / `admin` | Accounts. `admin.Role`: superadmin \| manager |
-| `tblcoupons` | Discount codes |
-| `tblloyalty` / `tblloyalty_log` | Points balance + history |
-| `tblwishlist` | Saved packages per user |
-| `tblactivity_log` | Admin/system audit trail (Actor, Action, Details, IP, timestamp) — this is this project's audit log (Rule 47); no separate `audit_logs` table was added since this already covers the same need |
-| `tbl_ai_*`, `tbl_copilot_sessions`, `tbl_explore_*` | AI feature state/cache — see `AI_ARCHITECTURE.md` |
-| `tblmigrations` (new) | Tracks which `database/migrations/*.sql` files have run |
-
-## Known schema debt (real, not hidden)
-
-- `tblbooking.TotalCost` and `tbltourpackages.PackagePrice` are `float`/
-  decimal-as-PHP-float rather than integer minor units. The new payment
-  ledger (`tblpayments.AmountMinor`) IS a proper integer; migrating the
-  older, widely-read columns is real follow-up work (touches ~15 files),
-  not done in this pass to avoid a risky drive-by schema change.
-- No hotel/activity/transport tables exist separately from
-  `tbltourpackages` — packages are still the only bookable product. Adding
-  a real hotel/activities/transport marketplace needs real supplier data
-  (Rule 3 forbids inventing hotel names/prices/availability), which this
-  project doesn't have access to; not built this round for that reason.
-- Charset is a mix of `latin1` and `utf8` across tables from different
-  migration eras — works today, but a full-`utf8mb4` pass would remove a
-  class of "emoji/rare-script breaks a column" bugs if this ever needs it.
-
-## Running migrations
-
-```
-php database/migrate.php            # apply pending migrations
-php database/migrate.php --status   # show what's pending, changes nothing
-```
-# Database
-
-MySQL/MariaDB, `latin1`/`utf8` mixed charset (inherited — not changed here,
-since a charset migration touches every table and is its own risky project).
-
-## Schema history (how it got here)
-
-Applied in this order, historically by hand in phpMyAdmin:
-1. `tms.sql` — base schema + seed data (`admin`, `tblbooking`, `tblenquiry`,
-   `tblissues`, `tblpages`, `tbltourpackages`, `tblusers`)
-2. `v6_migration.sql` — `tblactivity_log`, `tblblog`, `tblcoupons`,
-   `tblloyalty`, `tblloyalty_log`, `tblwishlist`
-3. `AI_MIGRATION.sql` — `tbl_ai_*`, `tbl_copilot_sessions`,
-   `tbl_review_sentiment`, `tbl_safety_alerts`, `tbl_travel_memories`,
-   `tbl_user_profile`
-4. `explore_migration.sql` — `tbl_explore_*`
-5. `schema_repair_migration.sql` — assorted column additions/fixes to
-   already-shipped tables (e.g. `tblbooking.NoOfPersons/TotalCost/
-   VerificationCode/BookingDate`, added incrementally as features needed
-   them but not tracked anywhere until now)
-
-**As of this round**, schema changes go through `database/migrations/`
-instead — see `database/migrate.php` and its own docblock. The 5 files
-above are recorded as an already-applied baseline the first time that
-runner touches a database, so they are never re-run.
-
-## Core tables (selected — see the .sql files for full column lists)
-
-| Table | Purpose |
-|---|---|
-| `tbltourpackages` | The product catalog — packages, price, location, capacity (`SeatsAvailable`, nullable = uncapped) |
-| `tblbooking` | One row per booked package per traveler group. `status`: 0=Pending, 1=Confirmed, 2=Cancelled. `PaymentStatus` (new): unpaid\|pending\|paid\|failed\|refunded\|partially_refunded |
-| `tblpayments` / `tblpayment_events` / `tblpayment_refunds` | New (this round) — the payment ledger. See `PAYMENTS.md` |
-| `tblusers` / `admin` | Accounts. `admin.Role` (Round 20 — granular RBAC, spec item 46): superadmin \| booking_manager \| package_manager \| finance \| support \| content_manager \| ai_manager \| operations, plus legacy `manager` (broad access, kept working for admins created before this round but not offered for new ones). Enforced per-page via `tms_admin_require_role()`/`tms_admin_can()` in `includes/config.php` — see `admin/manage-admins.php`'s docblock for the full per-role page map. `tblusers` gained `NotificationsEnabled` / `PersonalizationEnabled` / `DeletedAt` (Round 20 — privacy controls, spec item 48; see `privacy.php`) |
+| `tblpayments` / `tblpayment_events` / `tblpayment_refunds` | The payment ledger (migration `002_payments.sql`). `tblpayment_events` gained `ProviderEventId`/`Signature`/`ProcessingStatus`/`RetryCount` in migration `005_webhook_hardening.sql` (Round 56, item 43 — inbound webhook receivers). See `PAYMENTS.md` |
+| `tblusers` / `admin` | Accounts. `admin.Role` (Round 20 — granular RBAC, spec item 46): superadmin \| booking_manager \| package_manager \| finance \| support \| content_manager \| ai_manager \| operations, plus legacy `manager` (broad access, kept working for admins created before this round but not offered for new ones). Enforced per-page via `tms_admin_require_role()`/`tms_admin_can()` in `backend/config.php` — see `admin/manage-admins.php`'s docblock for the full per-role page map. `tblusers` gained `NotificationsEnabled` / `PersonalizationEnabled` / `DeletedAt` (Round 20 — privacy controls, spec item 48; see `privacy.php`) |
 | `tblcoupons` | Discount codes |
 | `tblloyalty` / `tblloyalty_log` | Points balance + history |
 | `tblwishlist` | Saved packages per user |
@@ -152,9 +89,9 @@ runner touches a database, so they are never re-run.
   was left alone rather than silently repurposed. Genuinely unused; a
   candidate to drop in a future pass, not done here (Rule 8 — no casual
   schema changes outside a reviewed migration).
-- **AI Provider Abstraction (Round 34, item 21):** `includes/ai/AIClient.php`
+- **AI Provider Abstraction (Round 34, item 21):** `backend/ai/AIClient.php`
   no longer talks to Google Gemini directly -- it delegates to a small
-  `AIProviderInterface` implementation (`includes/ai/providers/`), selected
+  `AIProviderInterface` implementation (`backend/ai/providers/`), selected
   by the `AI_PROVIDER` env var (default `gemini`, unchanged behavior for any
   existing deployment). A second `OpenAIProvider` implementation exists but
   has NOT been exercised against a real OpenAI account in this environment
@@ -169,13 +106,35 @@ runner touches a database, so they are never re-run.
 - **No travel-month / seasonal-availability column on `tbltourpackages`**
   (Round 36, item 30): packages are evergreen inventory -- there's no
   per-package "best month to visit" or date-range field anywhere in the
-  schema. `includes/ai/NLSearchParser.php`'s structured search deliberately
+  schema. `backend/ai/NLSearchParser.php`'s structured search deliberately
   does NOT filter by a mentioned month for this reason (Rule 3 -- faking
   it would mean inventing seasonality data), and surfaces an honest note
   to the visitor instead. `PackageDuration` is also worth knowing about
   here: it's free text ("3-4 Days", "Half Day"), not a numeric/range
   column, so duration filtering is done via a `[min,max]`-overlap parse of
   that text (`NLSearchParser::durationOverlaps()`) rather than SQL.
+- **`tbl_user_profile` was dead: it existed since `AI_MIGRATION.sql` but
+  nothing ever wrote to it (Round 42, item 67 — Travel Modes).** Added a
+  `travel_mode` column (`family`/`couple`/`solo`/`business`/`accessible`/
+  `group`/`adventure`, distinct from the pre-existing free-text
+  `travel_style` — this is the specific preset list the master prompt
+  names) and built the first real writer: a "Travel Preferences" card on
+  `profile.php` that upserts `travel_mode`/`budget_range`/
+  `preferred_climate`/`interests` (comma-separated input →  a capped JSON
+  array). `ai-recommend.php`'s Travel Style dropdown gained the missing
+  `business`/`accessible` options and now pre-selects a logged-in user's
+  saved `travel_mode`/`preferred_climate` as form defaults.
+  `TravelRecommender`'s AI prompt gets per-mode guidance text, and its
+  deterministic (AI-unavailable) fallback scorer nudges scores using only
+  real columns (`PackageDuration`, `HotelRating`, `MealPlan`) — except for
+  `accessible`, where `tbltourpackages` has no verified per-package
+  accessibility column at all, so the scorer deliberately does NOT
+  adjust any score for it and instead adds an honest warning that
+  accessibility details are unverified and must be confirmed directly
+  (Rule 3 — never fabricate). The scoring-adjustment logic
+  (`TravelRecommender::applyTravelModeAdjustment()`) is a public static
+  method specifically so it's unit-testable without a DB or the AI
+  client — see its `tests/run.php` case.
 
 ## Running migrations
 

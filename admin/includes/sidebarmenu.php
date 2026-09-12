@@ -100,6 +100,7 @@
       <?php if ($canSee(['operations', 'manager'])): ?>
         <?php navItem('manage-emergency.php','phone','Emergency Contacts',$cur); ?>
         <?php navItem('activity-log.php','history','Activity Log',$cur); ?>
+        <?php navItem('system-health.php','heartbeat','System Health',$cur); ?>
       <?php endif; ?>
       <?php if ($canSee(['content_manager', 'manager'])): ?>
         <?php navItem('manage-translations.php','language','Translations',$cur); ?>

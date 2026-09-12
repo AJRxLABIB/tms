@@ -14,7 +14,7 @@ include('includes/config.php');
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Plus+Jakarta+Sans:wght@600;700;800&display=swap" rel="stylesheet">
 <link href="css/font-awesome.min2.css" rel="stylesheet">
 <link href="css/bootstrap.min.css" rel="stylesheet">
-<link href="css/admin-v6.css" rel="stylesheet">
+<link href="<?php echo tms_asset_ver('css/admin-v6.css'); ?>" rel="stylesheet">
 </head>
 <body>
 <div class="tms-shell">
@@ -60,15 +60,32 @@ if(isset($_POST['submit'])) {
     if(isset($_FILES['packageimage']) && $_FILES['packageimage']['size'] > 0) {
         $allowed = array('jpg','jpeg','png','gif');
         $ext = strtolower(pathinfo($_FILES['packageimage']['name'], PATHINFO_EXTENSION));
-        if(in_array($ext, $allowed)) {
-            $filename = time() . '_' . basename($_FILES['packageimage']['name']);
+        $maxSize = 5 * 1024 * 1024;
+        // FILE UPLOAD SECURITY (master prompt item 45): this endpoint used
+        // to trust the extension alone and keep the caller's original
+        // filename (time() . '_' . basename(...)) with no size cap at all
+        // -- the one upload path in this project still missing both the
+        // real content-type/signature check every other image upload has,
+        // and a fully randomized filename. Brought in line with
+        // add-package.php/change-image.php's pattern.
+        $sigCheck = ['ok' => true, 'error' => null];
+        if (in_array($ext, $allowed) && $_FILES['packageimage']['size'] <= $maxSize) {
+            $sigCheck = tms_validate_upload_signature($_FILES['packageimage']['tmp_name'], $allowed);
+        }
+
+        if (!in_array($ext, $allowed)) {
+            $error = 'Only JPG, JPEG, PNG, GIF files are allowed.';
+        } elseif ($_FILES['packageimage']['size'] > $maxSize) {
+            $error = 'Image must be under 5 MB.';
+        } elseif (!$sigCheck['ok']) {
+            $error = $sigCheck['error'];
+        } else {
+            $filename = time() . '_' . bin2hex(random_bytes(4)) . '.' . $ext;
             $uploaddir = 'pacakgeimages/'; // keep existing folder name (matches add-package.php / change-image.php and tms_package_image_src())
             if(!is_dir($uploaddir)) { mkdir($uploaddir, 0755, true); }
             move_uploaded_file($_FILES['packageimage']['tmp_name'], $uploaddir . $filename);
             tms_compress_uploaded_image($uploaddir . $filename);
             $packageimage = $filename;
-        } else {
-            $error = 'Only JPG, JPEG, PNG, GIF files are allowed.';
         }
     }
 
@@ -92,6 +109,8 @@ if(isset($_POST['submit'])) {
         $query2->bindValue(':seatsavailable', $seatsavailable, $seatsavailable === null ? PDO::PARAM_NULL : PDO::PARAM_INT);
         $query2->bindParam(':pid', $pid, PDO::PARAM_INT);
         $query2->execute();
+        // Audit log coverage (Round 52).
+        tms_log_activity($dbh, $_SESSION['alogin'], 'Package Edited', "PackageId=$pid, Name: \"$packagename\"");
         $success = 'Package updated successfully!';
         // Refresh package data
         $query->execute();
@@ -115,12 +134,12 @@ if(isset($_POST['submit'])) {
                 <form method="post" enctype="multipart/form-data">
                 <?php tms_csrf_field(); ?>
                     <div class="form-group">
-                        <label>Package Name *</label>
-                        <input type="text" name="packagename" class="form-control" value="<?php echo htmlentities($package->PackageName); ?>" required>
+                        <label for="packagename">Package Name *</label>
+                        <input type="text" name="packagename" id="packagename" class="form-control" value="<?php echo htmlentities($package->PackageName); ?>" required>
                     </div>
                     <div class="form-group">
-                        <label>Package Type *</label>
-                        <select name="packagetype" class="form-control" required>
+                        <label for="packagetype">Package Type *</label>
+                        <select name="packagetype" id="packagetype" class="form-control" required>
                             <?php $types = ['Family Package','Couple Package','Group Package','Domestic Packages','International Package'];
                             foreach($types as $t): ?>
                             <option value="<?php echo $t; ?>" <?php echo ($package->PackageType==$t)?'selected':''; ?>><?php echo $t; ?></option>
@@ -128,11 +147,11 @@ if(isset($_POST['submit'])) {
                         </select>
                     </div>
                     <div class="form-group">
-                        <label>Package Location *</label>
-                        <input type="text" name="packagelocation" class="form-control" value="<?php echo htmlentities($package->PackageLocation); ?>" required>
+                        <label for="packagelocation">Package Location *</label>
+                        <input type="text" name="packagelocation" id="packagelocation" class="form-control" value="<?php echo htmlentities($package->PackageLocation); ?>" required>
                     </div>
                     <div class="form-group">
-                        <label>Package Price (৳) *</label>
+                        <label for="packagePriceInput">Package Price (৳) *</label>
                         <div style="display:flex;gap:8px;">
                             <input type="number" name="packageprice" id="packagePriceInput" class="form-control" value="<?php echo htmlentities($package->PackagePrice); ?>" required>
                             <button type="button" id="suggestPriceBtn" class="btn btn-info" style="white-space:nowrap;"
@@ -143,55 +162,55 @@ if(isset($_POST['submit'])) {
                         <div id="priceSuggestionBox" style="display:none;margin-top:8px;padding:10px 12px;background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;font-size:12.5px;color:#1e40af;"></div>
                     </div>
                     <div class="form-group">
-                        <label>Package Features</label>
-                        <textarea name="packagefeatures" class="form-control" rows="3"><?php echo htmlentities($package->PackageFetures); ?></textarea>
+                        <label for="packagefeatures">Package Features</label>
+                        <textarea name="packagefeatures" id="packagefeatures" class="form-control" rows="3"><?php echo htmlentities($package->PackageFetures); ?></textarea>
                     </div>
                     <div class="form-group">
-                        <label>Package Details</label>
-                        <textarea name="packagedetails" class="form-control" rows="5"><?php echo htmlentities($package->PackageDetails); ?></textarea>
+                        <label for="packagedetails">Package Details</label>
+                        <textarea name="packagedetails" id="packagedetails" class="form-control" rows="5"><?php echo htmlentities($package->PackageDetails); ?></textarea>
                     </div>
                     <div class="form-group">
-                        <label>Duration <small style="font-weight:400;color:#94a3b8;">(e.g. "5 Days 4 Nights")</small></label>
-                        <input type="text" name="packageduration" class="form-control" value="<?php echo htmlentities($package->PackageDuration ?? ''); ?>" placeholder="5 Days 4 Nights">
+                        <label for="packageduration">Duration <small style="font-weight:400;color:#94a3b8;">(e.g. "5 Days 4 Nights")</small></label>
+                        <input type="text" name="packageduration" id="packageduration" class="form-control" value="<?php echo htmlentities($package->PackageDuration ?? ''); ?>" placeholder="5 Days 4 Nights">
                     </div>
                     <div class="form-group">
-                        <label>Map Coordinates <small style="font-weight:400;color:#94a3b8;">(powers the interactive map, nearby-places widget, and price comparison — leave blank if unknown)</small></label>
-                        <div style="display:flex;gap:8px;">
-                            <input type="number" step="any" name="maplat" class="form-control" placeholder="Latitude" value="<?php echo htmlentities($package->MapLat ?? ''); ?>">
-                            <input type="number" step="any" name="maplng" class="form-control" placeholder="Longitude" value="<?php echo htmlentities($package->MapLng ?? ''); ?>">
+                        <label id="mapCoordsLabel_edit">Map Coordinates <small style="font-weight:400;color:#94a3b8;">(powers the interactive map, nearby-places widget, and price comparison — leave blank if unknown)</small></label>
+                        <div style="display:flex;gap:8px;" role="group" aria-labelledby="mapCoordsLabel_edit">
+                            <input type="number" step="any" name="maplat" id="maplat_edit" class="form-control" placeholder="Latitude" aria-label="Latitude" value="<?php echo htmlentities($package->MapLat ?? ''); ?>">
+                            <input type="number" step="any" name="maplng" id="maplng_edit" class="form-control" placeholder="Longitude" aria-label="Longitude" value="<?php echo htmlentities($package->MapLng ?? ''); ?>">
                         </div>
                         <p><small><a href="https://www.latlong.net/" target="_blank" rel="noopener">Look up coordinates for this destination &rarr;</a></small></p>
                     </div>
                     <div class="form-group">
-                        <label>Hotel Name <small style="font-weight:400;color:#94a3b8;">(shown in package comparison)</small></label>
-                        <input type="text" name="hotelname" class="form-control" value="<?php echo htmlentities($package->HotelName ?? ''); ?>" placeholder="e.g. Sea Pearl Beach Resort">
+                        <label for="hotelname">Hotel Name <small style="font-weight:400;color:#94a3b8;">(shown in package comparison)</small></label>
+                        <input type="text" name="hotelname" id="hotelname" class="form-control" value="<?php echo htmlentities($package->HotelName ?? ''); ?>" placeholder="e.g. Sea Pearl Beach Resort">
                     </div>
                     <div style="display:flex;gap:12px;">
                         <div class="form-group" style="flex:1;">
-                            <label>Hotel Rating <small style="font-weight:400;color:#94a3b8;">(1&ndash;5 stars)</small></label>
-                            <input type="number" step="0.5" min="1" max="5" name="hotelrating" class="form-control" value="<?php echo htmlentities($package->HotelRating ?? ''); ?>" placeholder="4.5">
+                            <label for="hotelrating">Hotel Rating <small style="font-weight:400;color:#94a3b8;">(1&ndash;5 stars)</small></label>
+                            <input type="number" step="0.5" min="1" max="5" name="hotelrating" id="hotelrating" class="form-control" value="<?php echo htmlentities($package->HotelRating ?? ''); ?>" placeholder="4.5">
                         </div>
                         <div class="form-group" style="flex:1;">
-                            <label>Meal Plan</label>
-                            <input type="text" name="mealplan" class="form-control" value="<?php echo htmlentities($package->MealPlan ?? ''); ?>" placeholder="e.g. Breakfast Included">
+                            <label for="mealplan">Meal Plan</label>
+                            <input type="text" name="mealplan" id="mealplan" class="form-control" value="<?php echo htmlentities($package->MealPlan ?? ''); ?>" placeholder="e.g. Breakfast Included">
                         </div>
                     </div>
                     <div style="display:flex;gap:12px;">
                         <div class="form-group" style="flex:1;">
-                            <label>Transport Mode</label>
-                            <input type="text" name="transportmode" class="form-control" value="<?php echo htmlentities($package->TransportMode ?? ''); ?>" placeholder="e.g. AC Bus, Flight">
+                            <label for="transportmode">Transport Mode</label>
+                            <input type="text" name="transportmode" id="transportmode" class="form-control" value="<?php echo htmlentities($package->TransportMode ?? ''); ?>" placeholder="e.g. AC Bus, Flight">
                         </div>
                         <div class="form-group" style="flex:1;">
-                            <label>Seats Available <small style="font-weight:400;color:#94a3b8;">(leave blank = unlimited/not tracked)</small></label>
-                            <input type="number" min="0" name="seatsavailable" class="form-control" value="<?php echo htmlentities($package->SeatsAvailable ?? ''); ?>" placeholder="e.g. 30">
+                            <label for="seatsavailable">Seats Available <small style="font-weight:400;color:#94a3b8;">(leave blank = unlimited/not tracked)</small></label>
+                            <input type="number" min="0" name="seatsavailable" id="seatsavailable" class="form-control" value="<?php echo htmlentities($package->SeatsAvailable ?? ''); ?>" placeholder="e.g. 30">
                         </div>
                     </div>
                     <div class="form-group">
-                        <label>Package Image (leave blank to keep current)</label>
+                        <label for="packageimage">Package Image (leave blank to keep current)</label>
                         <?php if($package->PackageImage): ?>
                         <p><small>Current image: <strong><?php echo htmlentities($package->PackageImage); ?></strong></small></p>
                         <?php endif; ?>
-                        <input type="file" name="packageimage" class="form-control">
+                        <input type="file" name="packageimage" id="packageimage" class="form-control">
                     </div>
                     <button type="submit" name="submit" class="btn-v6 success">Update Package</button>
                     <a href="manage-packages.php" class="btn-v6 ghost">Cancel</a>

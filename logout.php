@@ -1,16 +1,7 @@
 <?php
-session_start(); 
-$_SESSION = array();
-if (ini_get("session.use_cookies")) {
-    $params = session_get_cookie_params();
-    setcookie(session_name(), '', time() - 60*60,
-        $params["path"], $params["domain"],
-        $params["secure"], $params["httponly"]
-    );
-}
-unset($_SESSION['login']);
-session_destroy(); // destroy session
-header("location:index.php");
-exit;
-?>
-
+// This page's real implementation now lives in frontend/logout.php.
+// Kept here as a thin pass-through so the public URL (/logout.php), and every
+// asset reference, redirect, fetch() call, sitemap entry, and robots.txt
+// rule that already points at it, all keep working unchanged (Rule 2:
+// never break a working feature). See SESSION_SUMMARY_INDEX-1.md, Round 50.
+require __DIR__ . '/frontend/logout.php';

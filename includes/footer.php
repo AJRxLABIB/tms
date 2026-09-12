@@ -54,6 +54,7 @@
                     <li><a href="weather.php">Weather Guide</a></li>
                     <li><a href="budget-planner.php">Budget Planner</a></li>
                     <li><a href="compare.php">Compare Packages</a></li>
+                    <li><a href="transport-compare.php">Transport Compare</a></li>
                     <li><a href="emergency.php">Safety & Emergency</a></li>
                 </ul>
             </div>
@@ -215,6 +216,64 @@ if('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch
         ripple.addEventListener('animationend', function() { ripple.remove(); });
     }, { passive: true });
 })();
+
+// ACCESSIBILITY FIX (Round 70, WCAG 2.1.1/2.4.3): the shared sign-in modal
+// (#myModal4, backend/signin.php, included on 21+ pages) and contact modal
+// (#myModal3, write-us.php, opened from this footer's "Write to Us" link
+// site-wide) are classic Bootstrap 3 modals. Bootstrap 3's own
+// enforceFocus() only refocuses the modal's outer container whenever focus
+// escapes it via a focusin event -- it does NOT cycle Tab back to the
+// modal's first focusable element when you tab past its last one (focus
+// just leaves the page/document instead, effectively breaking out of the
+// modal despite it staying open), and it never returns focus to whichever
+// link/button opened the modal once it's closed (a keyboard user is
+// dropped back at the top of the page instead of where they were). Both
+// gaps are fixed here, generically, for every Bootstrap modal on the site
+// -- not hardcoded to these two IDs -- so any future one gets this for
+// free, matching the focus-trap/focus-return pattern the custom
+// tms-modal-overlay sign-in/sign-up dialogs already have (Round 55) and
+// the mega-menu/notification dropdown got in Round 67. Wrapped in
+// DOMContentLoaded because jQuery itself loads via a deferred <script> on
+// these pages -- a deferred script isn't guaranteed to have run yet by the
+// time this inline, non-deferred block is reached during parsing.
+document.addEventListener('DOMContentLoaded', function() {
+    if (!window.jQuery) return;
+    var $ = window.jQuery;
+    var tmsModalLastTrigger = null;
+
+    $(document).on('show.bs.modal', '.modal', function(e) {
+        // Bootstrap already supplies the opening element as e.relatedTarget
+        // when the modal was triggered via a data-toggle="modal" link/button.
+        tmsModalLastTrigger = e.relatedTarget || document.activeElement;
+    });
+
+    $(document).on('keydown', '.modal.in', function(e) {
+        if (e.key !== 'Tab' && e.keyCode !== 9) return;
+        var focusable = this.querySelectorAll(
+            'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+        );
+        focusable = Array.prototype.filter.call(focusable, function(el) {
+            return el.offsetParent !== null; // skip hidden elements
+        });
+        if (!focusable.length) return;
+        var first = focusable[0];
+        var last = focusable[focusable.length - 1];
+        if (e.shiftKey && document.activeElement === first) {
+            e.preventDefault();
+            last.focus();
+        } else if (!e.shiftKey && document.activeElement === last) {
+            e.preventDefault();
+            first.focus();
+        }
+    });
+
+    $(document).on('hidden.bs.modal', '.modal', function() {
+        if (tmsModalLastTrigger && typeof tmsModalLastTrigger.focus === 'function') {
+            tmsModalLastTrigger.focus();
+        }
+        tmsModalLastTrigger = null;
+    });
+});
 </script>
 <?php include('includes/chatbot.php'); ?>
 <?php /* Human "Chat with our team" widget removed per user request — Contact page covers this */ ?>

@@ -16,7 +16,7 @@ tms_admin_require_role($dbh, ['package_manager', 'manager']); // Round 20 RBAC (
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Plus+Jakarta+Sans:wght@600;700;800&display=swap" rel="stylesheet">
 <link href="css/font-awesome.min2.css" rel="stylesheet">
 <link href="css/bootstrap.min.css" rel="stylesheet">
-<link href="css/admin-v6.css" rel="stylesheet">
+<link href="<?php echo tms_asset_ver('css/admin-v6.css'); ?>" rel="stylesheet">
 </head>
 <body>
 <div class="tms-shell">
@@ -50,10 +50,17 @@ if (isset($_POST['submit'])) {
             $ext     = strtolower(pathinfo($_FILES['packageimage']['name'], PATHINFO_EXTENSION));
             $maxSize = 5 * 1024 * 1024;
 
+            $sigCheck = ['ok' => true, 'error' => null];
+            if (in_array($ext, $allowed)) {
+                $sigCheck = tms_validate_upload_signature($_FILES['packageimage']['tmp_name'], $allowed);
+            }
+
             if (!in_array($ext, $allowed)) {
                 $error = 'Only JPG, JPEG, PNG, GIF, WEBP images allowed.';
             } elseif ($_FILES['packageimage']['size'] > $maxSize) {
                 $error = 'Image must be under 5 MB.';
+            } elseif (!$sigCheck['ok']) {
+                $error = $sigCheck['error'];
             } else {
                 $uploadDir = 'pacakgeimages/'; // keep existing folder name
                 if (!is_dir($uploadDir)) mkdir($uploadDir, 0755, true);
@@ -88,6 +95,8 @@ if (isset($_POST['submit'])) {
             $q->bindValue(':transportmode',$transportmode);
             $q->bindValue(':seatsavailable',$seatsavailable, $seatsavailable === null ? PDO::PARAM_NULL : PDO::PARAM_INT);
             $q->execute();
+            // Audit log coverage (Round 52).
+            tms_log_activity($dbh, $_SESSION['alogin'], 'Package Created', "Name: \"$name\", Location: \"$location\", Price: $price");
             $success = 'Package "' . htmlspecialchars($name,ENT_QUOTES,'UTF-8') . '" added successfully!';
         }
     }
@@ -112,15 +121,15 @@ if (isset($_POST['submit'])) {
             <div class="row">
                 <div class="col-md-6">
                     <div class="form-group">
-                        <label>Package Name *</label>
-                        <input type="text" name="packagename" class="form-control" required maxlength="200"
+                        <label for="packagename">Package Name *</label>
+                        <input type="text" name="packagename" id="packagename" class="form-control" required maxlength="200"
                                value="<?php echo htmlspecialchars($_POST['packagename']??'',ENT_QUOTES,'UTF-8'); ?>">
                     </div>
                 </div>
                 <div class="col-md-6">
                     <div class="form-group">
-                        <label>Package Type *</label>
-                        <select name="packagetype" class="form-control" required>
+                        <label for="packagetype">Package Type *</label>
+                        <select name="packagetype" id="packagetype" class="form-control" required>
                             <option value="">-- Select Type --</option>
                             <?php $types=['Family Package','Couple Package','Group Package','Domestic Packages','International Package','Adventure Package'];
                             foreach ($types as $t): ?>
@@ -131,14 +140,14 @@ if (isset($_POST['submit'])) {
                 </div>
                 <div class="col-md-6">
                     <div class="form-group">
-                        <label>Package Location *</label>
-                        <input type="text" name="packagelocation" class="form-control" required maxlength="200"
+                        <label for="packagelocation">Package Location *</label>
+                        <input type="text" name="packagelocation" id="packagelocation" class="form-control" required maxlength="200"
                                value="<?php echo htmlspecialchars($_POST['packagelocation']??'',ENT_QUOTES,'UTF-8'); ?>">
                     </div>
                 </div>
                 <div class="col-md-6">
                     <div class="form-group">
-                        <label>Package Price (৳) *</label>
+                        <label for="packagePriceInput">Package Price (৳) *</label>
                         <div style="display:flex;gap:8px;">
                             <input type="number" name="packageprice" id="packagePriceInput" class="form-control" required min="1"
                                    value="<?php echo (int)($_POST['packageprice']??0) ?: ''; ?>">
@@ -152,74 +161,74 @@ if (isset($_POST['submit'])) {
                 </div>
                 <div class="col-md-12">
                     <div class="form-group">
-                        <label>Features</label>
-                        <input type="text" name="packagefeatures" class="form-control" maxlength="500"
+                        <label for="packagefeatures">Features</label>
+                        <input type="text" name="packagefeatures" id="packagefeatures" class="form-control" maxlength="500"
                                placeholder="e.g. Hotel, Meals, Transport"
                                value="<?php echo htmlspecialchars($_POST['packagefeatures']??'',ENT_QUOTES,'UTF-8'); ?>">
                     </div>
                 </div>
                 <div class="col-md-6">
                     <div class="form-group">
-                        <label>Duration <small style="color:#aaa;">(e.g. "5 Days 4 Nights")</small></label>
-                        <input type="text" name="packageduration" class="form-control"
+                        <label for="packageduration">Duration <small style="color:#aaa;">(e.g. "5 Days 4 Nights")</small></label>
+                        <input type="text" name="packageduration" id="packageduration" class="form-control"
                                value="<?php echo htmlspecialchars($_POST['packageduration']??'',ENT_QUOTES,'UTF-8'); ?>" placeholder="5 Days 4 Nights">
                     </div>
                 </div>
                 <div class="col-md-6">
                     <div class="form-group">
-                        <label>Map Coordinates <small style="color:#aaa;">(powers the interactive map &amp; nearby-places widget — optional)</small></label>
-                        <div style="display:flex;gap:8px;">
-                            <input type="number" step="any" name="maplat" class="form-control" placeholder="Latitude" value="<?php echo htmlspecialchars($_POST['maplat']??'',ENT_QUOTES,'UTF-8'); ?>">
-                            <input type="number" step="any" name="maplng" class="form-control" placeholder="Longitude" value="<?php echo htmlspecialchars($_POST['maplng']??'',ENT_QUOTES,'UTF-8'); ?>">
+                        <label id="mapCoordsLabel_add">Map Coordinates <small style="color:#aaa;">(powers the interactive map &amp; nearby-places widget — optional)</small></label>
+                        <div style="display:flex;gap:8px;" role="group" aria-labelledby="mapCoordsLabel_add">
+                            <input type="number" step="any" name="maplat" id="maplat_add" class="form-control" placeholder="Latitude" aria-label="Latitude" value="<?php echo htmlspecialchars($_POST['maplat']??'',ENT_QUOTES,'UTF-8'); ?>">
+                            <input type="number" step="any" name="maplng" id="maplng_add" class="form-control" placeholder="Longitude" aria-label="Longitude" value="<?php echo htmlspecialchars($_POST['maplng']??'',ENT_QUOTES,'UTF-8'); ?>">
                         </div>
                     </div>
                 </div>
                 <div class="col-md-6">
                     <div class="form-group">
-                        <label>Hotel Name <small style="color:#aaa;">(shown in package comparison)</small></label>
-                        <input type="text" name="hotelname" class="form-control" placeholder="e.g. Sea Pearl Beach Resort"
+                        <label for="hotelname">Hotel Name <small style="color:#aaa;">(shown in package comparison)</small></label>
+                        <input type="text" name="hotelname" id="hotelname" class="form-control" placeholder="e.g. Sea Pearl Beach Resort"
                                value="<?php echo htmlspecialchars($_POST['hotelname']??'',ENT_QUOTES,'UTF-8'); ?>">
                     </div>
                 </div>
                 <div class="col-md-6">
                     <div class="form-group">
-                        <label>Hotel Rating <small style="color:#aaa;">(1&ndash;5 stars, optional)</small></label>
-                        <input type="number" step="0.5" min="1" max="5" name="hotelrating" class="form-control" placeholder="4.5"
+                        <label for="hotelrating">Hotel Rating <small style="color:#aaa;">(1&ndash;5 stars, optional)</small></label>
+                        <input type="number" step="0.5" min="1" max="5" name="hotelrating" id="hotelrating" class="form-control" placeholder="4.5"
                                value="<?php echo htmlspecialchars($_POST['hotelrating']??'',ENT_QUOTES,'UTF-8'); ?>">
                     </div>
                 </div>
                 <div class="col-md-6">
                     <div class="form-group">
-                        <label>Meal Plan</label>
-                        <input type="text" name="mealplan" class="form-control" placeholder="e.g. Breakfast Included"
+                        <label for="mealplan">Meal Plan</label>
+                        <input type="text" name="mealplan" id="mealplan" class="form-control" placeholder="e.g. Breakfast Included"
                                value="<?php echo htmlspecialchars($_POST['mealplan']??'',ENT_QUOTES,'UTF-8'); ?>">
                     </div>
                 </div>
                 <div class="col-md-6">
                     <div class="form-group">
-                        <label>Transport Mode</label>
-                        <input type="text" name="transportmode" class="form-control" placeholder="e.g. AC Bus, Flight"
+                        <label for="transportmode">Transport Mode</label>
+                        <input type="text" name="transportmode" id="transportmode" class="form-control" placeholder="e.g. AC Bus, Flight"
                                value="<?php echo htmlspecialchars($_POST['transportmode']??'',ENT_QUOTES,'UTF-8'); ?>">
                     </div>
                 </div>
                 <div class="col-md-6">
                     <div class="form-group">
-                        <label>Seats Available <small style="color:#aaa;">(leave blank = unlimited/not tracked)</small></label>
-                        <input type="number" min="0" name="seatsavailable" class="form-control" placeholder="e.g. 30"
+                        <label for="seatsavailable">Seats Available <small style="color:#aaa;">(leave blank = unlimited/not tracked)</small></label>
+                        <input type="number" min="0" name="seatsavailable" id="seatsavailable" class="form-control" placeholder="e.g. 30"
                                value="<?php echo htmlspecialchars($_POST['seatsavailable']??'',ENT_QUOTES,'UTF-8'); ?>">
                     </div>
                 </div>
                 <div class="col-md-12">
                     <div class="form-group">
-                        <label>Package Details</label>
-                        <textarea name="packagedetails" class="form-control" rows="5"
+                        <label for="packagedetails">Package Details</label>
+                        <textarea name="packagedetails" id="packagedetails" class="form-control" rows="5"
                                   placeholder="Full description of the package…"><?php echo htmlspecialchars($_POST['packagedetails']??'',ENT_QUOTES,'UTF-8'); ?></textarea>
                     </div>
                 </div>
                 <div class="col-md-12">
                     <div class="form-group">
-                        <label>Package Image <small style="color:#aaa;">(JPG/PNG/GIF/WEBP, max 5 MB)</small></label>
-                        <input type="file" name="packageimage" class="form-control" accept="image/*"
+                        <label for="packageimage">Package Image <small style="color:#aaa;">(JPG/PNG/GIF/WEBP, max 5 MB)</small></label>
+                        <input type="file" name="packageimage" id="packageimage" class="form-control" accept="image/*"
                                onchange="previewImg(this)">
                         <img id="imgPreview" class="img-preview" alt="Preview">
                     </div>

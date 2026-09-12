@@ -114,9 +114,42 @@ CREATE TABLE IF NOT EXISTS `tbl_safety_alerts` (
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
--- Add AiItinerary column to custom trips if missing
+-- BUG FIX (found by actually running the CI pipeline end-to-end for the
+-- first time, master prompt item 59 -- "CI pipeline never actually run"):
+-- this ALTER assumed `tblcustomtrips` already existed, which is true on
+-- any live install (backend/config.php self-heals it into existence, with
+-- this exact same column already included, on the very first page load)
+-- but false on a genuinely fresh database that only has tms.sql +
+-- v6_migration.sql applied -- exactly what a from-scratch CI run does.
+-- That made this file fail outright with "Table 'tblcustomtrips' doesn't
+-- exist" the moment it was actually executed against a clean database,
+-- which would have failed the GitHub Actions workflow's "Load base
+-- schema" step on every single push, before the test suite ever ran.
+-- Adding the same CREATE TABLE IF NOT EXISTS backend/config.php already
+-- uses makes this file safe to run standalone: a no-op against any
+-- database that already has the table (i.e. every real install), and now
+-- correct against a genuinely empty one (i.e. CI).
+CREATE TABLE IF NOT EXISTS `tblcustomtrips` (
+  `id` int(11) NOT NULL AUTO_INCREMENT, `UserEmail` varchar(100) DEFAULT NULL,
+  `TripName` varchar(200) DEFAULT NULL, `Destination` varchar(200) DEFAULT NULL,
+  `StartDate` date DEFAULT NULL, `EndDate` date DEFAULT NULL,
+  `Budget` int(11) DEFAULT NULL, `TravelersCount` int(11) DEFAULT NULL,
+  `Accommodation` varchar(100) DEFAULT NULL, `Transport` varchar(100) DEFAULT NULL,
+  `Activities` mediumtext DEFAULT NULL, `MealPlan` varchar(100) DEFAULT NULL,
+  `SpecialRequests` mediumtext DEFAULT NULL, `Status` varchar(50) DEFAULT 'Pending',
+  `AdminNote` mediumtext DEFAULT NULL, `AiItinerary` longtext DEFAULT NULL,
+  `CreatedAt` timestamp NULL DEFAULT current_timestamp(),
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- Add AiItinerary column to custom trips if missing (redundant with the
+-- CREATE TABLE above on a fresh run, but kept -- and still needed -- for
+-- any database where tblcustomtrips already existed without this column).
 ALTER TABLE `tblcustomtrips` ADD COLUMN IF NOT EXISTS `AiItinerary` longtext DEFAULT NULL;
 
 -- ============================================================
--- Done. Set ANTHROPIC_API_KEY in includes/config.php next.
+-- Done. AI provider keys live in .env (GEMINI_API_KEY / OPENAI_API_KEY /
+-- AI_PROVIDER) -- see .env.example and backend/config.php, not
+-- includes/config.php (that file is an unused leftover; see
+-- SESSION_SUMMARY_INDEX-1.md, Round 49).
 -- ============================================================

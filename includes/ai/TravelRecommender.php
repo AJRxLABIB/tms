@@ -33,6 +33,17 @@ class TravelRecommender {
         // Build user profile context
         $profileContext = $this->getUserProfileContext($email);
 
+        // NEW (master prompt item 67 — Travel Modes): per-mode behavioral
+        // guidance for the traveler-type preset (family/couple/solo/
+        // business/accessible/group/adventure), appended to the system
+        // prompt only when a mode was actually selected. Kept separate from
+        // "travel style" -- this is the specific 5(+2)-mode list the master
+        // prompt names, not a vague style tag.
+        $modeGuidance = $this->travelModeGuidance($prefs['travel_type'] ?? '');
+        $modeSection  = $modeGuidance !== ''
+            ? "\n\nTRAVEL MODE GUIDANCE (apply this on top of the rules below):\n{$modeGuidance}"
+            : '';
+
         $system = <<<SYSTEM
 You are an expert senior travel consultant at TMS, a premium travel platform specializing in destinations across Bangladesh, South Asia, and international locations.
 
@@ -45,6 +56,9 @@ Rules:
 4. Flag any concerns (weather, budget shortfall, crowd levels)
 5. Consider the full travel context: group type, interests, season
 6. Return ONLY valid JSON — no markdown, no explanations outside the JSON
+7. Never claim or imply a package has an attribute (accessibility features,
+   certifications, etc.) that isn't present in the inventory data given to
+   you — if you don't know, say so in "warnings" instead of guessing.{$modeSection}
 SYSTEM;
 
         $userMessage = <<<MSG
@@ -55,6 +69,7 @@ TRAVELER PROFILE:
 - Climate preference: {$prefs['climate']}
 - Activities wanted: {$prefs['activities']}
 - Accommodation preference: {$prefs['accommodation']}
+- Dietary/food preference: {$prefs['food_preference']}
 - Previous trips: {$profileContext}
 
 AVAILABLE PACKAGES IN OUR INVENTORY:
@@ -126,6 +141,89 @@ Return: {\"score\": <int>, \"reason\": \"<string>\"}";
         $result = $this->ai->ask($system, $userMsg, 'match_' . $packageId . '_' . md5(json_encode($userPrefs)), $email, feature: 'recommender');
         $data   = $result['success'] ? ($this->ai->parseJson($result['content']) ?? []) : [];
         return ['score' => $data['score'] ?? 75, 'reason' => $data['reason'] ?? 'Good match for your profile'];
+    }
+
+    /**
+     * NEW (master prompt item 67 — Travel Modes): short behavioral guidance
+     * per traveler-type preset, injected into the AI system prompt. Returns
+     * '' for an unrecognized/empty mode (no guidance added, not an error).
+     * 'accessible' is deliberately the most restrictive entry here: this
+     * project's package inventory (tbltourpackages) has no verified
+     * per-package accessibility column today, so the instruction is to
+     * disclose that honestly rather than let the model infer or invent
+     * accessibility support (Rule 3 — never fabricate real-world data).
+     */
+    private function travelModeGuidance(string $mode): string {
+        return match ($mode) {
+            'family'     => '- FAMILY trip: favor a comfortable pace and kid-friendly activities; flag anything with long transit legs or very late-night activities.',
+            'couple'     => '- COUPLE/honeymoon trip: favor relaxed, romantic pacing and privacy-oriented accommodation.',
+            'solo'       => '- SOLO trip: give real weight to safety and ease of getting around alone; call out any genuine safety concerns honestly rather than glossing over them.',
+            'business'   => '- BUSINESS trip: favor shorter, efficient itineraries and reliable transport/higher-rated accommodation over leisure-heavy activities.',
+            'accessible' => "- ACCESSIBLE-travel request: our package inventory does NOT currently track verified per-package accessibility data (step-free access, sensory accommodations, etc). Do not claim, imply, or guess accessibility support for any package. Explicitly add a warning that accessibility details are unverified and must be confirmed directly with us before booking.",
+            'group'      => '- GROUP trip: favor packages/activities that work well for a larger party.',
+            'adventure'  => '- ADVENTURE trip: favor active, outdoor-oriented experiences.',
+            default      => '',
+        };
+    }
+
+    /**
+     * NEW (master prompt item 67 — Travel Modes): nudges the deterministic
+     * fallback scorer's per-dimension scores based on the traveler-type
+     * preset, using only real columns already on tbltourpackages
+     * (PackageDuration, HotelRating, MealPlan) -- never a fabricated
+     * per-package attribute. Public + static so this one piece of logic is
+     * independently unit-testable (tests/run.php) without needing the AI
+     * client or a live DB connection. Returns the adjusted scores plus an
+     * optional honest-disclosure warning (used for 'accessible', where the
+     * correct answer is "we don't know" rather than any score at all).
+     *
+     * @param array  $scores     The scores array as already built by the caller.
+     * @param string $travelMode One of family/couple/solo/business/
+     *                           accessible/group/adventure, or '' for none.
+     * @param object $pkg        A tbltourpackages row (stdClass, PDO::FETCH_OBJ).
+     * @return array{scores: array, warning: ?string}
+     */
+    public static function applyTravelModeAdjustment(array $scores, string $travelMode, object $pkg): array {
+        $duration    = (int)($pkg->PackageDuration ?? 0);
+        $hotelRating = (float)($pkg->HotelRating ?? 0);
+        $mealPlan    = trim((string)($pkg->MealPlan ?? ''));
+        $warning     = null;
+
+        switch ($travelMode) {
+            case 'business':
+                // Shorter trips and higher-rated hotels suit a business
+                // traveler better; nudge existing dimensions rather than
+                // inventing a "business_fit" column that doesn't exist.
+                if ($duration > 0 && $duration <= 5) {
+                    $scores['style_match'] = min(100, $scores['style_match'] + 15);
+                }
+                if ($hotelRating >= 4) {
+                    $scores['style_match'] = min(100, $scores['style_match'] + 10);
+                }
+                break;
+            case 'family':
+                if ($mealPlan !== '') {
+                    // A package that already specifies a meal plan is a real,
+                    // verifiable signal of family-oriented full-board service.
+                    $scores['style_match'] = min(100, $scores['style_match'] + 10);
+                }
+                break;
+            case 'solo':
+                if ($hotelRating >= 4) {
+                    $scores['safety'] = min(100, $scores['safety'] + 10);
+                }
+                break;
+            case 'accessible':
+                // Rule 3: never fabricate a filter/score for accessibility
+                // when we have no real column backing it -- disclose instead.
+                $warning = 'Accessibility features are not yet verified per-package — please confirm directly with us before booking if you have specific access needs.';
+                break;
+            // 'couple', 'group', 'adventure', '', or anything unrecognized:
+            // no adjustment -- no real column maps cleanly to these without
+            // guessing, so the scores pass through unchanged.
+        }
+
+        return ['scores' => $scores, 'warning' => $warning];
     }
 
     // ── Private helpers ───────────────────────────────────────────────────────
@@ -208,21 +306,32 @@ Return: {\"score\": <int>, \"reason\": \"<string>\"}";
 
     private function fallbackRuleBasedRecommend(array $prefs, array $packages): array {
         // Simplified rule fallback if AI is unavailable
+        $travelMode = (string)($prefs['travel_type'] ?? '');
         $results = [];
         foreach ($packages as $pkg) {
             $score = 50;
             if ($pkg->PackagePrice * $prefs['travelers'] <= $prefs['budget']) $score += 30;
+            $scores = ['budget_match'=>$score,'weather_suitability'=>70,'style_match'=>65,'safety'=>80,'experience'=>75];
+            $warnings = [];
+
+            // NEW (master prompt item 67 — Travel Modes): nudge scores using
+            // only real package columns, and surface an honest disclosure
+            // warning where a mode (accessible) has no real data to score.
+            $adj = self::applyTravelModeAdjustment($scores, $travelMode, $pkg);
+            $scores = $adj['scores'];
+            if ($adj['warning'] !== null) $warnings[] = $adj['warning'];
+
             $results[] = [
                 'package_id'        => $pkg->PackageId,
                 'destination'       => $pkg->PackageLocation,
                 'package_name'      => $pkg->PackageName,
                 'overall_match'     => min(95, $score + rand(0, 15)),
-                'scores'            => ['budget_match'=>$score,'weather_suitability'=>70,'style_match'=>65,'safety'=>80,'experience'=>75],
+                'scores'            => $scores,
                 'why_recommended'   => 'This package fits your budget and travel style.',
                 'best_for'          => $prefs['travel_type'],
                 'estimated_total_cost' => $pkg->PackagePrice * $prefs['travelers'],
                 'cost_savings_tip'  => 'Book at least 2 weeks in advance for best rates.',
-                'warnings'          => [],
+                'warnings'          => $warnings,
                 'highlights'        => ['Beautiful scenery', 'Local culture', 'Great food'],
                 'ai_confidence'     => 'low',
                 'image'             => $pkg->PackageImage ?? 'images/1.jpg',

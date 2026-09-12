@@ -4,10 +4,25 @@ error_reporting(E_ALL);
 ini_set('display_errors', 0);
 ini_set('log_errors', 1);
 include('includes/config.php');
-require_once(__DIR__ . '/../includes/payments/PaymentProviderInterface.php');
-require_once(__DIR__ . '/../includes/payments/SandboxProvider.php');
-require_once(__DIR__ . '/../includes/payments/PaymentService.php');
+require_once(__DIR__ . '/../backend/payments/PaymentProviderInterface.php');
+require_once(__DIR__ . '/../backend/payments/SandboxProvider.php');
+require_once(__DIR__ . '/../backend/payments/PaymentService.php');
 tms_require_admin();
+// SECURITY FIX (Round 75, master prompt item 46 -- RBAC): this page performs
+// real state-changing actions (confirm/cancel/delete a booking, approve/
+// reject a date-change request, process/reject a refund) but only ever
+// checked tms_require_admin() -- ANY admin role, not just the roles this
+// feature is meant for. admin/includes/sidebarmenu.php already hides the
+// "Manage Bookings" nav link from every role except booking_manager/
+// operations/manager, and the sibling page admin/manage-marketplace-
+// bookings.php already gates itself with this exact role list (its own
+// comment even claims "same gate as manage-bookings.php" -- it wasn't).
+// Any other admin (Content Manager, AI Manager, Finance, Support, Package
+// Manager) could reach this page directly by URL and confirm/cancel/delete
+// bookings or process refunds with zero server-side check. Closing that
+// gap here, matching the existing pattern exactly (Rule 1: no new pattern
+// invented).
+tms_admin_require_role($dbh, ['booking_manager', 'operations', 'manager']);
 $paymentService = new PaymentService($dbh);
 ?>
 <!DOCTYPE html>
@@ -19,7 +34,7 @@ $paymentService = new PaymentService($dbh);
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Plus+Jakarta+Sans:wght@600;700;800&display=swap" rel="stylesheet">
 <link href="css/font-awesome.css" rel="stylesheet">
 <link href="css/bootstrap.min.css" rel="stylesheet">
-<link href="css/admin-v6.css" rel="stylesheet">
+<link href="<?php echo tms_asset_ver('css/admin-v6.css'); ?>" rel="stylesheet">
 <style>
 .booking-status { display:inline-flex; align-items:center; gap:6px; padding:4px 10px; border-radius:20px; font-size:12px; font-weight:600; }
 .status-pending  { background:#fef3c7; color:#92400e; }
@@ -77,6 +92,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'], $_POST['id'
             );
             $msg = "Booking #BK".str_pad($bid,3,'0',STR_PAD_LEFT)." confirmed.";
             $msgType = 'success';
+            // Audit log coverage (Round 52).
+            tms_log_activity($dbh, $_SESSION['alogin'], 'Booking Confirmed', "BookingId=$bid");
             break;
         case 'cancel':
             $dbh->prepare("UPDATE tblbooking SET status=2 WHERE BookingId=:id")->execute([':id'=>$bid]);
@@ -89,11 +106,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'], $_POST['id'
             );
             $msg = "Booking #BK".str_pad($bid,3,'0',STR_PAD_LEFT)." cancelled.";
             $msgType = 'success';
+            // Audit log coverage (Round 52).
+            tms_log_activity($dbh, $_SESSION['alogin'], 'Booking Cancelled', "BookingId=$bid");
             break;
         case 'delete':
             $dbh->prepare("DELETE FROM tblbooking WHERE BookingId=:id")->execute([':id'=>$bid]);
             $msg = "Booking deleted.";
             $msgType = 'success';
+            // Audit log coverage (Round 52). Deleting a booking record is a
+            // permanent, financially-relevant action.
+            tms_log_activity($dbh, $_SESSION['alogin'], 'Booking Deleted', "BookingId=$bid");
             break;
         case 'approve_mod':
             // GUARD (Round 20, caught in live testing): a customer cancelling
@@ -118,6 +140,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'], $_POST['id'
                     "<p>Your requested date change for booking <strong>#$ref</strong> has been approved and applied.</p>");
                 $msg = "Date change approved for #BK$bid.";
                 $msgType = 'success';
+                // Audit log coverage (Round 52).
+                tms_log_activity($dbh, $_SESSION['alogin'], 'Booking Date-Change Approved', "BookingId=$bid, New dates: {$row->RequestedFromDate} to {$row->RequestedToDate}");
             } else {
                 $msg = "No pending date-change request found for that booking.";
                 $msgType = 'error';
@@ -133,6 +157,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'], $_POST['id'
                 "<p>We were unable to approve your requested date change for booking <strong>#$ref</strong>.</p><p>$note</p>");
             $msg = "Date-change request declined for #BK$bid.";
             $msgType = 'success';
+            // Audit log coverage (Round 52).
+            tms_log_activity($dbh, $_SESSION['alogin'], 'Booking Date-Change Rejected', "BookingId=$bid, Note: $note");
             break;
         case 'refund_processed':
             $dbh->prepare("UPDATE tblbooking SET RefundStatus='processed' WHERE BookingId=:id")->execute([':id'=>$bid]);
@@ -146,6 +172,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'], $_POST['id'
                 "<p>Your refund for the cancelled booking <strong>#$ref</strong> has been processed.</p>");
             $msg = "Refund marked as processed for #BK$bid.";
             $msgType = 'success';
+            // Audit log coverage (Round 52). A financial-status change is
+            // exactly the category of action an audit trail must cover.
+            tms_log_activity($dbh, $_SESSION['alogin'], 'Booking Refund Processed', "BookingId=$bid");
             break;
         case 'refund_rejected':
             $note = tms_clean($_POST['note'] ?? '') ?: 'Refund could not be verified.';
@@ -157,6 +186,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'], $_POST['id'
                 "<p>We were unable to process a refund for booking <strong>#$ref</strong>.</p><p>$note</p>");
             $msg = "Refund declined for #BK$bid.";
             $msgType = 'success';
+            // Audit log coverage (Round 52).
+            tms_log_activity($dbh, $_SESSION['alogin'], 'Booking Refund Rejected', "BookingId=$bid, Note: $note");
             break;
     }
 }

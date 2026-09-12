@@ -16,7 +16,7 @@ tms_admin_require_role($dbh, ['support', 'manager']); // Round 20 RBAC (item 46)
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Plus+Jakarta+Sans:wght@600;700;800&display=swap" rel="stylesheet">
 <link href="css/font-awesome.css" rel="stylesheet">
 <link href="css/bootstrap.min.css" rel="stylesheet">
-<link href="css/admin-v6.css" rel="stylesheet">
+<link href="<?php echo tms_asset_ver('css/admin-v6.css'); ?>" rel="stylesheet">
 <style>
 .page-title-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;flex-wrap:wrap;gap:12px;}
 .page-title-row h2{font-family:'Plus Jakarta Sans',sans-serif;font-size:22px;font-weight:800;color:#0f172a;margin:0;}
@@ -45,7 +45,13 @@ $msg=''; $msgType='';
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'delete' && isset($_POST['id'])) {
     tms_csrf_validate();
     $uid=(int)$_POST['id'];
+    $delUser = $dbh->prepare("SELECT EmailId FROM tblusers WHERE id=:id");
+    $delUser->execute([':id'=>$uid]);
+    $delUser = $delUser->fetchColumn();
     $dbh->prepare("DELETE FROM tblusers WHERE id=:id")->execute([':id'=>$uid]);
+    // Audit log coverage (Round 52). Deleting a user account is exactly the
+    // kind of destructive, PII-affecting action an audit trail exists for.
+    tms_log_activity($dbh, $_SESSION['alogin'], 'User Deleted', "UserId=$uid" . ($delUser ? ", Email: $delUser" : ''));
     $msg="User deleted."; $msgType='success';
 }
 try{
@@ -63,9 +69,20 @@ try{
     $uq->bindValue(':off', $userOffset, PDO::PARAM_INT);
     $uq->execute();
     $users=$uq->fetchAll(PDO::FETCH_OBJ);
-}catch(Exception $e){ $users=[]; $userTotal=0; $userTotalPages=1; $userPage=1; }
+}catch(Exception $e){
+    // Master prompt item 62 (error/empty/loading states): a real DB failure
+    // here used to be indistinguishable from a genuinely-empty user table --
+    // both silently fell through to the same "No users registered yet." row
+    // with no indication anything had gone wrong. Now it surfaces through
+    // the same $msg/$msgType alert banner this page already uses for
+    // success messages (matching the pattern already established in
+    // manage-bookings.php's identical try/catch).
+    $users=[]; $userTotal=0; $userTotalPages=1; $userPage=1;
+    $msg = "Error loading users: " . $e->getMessage();
+    $msgType = 'error';
+}
 ?>
-<?php if($msg): ?><div class="alert-msg alert-<?=$msgType?>"><i class="fa fa-check-circle"></i><?=htmlspecialchars($msg)?></div><?php endif; ?>
+<?php if($msg): ?><div class="alert-msg alert-<?=$msgType?>"><i class="fa fa-<?=$msgType==='success'?'check-circle':'exclamation-circle'?>"></i><?=htmlspecialchars($msg)?></div><?php endif; ?>
 <div class="table-responsive">
 <table class="tms-table" style="font-size:13px;">
   <thead><tr><th>#</th><th>Name</th><th>Email</th><th>Mobile</th><th>Joined</th><th>Actions</th></tr></thead>

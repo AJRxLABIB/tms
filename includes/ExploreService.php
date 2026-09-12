@@ -325,6 +325,7 @@ class ExploreService {
                 'website'       => $tags['website'] ?? $tags['contact:website'] ?? null,
                 'rating'        => null,
                 'photo'         => null,
+                'photo_attribution' => null,
                 'distance_m'    => (int)$this->haversine($lat, $lng, (float)$plat, (float)$plng),
             ];
         }
@@ -350,6 +351,7 @@ class ExploreService {
         $places = [];
         foreach (($res['data']['results'] ?? []) as $p) {
             $photo = null;
+            $photoAttribution = null;
             if (!empty($p['photos'][0]['photo_reference'])) {
                 // SECURITY FIX (Round 14): this used to embed GOOGLE_PLACES_API_KEY
                 // in a URL that was sent to the browser and rendered in an <img src>,
@@ -357,6 +359,15 @@ class ExploreService {
                 // opaque reference and let api/explore.php?action=place_photo stream
                 // the image server-side instead.
                 $photo = 'api/explore.php?action=place_photo&ref=' . urlencode($p['photos'][0]['photo_reference']);
+                // PROVENANCE FIX (Round 73, master prompt item 65): Google's Places
+                // API terms require displaying each photo's attribution whenever it
+                // is shown. `html_attributions[0]` is real data straight from
+                // Google's own response (typically a small "<a href=...>Photo
+                // credit</a>" snippet) -- never fabricated, and only ever attached
+                // to a place that genuinely has a Google photo.
+                if (!empty($p['photos'][0]['html_attributions'][0]) && is_string($p['photos'][0]['html_attributions'][0])) {
+                    $photoAttribution = $p['photos'][0]['html_attributions'][0];
+                }
             }
             $plat = $p['geometry']['location']['lat'] ?? null;
             $plng = $p['geometry']['location']['lng'] ?? null;
@@ -370,6 +381,7 @@ class ExploreService {
                 'website'       => null,
                 'rating'        => $p['rating'] ?? null,
                 'photo'         => $photo,
+                'photo_attribution' => $photoAttribution,
                 'distance_m'    => ($plat && $plng) ? (int)$this->haversine($lat, $lng, $plat, $plng) : null,
             ];
         }
@@ -507,11 +519,69 @@ class ExploreService {
     }
 
     // ════════════════════════════════════════════════════════════════════
+    // LOCAL INVENTORY (master prompt item 6, "Travel" tier) -- real,
+    // already-bookable packages/hotels/activities from this system's own
+    // catalog for the country being explored. Everything above this method
+    // (overview, attractions, costs, safety tips) comes from the AI or a
+    // dedicated emergency-contacts table; none of it was ever connected to
+    // this site's actual inventory, so a visitor exploring "Bali" had no way
+    // to see the real packages TMS sells there without leaving Explore Mode
+    // and running a separate search. Matches on exact Country only (not a
+    // LIKE against free-text location strings) to avoid a false positive
+    // like "France" matching "French Polynesia".
+    // ════════════════════════════════════════════════════════════════════
+
+    public function getLocalInventory(string $country): array {
+        $country = trim($country);
+        $out = ['packages' => [], 'hotels' => [], 'activities' => []];
+        if ($country === '') return $out;
+
+        try {
+            $stmt = $this->db->prepare(
+                "SELECT PackageId, PackageName, PackageLocation, PackagePrice, PackageImage, AvgRating
+                 FROM tbltourpackages WHERE Status=1 AND Country=?
+                 ORDER BY AvgRating DESC, PackageId DESC LIMIT 6"
+            );
+            $stmt->execute([$country]);
+            $out['packages'] = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        } catch (Exception $e) {}
+
+        try {
+            $stmt = $this->db->prepare(
+                "SELECT HotelId, HotelName, City, StarRating, PricePerNight, HotelImage, AvgRating, IsSampleData
+                 FROM tblhotels WHERE Status=1 AND Country=?
+                 ORDER BY AvgRating DESC, HotelId DESC LIMIT 6"
+            );
+            $stmt->execute([$country]);
+            $out['hotels'] = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        } catch (Exception $e) {}
+
+        try {
+            $stmt = $this->db->prepare(
+                "SELECT ActivityId, ActivityName, City, Category, PricePerPerson, ActivityImage, AvgRating, IsSampleData
+                 FROM tblactivities WHERE Status=1 AND Country=?
+                 ORDER BY AvgRating DESC, ActivityId DESC LIMIT 6"
+            );
+            $stmt->execute([$country]);
+            $out['activities'] = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        } catch (Exception $e) {}
+
+        return $out;
+    }
+
+    // ════════════════════════════════════════════════════════════════════
     // AI-GENERATED DESTINATION INFO (overview, attractions, history, etc.)
     // ════════════════════════════════════════════════════════════════════
 
     public function getDestinationInfo(AIClient $ai, string $name, float $lat, float $lng, string $country, string $userEmail): array {
         $placeKey = 'info_' . md5(strtolower($name) . '_' . round($lat, 2) . '_' . round($lng, 2));
+
+        // Computed fresh on every call, whatever happens with the AI-content
+        // cache below -- unlike the AI-written overview text (safe to reuse
+        // for a while) or emergency_contacts (near-static), which package or
+        // hotel is actually bookable can change at any time, so this must
+        // never be served from the cached info_json blob.
+        $localInventory = $this->getLocalInventory($country);
 
         $row = null;
         try {
@@ -522,7 +592,7 @@ class ExploreService {
 
         if ($row) {
             $decoded = json_decode($row, true);
-            if (is_array($decoded)) return ['success' => true, 'data' => $decoded, 'cached' => true];
+            if (is_array($decoded)) return ['success' => true, 'data' => $decoded, 'cached' => true, 'local_inventory' => $localInventory];
         }
 
         $system = "You are an expert travel guide and researcher. Given a destination, respond with ONLY a single valid JSON object "
@@ -551,12 +621,18 @@ class ExploreService {
 
         $res = $ai->ask($system, $userMsg, '', $userEmail);
         if (!$res['success']) {
-            return ['success' => false, 'error' => $res['error'] ?? 'AI service is temporarily unavailable.'];
+            // Real, independently-fetched catalog data (packages/hotels/
+            // activities) has nothing to do with whether the AI overview
+            // call succeeded -- an install with no AI key configured (the
+            // documented common case, see the FIX above) shouldn't hide a
+            // visitor's own bookable inventory just because the AI text
+            // failed. See the same reasoning on the parse-failure branch below.
+            return ['success' => false, 'error' => $res['error'] ?? 'AI service is temporarily unavailable.', 'local_inventory' => $localInventory];
         }
 
         $data = $ai->parseJson($res['content']);
         if (!$data) {
-            return ['success' => false, 'error' => 'Could not parse destination information. Please try again.'];
+            return ['success' => false, 'error' => 'Could not parse destination information. Please try again.', 'local_inventory' => $localInventory];
         }
 
         $data['emergency_contacts'] = $this->lookupEmergencyContacts($country);
@@ -571,7 +647,7 @@ class ExploreService {
             $stmt->execute([$placeKey, $name, $country, $lat, $lng, json_encode($data, JSON_UNESCAPED_UNICODE), $expires]);
         } catch (Exception $e) {}
 
-        return ['success' => true, 'data' => $data, 'cached' => false];
+        return ['success' => true, 'data' => $data, 'cached' => false, 'local_inventory' => $localInventory];
     }
 
     /** Record that this user opened a destination (see the note above). */
@@ -682,18 +758,33 @@ class ExploreService {
         $err      = curl_error($ch);
         curl_close($ch);
 
+        // MONITORING (Round 72, master prompt item 56): this is the single
+        // low-level HTTP call every Explore Mode feature funnels through --
+        // Nominatim geocoding, Overpass nearby places, routing -- so it's
+        // the one safe, low-risk place to log real success/failure for the
+        // "Maps" signal admin/system-health.php previously reported as "not
+        // tracked" (Leaflet/OSM tiles themselves need no key/tracking, but
+        // these are the actual live external calls behind the map features).
+        // Logged with the request host, not the full URL/query, so no
+        // coordinates or place-search text ever land in this log.
+        $host = parse_url($url, PHP_URL_HOST) ?: 'unknown';
+
         if ($err) {
+            tms_log_system_event($this->db, 'maps', $host, false, 'curl error: ' . $err);
             return ['success' => false, 'error' => 'Network error while contacting live data service.'];
         }
         if ($httpCode < 200 || $httpCode >= 300) {
+            tms_log_system_event($this->db, 'maps', $host, false, "HTTP $httpCode");
             return ['success' => false, 'error' => "Live data service returned an error (HTTP $httpCode)."];
         }
 
         $data = json_decode($response, true);
         if ($data === null && $response !== 'null') {
+            tms_log_system_event($this->db, 'maps', $host, false, 'invalid JSON response');
             return ['success' => false, 'error' => 'Received an invalid response from live data service.'];
         }
 
+        tms_log_system_event($this->db, 'maps', $host, true);
         return ['success' => true, 'data' => $data];
     }
 }

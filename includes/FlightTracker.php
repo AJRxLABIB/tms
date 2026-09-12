@@ -148,6 +148,18 @@ class FlightTracker {
     private function formatState(array $s): array {
         $velocityMs = $s[self::IDX_VELOCITY_MS] ?? null;
         return [
+            // Master prompt item 64 (source provenance): this is live,
+            // perishable position data (the aircraft has already moved by
+            // the time it's read), and formatState() previously returned no
+            // indication of where it came from or when it was observed --
+            // unlike weather.php/currency, which already surface this.
+            // fetched_at is date('c') at format time (this call happens
+            // synchronously right after the OpenSky HTTP request in
+            // getStatesInBoundingBox(), so it's accurate to within the
+            // request's own latency -- no separate timestamp field needed
+            // from the API response itself).
+            'source'         => 'opensky',
+            'fetched_at'     => date('c'),
             'callsign'       => trim((string)($s[self::IDX_CALLSIGN] ?? '')),
             'origin_country' => $s[self::IDX_ORIGIN_COUNTRY] ?? null,
             'latitude'       => $s[self::IDX_LATITUDE] ?? null,

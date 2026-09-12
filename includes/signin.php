@@ -15,7 +15,11 @@
     <div class="modal-dialog" role="document">
         <div class="modal-content modal-info">
             <div class="modal-header">
-                <button type="button" class="close" data-dismiss="modal"><span>&times;</span></button>
+                <!-- ACCESSIBILITY FIX (Round 69): the sibling write-us.php
+                     modal's close button already had aria-label="Close" --
+                     this one never did, so a screen reader announced it as
+                     just "x button" with no purpose. -->
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
                 <h4 class="modal-title" style="color:#333;font-size:18px;padding:5px 0;"><?php echo tms_t('modal_sign_in_title','Sign In'); ?></h4>
             </div>
             <div class="modal-body modal-spa">

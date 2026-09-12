@@ -16,7 +16,7 @@ tms_admin_require_role($dbh, ['content_manager', 'support', 'manager']); // Roun
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Plus+Jakarta+Sans:wght@600;700;800&display=swap" rel="stylesheet">
 <link href="css/font-awesome.css" rel="stylesheet">
 <link href="css/bootstrap.min.css" rel="stylesheet">
-<link href="css/admin-v6.css" rel="stylesheet">
+<link href="<?php echo tms_asset_ver('css/admin-v6.css'); ?>" rel="stylesheet">
 <style>
 .page-title-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;flex-wrap:wrap;gap:12px;}
 .page-title-row h2{font-family:'Plus Jakarta Sans',sans-serif;font-size:22px;font-weight:800;color:#0f172a;margin:0;}
@@ -47,6 +47,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && in_array($_POST['action'] ?? '', ['
     $rid=(int)$_POST['id'];
     if($_POST['action']==='delete'){
         $dbh->prepare("DELETE FROM tblreviews WHERE id=:id")->execute([':id'=>$rid]);
+        // Audit log coverage (Round 52).
+        tms_log_activity($dbh, $_SESSION['alogin'], 'Review Deleted', "id=$rid");
         $msg="Review deleted."; $msgType='success';
     } elseif($_POST['action']==='approve'){
         $dbh->prepare("UPDATE tblreviews SET Status=1 WHERE id=:id")->execute([':id'=>$rid]);
@@ -58,9 +60,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && in_array($_POST['action'] ?? '', ['
             $dbh->prepare("UPDATE tbltourpackages SET AvgRating=(SELECT AVG(Rating) FROM tblreviews WHERE PackageId=:p AND Status=1) WHERE PackageId=:p2")
                 ->execute([':p'=>$pid, ':p2'=>$pid]);
         }
+        tms_log_activity($dbh, $_SESSION['alogin'], 'Review Approved', "id=$rid");
         $msg="Review approved."; $msgType='success';
     } elseif($_POST['action']==='reject'){
         $dbh->prepare("UPDATE tblreviews SET Status=2 WHERE id=:id")->execute([':id'=>$rid]);
+        tms_log_activity($dbh, $_SESSION['alogin'], 'Review Rejected', "id=$rid");
         $msg="Review rejected and hidden from the public site."; $msgType='success';
     }
 }

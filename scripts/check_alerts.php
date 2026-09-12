@@ -26,8 +26,8 @@ if (PHP_SAPI !== 'cli') {
     die('This script is CLI-only.');
 }
 
-require __DIR__ . '/../includes/config.php';
-require __DIR__ . '/../includes/AlertService.php';
+require __DIR__ . '/../backend/config.php';
+require __DIR__ . '/../backend/AlertService.php';
 
 $result = tms_check_and_fire_alerts($dbh);
 

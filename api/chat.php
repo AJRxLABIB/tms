@@ -18,7 +18,7 @@
  */
 
 session_start();
-require_once dirname(__DIR__) . '/includes/config.php';
+require_once dirname(__DIR__) . '/backend/config.php';
 
 header('Content-Type: application/json; charset=utf-8');
 header('X-Content-Type-Options: nosniff');

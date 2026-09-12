@@ -7,6 +7,50 @@ project, so there is no automatic upload to S3/GCS/etc — see "Offsite copies"
 below for what "offsite" actually means here instead of pretending an
 integration exists that isn't wired to real credentials.
 
+## Testing status
+
+**Implementation status:** complete — backup, encryption, retention,
+optional offsite copy, and both restore modes (`--verify` and
+`--restore --confirm`) are all implemented as described below.
+
+**Testing status: genuinely tested end-to-end (Round 51).** Every prior
+round had implemented this but never actually run it against a real
+database — "should work" was an assumption, not a tested fact (Rule 77).
+Round 51 stood up a real MariaDB instance loaded with this project's actual
+schema (`tms.sql` + `v6_migration.sql`) and ran the full disaster-recovery
+cycle for real: `backup_database.php` → `restore_database.php --verify` →
+a destructive wipe of the test database → `restore_database.php --restore
+--confirm` → row-count and data-content comparison against the pre-wipe
+state. The cycle now passes cleanly with exact data parity.
+
+That first real run also found and fixed three bugs that inspection alone
+had missed:
+
+- **`backup_database.php` / `restore_database.php` — credential truncation
+  at `#`.** Both scripts wrote DB credentials into a `--defaults-extra-file`
+  unquoted. MySQL/MariaDB's option-file parser treats an unquoted `#` as
+  starting a comment for the rest of the line, so a password containing
+  `#` (an entirely ordinary character in a strong password) was silently
+  truncated, and every backup/restore attempt authenticated with the wrong
+  password and failed. Fixed by quoting every credential value.
+- **`backup_database.php` — failed dumps left on disk.** A failed or
+  partial `mysqldump` run left a plaintext (unencrypted) `.sql` file sitting
+  in `backups/` indefinitely, contradicting this doc's own claim that the
+  plaintext dump never touches disk on its own. Fixed: the failure path now
+  deletes the partial dump.
+- **`backend/config.php` — `tblbooking` fallback schema gap.** The
+  self-healing fallback `CREATE TABLE IF NOT EXISTS tblbooking` (used only
+  when restoring into a database that doesn't have the table at all) was
+  missing three columns (`FromDate`, `ToDate`, `Comment`) that real,
+  actively-used pages depend on. Invisible in every previous round because
+  testing always used a database descended from the original `tms.sql`
+  (which already had these columns) rather than a genuinely empty one.
+  Fixed by adding them to the fallback schema.
+
+This testing was done against a disposable database in an isolated test
+environment with fabricated test credentials — never against this
+project's real `.env` or production data.
+
 ## What runs, and when
 
 | Script | Schedule | What it does |

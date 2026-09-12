@@ -17,14 +17,16 @@
  *
  * SCOPE NOTE: fully translating every string on every one of the 60+ pages
  * (booking flow, admin panel, all AI tools, etc.) into all 8 listed
- * languages is a large, ongoing content-translation effort, not something
- * that can be responsibly hand-written in one pass without native-speaker
- * review. This ships real, working English + Bengali dictionaries (the two
- * most relevant for a Bangladesh-based audience) for the common site-wide
- * chrome, structured so more keys/languages can be added incrementally to
- * $TMS_TRANSLATIONS below without touching any page code. Any key missing
- * for the active language automatically falls back to English, so nothing
- * ever renders blank or broken while translations are still being filled in.
+ * languages (en/bn/hi/ar/fr/zh/es/de) is a large, ongoing content-translation
+ * effort, not something that can be responsibly hand-written in one pass
+ * without native-speaker review -- every non-English string in this file,
+ * including the reg_* keys added in Round 74, is a best-effort machine
+ * translation and should be reviewed by a native speaker before this is
+ * treated as launch-ready copy. Structured so more keys/languages can be
+ * added incrementally to $TMS_TRANSLATIONS below without touching any page
+ * code. Any key missing for the active language automatically falls back
+ * to English, so nothing ever renders blank or broken while translations
+ * are still being filled in.
  */
 
 $TMS_TRANSLATIONS = [
@@ -60,6 +62,11 @@ $TMS_TRANSLATIONS = [
         'ph_your_password'=>'Your password','modal_join_tms'=>'Join TMS','modal_signup_subtitle'=>'Start planning your dream trip today',
         'lbl_mobile_number'=>'Mobile Number','lbl_confirm_password'=>'Confirm Password','ph_full_name'=>'Your full name',
         'ph_min_6_chars'=>'Minimum 6 characters','ph_repeat_password'=>'Repeat your password','btn_create_account'=>'Create My Account',
+        'reg_err_invalid_request'=>'Invalid request.','reg_err_csrf_expired'=>'Security token expired. Please refresh the page and try again.',
+        'reg_err_all_fields_required'=>'All fields are required.','reg_err_name_too_short'=>'Full name must be at least 3 characters.',
+        'reg_err_invalid_email'=>'Please enter a valid email address.','reg_err_password_too_short'=>'Password must be at least 6 characters.',
+        'reg_err_password_mismatch'=>'Passwords do not match.','reg_err_email_exists'=>'An account with this email already exists.',
+        'reg_success_created'=>'Account created successfully!','reg_err_registration_failed'=>'Registration failed. Please try again.',
         'msg_already_have_account'=>'Already have an account?',
     ],
     'bn' => [
@@ -94,6 +101,11 @@ $TMS_TRANSLATIONS = [
         'ph_your_password'=>'আপনার পাসওয়ার্ড','modal_join_tms'=>'TMS-এ যোগ দিন','modal_signup_subtitle'=>'আজই আপনার স্বপ্নের ভ্রমণের পরিকল্পনা শুরু করুন',
         'lbl_mobile_number'=>'মোবাইল নম্বর','lbl_confirm_password'=>'পাসওয়ার্ড নিশ্চিত করুন','ph_full_name'=>'আপনার পূর্ণ নাম',
         'ph_min_6_chars'=>'ন্যূনতম ৬ অক্ষর','ph_repeat_password'=>'আপনার পাসওয়ার্ড পুনরায় লিখুন','btn_create_account'=>'অ্যাকাউন্ট তৈরি করুন',
+        'reg_err_invalid_request'=>'অবৈধ অনুরোধ।','reg_err_csrf_expired'=>'সিকিউরিটি টোকেনের মেয়াদ শেষ হয়ে গেছে। অনুগ্রহ করে পৃষ্ঠাটি রিফ্রেশ করে আবার চেষ্টা করুন।',
+        'reg_err_all_fields_required'=>'সব ঘর পূরণ করা আবশ্যক।','reg_err_name_too_short'=>'পুরো নাম কমপক্ষে ৩ অক্ষরের হতে হবে।',
+        'reg_err_invalid_email'=>'অনুগ্রহ করে একটি সঠিক ইমেইল ঠিকানা লিখুন।','reg_err_password_too_short'=>'পাসওয়ার্ড কমপক্ষে ৬ অক্ষরের হতে হবে।',
+        'reg_err_password_mismatch'=>'পাসওয়ার্ড মিলছে না।','reg_err_email_exists'=>'এই ইমেইল দিয়ে ইতিমধ্যে একটি অ্যাকাউন্ট আছে।',
+        'reg_success_created'=>'অ্যাকাউন্ট সফলভাবে তৈরি হয়েছে!','reg_err_registration_failed'=>'নিবন্ধন ব্যর্থ হয়েছে। অনুগ্রহ করে আবার চেষ্টা করুন।',
         'msg_already_have_account'=>'ইতিমধ্যে অ্যাকাউন্ট আছে?',
     ],
     'hi' => [
@@ -128,6 +140,11 @@ $TMS_TRANSLATIONS = [
         'ph_your_password'=>'आपका पासवर्ड','modal_join_tms'=>'TMS से जुड़ें','modal_signup_subtitle'=>'आज ही अपनी सपनों की यात्रा की योजना बनाना शुरू करें',
         'lbl_mobile_number'=>'मोबाइल नंबर','lbl_confirm_password'=>'पासवर्ड की पुष्टि करें','ph_full_name'=>'आपका पूरा नाम',
         'ph_min_6_chars'=>'न्यूनतम 6 अक्षर','ph_repeat_password'=>'अपना पासवर्ड दोबारा लिखें','btn_create_account'=>'मेरा खाता बनाएं',
+        'reg_err_invalid_request'=>'अमान्य अनुरोध।','reg_err_csrf_expired'=>'सुरक्षा टोकन की समय-सीमा समाप्त हो गई है। कृपया पृष्ठ को रीफ़्रेश करें और पुनः प्रयास करें।',
+        'reg_err_all_fields_required'=>'सभी फ़ील्ड आवश्यक हैं।','reg_err_name_too_short'=>'पूरा नाम कम से कम 3 अक्षरों का होना चाहिए।',
+        'reg_err_invalid_email'=>'कृपया एक मान्य ईमेल पता दर्ज करें।','reg_err_password_too_short'=>'पासवर्ड कम से कम 6 अक्षरों का होना चाहिए।',
+        'reg_err_password_mismatch'=>'पासवर्ड मेल नहीं खाते।','reg_err_email_exists'=>'इस ईमेल से पहले से एक खाता मौजूद है।',
+        'reg_success_created'=>'खाता सफलतापूर्वक बनाया गया!','reg_err_registration_failed'=>'पंजीकरण विफल रहा। कृपया पुनः प्रयास करें।',
         'msg_already_have_account'=>'पहले से खाता है?',
     ],
     'ar' => [
@@ -162,6 +179,11 @@ $TMS_TRANSLATIONS = [
         'ph_your_password'=>'كلمة المرور الخاصة بك','modal_join_tms'=>'انضم إلى TMS','modal_signup_subtitle'=>'ابدأ التخطيط لرحلة أحلامك اليوم',
         'lbl_mobile_number'=>'رقم الجوال','lbl_confirm_password'=>'تأكيد كلمة المرور','ph_full_name'=>'اسمك الكامل',
         'ph_min_6_chars'=>'6 أحرف على الأقل','ph_repeat_password'=>'أعد كتابة كلمة المرور','btn_create_account'=>'إنشاء حسابي',
+        'reg_err_invalid_request'=>'طلب غير صالح.','reg_err_csrf_expired'=>'انتهت صلاحية رمز الأمان. يرجى تحديث الصفحة والمحاولة مرة أخرى.',
+        'reg_err_all_fields_required'=>'جميع الحقول مطلوبة.','reg_err_name_too_short'=>'يجب أن يتكون الاسم الكامل من 3 أحرف على الأقل.',
+        'reg_err_invalid_email'=>'يرجى إدخال عنوان بريد إلكتروني صحيح.','reg_err_password_too_short'=>'يجب أن تتكون كلمة المرور من 6 أحرف على الأقل.',
+        'reg_err_password_mismatch'=>'كلمتا المرور غير متطابقتين.','reg_err_email_exists'=>'يوجد بالفعل حساب مسجل بهذا البريد الإلكتروني.',
+        'reg_success_created'=>'تم إنشاء الحساب بنجاح!','reg_err_registration_failed'=>'فشل التسجيل. يرجى المحاولة مرة أخرى.',
         'msg_already_have_account'=>'لديك حساب بالفعل؟',
     ],
     'fr' => [
@@ -196,6 +218,11 @@ $TMS_TRANSLATIONS = [
         'ph_your_password'=>'Votre mot de passe','modal_join_tms'=>'Rejoindre TMS','modal_signup_subtitle'=>"Commencez à planifier le voyage de vos rêves dès aujourd'hui",
         'lbl_mobile_number'=>'Numéro de mobile','lbl_confirm_password'=>'Confirmer le mot de passe','ph_full_name'=>'Votre nom complet',
         'ph_min_6_chars'=>'Minimum 6 caractères','ph_repeat_password'=>'Répétez votre mot de passe','btn_create_account'=>'Créer mon compte',
+        'reg_err_invalid_request'=>'Requête invalide.','reg_err_csrf_expired'=>'Le jeton de sécurité a expiré. Veuillez actualiser la page et réessayer.',
+        'reg_err_all_fields_required'=>'Tous les champs sont obligatoires.','reg_err_name_too_short'=>'Le nom complet doit comporter au moins 3 caractères.',
+        'reg_err_invalid_email'=>'Veuillez saisir une adresse e-mail valide.','reg_err_password_too_short'=>'Le mot de passe doit comporter au moins 6 caractères.',
+        'reg_err_password_mismatch'=>'Les mots de passe ne correspondent pas.','reg_err_email_exists'=>'Un compte avec cet e-mail existe déjà.',
+        'reg_success_created'=>'Compte créé avec succès !','reg_err_registration_failed'=>'Échec de l\'inscription. Veuillez réessayer.',
         'msg_already_have_account'=>'Vous avez déjà un compte ?',
     ],
     'zh' => [
@@ -230,6 +257,11 @@ $TMS_TRANSLATIONS = [
         'ph_your_password'=>'您的密码','modal_join_tms'=>'加入 TMS','modal_signup_subtitle'=>'立即开始规划您的梦想之旅',
         'lbl_mobile_number'=>'手机号码','lbl_confirm_password'=>'确认密码','ph_full_name'=>'您的姓名',
         'ph_min_6_chars'=>'至少6个字符','ph_repeat_password'=>'请再次输入密码','btn_create_account'=>'创建我的账户',
+        'reg_err_invalid_request'=>'无效的请求。','reg_err_csrf_expired'=>'安全令牌已过期,请刷新页面后重试。',
+        'reg_err_all_fields_required'=>'所有字段均为必填项。','reg_err_name_too_short'=>'全名必须至少包含3个字符。',
+        'reg_err_invalid_email'=>'请输入有效的电子邮箱地址。','reg_err_password_too_short'=>'密码必须至少包含6个字符。',
+        'reg_err_password_mismatch'=>'两次输入的密码不一致。','reg_err_email_exists'=>'该邮箱已注册账户。',
+        'reg_success_created'=>'账户创建成功!','reg_err_registration_failed'=>'注册失败,请重试。',
         'msg_already_have_account'=>'已有账户？',
     ],
     'es' => [
@@ -264,6 +296,11 @@ $TMS_TRANSLATIONS = [
         'ph_your_password'=>'Tu contraseña','modal_join_tms'=>'Únete a TMS','modal_signup_subtitle'=>'Empieza a planear el viaje de tus sueños hoy',
         'lbl_mobile_number'=>'Número de móvil','lbl_confirm_password'=>'Confirmar contraseña','ph_full_name'=>'Tu nombre completo',
         'ph_min_6_chars'=>'Mínimo 6 caracteres','ph_repeat_password'=>'Repite tu contraseña','btn_create_account'=>'Crear mi cuenta',
+        'reg_err_invalid_request'=>'Solicitud no válida.','reg_err_csrf_expired'=>'El token de seguridad ha caducado. Actualiza la página e inténtalo de nuevo.',
+        'reg_err_all_fields_required'=>'Todos los campos son obligatorios.','reg_err_name_too_short'=>'El nombre completo debe tener al menos 3 caracteres.',
+        'reg_err_invalid_email'=>'Introduce una dirección de correo electrónico válida.','reg_err_password_too_short'=>'La contraseña debe tener al menos 6 caracteres.',
+        'reg_err_password_mismatch'=>'Las contraseñas no coinciden.','reg_err_email_exists'=>'Ya existe una cuenta con este correo electrónico.',
+        'reg_success_created'=>'¡Cuenta creada con éxito!','reg_err_registration_failed'=>'Error en el registro. Inténtalo de nuevo.',
         'msg_already_have_account'=>'¿Ya tienes una cuenta?',
     ],
     'de' => [
@@ -298,6 +335,11 @@ $TMS_TRANSLATIONS = [
         'ph_your_password'=>'Ihr Passwort','modal_join_tms'=>'TMS beitreten','modal_signup_subtitle'=>'Beginnen Sie noch heute mit der Planung Ihrer Traumreise',
         'lbl_mobile_number'=>'Handynummer','lbl_confirm_password'=>'Passwort bestätigen','ph_full_name'=>'Ihr vollständiger Name',
         'ph_min_6_chars'=>'Mindestens 6 Zeichen','ph_repeat_password'=>'Passwort wiederholen','btn_create_account'=>'Mein Konto erstellen',
+        'reg_err_invalid_request'=>'Ungültige Anfrage.','reg_err_csrf_expired'=>'Das Sicherheitstoken ist abgelaufen. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.',
+        'reg_err_all_fields_required'=>'Alle Felder sind erforderlich.','reg_err_name_too_short'=>'Der vollständige Name muss mindestens 3 Zeichen lang sein.',
+        'reg_err_invalid_email'=>'Bitte geben Sie eine gültige E-Mail-Adresse ein.','reg_err_password_too_short'=>'Das Passwort muss mindestens 6 Zeichen lang sein.',
+        'reg_err_password_mismatch'=>'Die Passwörter stimmen nicht überein.','reg_err_email_exists'=>'Es existiert bereits ein Konto mit dieser E-Mail-Adresse.',
+        'reg_success_created'=>'Konto erfolgreich erstellt!','reg_err_registration_failed'=>'Registrierung fehlgeschlagen. Bitte versuchen Sie es erneut.',
         'msg_already_have_account'=>'Bereits ein Konto?',
     ],
 ];

@@ -16,7 +16,7 @@ tms_admin_require_role($dbh, ['operations', 'booking_manager', 'manager']); // R
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Plus+Jakarta+Sans:wght@600;700;800&display=swap" rel="stylesheet">
 <link href="css/font-awesome.css" rel="stylesheet">
 <link href="css/bootstrap.min.css" rel="stylesheet">
-<link href="css/admin-v6.css" rel="stylesheet">
+<link href="<?php echo tms_asset_ver('css/admin-v6.css'); ?>" rel="stylesheet">
 <style>
 .page-title-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;flex-wrap:wrap;gap:12px;}
 .page-title-row h2{font-family:'Plus Jakarta Sans',sans-serif;font-size:22px;font-weight:800;color:#0f172a;margin:0;}
@@ -46,6 +46,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'delet
     tms_csrf_validate();
     $cid=(int)$_POST['id'];
     $dbh->prepare("DELETE FROM tblcustomtrips WHERE id=:id")->execute([':id'=>$cid]);
+    // Audit log coverage (Round 52).
+    tms_log_activity($dbh, $_SESSION['alogin'], 'Custom Trip Request Deleted', "id=$cid");
     $msg="Custom trip deleted."; $msgType='success';
 }
 try{ $trips=$dbh->query("SELECT * FROM tblcustomtrips ORDER BY id DESC")->fetchAll(PDO::FETCH_OBJ); }

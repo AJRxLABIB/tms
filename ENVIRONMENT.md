@@ -1,7 +1,7 @@
 # Environment variables
 
 All configuration lives in `.env` (real values, git-ignored, blocked from
-web access by `.htaccess`, read by `includes/env-loader.php`). `.env.example`
+web access by `.htaccess`, read by `backend/env-loader.php`). `.env.example`
 is the template — safe to commit, holds blank placeholders only. Copy it to
 `.env` and fill in real values; leaving everything blank keeps the app
 running against local XAMPP defaults exactly as it always has.

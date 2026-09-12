@@ -5,14 +5,14 @@
  */
 session_start();
 error_reporting(E_ALL); ini_set('display_errors', '0'); ini_set('log_errors', '1');
-include('../includes/config.php');
+include('../backend/config.php');
 tms_require_admin();
 tms_admin_require_role($dbh, ['ai_manager', 'manager']); // Round 20 RBAC (item 46)
 
-require_once '../includes/ai/AIClient.php';
-require_once '../includes/ai/SentimentAnalyser.php';
-require_once '../includes/ai/FraudDetector.php';
-require_once '../includes/ai/AIEvaluator.php';
+require_once '../backend/ai/AIClient.php';
+require_once '../backend/ai/SentimentAnalyser.php';
+require_once '../backend/ai/FraudDetector.php';
+require_once '../backend/ai/AIEvaluator.php';
 
 // Round 35 (item 22, "AI Evaluation suite"): admin-triggered only, never
 // automatic -- this makes ~8 real AI calls (real quota cost), so it must
@@ -353,7 +353,7 @@ if ($_GET['action'] === 'get_insights') {
 <title>AI Dashboard | TMS Admin</title>
 <link href="../css/bootstrap.min2.css" rel="stylesheet">
 <link href="../css/font-awesome.min2.css" rel="stylesheet">
-<link href="../css/modern-theme.css" rel="stylesheet">
+<link href="<?php echo tms_asset_ver('../css/modern-theme.css'); ?>" rel="stylesheet">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&family=Playfair+Display:wght@700;800&display=swap" rel="stylesheet">

@@ -48,7 +48,7 @@ $initials = strtoupper(substr($adminName,0,2));
       <span><?= $adminName ?></span>
     </div>
     <a href="logout.php" class="btn-v6 ghost sm" title="Logout">
-      <i class="fa fa-sign-out"></i> Logout
+      <i class="fa fa-sign-out"></i> <span class="topbar-logout-label">Logout</span>
     </a>
   </div>
 </header>

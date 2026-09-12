@@ -15,7 +15,7 @@ tms_require_admin();
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Plus+Jakarta+Sans:wght@600;700;800&display=swap" rel="stylesheet">
 <link href="css/font-awesome.min2.css" rel="stylesheet">
 <link href="css/bootstrap.min.css" rel="stylesheet">
-<link href="css/admin-v6.css" rel="stylesheet">
+<link href="<?php echo tms_asset_ver('css/admin-v6.css'); ?>" rel="stylesheet">
 </head>
 <body>
 <div class="tms-shell">
@@ -55,8 +55,13 @@ if (isset($_POST['submit'])) {
             $upd->bindParam(':pwd',   $newHash, PDO::PARAM_STR);
             $upd->bindParam(':uname', $uname,   PDO::PARAM_STR);
             $upd->execute();
+            // Audit log coverage (Round 52). Never log the password itself,
+            // only that a change happened -- same principle as the 2FA
+            // enable/disable log lines in two-factor-setup.php.
+            tms_log_activity($dbh, $uname, 'Admin Password Changed', 'Password changed via admin panel');
             $success = 'Password changed successfully!';
         } else {
+            tms_log_activity($dbh, $uname, 'Admin Password Change Failed', 'Current password did not match');
             $error = 'Current password is incorrect.';
         }
     }
@@ -77,16 +82,16 @@ if (isset($_POST['submit'])) {
                 <form method="post">
                     <?php tms_csrf_field(); ?>
                     <div class="form-group">
-                        <label>Current Password *</label>
-                        <input type="password" name="currentpassword" class="form-control" required autocomplete="current-password">
+                        <label for="cpw_currentpassword">Current Password *</label>
+                        <input type="password" id="cpw_currentpassword" name="currentpassword" class="form-control" required autocomplete="current-password">
                     </div>
                     <div class="form-group">
-                        <label>New Password * <small class="text-muted">(min 6 characters)</small></label>
-                        <input type="password" name="newpassword" class="form-control" required autocomplete="new-password">
+                        <label for="cpw_newpassword">New Password * <small class="text-muted">(min 6 characters)</small></label>
+                        <input type="password" id="cpw_newpassword" name="newpassword" class="form-control" required autocomplete="new-password">
                     </div>
                     <div class="form-group">
-                        <label>Confirm New Password *</label>
-                        <input type="password" name="confirmpassword" class="form-control" required autocomplete="new-password">
+                        <label for="cpw_confirmpassword">Confirm New Password *</label>
+                        <input type="password" id="cpw_confirmpassword" name="confirmpassword" class="form-control" required autocomplete="new-password">
                     </div>
                     <button type="submit" name="submit" class="btn-v6 success">
                         <i class="fa fa-lock"></i> Change Password

@@ -152,7 +152,7 @@ $admins = $dbh->query("SELECT id, UserName, Role, updationDate FROM admin ORDER 
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Plus+Jakarta+Sans:wght@600;700;800&display=swap" rel="stylesheet">
 <link href="css/font-awesome.css" rel="stylesheet">
 <link href="css/bootstrap.min.css" rel="stylesheet">
-<link href="css/admin-v6.css" rel="stylesheet">
+<link href="<?php echo tms_asset_ver('css/admin-v6.css'); ?>" rel="stylesheet">
 <style>
 .page-title-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;flex-wrap:wrap;gap:12px;}
 .page-title-row h2{font-family:'Plus Jakarta Sans',sans-serif;font-size:22px;font-weight:800;color:#0f172a;margin:0;}
@@ -202,16 +202,16 @@ html[data-theme="dark"] .form-row label { color:#94a3b8 !important; }
   <form method="post">
     <?php tms_csrf_field(); ?>
     <div class="form-row">
-      <label>Username</label>
-      <input type="text" name="new_username" minlength="3" maxlength="100" required autocomplete="off">
+      <label for="adm_new_username">Username</label>
+      <input type="text" id="adm_new_username" name="new_username" minlength="3" maxlength="100" required autocomplete="off">
     </div>
     <div class="form-row">
-      <label>Password</label>
-      <input type="password" name="new_password" minlength="8" required autocomplete="new-password">
+      <label for="adm_new_password">Password</label>
+      <input type="password" id="adm_new_password" name="new_password" minlength="8" required autocomplete="new-password">
     </div>
     <div class="form-row">
-      <label>Role</label>
-      <select name="new_role">
+      <label for="adm_new_role">Role</label>
+      <select id="adm_new_role" name="new_role">
         <?php foreach (tms_admin_role_labels() as $roleSlug => $roleLabel): ?>
           <?php if ($roleSlug === 'manager') continue; // legacy value, not offered for new admins ?>
           <option value="<?= htmlspecialchars($roleSlug) ?>" <?= $roleSlug === 'operations' ? 'selected' : '' ?>><?= htmlspecialchars($roleLabel) ?></option>

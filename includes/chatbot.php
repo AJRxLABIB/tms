@@ -113,7 +113,13 @@
 .chat-voice-toggle { background:none; border:none; color:#fff; font-size:15px; cursor:pointer; padding:5px; opacity:0.75; margin-left:auto; }
 .chat-voice-toggle:hover { opacity:1; }
 .chat-voice-toggle.on { opacity:1; color:#9ffcd8; }
-.chat-mic { background:none; border:none; color:#764ba2; font-size:16px; cursor:pointer; padding:0 8px; opacity:0.7; transition:opacity .15s, color .15s; }
+/* ACCESSIBILITY FIX (Round 69, WCAG 2.5.8 target size): zero top/bottom
+   padding left this button's clickable height at roughly 19px (vs. the
+   sibling .chat-close/.chat-voice-toggle buttons above, which use
+   symmetric padding:5px and already clear 24px on both axes). min-height
+   plus flex-centering guarantee a full 24px-tall box without changing the
+   icon's visible size; width was already passing so it's untouched. */
+.chat-mic { background:none; border:none; color:#764ba2; font-size:16px; cursor:pointer; padding:0 8px; min-height:24px; display:inline-flex; align-items:center; opacity:0.7; transition:opacity .15s, color .15s; }
 .chat-mic:hover { opacity:1; }
 .chat-mic.listening { color:#e74c3c; opacity:1; animation:tmsMicPulse 1s ease-in-out infinite; }
 @keyframes tmsMicPulse { 0%,100%{ transform:scale(1); } 50%{ transform:scale(1.18); } }

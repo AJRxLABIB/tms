@@ -18,7 +18,7 @@
  *
  * Run: php tests/run.php
  * Needs your local DB configured exactly like the running app (it boots the
- * real includes/config.php), since several of these are integration tests
+ * real backend/config.php), since several of these are integration tests
  * against real tables, not pure unit tests -- there is no mocking layer in
  * this project, and building one just for tests would itself be
  * overengineering for a codebase this size.
@@ -32,12 +32,24 @@ if (PHP_SAPI !== 'cli') {
 }
 
 chdir(__DIR__ . '/..');
-require __DIR__ . '/../includes/config.php';
-require __DIR__ . '/../includes/PricingEngine.php';
-require __DIR__ . '/../includes/payments/PaymentProviderInterface.php';
-require __DIR__ . '/../includes/payments/SandboxProvider.php';
-require __DIR__ . '/../includes/payments/PaymentService.php';
-require __DIR__ . '/../includes/ai/NLSearchParser.php';
+// BUG FIX (found by actually running this test suite for the first time,
+// master prompt item 59 -- "CI pipeline never actually run"): these were
+// plain `require`, but backend/config.php already does
+// `require_once __DIR__ . '/PricingEngine.php'` internally -- and a plain
+// `require` does NOT consult PHP's already-included-files registry the way
+// `require_once` does, so this unconditionally re-executed
+// PricingEngine.php a second time and fatal-errored with "Cannot redeclare
+// function tms_remaining_seats()" before a single test could run. Every
+// bootstrap require here is now require_once, both to fix that and as a
+// standing defense against the same class of bug if config.php's own
+// dependencies ever change.
+require_once __DIR__ . '/../backend/config.php';
+require_once __DIR__ . '/../backend/PricingEngine.php';
+require_once __DIR__ . '/../backend/payments/PaymentProviderInterface.php';
+require_once __DIR__ . '/../backend/payments/SandboxProvider.php';
+require_once __DIR__ . '/../backend/payments/PaymentService.php';
+require_once __DIR__ . '/../backend/ai/NLSearchParser.php';
+require_once __DIR__ . '/../backend/ai/TravelRecommender.php';
 
 $tests = [];
 $results = [];
@@ -108,7 +120,7 @@ tms_test('tms_remaining_seats never returns a negative number', function () use 
 // ── Alerts ───────────────────────────────────────────────────────────────
 
 tms_test('tms_create_price_alert rejects a zero/negative target price', function () use ($dbh) {
-    require_once __DIR__ . '/../includes/AlertService.php';
+    require_once __DIR__ . '/../backend/AlertService.php';
     $ok = tms_create_price_alert($dbh, 'test-runner@example.invalid', 1, 0.0);
     if ($ok !== false) {
         throw new Exception('expected false for a zero target price, got true');
@@ -117,7 +129,7 @@ tms_test('tms_create_price_alert rejects a zero/negative target price', function
 });
 
 tms_test('group settlement math: shares always sum exactly to the total spent (no lost/duplicated cents)', function () use ($dbh) {
-    require_once __DIR__ . '/../includes/GroupTripService.php';
+    require_once __DIR__ . '/../backend/GroupTripService.php';
     // Simulate the pure math without touching the DB: 3-way split of 100
     // minor units should be 34/33/33 (or similar), summing to exactly 100 --
     // this is the classic case where naive float division loses a unit.
@@ -136,7 +148,7 @@ tms_test('group settlement math: shares always sum exactly to the total spent (n
 });
 
 tms_test('tms_add_group_expense rejects a zero/negative amount', function () use ($dbh) {
-    require_once __DIR__ . '/../includes/GroupTripService.php';
+    require_once __DIR__ . '/../backend/GroupTripService.php';
     $ok = tms_add_group_expense($dbh, 999999, 'test-runner@example.invalid', 'test', 0);
     if ($ok !== false) {
         throw new Exception('expected false for a zero amount, got true');
@@ -186,7 +198,7 @@ tms_test('PaymentService refund-ledger methods no-op safely when a booking was n
     // unconditionally from tour-history.php / admin/manage-bookings.php on
     // every cancellation/refund decision, so they must never throw or
     // error out just because there's nothing to link -- see each method's
-    // own docblock in includes/payments/PaymentService.php.
+    // own docblock in backend/payments/PaymentService.php.
     $paymentService = new PaymentService($dbh);
     $fakeBookingId = 999999999; // does not exist
     $paymentService->logRefundRequest($fakeBookingId, 'test');
@@ -330,6 +342,43 @@ tms_test('tms_admin_role fails open to superadmin for an unrecognized session, n
     } finally {
         if ($had) { $_SESSION['alogin'] = $prev; } else { unset($_SESSION['alogin']); }
     }
+});
+
+// ── Travel Modes (item 67, Round 42) ──────────────────────────────────────
+
+tms_test('TravelRecommender::applyTravelModeAdjustment nudges only real columns per mode, never fabricates accessibility data', function () {
+    // Pure unit test -- no DB, no AI client, just the static scoring helper.
+    $pkg = (object)['PackageDuration' => 4, 'HotelRating' => 4.5, 'MealPlan' => 'Breakfast included'];
+    $baseScores = ['budget_match'=>80,'weather_suitability'=>70,'style_match'=>65,'safety'=>80,'experience'=>75];
+
+    // Business: short duration + high-rated hotel is a real, verifiable
+    // signal that should raise style_match, with no warning attached.
+    $biz = TravelRecommender::applyTravelModeAdjustment($baseScores, 'business', $pkg);
+    if ($biz['scores']['style_match'] <= $baseScores['style_match']) {
+        throw new Exception('expected business mode to raise style_match for a short, high-rated package');
+    }
+    if ($biz['warning'] !== null) {
+        throw new Exception('business mode should not produce a warning');
+    }
+
+    // Accessible: tbltourpackages has no verified accessibility column, so
+    // this must NEVER change the scores (Rule 3 -- never fabricate) and
+    // MUST disclose that fact via a warning instead.
+    $acc = TravelRecommender::applyTravelModeAdjustment($baseScores, 'accessible', $pkg);
+    if ($acc['scores'] !== $baseScores) {
+        throw new Exception('accessible mode must not fabricate a score change -- no verified per-package accessibility data exists');
+    }
+    if (empty($acc['warning']) || stripos($acc['warning'], 'accessib') === false) {
+        throw new Exception('accessible mode must disclose that accessibility data is unverified, got: ' . var_export($acc['warning'], true));
+    }
+
+    // Empty/unrecognized mode: pass-through unchanged, no invented adjustment.
+    $none = TravelRecommender::applyTravelModeAdjustment($baseScores, '', $pkg);
+    if ($none['scores'] !== $baseScores || $none['warning'] !== null) {
+        throw new Exception('an empty travel mode must leave scores unchanged and produce no warning');
+    }
+
+    return true;
 });
 
 // ── Run everything ─────────────────────────────────────────────────────

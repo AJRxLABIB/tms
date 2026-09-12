@@ -16,7 +16,7 @@ tms_admin_require_role($dbh, ['finance', 'package_manager', 'manager']); // Roun
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Plus+Jakarta+Sans:wght@600;700;800&display=swap" rel="stylesheet">
 <link href="css/font-awesome.css" rel="stylesheet">
 <link href="css/bootstrap.min.css" rel="stylesheet">
-<link href="css/admin-v6.css" rel="stylesheet">
+<link href="<?php echo tms_asset_ver('css/admin-v6.css'); ?>" rel="stylesheet">
 <style>
 .page-title-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;flex-wrap:wrap;gap:12px;}
 .page-title-row h2{font-family:'Plus Jakarta Sans',sans-serif;font-size:22px;font-weight:800;color:#0f172a;margin:0;}
@@ -52,6 +52,8 @@ if(isset($_POST['add_coupon'])){
             $dbh->prepare("INSERT INTO tblcoupons (Code,DiscountPercent,ExpiryDate,IsUsed) VALUES(:c,:d,:e,0)")
                 ->execute([':c'=>$code,':d'=>$disc,':e'=>$exp ?: null]);
             tms_notify_all($dbh, "🎁 New offer: use code \"" . $code . "\" for " . $disc . "% off — " . ($exp ? "valid until " . $exp : "limited time"), 'package-list.php');
+            // Audit log coverage (Round 52).
+            tms_log_activity($dbh, $_SESSION['alogin'], 'Coupon Created', "Code: $code, Discount: {$disc}%" . ($exp ? ", Expires: $exp" : ''));
             $msg="Coupon added."; $msgType='success';
         }catch(Exception $e){ $msg="Error: ".$e->getMessage(); $msgType='error'; }
     } else { $msg="Please fill all fields."; $msgType='error'; }
@@ -61,9 +63,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && in_array($_POST['action'] ?? '', ['
     $cid=(int)$_POST['id'];
     if($_POST['action']==='delete'){
         $dbh->prepare("DELETE FROM tblcoupons WHERE id=:id")->execute([':id'=>$cid]);
+        // Audit log coverage (Round 52).
+        tms_log_activity($dbh, $_SESSION['alogin'], 'Coupon Deleted', "id=$cid");
         $msg="Coupon deleted."; $msgType='success';
     } elseif($_POST['action']==='toggle'){
         $dbh->prepare("UPDATE tblcoupons SET IsUsed=IF(IsUsed=1,0,1) WHERE id=:id")->execute([':id'=>$cid]);
+        tms_log_activity($dbh, $_SESSION['alogin'], 'Coupon Status Toggled', "id=$cid");
         $msg="Coupon status updated."; $msgType='success';
     }
 }
@@ -75,12 +80,12 @@ catch(Exception $e){ $coupons=[]; }
   <h3 style="font-size:16px;font-weight:700;margin-bottom:14px;">Add New Coupon</h3>
   <form method="post" style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;">
   <?php tms_csrf_field(); ?>
-    <div><label style="font-size:12px;font-weight:500;color:#64748b;display:block;margin-bottom:4px;">Coupon Code</label>
-    <input type="text" name="code" placeholder="e.g. SAVE20" style="padding:8px 12px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:13px;" required></div>
-    <div><label style="font-size:12px;font-weight:500;color:#64748b;display:block;margin-bottom:4px;">Discount (%)</label>
-    <input type="number" name="discount" placeholder="20" min="1" max="100" style="padding:8px 12px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:13px;width:100px;" required></div>
-    <div><label style="font-size:12px;font-weight:500;color:#64748b;display:block;margin-bottom:4px;">Expiry Date</label>
-    <input type="date" name="expiry" style="padding:8px 12px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:13px;"></div>
+    <div><label style="font-size:12px;font-weight:500;color:#64748b;display:block;margin-bottom:4px;" for="cpn_code">Coupon Code</label>
+    <input type="text" id="cpn_code" name="code" placeholder="e.g. SAVE20" style="padding:8px 12px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:13px;" required></div>
+    <div><label style="font-size:12px;font-weight:500;color:#64748b;display:block;margin-bottom:4px;" for="cpn_discount">Discount (%)</label>
+    <input type="number" id="cpn_discount" name="discount" placeholder="20" min="1" max="100" style="padding:8px 12px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:13px;width:100px;" required></div>
+    <div><label style="font-size:12px;font-weight:500;color:#64748b;display:block;margin-bottom:4px;" for="cpn_expiry">Expiry Date</label>
+    <input type="date" id="cpn_expiry" name="expiry" style="padding:8px 12px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:13px;"></div>
     <button type="submit" name="add_coupon" class="btn-v6 primary"><i class="fa fa-plus"></i> Add Coupon</button>
   </form>
 </div>

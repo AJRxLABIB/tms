@@ -1,5 +1,16 @@
 # This Session's Work — Master Index
 
+> **⚠️ SUPERSEDED — this file stops at approximately Round 18.** The
+> actively-maintained, current session index is
+> [`SESSION_SUMMARY_INDEX-1.md`](SESSION_SUMMARY_INDEX-1.md), which
+> continues from where this file leaves off through the present round.
+> This file is kept as-is (not deleted or trimmed) for its historical
+> deploy-checklist detail and early-round record — nothing below this
+> notice has been edited — but for anything current, read the `-1` file
+> instead. (Flagged as a stale/duplicate pair in Round 42/45; this banner
+> added Round 47 rather than deleting real historical content or silently
+> continuing to maintain two diverging "master index" files.)
+
 Quick map of everything built/fixed in this session, plus what to actually
 check first given limited time. Full technical detail for each item is in
 `SECURITY_HARDENING_PHASE1.md` and `FEATURE_PHASE2_AI_DEEPENING.md` — this

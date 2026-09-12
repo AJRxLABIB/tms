@@ -92,7 +92,7 @@ $currentPage = basename($_SERVER['PHP_SELF']);
                 } catch (Exception $e) { /* tables may not exist yet on first request — fail quiet */ }
             ?>
             <div class="tms-notif-wrap" id="tmsNotifWrap">
-                <button type="button" class="tms-notif-bell" id="tmsNotifBell" onclick="tmsToggleNotif(event)" aria-label="Notifications" title="Notifications">
+                <button type="button" class="tms-notif-bell" id="tmsNotifBell" onclick="tmsToggleNotif(event)" aria-label="Notifications" title="Notifications" aria-haspopup="true" aria-expanded="false" aria-controls="tmsNotifDropdown">
                     <i class="fa fa-bell-o"></i>
                     <?php if ($tmsNotifUnread > 0): ?><span class="tms-notif-badge"><?php echo $tmsNotifUnread > 9 ? '9+' : $tmsNotifUnread; ?></span><?php endif; ?>
                 </button>
@@ -192,7 +192,7 @@ $currentPage = basename($_SERVER['PHP_SELF']);
 
             <!-- MEGA DROPDOWN -->
             <li class="tms-has-mega" id="featDropdown">
-                <a href="javascript:void(0)" onclick="toggleMegaMenu(event)">
+                <a href="javascript:void(0)" id="featMegaTrigger" onclick="toggleMegaMenu(event)" aria-haspopup="true" aria-expanded="false" aria-controls="featMegaMenu">
                     <?php echo tms_t('nav_features','Features'); ?> <i class="fa fa-chevron-down" style="font-size:10px;margin-left:3px;"></i>
                 </a>
                 <div class="tms-mega-menu" id="featMegaMenu">
@@ -258,6 +258,13 @@ $currentPage = basename($_SERVER['PHP_SELF']);
                                 <div class="tms-mega-label">
                                     <strong>Flight Tracker</strong>
                                     <span>Live aircraft position (beta)</span>
+                                </div>
+                            </a>
+                            <a href="transport-compare.php" class="tms-mega-item">
+                                <div class="tms-mega-icon icon-map"><i class="fa fa-random"></i></div>
+                                <div class="tms-mega-label">
+                                    <strong>Transport Compare</strong>
+                                    <span>Walking to flights — fastest, cheapest, greenest</span>
                                 </div>
                             </a>
                             <a href="custom-trip.php" class="tms-mega-item">
@@ -331,26 +338,26 @@ $currentPage = basename($_SERVER['PHP_SELF']);
 
 <!-- ═══════════════════════════════════════════ SIGN IN MODAL ═══════════════════════════════════════════ -->
 <div id="signinModal" class="tms-modal-overlay" onclick="if(event.target===this)closeModal('signinModal')">
-    <div class="tms-modal-box">
+    <div class="tms-modal-box" role="dialog" aria-modal="true" aria-labelledby="signinModalTitle" tabindex="-1">
         <button class="tms-modal-close" onclick="closeModal('signinModal')" aria-label="Close sign-in dialog">&times;</button>
         <div class="tms-modal-header">
             <div class="tms-modal-icon"><i class="fa fa-sign-in"></i></div>
-            <h3><?php echo tms_t('modal_welcome_back','Welcome Back'); ?></h3>
+            <h3 id="signinModalTitle"><?php echo tms_t('modal_welcome_back','Welcome Back'); ?></h3>
             <p><?php echo tms_t('modal_signin_subtitle','Sign in to your TMS account'); ?></p>
         </div>
         <?php if(isset($_SESSION['login_error'])): ?>
-        <div class="tms-alert tms-alert-error"><i class="fa fa-exclamation-circle"></i> <?php echo htmlspecialchars($_SESSION['login_error']); unset($_SESSION['login_error']); ?></div>
+        <div class="tms-alert tms-alert-error" role="alert"><i class="fa fa-exclamation-circle"></i> <?php echo htmlspecialchars($_SESSION['login_error']); unset($_SESSION['login_error']); ?></div>
         <?php endif; ?>
         <form method="post" action="login.php">
             <?php tms_csrf_field(); ?>
             <input type="hidden" name="redirect" value="<?php echo htmlspecialchars($_SESSION['post_login_redirect'] ?? $_SERVER['PHP_SELF']); ?>">
             <div class="tms-field">
-                <label><?php echo tms_t('lbl_email_address','Email Address'); ?></label>
-                <div class="tms-input-wrap"><i class="fa fa-envelope"></i><input type="email" name="EmailId" placeholder="your@email.com" required></div>
+                <label for="signinEmailField"><?php echo tms_t('lbl_email_address','Email Address'); ?></label>
+                <div class="tms-input-wrap"><i class="fa fa-envelope"></i><input type="email" name="EmailId" id="signinEmailField" placeholder="your@email.com" required></div>
             </div>
             <div class="tms-field">
-                <label><?php echo tms_t('lbl_password','Password'); ?></label>
-                <div class="tms-input-wrap"><i class="fa fa-lock"></i><input type="password" name="Password" placeholder="<?php echo htmlspecialchars(tms_t('ph_your_password','Your password'), ENT_QUOTES, 'UTF-8'); ?>" required></div>
+                <label for="signinPasswordField"><?php echo tms_t('lbl_password','Password'); ?></label>
+                <div class="tms-input-wrap"><i class="fa fa-lock"></i><input type="password" name="Password" id="signinPasswordField" placeholder="<?php echo htmlspecialchars(tms_t('ph_your_password','Your password'), ENT_QUOTES, 'UTF-8'); ?>" required></div>
             </div>
             <div style="text-align:right;margin-bottom:20px;"><a href="forgot-password.php" style="font-size:13px;color:var(--secondary);"><?php echo tms_t('link_forgot_password','Forgot password?'); ?></a></div>
             <button type="submit" name="signin" class="tms-btn-modal"><?php echo tms_t('nav_signin','Sign In'); ?> <i class="fa fa-arrow-right"></i></button>
@@ -361,15 +368,15 @@ $currentPage = basename($_SERVER['PHP_SELF']);
 
 <!-- ═══════════════════════════════════════════ SIGN UP MODAL ═══════════════════════════════════════════ -->
 <div id="signupModal" class="tms-modal-overlay" onclick="if(event.target===this)closeModal('signupModal')">
-    <div class="tms-modal-box">
+    <div class="tms-modal-box" role="dialog" aria-modal="true" aria-labelledby="signupModalTitle" tabindex="-1">
         <button class="tms-modal-close" onclick="closeModal('signupModal')" aria-label="Close sign-up dialog">&times;</button>
         <div class="tms-modal-header">
             <div class="tms-modal-icon" style="background:linear-gradient(135deg,var(--secondary),var(--primary));"><i class="fa fa-user-plus"></i></div>
-            <h3><?php echo tms_t('modal_join_tms','Join TMS'); ?></h3>
+            <h3 id="signupModalTitle"><?php echo tms_t('modal_join_tms','Join TMS'); ?></h3>
             <p><?php echo tms_t('modal_signup_subtitle','Start planning your dream trip today'); ?></p>
         </div>
         <?php if(isset($_SESSION['reg_error'])): ?>
-        <div class="tms-alert tms-alert-error"><i class="fa fa-exclamation-circle"></i> <?php echo htmlspecialchars($_SESSION['reg_error']); unset($_SESSION['reg_error']); ?></div>
+        <div class="tms-alert tms-alert-error" role="alert"><i class="fa fa-exclamation-circle"></i> <?php echo htmlspecialchars($_SESSION['reg_error']); unset($_SESSION['reg_error']); ?></div>
         <?php endif; ?>
         <form method="post" action="register.php">
             <?php /* id="signupCsrf" matters: checkEmailLive() below reads the token
@@ -379,25 +386,25 @@ $currentPage = basename($_SERVER['PHP_SELF']);
             <input type="hidden" name="csrf_token" id="signupCsrf" value="<?php echo htmlspecialchars(tms_csrf_token(), ENT_QUOTES, 'UTF-8'); ?>">
             <input type="hidden" name="ref" value="<?php echo htmlspecialchars($_COOKIE['tms_ref'] ?? '', ENT_QUOTES, 'UTF-8'); ?>">
             <div class="tms-field">
-                <label><?php echo tms_t('lbl_full_name','Full Name'); ?> *</label>
-                <div class="tms-input-wrap"><i class="fa fa-user"></i><input type="text" name="FullName" placeholder="<?php echo htmlspecialchars(tms_t('ph_full_name','Your full name'), ENT_QUOTES, 'UTF-8'); ?>" required autocomplete="off" minlength="3"></div>
+                <label for="signupFullNameField"><?php echo tms_t('lbl_full_name','Full Name'); ?> *</label>
+                <div class="tms-input-wrap"><i class="fa fa-user"></i><input type="text" name="FullName" id="signupFullNameField" placeholder="<?php echo htmlspecialchars(tms_t('ph_full_name','Your full name'), ENT_QUOTES, 'UTF-8'); ?>" required autocomplete="off" minlength="3"></div>
             </div>
             <div class="tms-field">
-                <label><?php echo tms_t('lbl_mobile_number','Mobile Number'); ?> *</label>
-                <div class="tms-input-wrap"><i class="fa fa-phone"></i><input type="text" name="MobileNumber" placeholder="e.g. 01712345678" maxlength="15" required></div>
+                <label for="signupMobileField"><?php echo tms_t('lbl_mobile_number','Mobile Number'); ?> *</label>
+                <div class="tms-input-wrap"><i class="fa fa-phone"></i><input type="text" name="MobileNumber" id="signupMobileField" placeholder="e.g. 01712345678" maxlength="15" required></div>
             </div>
             <div class="tms-field">
-                <label><?php echo tms_t('lbl_email_address','Email Address'); ?> *</label>
-                <div class="tms-input-wrap"><i class="fa fa-envelope"></i><input type="email" name="EmailId" id="regEmailField" placeholder="your@email.com" required autocomplete="off" onblur="checkEmailLive(this.value)"></div>
-                <div id="emailCheckResult" style="font-size:12px;margin-top:4px;"></div>
+                <label for="regEmailField"><?php echo tms_t('lbl_email_address','Email Address'); ?> *</label>
+                <div class="tms-input-wrap"><i class="fa fa-envelope"></i><input type="email" name="EmailId" id="regEmailField" placeholder="your@email.com" required autocomplete="off" onblur="checkEmailLive(this.value)" aria-describedby="emailCheckResult"></div>
+                <div id="emailCheckResult" style="font-size:12px;margin-top:4px;" role="status"></div>
             </div>
             <div class="tms-field">
-                <label><?php echo tms_t('lbl_password','Password'); ?> *</label>
-                <div class="tms-input-wrap"><i class="fa fa-lock"></i><input type="password" name="Password" placeholder="<?php echo htmlspecialchars(tms_t('ph_min_6_chars','Minimum 6 characters'), ENT_QUOTES, 'UTF-8'); ?>" required minlength="6"></div>
+                <label for="signupPasswordField"><?php echo tms_t('lbl_password','Password'); ?> *</label>
+                <div class="tms-input-wrap"><i class="fa fa-lock"></i><input type="password" name="Password" id="signupPasswordField" placeholder="<?php echo htmlspecialchars(tms_t('ph_min_6_chars','Minimum 6 characters'), ENT_QUOTES, 'UTF-8'); ?>" required minlength="6"></div>
             </div>
             <div class="tms-field">
-                <label><?php echo tms_t('lbl_confirm_password','Confirm Password'); ?> *</label>
-                <div class="tms-input-wrap"><i class="fa fa-lock"></i><input type="password" name="CPassword" placeholder="<?php echo htmlspecialchars(tms_t('ph_repeat_password','Repeat your password'), ENT_QUOTES, 'UTF-8'); ?>" required minlength="6"></div>
+                <label for="signupCPasswordField"><?php echo tms_t('lbl_confirm_password','Confirm Password'); ?> *</label>
+                <div class="tms-input-wrap"><i class="fa fa-lock"></i><input type="password" name="CPassword" id="signupCPasswordField" placeholder="<?php echo htmlspecialchars(tms_t('ph_repeat_password','Repeat your password'), ENT_QUOTES, 'UTF-8'); ?>" required minlength="6"></div>
             </div>
             <button type="submit" name="submit" id="regSubmitBtn" class="tms-btn-modal" style="background:linear-gradient(135deg,var(--secondary),var(--primary));"><?php echo tms_t('btn_create_account','Create My Account'); ?> <i class="fa fa-arrow-right"></i></button>
         </form>
@@ -826,7 +833,40 @@ document.addEventListener('DOMContentLoaded', function() { tmsSyncThemeIcon(); }
 </script>
 
 <script>
-function openModal(id) { document.getElementById(id).classList.add('open'); document.body.style.overflow='hidden'; }
+// ACCESSIBILITY FIX (Round 55, master prompt item 32): these two functions
+// used to only toggle a CSS class -- no focus ever moved into the dialog
+// (a keyboard/screen-reader user who triggered "Sign In" heard/saw nothing
+// change), Tab could escape the open modal into the page behind it, and
+// closing never returned focus to whatever had opened it. role="dialog"/
+// aria-modal/aria-labelledby were also missing from the markup (see the
+// signinModal/signupModal divs above). Escape-to-close already existed
+// (the document-level keydown handler further down) and is left as-is.
+var tmsModalLastFocus = null;
+var tmsModalKeydownHandler = null;
+function tmsGetFocusable(container) {
+    return Array.prototype.slice.call(container.querySelectorAll(
+        'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+    )).filter(function(el){ return el.offsetParent !== null; });
+}
+function openModal(id) {
+    var modal = document.getElementById(id);
+    if (!modal || modal.classList.contains('open')) return;
+    tmsModalLastFocus = document.activeElement;
+    modal.classList.add('open');
+    document.body.style.overflow = 'hidden';
+    var box = modal.querySelector('.tms-modal-box') || modal;
+    var focusables = tmsGetFocusable(box);
+    (focusables[0] || box).focus();
+    tmsModalKeydownHandler = function(e) {
+        if (e.key !== 'Tab') return;
+        var items = tmsGetFocusable(box);
+        if (!items.length) return;
+        var first = items[0], last = items[items.length - 1];
+        if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+        else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+    };
+    document.addEventListener('keydown', tmsModalKeydownHandler);
+}
 (function(){
     var curSels = document.querySelectorAll('.tms-currency-select');
     if (!curSels.length) return;
@@ -923,17 +963,47 @@ function tmsSyncThemeIcon() {
 }
 tmsSyncThemeIcon();
 // Sign in modal / mega menu behaviour below ↓
-function closeModal(id) { document.getElementById(id).classList.remove('open'); document.body.style.overflow=''; }
+function closeModal(id) {
+    var modal = document.getElementById(id);
+    if (!modal || !modal.classList.contains('open')) return;
+    modal.classList.remove('open');
+    document.body.style.overflow = '';
+    if (tmsModalKeydownHandler) { document.removeEventListener('keydown', tmsModalKeydownHandler); tmsModalKeydownHandler = null; }
+    if (tmsModalLastFocus && typeof tmsModalLastFocus.focus === 'function') { tmsModalLastFocus.focus(); }
+    tmsModalLastFocus = null;
+}
+// ACCESSIBILITY FIX (Round 67, master prompt item 32): the mega-menu and
+// notification dropdown toggled a CSS class only -- their trigger buttons
+// never exposed open/closed state via aria-expanded (screen-reader users
+// had no way to know the menu was open at all, WCAG 4.1.2), and neither
+// had any keyboard way to close once open (the only close path was a
+// document-level *click* listener further below -- a keyboard user tabbing
+// past the menu just left it open, and Escape, which already closed the
+// sign-in/sign-up modals, did nothing for these two). Both gaps are fixed
+// together: aria-expanded is now kept in sync with the actual open state,
+// and Escape closes whichever of these is open and returns focus to its
+// trigger button (same "return focus to opener" courtesy the modal
+// open/closeModal() functions already give the sign-in dialog).
 function toggleMegaMenu(e) {
     e.stopPropagation();
     var menu = document.getElementById('featMegaMenu');
-    menu.classList.toggle('open');
+    var trigger = document.getElementById('featMegaTrigger');
+    var nowOpen = menu.classList.toggle('open');
+    if (trigger) trigger.setAttribute('aria-expanded', nowOpen ? 'true' : 'false');
+}
+function tmsCloseMegaMenu() {
+    var menu = document.getElementById('featMegaMenu');
+    var trigger = document.getElementById('featMegaTrigger');
+    if (menu) menu.classList.remove('open');
+    if (trigger) trigger.setAttribute('aria-expanded', 'false');
 }
 function tmsToggleNotif(e) {
     e.stopPropagation();
     var dd = document.getElementById('tmsNotifDropdown');
+    var bell = document.getElementById('tmsNotifBell');
     var wasOpen = dd.classList.contains('open');
-    dd.classList.toggle('open');
+    var nowOpen = dd.classList.toggle('open');
+    if (bell) bell.setAttribute('aria-expanded', nowOpen ? 'true' : 'false');
     if (!wasOpen) {
         // Mark as read the moment the visitor actually opens the dropdown
         var badge = document.querySelector('#tmsNotifBell .tms-notif-badge');
@@ -941,6 +1011,12 @@ function tmsToggleNotif(e) {
         document.querySelectorAll('.tms-notif-item.unread').forEach(function(el) { el.classList.remove('unread'); });
         fetch('mark-notifications-read.php', { method: 'POST' }).catch(function() {});
     }
+}
+function tmsCloseNotif() {
+    var dd = document.getElementById('tmsNotifDropdown');
+    var bell = document.getElementById('tmsNotifBell');
+    if (dd) dd.classList.remove('open');
+    if (bell) bell.setAttribute('aria-expanded', 'false');
 }
 function toggleMobileNav() {
     var nav = document.getElementById('tmsNavMenu');
@@ -951,14 +1027,19 @@ function toggleMobileNav() {
 document.addEventListener('click', function(e) {
     var dd = document.getElementById('featDropdown');
     var menu = document.getElementById('featMegaMenu');
-    if (menu && dd && !dd.contains(e.target)) menu.classList.remove('open');
+    if (menu && dd && !dd.contains(e.target)) tmsCloseMegaMenu();
 
     var notifWrap = document.getElementById('tmsNotifWrap');
     var notifDD = document.getElementById('tmsNotifDropdown');
-    if (notifDD && notifWrap && !notifWrap.contains(e.target)) notifDD.classList.remove('open');
+    if (notifDD && notifWrap && !notifWrap.contains(e.target)) tmsCloseNotif();
 });
 document.addEventListener('keydown', function(e) {
-    if (e.key === 'Escape') { closeModal('signinModal'); closeModal('signupModal'); }
+    if (e.key !== 'Escape') return;
+    closeModal('signinModal'); closeModal('signupModal');
+    var megaOpen = document.getElementById('featMegaMenu') && document.getElementById('featMegaMenu').classList.contains('open');
+    var notifOpen = document.getElementById('tmsNotifDropdown') && document.getElementById('tmsNotifDropdown').classList.contains('open');
+    if (megaOpen) { tmsCloseMegaMenu(); var t = document.getElementById('featMegaTrigger'); if (t) t.focus(); }
+    if (notifOpen) { tmsCloseNotif(); var b = document.getElementById('tmsNotifBell'); if (b) b.focus(); }
 });
 // Sticky nav shadow on scroll
 window.addEventListener('scroll', function() {
@@ -1042,9 +1123,21 @@ window.onload = function(){ openModal('signupModal'); };
 .tms-toast.info    i.tms-toast-icon { color: var(--primary, #0F4C81); }
 .tms-toast span { flex: 1; }
 .tms-toast .tms-toast-close {
-    cursor: pointer; opacity: 0.4; font-size: 12px; margin-top: 2px;
+    /* ACCESSIBILITY FIX (Round 67, master prompt item 32): this was a bare
+       <span onclick=...> -- no tabindex, no keyboard handler, no role, no
+       accessible name beyond a raw "×" glyph (WCAG 2.1.1/4.1.2), and at
+       font-size:12px with no padding it also failed the 24×24px minimum
+       touch-target size (WCAG 2.5.8). Now a real <button> (native
+       keyboard/AT semantics for free) with an aria-label and an explicit
+       24×24 hit area; visually unchanged otherwise (background/border
+       reset, same "×" glyph, same dimming/hover treatment). */
+    all: unset; cursor: pointer; opacity: 0.4;
+    display: flex; align-items: center; justify-content: center;
+    width: 24px; height: 24px; min-width: 24px; margin-top: -3px;
+    font-size: 15px; line-height: 1;
 }
-.tms-toast .tms-toast-close:hover { opacity: 0.8; }
+.tms-toast .tms-toast-close:hover, .tms-toast .tms-toast-close:focus-visible { opacity: 0.8; }
+.tms-toast .tms-toast-close:focus-visible { outline: 2px solid var(--accent, #FF6B45); outline-offset: 1px; border-radius: 4px; }
 @keyframes tmsToastIn { from { opacity: 0; transform: translateX(30px); } to { opacity: 1; transform: translateX(0); } }
 @keyframes tmsToastOut { from { opacity: 1; } to { opacity: 0; transform: translateX(30px); } }
 html[data-theme="dark"] .tms-toast { background: #1a2535; color: #e2e8f0; }
@@ -1084,7 +1177,7 @@ function tmsToast(message, type) {
     var el = document.createElement('div');
     el.className = 'tms-toast ' + type;
     el.setAttribute('role', 'status');
-    el.innerHTML = '<i class="fa ' + icons[type] + ' tms-toast-icon"></i><span></span><span class="tms-toast-close">&times;</span>';
+    el.innerHTML = '<i class="fa ' + icons[type] + ' tms-toast-icon"></i><span></span><button type="button" class="tms-toast-close" aria-label="Dismiss notification">&times;</button>';
     el.querySelector('span').textContent = message; // textContent, not innerHTML — message may contain user input
     var remove = function() {
         el.style.animation = 'tmsToastOut 0.2s ease-in forwards';

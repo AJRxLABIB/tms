@@ -1,24 +1,7 @@
 <?php
-/**
- * pay-now.php — lets a signed-in user pay for an already-existing Pending/
- * unpaid booking from tour-history.php, using the same payment.php flow
- * checkout.php uses for a brand-new booking. Ownership is verified before
- * anything else happens (Rule 44 -- no IDOR via a guessed booking_id).
- */
-require('includes/config.php');
-tms_require_user();
-tms_csrf_validate();
-
-$email = $_SESSION['login'];
-$bookingId = (int)($_POST['booking_id'] ?? 0);
-
-if ($bookingId > 0) {
-    $check = $dbh->prepare("SELECT BookingId FROM tblbooking WHERE BookingId = :id AND UserEmail = :email");
-    $check->execute([':id' => $bookingId, ':email' => $email]);
-    if ($check->fetchColumn()) {
-        $_SESSION['pending_payment_booking_ids'] = [$bookingId];
-    }
-}
-
-header('Location: payment.php');
-exit;
+// This page's real implementation now lives in frontend/pay-now.php.
+// Kept here as a thin pass-through so the public URL (/pay-now.php), and every
+// asset reference, redirect, fetch() call, sitemap entry, and robots.txt
+// rule that already points at it, all keep working unchanged (Rule 2:
+// never break a working feature). See SESSION_SUMMARY_INDEX-1.md, Round 50.
+require __DIR__ . '/frontend/pay-now.php';

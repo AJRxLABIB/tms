@@ -14,7 +14,7 @@ include('includes/config.php');
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@700;800&display=swap" rel="stylesheet">
 <link href="css/font-awesome.min2.css" rel="stylesheet">
 <link href="css/bootstrap.min.css" rel="stylesheet">
-<link href="css/admin-v6.css" rel="stylesheet">
+<link href="<?php echo tms_asset_ver('css/admin-v6.css'); ?>" rel="stylesheet">
 </head>
 <body>
 <div class="tms-shell">
@@ -56,12 +56,19 @@ if(isset($_POST['submit']))
         $allowed = ['jpg','jpeg','png','gif','webp'];
         $ext = strtolower(pathinfo($_FILES['packageimage']['name'], PATHINFO_EXTENSION));
         $maxSize = 5 * 1024 * 1024;
+        $sigCheck = ['ok' => true, 'error' => null];
+        if (in_array($ext, $allowed, true) && ($_FILES['packageimage']['error'] ?? null) === UPLOAD_ERR_OK) {
+            $sigCheck = tms_validate_upload_signature($_FILES['packageimage']['tmp_name'], $allowed);
+        }
+
         if (!in_array($ext, $allowed, true)) {
             $error = 'Only JPG, JPEG, PNG, GIF, WEBP images allowed.';
         } elseif ($_FILES['packageimage']['size'] > $maxSize) {
             $error = 'Image must be under 5 MB.';
         } elseif ($_FILES['packageimage']['error'] !== UPLOAD_ERR_OK) {
             $error = 'Upload failed. Please try again.';
+        } elseif (!$sigCheck['ok']) {
+            $error = $sigCheck['error'];
         } else {
             $uploadDir = 'pacakgeimages/'; // keep existing folder name
             if (!is_dir($uploadDir)) mkdir($uploadDir, 0755, true);
@@ -73,6 +80,8 @@ if(isset($_POST['submit']))
             $query->bindParam(':imgid', $imgid, PDO::PARAM_STR);
             $query->bindParam(':pimage', $pimage, PDO::PARAM_STR);
             $query->execute();
+            // Audit log coverage (Round 52).
+            tms_log_activity($dbh, $_SESSION['alogin'], 'Package Image Changed', "PackageId=$imgid, File: $pimage");
             $msg = "Package image updated successfully.";
         }
     }

@@ -54,6 +54,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'], $_POST['id'
                  <p>You can view it anytime from <strong>My Marketplace Bookings</strong>.</p>"
             );
             $msg = "$label booking #$code confirmed."; $msgType = 'success';
+            // Audit log coverage (Round 52).
+            tms_log_activity($dbh, $_SESSION['alogin'], "Marketplace $label Booking Confirmed", "BookingId=$bid");
             break;
         case 'cancel':
             $dbh->prepare("UPDATE $table SET status=2 WHERE BookingId=:id")->execute([':id' => $bid]);
@@ -65,10 +67,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'], $_POST['id'
                  <p>If you weren't expecting this or have questions, please reach out to TMS support.</p>"
             );
             $msg = "$label booking #$code cancelled."; $msgType = 'success';
+            tms_log_activity($dbh, $_SESSION['alogin'], "Marketplace $label Booking Cancelled", "BookingId=$bid");
             break;
         case 'delete':
             $dbh->prepare("DELETE FROM $table WHERE BookingId=:id")->execute([':id' => $bid]);
             $msg = "$label booking #$code deleted."; $msgType = 'success';
+            tms_log_activity($dbh, $_SESSION['alogin'], "Marketplace $label Booking Deleted", "BookingId=$bid");
             break;
     }
 }
@@ -174,7 +178,7 @@ $statusIcon  = [0 => 'fa-clock-o', 1 => 'fa-check-circle', 2 => 'fa-times-circle
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Plus+Jakarta+Sans:wght@600;700;800&display=swap" rel="stylesheet">
 <link href="css/font-awesome.css" rel="stylesheet">
 <link href="css/bootstrap.min.css" rel="stylesheet">
-<link href="css/admin-v6.css" rel="stylesheet">
+<link href="<?php echo tms_asset_ver('css/admin-v6.css'); ?>" rel="stylesheet">
 <style>
 .booking-status { display:inline-flex; align-items:center; gap:6px; padding:4px 10px; border-radius:20px; font-size:12px; font-weight:600; }
 .status-pending  { background:#fef3c7; color:#92400e; }

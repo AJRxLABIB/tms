@@ -60,12 +60,20 @@
         <div style="margin-bottom:13px;">
           <label style="font-size:11px;font-weight:700;color:#4a5568;text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:5px;">Password</label>
           <div style="position:relative;">
+            <!-- ACCESSIBILITY FIX (Round 69, WCAG 2.5.8 target size): this
+                 eye-toggle button (and its twin below, on Confirm Password)
+                 used to have padding:0 and no explicit box, so its
+                 clickable area was only the ~13px icon glyph itself --
+                 well under the 24px minimum on both axes. An explicit
+                 24x24 flex-centered box fixes this without moving the
+                 icon's visible position (right nudged from 10px to 4px to
+                 compensate for the wider box). -->
             <i class="fa fa-lock" style="position:absolute;left:11px;top:50%;transform:translateY(-50%);color:#a0aec0;font-size:13px;"></i>
             <input type="password" name="Password" id="suPass" placeholder="Min. 6 characters"
                    style="width:100%;padding:10px 32px 10px 32px;border:2px solid #e2e8f0;border-radius:8px;font-size:13px;outline:none;transition:.2s;"
                    onfocus="this.style.borderColor='#667eea'" onblur="this.style.borderColor='#e2e8f0'"
                    required minlength="6" maxlength="100">
-            <button type="button" onclick="suToggle('suPass',this)" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:none;color:#a0aec0;cursor:pointer;padding:0;font-size:13px;"><i class="fa fa-eye"></i></button>
+            <button type="button" onclick="suToggle('suPass',this)" style="position:absolute;right:4px;top:50%;transform:translateY(-50%);background:none;border:none;color:#a0aec0;cursor:pointer;padding:0;font-size:13px;width:24px;height:24px;display:flex;align-items:center;justify-content:center;"><i class="fa fa-eye"></i></button>
           </div>
         </div>
 
@@ -77,7 +85,7 @@
                    style="width:100%;padding:10px 32px 10px 32px;border:2px solid #e2e8f0;border-radius:8px;font-size:13px;outline:none;transition:.2s;"
                    onfocus="this.style.borderColor='#667eea'" onblur="this.style.borderColor='#e2e8f0'"
                    required minlength="6" maxlength="100">
-            <button type="button" onclick="suToggle('suCPass',this)" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:none;color:#a0aec0;cursor:pointer;padding:0;font-size:13px;"><i class="fa fa-eye"></i></button>
+            <button type="button" onclick="suToggle('suCPass',this)" style="position:absolute;right:4px;top:50%;transform:translateY(-50%);background:none;border:none;color:#a0aec0;cursor:pointer;padding:0;font-size:13px;width:24px;height:24px;display:flex;align-items:center;justify-content:center;"><i class="fa fa-eye"></i></button>
           </div>
         </div>
 

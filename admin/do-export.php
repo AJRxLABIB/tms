@@ -15,7 +15,7 @@ tms_admin_require_role($dbh, ['superadmin', 'finance']);
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Plus+Jakarta+Sans:wght@600;700;800&display=swap" rel="stylesheet">
 <link href="css/font-awesome.min2.css" rel="stylesheet">
 <link href="css/bootstrap.min.css" rel="stylesheet">
-<link href="css/admin-v6.css" rel="stylesheet">
+<link href="<?php echo tms_asset_ver('css/admin-v6.css'); ?>" rel="stylesheet">
 </head>
 <body>
 <div class="tms-shell">
@@ -29,6 +29,11 @@ tms_admin_require_role($dbh, ['superadmin', 'finance']);
 $type   = tms_clean($_GET['type']   ?? 'bookings');
 $format = tms_clean($_GET['format'] ?? 'csv');
 $data = []; $headers = [];
+
+// Audit log coverage (Round 52): a bulk export of user/booking/enquiry data
+// is exactly the kind of action an audit trail needs to cover -- it's a
+// real PII-bearing data extraction, not a read of a single record.
+tms_log_activity($dbh, $_SESSION['alogin'], 'Data Export', "type=$type, format=$format");
 
 if ($type === 'bookings') {
     $q = $dbh->query("SELECT b.BookingId,b.UserEmail,p.PackageName,b.FromDate,b.ToDate,

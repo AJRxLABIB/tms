@@ -41,7 +41,7 @@ if (PHP_SAPI !== 'cli') {
     die('This script is CLI-only.');
 }
 
-require __DIR__ . '/../includes/config.php';
+require __DIR__ . '/../backend/config.php';
 
 function tms_backup_log(PDO $dbh, string $status, string $filename, int $bytes, string $note): void {
     try {
@@ -107,11 +107,25 @@ $mysqldump = tms_env('MYSQLDUMP_PATH', '') ?: 'mysqldump';
 // process on the machine (e.g. `ps`/Task Manager) for as long as mysqldump
 // runs. File is written with owner-only-readable perms and removed in a
 // finally block even if the dump fails.
+// BUG FOUND BY ACTUALLY RUNNING THIS SCRIPT (Round 51, master prompt item
+// 60 -- "a backup is not tested until restoration is tested", and neither
+// half of this had ever actually been executed end-to-end before now):
+// MySQL/MariaDB option files treat an unquoted '#' as starting a comment
+// for the rest of the line. A DB_USER/DB_PASS/DB_HOST containing '#' (a
+// very ordinary character in a strong password) was silently truncated at
+// that point, so mysqldump authenticated with the wrong (truncated)
+// password and every backup quietly failed -- exactly the kind of bug
+// that stays invisible until the day a real backup is needed. Every value
+// is now wrapped in double quotes (still escaping backslash/embedded
+// double-quote first), which makes '#', ';', and whitespace all safe too.
+$escUser = str_replace(["\\", "\""], ["\\\\", "\\\""], DB_USER);
+$escPass = str_replace(["\\", "\""], ["\\\\", "\\\""], DB_PASS);
+$escHost = str_replace(["\\", "\""], ["\\\\", "\\\""], DB_HOST);
 $credFile = tempnam(sys_get_temp_dir(), 'tmsbkcred_');
 $credContent = "[client]\n"
-             . "user=" . DB_USER . "\n"
-             . "password=" . str_replace(["\\", "\""], ["\\\\", "\\\""], DB_PASS) . "\n"
-             . "host=" . DB_HOST . "\n";
+             . "user=\"" . $escUser . "\"\n"
+             . "password=\"" . $escPass . "\"\n"
+             . "host=\"" . $escHost . "\"\n";
 file_put_contents($credFile, $credContent);
 @chmod($credFile, 0600);
 
@@ -130,6 +144,12 @@ try {
 
     if ($exitCode !== 0 || !file_exists($dumpPath) || filesize($dumpPath) === 0) {
         $errorOutput = "mysqldump exited with code {$exitCode}. " . $errText;
+        // A failed/partial dump is still a plaintext file that may contain
+        // real data -- clean it up rather than leaving it sitting
+        // unencrypted in backups/ indefinitely (found during Round 51's
+        // first-ever real test run: two empty .sql files were left behind
+        // by earlier failed attempts and would otherwise never get removed).
+        @unlink($dumpPath);
     } else {
         // Encrypt: AES-256-GCM gives both confidentiality and integrity
         // (the auth tag catches any corruption/tampering on restore).

@@ -18,23 +18,48 @@
  *
  * Responses always: { success: bool, data: ..., meta: {...} } or
  * { success: false, error: "..." }. See API_DOCUMENTATION.md for full
- * request/response examples, auth details, and error codes.
+ * request/response examples, auth details, and error codes. A machine-
+ * readable spec covering every endpoint above lives in api/openapi.yaml
+ * (rendered at /api/docs.php).
  *
- * This is unversioned in the URL path (no /v1/ prefix) to avoid restructuring
- * the two things that already depend on this directory's layout (api/ai.php,
- * api/explore.php) — but every response carries "version":"1" in its meta so
- * a client can detect a future v2 without guessing. A real v2 would live
- * alongside this as api/v2/, not replace this file.
+ * VERSIONING (Round 71, master prompt item 42): this file is also reachable,
+ * unchanged, at the real path /api/v1/ -- api/v1/index.php contains nothing
+ * but a one-line `require` of this same file, so the two paths can never
+ * behave differently or drift apart, and api/ai.php / api/explore.php (the
+ * two siblings that would have broken under a real directory restructure)
+ * are completely untouched. Every response also still carries "version":"1"
+ * in its meta, plus a new "versioned_path" boolean confirming which path was
+ * actually hit. The legacy unversioned path keeps working exactly as before
+ * -- "do not break existing consumers" -- and is expected to keep working
+ * indefinitely; /v1/ is additive, not a replacement.
+ *
+ * RATE LIMITING (Round 71, master prompt item 42/44): every action is now
+ * throttled to 120 requests/60s per IP (bucket "api_global"), with a
+ * stricter 20/60s specifically on check_email (bucket "api_check_email",
+ * since it has no other abuse protection and is a plain account-
+ * enumeration oracle otherwise). Exceeding either returns 429. See
+ * tms_api_rate_limit_check() below.
  */
 
 session_start();
-require_once dirname(__DIR__) . '/includes/config.php';
+require_once dirname(__DIR__) . '/backend/config.php';
 
 header('Content-Type: application/json; charset=utf-8');
 header('X-Content-Type-Options: nosniff');
 
 // ─── Route ────────────────────────────────────────────────────────────────────
 $action = tms_clean($_GET['action'] ?? $_POST['action'] ?? '');
+
+// FEATURE (Round 71, master prompt item 42/44): a global per-IP request
+// throttle, applied to every action, plus a stricter one on check_email
+// specifically -- unlike login, it had zero abuse protection at all and
+// is a plain account-enumeration oracle (any email in, "available: true/
+// false" out) if hammered.
+$tmsApiClientIp = $_SERVER['REMOTE_ADDR'] ?? 'unknown';
+tms_api_rate_limit_check($dbh, 'api_global', $tmsApiClientIp, 120, 60);
+if ($action === 'check_email') {
+    tms_api_rate_limit_check($dbh, 'api_check_email', $tmsApiClientIp, 20, 60);
+}
 
 try {
     match ($action) {
@@ -57,7 +82,15 @@ try {
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 function api_json(array $payload, int $status = 200): void {
-    $payload['meta'] = ($payload['meta'] ?? []) + ['version' => '1'];
+    $payload['meta'] = ($payload['meta'] ?? []) + [
+        'version' => '1',
+        // Round 71: true when this request actually came in through the new
+        // /api/v1/ path (api/v1/index.php just requires this same file --
+        // see that file's own comment -- so both paths run identical code;
+        // this flag is purely informational, for a client or a log grep to
+        // confirm the versioned path is really being used).
+        'versioned_path' => (bool) (strpos($_SERVER['SCRIPT_NAME'] ?? '', '/v1/') !== false),
+    ];
     http_response_code($status);
     echo json_encode($payload, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
     exit;
@@ -65,6 +98,52 @@ function api_json(array $payload, int $status = 200): void {
 
 function api_error(int $status, string $message): void {
     api_json(['success' => false, 'error' => $message], $status);
+}
+
+/**
+ * Fixed-window per-(bucket,identifier) request counter (Round 71, master
+ * prompt item 42/44). Deliberately SQL-clock-only -- WindowStart is computed
+ * by MySQL's own NOW()/UNIX_TIMESTAMP(), never PHP's time() or date() --
+ * because Round 66 found a real ~4 hour PHP/MySQL clock disagreement in
+ * this environment; mixing the two clocks here would silently mis-bucket
+ * requests the same way it silently broke login-lockout timing before.
+ * Fails OPEN on any DB error (same philosophy as
+ * tms_login_lockout_minutes_remaining()) -- a broken limiter must never be
+ * able to take the whole API down.
+ */
+function tms_api_rate_limit_check(PDO $dbh, string $bucket, string $identifier, int $maxRequests, int $windowSeconds): void {
+    try {
+        $dbh->prepare(
+            "INSERT INTO tbl_api_rate_limit (Bucket, Identifier, WindowStart, RequestCount)
+             VALUES (:b, :i, FLOOR(UNIX_TIMESTAMP(NOW()) / :w), 1)
+             ON DUPLICATE KEY UPDATE RequestCount = RequestCount + 1"
+        )->execute([':b' => $bucket, ':i' => $identifier, ':w' => $windowSeconds]);
+
+        $q = $dbh->prepare(
+            "SELECT RequestCount FROM tbl_api_rate_limit
+             WHERE Bucket = :b AND Identifier = :i AND WindowStart = FLOOR(UNIX_TIMESTAMP(NOW()) / :w)
+             LIMIT 1"
+        );
+        $q->execute([':b' => $bucket, ':i' => $identifier, ':w' => $windowSeconds]);
+        $count = (int) $q->fetchColumn();
+
+        // Opportunistic cleanup (~1% of requests) so this table doesn't grow
+        // unbounded -- same "self-maintaining, no cron required" philosophy
+        // as the rest of this project's self-healing migrations.
+        if (mt_rand(1, 100) === 1) {
+            try {
+                $dbh->prepare(
+                    "DELETE FROM tbl_api_rate_limit WHERE WindowStart < FLOOR(UNIX_TIMESTAMP(NOW()) / :w) - 60"
+                )->execute([':w' => $windowSeconds]);
+            } catch (Exception $e) {}
+        }
+
+        if ($count > $maxRequests) {
+            api_error(429, 'Rate limit exceeded for this endpoint. Please slow down and try again shortly.');
+        }
+    } catch (Exception $e) {
+        error_log('[TMS API] Rate limit check failed (failing open): ' . $e->getMessage());
+    }
 }
 
 /**

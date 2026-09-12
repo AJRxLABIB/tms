@@ -61,23 +61,34 @@ define('TMS_MAX_LOYALTY_DISCOUNT', (int) tms_env('TMS_MAX_LOYALTY_DISCOUNT', 40)
 define('ANTHROPIC_API_KEY', GEMINI_API_KEY);
 define('ANTHROPIC_MODEL',   GEMINI_MODEL);
 
-// Diagnostic only — a valid Google AI Studio key normally starts with "AIza".
-// This does NOT block the app (some proxied/alternate key formats exist),
-// it just logs so "AI features silently return 503" isn't a total mystery.
-if (GEMINI_API_KEY === '') {
-    // FIX (Round 14): the diagnostic below only fired for a MALFORMED key, so the
-    // far more common "no .env at all" case logged nothing and every AI feature
-    // silently degraded to canned fallback text with no clue why.
-    error_log('[TMS Config] GEMINI_API_KEY is empty — every AI feature (chatbot, Explore '
-        . 'overview, AI Recommender, planner, packing assistant) will return its non-AI '
-        . 'fallback. Create a .env file in the project root containing GEMINI_API_KEY=... '
-        . '(get a free key at https://aistudio.google.com). See .env.example.');
-}
-if (GEMINI_API_KEY !== '' && !str_starts_with(GEMINI_API_KEY, 'AIza')) {
-    error_log('[TMS Config] GEMINI_API_KEY does not look like a standard Google AI Studio key '
-        . '(those normally start with "AIza"). If AI-powered features (Explore Mode overview, '
-        . 'AI Recommender, chatbots) are failing, regenerate a fresh key at '
-        . 'https://aistudio.google.com and update .env.');
+// Diagnostic only — gated to whichever provider AI_PROVIDER actually
+// selects (Round 34), so switching to OpenAI no longer logs a misleading
+// "GEMINI_API_KEY is empty" warning about a provider the site isn't using.
+if (AI_PROVIDER === 'openai') {
+    if (OPENAI_API_KEY === '') {
+        error_log('[TMS Config] AI_PROVIDER=openai but OPENAI_API_KEY is empty — every AI '
+            . 'feature (chatbot, Explore overview, AI Recommender, planner, packing assistant) '
+            . 'will return its non-AI fallback. Set OPENAI_API_KEY in .env. See .env.example.');
+    }
+} else {
+    // A valid Google AI Studio key normally starts with "AIza". This does
+    // NOT block the app (some proxied/alternate key formats exist), it just
+    // logs so "AI features silently return 503" isn't a total mystery.
+    if (GEMINI_API_KEY === '') {
+        // FIX (Round 14): the diagnostic below only fired for a MALFORMED key, so the
+        // far more common "no .env at all" case logged nothing and every AI feature
+        // silently degraded to canned fallback text with no clue why.
+        error_log('[TMS Config] GEMINI_API_KEY is empty — every AI feature (chatbot, Explore '
+            . 'overview, AI Recommender, planner, packing assistant) will return its non-AI '
+            . 'fallback. Create a .env file in the project root containing GEMINI_API_KEY=... '
+            . '(get a free key at https://aistudio.google.com). See .env.example.');
+    }
+    if (GEMINI_API_KEY !== '' && !str_starts_with(GEMINI_API_KEY, 'AIza')) {
+        error_log('[TMS Config] GEMINI_API_KEY does not look like a standard Google AI Studio key '
+            . '(those normally start with "AIza"). If AI-powered features (Explore Mode overview, '
+            . 'AI Recommender, chatbots) are failing, regenerate a fresh key at '
+            . 'https://aistudio.google.com and update .env.');
+    }
 }
 
 // ─── Weather Configuration (OpenWeatherMap — FREE, 1000 calls/day) ───────────
@@ -263,6 +274,7 @@ if (empty($_SESSION['tms_marketplace_tables'])) {
 _tms_repair_schema_drift($dbh);
 
 require_once __DIR__ . '/log-activity.php';
+require_once __DIR__ . '/system-events.php';
 require_once __DIR__ . '/i18n.php';
 
 // ══════════════════════════════════════════════════════════════════════════════
@@ -611,6 +623,25 @@ function _tms_repair_schema_drift(PDO $dbh): void {
         'highlights'        => 'highlights TEXT DEFAULT NULL',
         'is_suspicious'     => 'is_suspicious TINYINT(1) DEFAULT 0',
         'suspicious_reason' => 'suspicious_reason VARCHAR(255) DEFAULT NULL',
+    ]);
+    // Travel Modes (master prompt item 67): tbl_user_profile already existed
+    // (interests/budget_range/preferred_climate/travel_style) but nothing in
+    // the app ever wrote to it -- there was no settings UI at all (a real,
+    // separate gap from this one). travel_mode is a distinct concept from
+    // travel_style: it's the traveler-type preset (family/couple/solo/
+    // business/accessible) the master prompt names explicitly, used to
+    // adjust recommendation weighting and surfaced messaging, not a vague
+    // style tag. Nullable/no-preference by default -- never assumed.
+    tms_ensure_columns($dbh, 'tbl_user_profile', [
+        'travel_mode' => 'travel_mode VARCHAR(20) DEFAULT NULL',
+    ]);
+    // Personalization (master prompt item 23): tbl_user_profile already
+    // captured budget/climate/travel_mode/interests, but "food preferences"
+    // -- one of the spec's explicitly-named preference dimensions -- had no
+    // field anywhere. Nullable/no-preference by default, same as every
+    // other field here -- never assumed for a user who hasn't set one.
+    tms_ensure_columns($dbh, 'tbl_user_profile', [
+        'food_preference' => 'food_preference VARCHAR(30) DEFAULT NULL',
     ]);
     // RBAC (Phase 1b): existing installs have exactly one flat admin role.
     // Default every pre-existing admin row to 'superadmin' so nobody already
@@ -1106,6 +1137,63 @@ function _tms_run_core_migrations(PDO $dbh): void {
   `CreatedAt` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`), KEY `idx_group` (`GroupId`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4",
+
+// Round 64 (master prompt item 56, "MONITORING"): generic system-event log
+// for failure modes that had zero admin-visible tracking before -- see
+// backend/system-events.php's own docblock for why this is separate from
+// tbl_ai_telemetry/tblpayment_events/tblactivity_log rather than reusing one
+// of them.
+"CREATE TABLE IF NOT EXISTS `tbl_system_events` (
+  `id` INT(11) NOT NULL AUTO_INCREMENT,
+  `category` VARCHAR(30) NOT NULL,
+  `event_type` VARCHAR(60) NOT NULL,
+  `success` TINYINT(1) NOT NULL DEFAULT 0,
+  `message` VARCHAR(255) DEFAULT NULL,
+  `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `idx_sysevents_category` (`category`),
+  KEY `idx_sysevents_time` (`created_at`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4",
+
+// Round 66 (master prompt item 44, SECURITY): forgot-password.php used to
+// "verify" identity with only EmailId+MobileNumber -- both guessable/
+// obtainable facts, not secrets -- and reset the password in that same
+// request. Anyone who knew (or found) a customer's email and phone number
+// could take over their account with zero access to their inbox or phone.
+// Fixed the standard way: a single-use, random, time-limited token (same
+// shape as api/index.php's tblapi_tokens -- raw token emailed to the
+// account's registered address, only its SHA-256 hash stored here) that
+// must be presented before any password is changed.
+"CREATE TABLE IF NOT EXISTS `tbl_password_resets` (
+  `id` INT(11) NOT NULL AUTO_INCREMENT,
+  `UserEmail` VARCHAR(100) NOT NULL,
+  `TokenHash` VARCHAR(64) NOT NULL,
+  `ExpiresAt` TIMESTAMP NOT NULL,
+  `UsedAt` TIMESTAMP NULL DEFAULT NULL,
+  `CreatedAt` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uq_pwreset_token_hash` (`TokenHash`),
+  KEY `idx_pwreset_email` (`UserEmail`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4",
+
+// FEATURE (Round 71, master prompt item 42 "API architecture" + item 44
+// "rate limiting"/"API abuse"): api/index.php had zero request throttling
+// of its own -- the only protection any of its endpoints had was
+// tbl_login_attempts, and that only covers the `login` action. A fixed
+// window counter, entirely SQL-clock-driven (WindowStart computed via
+// MySQL's own NOW(), never PHP's time()/date() -- Round 66 found a real
+// ~4 hour PHP/MySQL clock disagreement in this environment, so any new
+// time-bucketed logic here has to stay SQL-only from the start).
+"CREATE TABLE IF NOT EXISTS `tbl_api_rate_limit` (
+  `id` INT(11) NOT NULL AUTO_INCREMENT,
+  `Bucket` VARCHAR(40) NOT NULL,
+  `Identifier` VARCHAR(100) NOT NULL,
+  `WindowStart` BIGINT NOT NULL,
+  `RequestCount` INT(11) NOT NULL DEFAULT 1,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uq_api_rl_bucket_id_window` (`Bucket`,`Identifier`,`WindowStart`),
+  KEY `idx_api_rl_window` (`WindowStart`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4",
     ];
 
     foreach ($tables as $sql) {
@@ -1294,6 +1382,7 @@ function _tms_run_ai_migrations(PDO $dbh): void {
   `budget_range` varchar(50) DEFAULT NULL,
   `preferred_climate` varchar(50) DEFAULT NULL,
   `travel_style` varchar(50) DEFAULT NULL,
+  `travel_mode` varchar(20) DEFAULT NULL,
   `updated_at` timestamp NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
   PRIMARY KEY (`id`), UNIQUE KEY `uq_profile_email` (`user_email`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4",
@@ -1989,7 +2078,14 @@ function tms_verify_password(string $plain, string $stored, ?int $recordId, PDO 
         }
         return true;
     }
-    if (strlen($stored) === 32 && $stored === md5($plain) && $recordId !== null) {
+    // FIX (Round 66, master prompt item 44, low-priority hardening): a plain
+    // === comparison of two hashes is a timing side-channel in theory (early
+    // exit on the first mismatched byte) -- unlikely to be practically
+    // exploitable over a network for a fixed-length MD5 hex string, but
+    // hash_equals() is the standard constant-time comparison for exactly
+    // this situation and costs nothing to use here, same as this file's own
+    // CSRF check (tms_csrf_validate() below) already does.
+    if (strlen($stored) === 32 && hash_equals($stored, md5($plain)) && $recordId !== null) {
         $dbh->prepare("UPDATE `$table` SET Password=? WHERE `$pkCol`=?")
             ->execute([tms_hash_password($plain), $recordId]);
         return true;
@@ -2261,6 +2357,111 @@ function tms_currency_js(): array {
 }
 
 /**
+ * NEW (Round 20, spec item 53 — SEO): echoes a canonical URL, OpenGraph
+ * tags, and an optional JSON-LD structured-data block, from whatever real
+ * data the caller has on hand — nothing here is invented if a field is
+ * missing (an empty/absent value is simply omitted from the output, never
+ * filled with a placeholder). Call once inside a page's own <head>, after
+ * its <title> tag; every page here builds its own <head> individually
+ * (there is no single shared head include), so this is opt-in per page
+ * rather than sitewide by default — only wired into the highest-SEO-value
+ * page types for now (destination listing, package details, blog posts),
+ * per the spec's own named examples. Extending it to the rest of the ~60
+ * page files is the same one-line pattern, just not done yet everywhere.
+ *
+ * @param array $o {
+ *   string $title        Required. Plain text page title (no site suffix).
+ *   string $description  Optional. Plain text description/summary.
+ *   string $image        Optional. Absolute or site-relative image URL.
+ *   string $type         Optional. og:type, default 'website'.
+ *   string $canonical    Optional. Absolute canonical URL; defaults to the
+ *                        current request's scheme+host+path (query string
+ *                        stripped, so filtered/paginated views canonicalize
+ *                        to their base page rather than each combination of
+ *                        filters counting as a separate page).
+ *   array  $jsonld       Optional. A pre-built schema.org array to emit as
+ *                        JSON-LD. Only pass fields backed by real data.
+ * }
+ */
+function tms_seo_meta(array $o): void {
+    $title = trim($o['title'] ?? '');
+    if ($title === '') return;
+
+    $scheme    = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
+    $host      = $_SERVER['HTTP_HOST'] ?? 'localhost';
+    $path      = strtok($_SERVER['REQUEST_URI'] ?? '/', '?');
+    $canonical = $o['canonical'] ?? ($scheme . '://' . $host . $path);
+    $description = trim($o['description'] ?? '');
+    $image     = trim($o['image'] ?? '');
+    $type      = $o['type'] ?? 'website';
+
+    echo '<link rel="canonical" href="' . htmlspecialchars($canonical, ENT_QUOTES, 'UTF-8') . '">' . "\n";
+    echo '<meta property="og:site_name" content="TMS">' . "\n";
+    echo '<meta property="og:type" content="' . htmlspecialchars($type, ENT_QUOTES, 'UTF-8') . '">' . "\n";
+    echo '<meta property="og:title" content="' . htmlspecialchars($title, ENT_QUOTES, 'UTF-8') . '">' . "\n";
+    echo '<meta property="og:url" content="' . htmlspecialchars($canonical, ENT_QUOTES, 'UTF-8') . '">' . "\n";
+
+    if ($description !== '') {
+        echo '<meta name="description" content="' . htmlspecialchars($description, ENT_QUOTES, 'UTF-8') . '">' . "\n";
+        echo '<meta property="og:description" content="' . htmlspecialchars($description, ENT_QUOTES, 'UTF-8') . '">' . "\n";
+    }
+    if ($image !== '') {
+        // Social crawlers don't run from this domain, so a site-relative
+        // path (e.g. "images/1.jpg") has to be resolved to absolute or the
+        // image simply won't load in the share preview.
+        if (!preg_match('#^https?://#i', $image)) {
+            $image = $scheme . '://' . $host . '/' . ltrim($image, '/');
+        }
+        echo '<meta property="og:image" content="' . htmlspecialchars($image, ENT_QUOTES, 'UTF-8') . '">' . "\n";
+    }
+    if (!empty($o['jsonld']) && is_array($o['jsonld'])) {
+        echo '<script type="application/ld+json">'
+            . json_encode($o['jsonld'], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE)
+            . '</script>' . "\n";
+    }
+}
+
+/**
+ * Cache-busting (master prompt item 49): appends a `?v=<mtime>` query
+ * string to a site-owned CSS/JS asset path, based on that file's real
+ * last-modified time on disk -- so a browser/CDN that has an old copy
+ * cached fetches the new one the moment the file actually changes on
+ * disk, without needing a manual version bump anywhere or an unconditional
+ * cache-buster that defeats caching entirely (e.g. appending time()).
+ *
+ * Resolves the asset relative to the CURRENTLY EXECUTING script's own
+ * directory (via $_SERVER['SCRIPT_FILENAME'], not this file's own
+ * __DIR__) so the same call works correctly whether it's made from a
+ * root-level page (css/modern-theme.css -> ./css/modern-theme.css) or an
+ * admin-level page (css/admin-v6.css -> admin/css/admin-v6.css) -- exactly
+ * how the browser itself resolves that same relative href/src.
+ *
+ * Deliberately scoped to this project's own, actively-edited theme
+ * stylesheets (css/modern-theme.css, admin/css/admin-v6.css) rather than
+ * every vendor/library asset (bootstrap, jquery, font-awesome) referenced
+ * across the site -- those are pinned bundle files that essentially never
+ * change in place, so cache-busting them adds no real benefit while
+ * multiplying the number of places this touches for no gain (Rule 73 --
+ * don't overengineer).
+ *
+ * @param string $relPath  Site-relative path as it already appears in the
+ *                          page's own href/src, e.g. 'css/modern-theme.css'.
+ * @return string           The same path with '?v=<mtime>' appended, or
+ *                          unchanged if the file can't be found on disk
+ *                          (fails open -- a missing asset shouldn't also
+ *                          break the page's markup).
+ */
+function tms_asset_ver(string $relPath): string {
+    $scriptDir = dirname($_SERVER['SCRIPT_FILENAME'] ?? __FILE__);
+    $full = $scriptDir . '/' . $relPath;
+    $mtime = @filemtime($full);
+    if ($mtime === false) {
+        return $relPath;
+    }
+    return $relPath . '?v=' . $mtime;
+}
+
+/**
  * ROOT-CAUSE FIX: normalizes "smart"/curly quote variants (as typed by iOS/
  * Word/Android autocorrect, e.g. U+2019 ' ) down to a plain ASCII apostrophe.
  * Search terms like "Cox's Bazar" typed with a curly apostrophe would not
@@ -2279,6 +2480,75 @@ function tms_normalize_quotes(string $val): string {
 
 function tms_validate_email(string $email): string {
     return filter_var(trim($email), FILTER_VALIDATE_EMAIL) ?: '';
+}
+
+/**
+ * File Upload Security (master prompt item 45): verifies an uploaded
+ * file's REAL content type via libmagic file-signature sniffing (PHP's
+ * finfo extension, backed by the same "magic bytes" database `file(1)`
+ * uses) -- never the client-supplied $_FILES[...]['type'], which the spec
+ * explicitly calls out as untrustworthy (it's just whatever the browser
+ * sent, trivially spoofable). This is what "actual file signature"
+ * validation means in practice: an attacker can rename a executable/script
+ * to "photo.jpg", but they can't make finfo's magic-byte scan of the
+ * file's real content lie about what it actually is.
+ *
+ * wallet.php already did exactly this (Round ?, its own docblock) for
+ * documents; this generalizes that one working pattern into a shared
+ * helper instead of each of the other 5 upload endpoints (reviews.php,
+ * admin/add-package.php, admin/change-image.php, admin/edit-package.php,
+ * admin/add-blog.php, admin/edit-blog.php) either re-implementing it
+ * slightly differently or skipping it entirely and trusting the file
+ * extension alone, which is exactly the gap this closes.
+ *
+ * @param string $tmpPath           $_FILES[...]['tmp_name'] -- must be a
+ *                                  real PHP-managed upload (checked via
+ *                                  is_uploaded_file()).
+ * @param array  $allowedExtensions Lowercase extensions this endpoint
+ *                                  accepts, e.g. ['jpg','jpeg','png','webp'].
+ * @return array{ok: bool, mime: ?string, error: ?string}
+ */
+function tms_validate_upload_signature(string $tmpPath, array $allowedExtensions): array {
+    static $extToMimes = [
+        'jpg'  => ['image/jpeg'],
+        'jpeg' => ['image/jpeg'],
+        'png'  => ['image/png'],
+        'gif'  => ['image/gif'],
+        'webp' => ['image/webp'],
+        'pdf'  => ['application/pdf'],
+    ];
+
+    if (!is_uploaded_file($tmpPath)) {
+        // Not a file PHP itself received via a real upload -- refuse
+        // outright rather than let something else feed this function an
+        // arbitrary server-side path.
+        return ['ok' => false, 'mime' => null, 'error' => 'Upload could not be verified.'];
+    }
+
+    $finfo = $tmpPath !== '' ? finfo_open(FILEINFO_MIME_TYPE) : false;
+    $realMime = $finfo ? finfo_file($finfo, $tmpPath) : false;
+    if ($finfo) finfo_close($finfo);
+
+    if ($realMime === false || $realMime === null || $realMime === '') {
+        return ['ok' => false, 'mime' => null, 'error' => "Could not verify this file's actual content type."];
+    }
+
+    $allowedMimes = [];
+    foreach ($allowedExtensions as $ext) {
+        $allowedMimes = array_merge($allowedMimes, $extToMimes[strtolower($ext)] ?? []);
+    }
+    $allowedMimes = array_values(array_unique($allowedMimes));
+
+    if (!in_array($realMime, $allowedMimes, true)) {
+        return [
+            'ok' => false,
+            'mime' => $realMime,
+            'error' => "This file's actual content ($realMime) doesn't match an allowed type for this upload -- "
+                . "renaming a file's extension doesn't change what it really is.",
+        ];
+    }
+
+    return ['ok' => true, 'mime' => $realMime, 'error' => null];
 }
 
 function tms_int(mixed $val, int $min = 0, int $max = PHP_INT_MAX): int {
@@ -2480,23 +2750,42 @@ const TMS_LOGIN_LOCKOUT_MINS  = 15;
  */
 function tms_login_lockout_minutes_remaining(PDO $dbh, string $email, string $ip): int {
     try {
+        // FIX (Round 66, master prompt item 44): this used to fetch
+        // MAX(CreatedAt) as a string and hand it to PHP's DateTime, then
+        // compare against PHP's own "now" (new DateTime()) -- correct only
+        // if PHP's configured timezone and the MySQL server's clock agree.
+        // Verified live on this environment that they don't (PHP's
+        // date.timezone is Europe/Berlin; MySQL's SELECT NOW() returned a
+        // time 4 hours ahead of PHP's), which was silently turning every
+        // real lockout into one lasting hours instead of
+        // TMS_LOGIN_LOCKOUT_MINS, and (found while building this round's
+        // password-reset token, which hit the exact same class of bug --
+        // see forgot-password.php) was the reason a freshly-issued,
+        // unexpired reset token could appear already expired. Fixed by
+        // computing the remaining time entirely in SQL, so both sides of
+        // the comparison (MAX(CreatedAt) and NOW()) come from the same
+        // MySQL clock and PHP's own timezone setting no longer matters.
+        // This connection uses PDO::ATTR_EMULATE_PREPARES => false (native
+        // prepares), which this MySQL driver does NOT support reusing the
+        // same named placeholder twice in one query for ("Invalid
+        // parameter number" -- confirmed live) -- so the interval is bound
+        // twice under two different names instead, both the same value.
         $stmt = $dbh->prepare(
-            "SELECT COUNT(*), MAX(CreatedAt) FROM tbl_login_attempts
-             WHERE (Email = :email OR IPAddress = :ip) AND CreatedAt > DATE_SUB(NOW(), INTERVAL :mins MINUTE)"
+            "SELECT COUNT(*), CEIL(TIMESTAMPDIFF(SECOND, NOW(), DATE_ADD(MAX(CreatedAt), INTERVAL :mins1 MINUTE)) / 60)
+             FROM tbl_login_attempts
+             WHERE (Email = :email OR IPAddress = :ip) AND CreatedAt > DATE_SUB(NOW(), INTERVAL :mins2 MINUTE)"
         );
         $stmt->bindValue(':email', $email);
         $stmt->bindValue(':ip', $ip);
-        $stmt->bindValue(':mins', TMS_LOGIN_LOCKOUT_MINS, PDO::PARAM_INT);
+        $stmt->bindValue(':mins1', TMS_LOGIN_LOCKOUT_MINS, PDO::PARAM_INT);
+        $stmt->bindValue(':mins2', TMS_LOGIN_LOCKOUT_MINS, PDO::PARAM_INT);
         $stmt->execute();
-        [$count, $lastAttempt] = $stmt->fetch(PDO::FETCH_NUM);
+        [$count, $minsLeft] = $stmt->fetch(PDO::FETCH_NUM);
 
-        if ((int)$count < TMS_LOGIN_MAX_ATTEMPTS || !$lastAttempt) {
+        if ((int)$count < TMS_LOGIN_MAX_ATTEMPTS || $minsLeft === null) {
             return 0;
         }
-        $unlockAt = (new DateTime($lastAttempt))->modify('+' . TMS_LOGIN_LOCKOUT_MINS . ' minutes');
-        $remaining = (new DateTime())->diff($unlockAt);
-        $minsLeft = (int)ceil(($remaining->days * 1440 + $remaining->h * 60 + $remaining->i));
-        return $unlockAt > new DateTime() ? max(1, $minsLeft) : 0;
+        return $minsLeft > 0 ? max(1, (int)$minsLeft) : 0;
     } catch (Exception $e) {
         error_log('[TMS Login] Lockout check failed: ' . $e->getMessage());
         return 0; // fail open — never lock people out due to an infra error
@@ -2722,6 +3011,7 @@ function tms_get_weather(PDO $dbh, float $lat, float $lng, string $label = ''): 
             // Open-Meteo path rather than giving up straight to simulated
             // seasonal averages, so a temporary OWM problem doesn't take
             // real weather away entirely.
+            tms_log_system_event($dbh, 'weather', 'openweathermap', false, 'empty/malformed current-weather response');
             return tms_get_weather_openmeteo($dbh, $lat, $lng, $label, $cacheKey, $tmsCache ?? null);
         }
 
@@ -2797,11 +3087,22 @@ function tms_get_weather(PDO $dbh, float $lat, float $lng, string $label = ''): 
             $tmsCache->set($cacheKey, $result, WEATHER_CACHE_TTL);
         }
 
+        // MONITORING (Round 72, master prompt item 56): a real success/
+        // latency signal for the "Weather" line on admin/system-health.php,
+        // which previously reported this provider as "not tracked" (only
+        // configured/not-configured, same as AI's own detailed telemetry
+        // now covers). Only logged on an actual live fetch, not a cache hit
+        // (the early `return $cachedData` above never reaches here) --
+        // matches how AI telemetry's own health-page query already filters
+        // to `cached = 0` so a cache hit can't flatter the numbers.
+        tms_log_system_event($dbh, 'weather', 'openweathermap', true);
+
     } catch (Throwable $e) {
         // Even an unexpected error from the OWM path falls back to the free API
         // rather than giving up on real weather entirely. (Throwable, not
         // Exception: PHP 8 throws ValueError/TypeError, which are Errors.)
         error_log('[TMS Weather] OpenWeatherMap path failed: ' . $e->getMessage());
+        tms_log_system_event($dbh, 'weather', 'openweathermap', false, $e->getMessage());
         return tms_get_weather_openmeteo($dbh, $lat, $lng, $label, $cacheKey, $tmsCache ?? null);
     }
 
@@ -2834,6 +3135,7 @@ function tms_get_weather_openmeteo(PDO $dbh, float $lat, float $lng, string $lab
         // number on weather.php and a fabricated "0°C" on compare.php.
         if (!$w || !isset($w['current']) || !isset($w['current']['temperature_2m'])) {
             if ($tmsCache) { $tmsCache->set($cacheKey, $result, 120); }
+            tms_log_system_event($dbh, 'weather', 'open-meteo', false, 'empty/malformed current-weather response');
             return $result;
         }
 
@@ -2879,6 +3181,7 @@ function tms_get_weather_openmeteo(PDO $dbh, float $lat, float $lng, string $lab
     } catch (Throwable $e) {
         error_log('[TMS Weather] Open-Meteo path failed: ' . $e->getMessage());
         $result = ['ok' => false, 'error' => 'exception'];
+        tms_log_system_event($dbh, 'weather', 'open-meteo', false, $e->getMessage());
     }
     // FIX (Round 14): failures used to be left uncached, so during an outage
     // EVERY page load re-attempted the call — up to 6s each, and compare.php
@@ -2887,6 +3190,15 @@ function tms_get_weather_openmeteo(PDO $dbh, float $lat, float $lng, string $lab
     // negative TTL keeps the site responsive while an API is down.
     if (!$result['ok'] && $tmsCache) {
         $tmsCache->set($cacheKey, $result, 120);
+    }
+    // MONITORING (Round 72, master prompt item 56): logs the success case
+    // here (the two failure branches above already logged their own, more
+    // specific message and return early via their own `return`, so this
+    // line is only reached, for a failure, by nothing -- it's success-only
+    // in practice, but guarded on $result['ok'] to stay correct if a future
+    // edit adds another path through this function).
+    if ($result['ok']) {
+        tms_log_system_event($dbh, 'weather', 'open-meteo', true);
     }
     return $result;
 }

@@ -22,7 +22,7 @@ if (PHP_SAPI !== 'cli') {
     die('This script is CLI-only.');
 }
 
-require __DIR__ . '/../includes/config.php';
+require __DIR__ . '/../backend/config.php';
 
 const WINDOWS = [30, 7]; // days-before-expiry checkpoints, furthest first
 

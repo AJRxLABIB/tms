@@ -16,7 +16,7 @@ tms_admin_require_role($dbh, ['package_manager', 'manager']); // Round 20 RBAC (
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Plus+Jakarta+Sans:wght@600;700;800&display=swap" rel="stylesheet">
 <link href="css/font-awesome.css" rel="stylesheet">
 <link href="css/bootstrap.min.css" rel="stylesheet">
-<link href="css/admin-v6.css" rel="stylesheet">
+<link href="<?php echo tms_asset_ver('css/admin-v6.css'); ?>" rel="stylesheet">
 <style>
 .page-title-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;flex-wrap:wrap;gap:12px;}
 .page-title-row h2{font-family:'Plus Jakarta Sans',sans-serif;font-size:22px;font-weight:800;color:#0f172a;margin:0;}
@@ -45,7 +45,12 @@ $msg=''; $msgType='';
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'delete' && isset($_POST['id'])) {
     tms_csrf_validate();
     $pid=(int)$_POST['id'];
+    $delName = $dbh->prepare("SELECT PackageName FROM tbltourpackages WHERE PackageId=:id");
+    $delName->execute([':id'=>$pid]);
+    $delName = $delName->fetchColumn();
     $dbh->prepare("DELETE FROM tbltourpackages WHERE PackageId=:id")->execute([':id'=>$pid]);
+    // Audit log coverage (Round 52).
+    tms_log_activity($dbh, $_SESSION['alogin'], 'Package Deleted', "PackageId=$pid" . ($delName ? ", Name: \"$delName\"" : ''));
     $msg="Package deleted."; $msgType='success';
 }
 try{
@@ -72,9 +77,16 @@ try{
     $pq->bindValue(':off', $offset, PDO::PARAM_INT);
     $pq->execute();
     $packages = $pq->fetchAll(PDO::FETCH_OBJ);
-}catch(Exception $e){ $packages=[]; $total=0; $totalPages=1; $page=1; }
+}catch(Exception $e){
+    // Master prompt item 62 (error/empty/loading states): see the identical
+    // fix/comment in manage-users.php -- a real DB failure was previously
+    // indistinguishable from a genuinely-empty package table.
+    $packages=[]; $total=0; $totalPages=1; $page=1;
+    $msg = "Error loading packages: " . $e->getMessage();
+    $msgType = 'error';
+}
 ?>
-<?php if($msg): ?><div class="alert-msg alert-<?=$msgType?>"><i class="fa fa-check-circle"></i><?=htmlspecialchars($msg)?></div><?php endif; ?>
+<?php if($msg): ?><div class="alert-msg alert-<?=$msgType?>"><i class="fa fa-<?=$msgType==='success'?'check-circle':'exclamation-circle'?>"></i><?=htmlspecialchars($msg)?></div><?php endif; ?>
 <div style="margin-bottom:16px;display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px;">
     <a href="add-package.php" class="btn-v6 primary"><i class="fa fa-plus"></i> Add New Package</a>
     <form method="get" style="display:flex;gap:6px;">

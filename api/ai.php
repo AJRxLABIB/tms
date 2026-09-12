@@ -20,18 +20,18 @@
  */
 
 session_start();
-require_once dirname(__DIR__) . '/includes/config.php';
-require_once dirname(__DIR__) . '/includes/ai/AIClient.php';
-require_once dirname(__DIR__) . '/includes/ai/TravelRecommender.php';
-require_once dirname(__DIR__) . '/includes/ai/ItineraryPlanner.php';
-require_once dirname(__DIR__) . '/includes/ai/TripCopilot.php';
-require_once dirname(__DIR__) . '/includes/ai/BudgetOptimizer.php';
-require_once dirname(__DIR__) . '/includes/ai/PackageGenerator.php';
-require_once dirname(__DIR__) . '/includes/ai/CrowdPredictor.php';
-require_once dirname(__DIR__) . '/includes/SustainabilityCalculator.php';
-require_once dirname(__DIR__) . '/includes/FlightTracker.php';
-require_once dirname(__DIR__) . '/includes/ai/SiteAssistant.php';
-require_once dirname(__DIR__) . '/includes/ai/NLSearchParser.php';
+require_once dirname(__DIR__) . '/backend/config.php';
+require_once dirname(__DIR__) . '/backend/ai/AIClient.php';
+require_once dirname(__DIR__) . '/backend/ai/TravelRecommender.php';
+require_once dirname(__DIR__) . '/backend/ai/ItineraryPlanner.php';
+require_once dirname(__DIR__) . '/backend/ai/TripCopilot.php';
+require_once dirname(__DIR__) . '/backend/ai/BudgetOptimizer.php';
+require_once dirname(__DIR__) . '/backend/ai/PackageGenerator.php';
+require_once dirname(__DIR__) . '/backend/ai/CrowdPredictor.php';
+require_once dirname(__DIR__) . '/backend/SustainabilityCalculator.php';
+require_once dirname(__DIR__) . '/backend/FlightTracker.php';
+require_once dirname(__DIR__) . '/backend/ai/SiteAssistant.php';
+require_once dirname(__DIR__) . '/backend/ai/NLSearchParser.php';
 
 header('Content-Type: application/json; charset=utf-8');
 header('X-Content-Type-Options: nosniff');
@@ -216,7 +216,7 @@ function handleChatbot(PDO $dbh, string $email): void {
 
     if (!$result['success']) {
         // The frontend falls back to its local rule-based responder — and now
-        // tells the visitor that's what happened (see includes/chatbot.php).
+        // tells the visitor that's what happened (see backend/chatbot.php).
         apiError(503, $result['error'] ?: 'AI assistant temporarily unavailable.');
     }
 
