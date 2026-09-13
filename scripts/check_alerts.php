@@ -29,6 +29,12 @@ if (PHP_SAPI !== 'cli') {
 require __DIR__ . '/../backend/config.php';
 require __DIR__ . '/../backend/AlertService.php';
 
+// Rule 26 ("Track historical prices where legitimate data is available"):
+// snapshot today's price for every active package on the same cadence this
+// script already runs at, before checking alerts against it -- no separate
+// cron entry needed (Rule 73).
+$snapshotCount = tms_snapshot_all_package_prices($dbh);
+
 $result = tms_check_and_fire_alerts($dbh);
 
-echo date('c') . " check_alerts: fired {$result['price']} price alert(s), {$result['availability']} availability alert(s).\n";
+echo date('c') . " check_alerts: recorded {$snapshotCount} price snapshot(s), fired {$result['price']} price alert(s), {$result['availability']} availability alert(s).\n";

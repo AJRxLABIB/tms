@@ -1,6 +1,9 @@
 <?php
 require_once __DIR__ . '/PaymentProviderInterface.php';
 require_once __DIR__ . '/SandboxProvider.php';
+require_once __DIR__ . '/SslcommerzProvider.php';
+require_once __DIR__ . '/BkashProvider.php';
+require_once __DIR__ . '/NagadProvider.php';
 
 /**
  * PaymentService — the one place the rest of the app talks to for anything
@@ -26,11 +29,13 @@ class PaymentService
     public function getProvider(): PaymentProviderInterface
     {
         $configured = tms_env('PAYMENT_PROVIDER', 'sandbox');
-        // Real provider classes are intentionally not auto-loaded here yet --
-        // see includes/payments/SslcommerzProvider.php etc. Each one throws
-        // in its constructor unless real credentials are present, and none
-        // are configured in this project today (no merchant account exists),
-        // so defaulting to sandbox is the honest behavior, not a placeholder.
+        // The real provider classes (SslcommerzProvider/BkashProvider/
+        // NagadProvider, required at the top of this file since Round 56
+        // so handleWebhook() can construct them) each throw in their own
+        // constructor unless real credentials are present, and none are
+        // configured in this project today (no merchant account exists),
+        // so defaulting to sandbox here is the honest behavior, not a
+        // placeholder.
         return new SandboxProvider();
     }
 
@@ -121,8 +126,8 @@ class PaymentService
             $this->dbh->prepare("UPDATE tblbooking SET PaymentStatus='paid', status=1 WHERE BookingId=:bid")
                 ->execute([':bid' => $payment['BookingId']]);
             $this->dbh->prepare(
-                "INSERT INTO tblpayment_events(PaymentId, Provider, EventType, SignatureValid, Payload, ProcessedAt)
-                 VALUES(:pid, 'sandbox', 'sandbox.confirmed', 1, :payload, NOW())"
+                "INSERT INTO tblpayment_events(PaymentId, Provider, EventType, SignatureValid, ProcessingStatus, Payload, ProcessedAt)
+                 VALUES(:pid, 'sandbox', 'sandbox.confirmed', 1, 'processed', :payload, NOW())"
             )->execute([':pid' => $paymentId, ':payload' => json_encode(['booking_id' => $payment['BookingId']])]);
             $this->dbh->commit();
             return true;
@@ -217,37 +222,156 @@ class PaymentService
     }
 
     /**
-     * Entry point for real provider webhooks (Rule 43). Not reachable today
-     * since no real provider is configured, but the shape is here so wiring
-     * in a real provider later means writing that provider's
-     * verifyWebhook()/normalizeStatus() and pointing its callback URL here --
-     * not redesigning this method.
+     * Entry point for real provider webhooks (Rule 43). One shared
+     * implementation for every provider (sslcommerz/bkash/nagad) -- the
+     * per-provider files under backend/webhooks/ are thin dispatchers that
+     * just read the raw request and call this.
+     *
+     * What this guarantees regardless of which provider is calling:
+     *  - the event is logged (event/payload/signature/timestamp) BEFORE any
+     *    verification or business logic runs, so even a forged or malformed
+     *    request leaves an audit trail (Rule 43's "store: event, payload,
+     *    signature, timestamp, processing status, retry count");
+     *  - a provider's own redelivery retries (every major gateway retries a
+     *    webhook until it gets a 2xx) are recognized and NOT reprocessed,
+     *    via a dedup key on (Provider, ProviderEventId) -- Rule 43's "use
+     *    idempotency";
+     *  - nothing here ever marks a payment 'paid' from an unverified
+     *    request -- verifyWebhook() must return true first (Rule 43: "never
+     *    trust client-side success messages for payments").
+     *
+     * What this deliberately does NOT do: implement real signature
+     * verification for sslcommerz/bkash/nagad. Each provider's own
+     * verifyWebhook() (backend/payments/*.php) returns false unconditionally
+     * today because that requires that provider's real current documentation
+     * and a real secret to test against, neither of which exists for this
+     * project (no merchant account -- Rule 3/4). Wiring a real provider
+     * later means implementing that ONE method for real; this shared
+     * handler does not change.
+     *
+     * @param string $providerName 'sslcommerz' | 'bkash' | 'nagad'
+     * @param string $rawBody      exact request body bytes (php://input) --
+     *                             read before any $_POST access, since some
+     *                             providers sign the raw bytes and PHP's
+     *                             re-parsing would not preserve that.
+     * @param array  $headers      every inbound request header (getallheaders())
+     * @return array{status:int, body:array} HTTP status + JSON-able body for
+     *         the calling endpoint file to send back.
      */
-    public function handleWebhook(PaymentProviderInterface $provider, array $payload, array $headers): bool
+    public function handleWebhook(string $providerName, string $rawBody, array $headers): array
     {
-        $signatureValid = $provider->verifyWebhook($payload, $headers);
-
-        $this->dbh->prepare(
-            "INSERT INTO tblpayment_events(PaymentId, Provider, EventType, SignatureValid, Payload)
-             VALUES(:pid, :prov, :type, :valid, :payload)"
-        )->execute([
-            ':pid' => $payload['payment_id'] ?? null,
-            ':prov' => $provider->name(),
-            ':type' => $payload['event'] ?? 'unknown',
-            ':valid' => $signatureValid ? 1 : 0,
-            ':payload' => json_encode($payload),
-        ]);
-
-        if (!$signatureValid) {
-            error_log('[TMS Payments] Rejected webhook with invalid/unverifiable signature from ' . $provider->name());
-            return false;
+        $payload = json_decode($rawBody, true);
+        if (!is_array($payload)) {
+            $payload = [];
+            // Fall back to classic form-encoded callbacks (some gateways
+            // still POST application/x-www-form-urlencoded rather than JSON).
+            parse_str($rawBody, $payload);
         }
 
-        $status = $provider->normalizeStatus($payload);
-        // Real reconciliation logic (update tblpayments/tblbooking from a
-        // verified webhook) goes here once a real provider is actually
-        // configured; intentionally not built further blind, since it needs
-        // that provider's real payload shape to get right (Rule 3).
-        return true;
+        // Which header carries the signature is provider-specific (see
+        // class docblock above) -- this only captures *a* signature-looking
+        // header generically for the audit trail; it is never used to
+        // decide trust by itself.
+        $signature = null;
+        foreach ($headers as $hName => $hVal) {
+            if (preg_match('/sign(ature)?$/i', (string)$hName)) {
+                $signature = is_array($hVal) ? implode(',', $hVal) : (string)$hVal;
+                break;
+            }
+        }
+
+        $providerEventId = $payload['event_id'] ?? $payload['id'] ?? $payload['transactionId']
+            ?? $payload['tran_id'] ?? $payload['paymentID'] ?? null;
+        if (!$providerEventId) {
+            $providerEventId = 'sha256:' . hash('sha256', $rawBody);
+        }
+        $providerEventId = (string)$providerEventId;
+
+        try {
+            // Dedup first: has this exact event already been logged? If so
+            // this is a provider retry of a delivery we've already seen --
+            // acknowledge it the same way without reprocessing.
+            $existing = $this->dbh->prepare(
+                "SELECT EventId, ProcessingStatus FROM tblpayment_events WHERE Provider = :prov AND ProviderEventId = :peid LIMIT 1"
+            );
+            $existing->execute([':prov' => $providerName, ':peid' => $providerEventId]);
+            if ($dupe = $existing->fetch(PDO::FETCH_ASSOC)) {
+                return ['status' => 200, 'body' => ['status' => 'duplicate', 'already' => $dupe['ProcessingStatus']]];
+            }
+
+            // Log unconditionally, before verification -- a forged or
+            // malformed request still leaves a record.
+            $ins = $this->dbh->prepare(
+                "INSERT INTO tblpayment_events(PaymentId, Provider, ProviderEventId, EventType, SignatureValid, Signature, Payload, ProcessingStatus, RetryCount)
+                 VALUES(NULL, :prov, :peid, :etype, 0, :sig, :payload, 'received', 0)"
+            );
+            $ins->execute([
+                ':prov' => $providerName,
+                ':peid' => $providerEventId,
+                ':etype' => (string)($payload['event'] ?? $payload['type'] ?? 'unknown'),
+                ':sig' => $signature,
+                ':payload' => $rawBody !== '' ? $rawBody : json_encode($payload),
+            ]);
+            $eventId = (int)$this->dbh->lastInsertId();
+        } catch (PDOException $e) {
+            error_log("[TMS Webhooks] {$providerName}: failed to log inbound event -- " . $e->getMessage());
+            return ['status' => 500, 'body' => ['status' => 'error', 'message' => 'Could not record event.']];
+        }
+
+        // Real provider classes throw in their constructor until real
+        // credentials exist in .env (see PAYMENTS.md) -- that is the honest,
+        // current state for all three today, so this fails closed rather
+        // than pretending to verify anything.
+        try {
+            $provider = match ($providerName) {
+                'sslcommerz' => new SslcommerzProvider(),
+                'bkash' => new BkashProvider(),
+                'nagad' => new NagadProvider(),
+                default => null,
+            };
+        } catch (RuntimeException $e) {
+            $this->markWebhookEvent($eventId, 'failed');
+            error_log("[TMS Webhooks] {$providerName}: provider not configured -- " . $e->getMessage());
+            return ['status' => 503, 'body' => ['status' => 'error', 'message' => 'This payment provider is not configured on this server yet.']];
+        }
+
+        if ($provider === null) {
+            $this->markWebhookEvent($eventId, 'failed');
+            return ['status' => 404, 'body' => ['status' => 'error', 'message' => 'Unknown provider.']];
+        }
+
+        try {
+            $signatureValid = $provider->verifyWebhook($payload, $headers);
+            $this->dbh->prepare("UPDATE tblpayment_events SET SignatureValid = :v WHERE EventId = :id")
+                ->execute([':v' => $signatureValid ? 1 : 0, ':id' => $eventId]);
+
+            if (!$signatureValid) {
+                $this->markWebhookEvent($eventId, 'rejected');
+                error_log("[TMS Webhooks] {$providerName}: rejected webhook with invalid/unverifiable signature.");
+                return ['status' => 400, 'body' => ['status' => 'error', 'message' => 'Signature could not be verified.']];
+            }
+
+            // Real reconciliation (update tblpayments/tblbooking from a
+            // verified webhook) intentionally goes here once a real
+            // provider is actually configured and its normalizeStatus()/
+            // payload shape can be tested against real data -- not built
+            // further blind (Rule 3).
+            $status = $provider->normalizeStatus($payload);
+            $this->dbh->prepare("UPDATE tblpayment_events SET ProcessingStatus = 'processed', ProcessedAt = NOW() WHERE EventId = :id")
+                ->execute([':id' => $eventId]);
+
+            return ['status' => 200, 'body' => ['status' => 'ok']];
+        } catch (Throwable $e) {
+            $this->dbh->prepare("UPDATE tblpayment_events SET ProcessingStatus = 'failed', RetryCount = RetryCount + 1 WHERE EventId = :id")
+                ->execute([':id' => $eventId]);
+            error_log("[TMS Webhooks] {$providerName}: processing error -- " . $e->getMessage());
+            return ['status' => 500, 'body' => ['status' => 'error', 'message' => 'Internal error while processing webhook.']];
+        }
+    }
+
+    private function markWebhookEvent(int $eventId, string $status): void
+    {
+        $this->dbh->prepare("UPDATE tblpayment_events SET ProcessingStatus = :s WHERE EventId = :id")
+            ->execute([':s' => $status, ':id' => $eventId]);
     }
 }

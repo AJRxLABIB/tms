@@ -354,6 +354,54 @@ html[data-theme="dark"] .mt-sched-item{color:var(--text-muted) !important;}
                     <a href="tour-history.php" class="mt-link"><i class="fa fa-cog"></i> Manage Booking</a>
                 </div>
             </div>
+
+            <?php
+            // Round 83 (master prompt item 52 -- "PWA / Offline"): the spec
+            // names a specific list of things offline mode should prioritize
+            // for a trip -- itinerary, booking confirmation, tickets,
+            // emergency contacts, hotel information, packing list, selected
+            // documents, previously cached trip information. Everything in
+            // $offlineKitItems below is a real, already-working page for
+            // *this specific real booking* -- nothing fabricated, and E-Ticket
+            // is only offered when this booking is actually Confirmed
+            // (status==1), matching the same condition the E-Ticket link
+            // elsewhere on this page already uses. Not offered for a
+            // cancelled booking -- there's nothing meaningful to save offline
+            // for a trip that isn't happening.
+            $offlineKitItems = [];
+            if ($trip->status != 2) {
+                $offlineKitItems[] = ['url' => 'my-trip.php?id=' . (int)$trip->BookingId, 'label' => 'Trip Itinerary'];
+                if ((int)$trip->status === 1) {
+                    $offlineKitItems[] = ['url' => 'ticket.php?bkid=' . (int)$trip->BookingId, 'label' => 'E-Ticket / Booking Confirmation'];
+                }
+                $offlineKitItems[] = ['url' => 'emergency.php', 'label' => 'Emergency Contacts & Safety'];
+                $offlineKitItems[] = ['url' => 'wallet.php', 'label' => 'My Documents'];
+                $offlineKitItems[] = ['url' => 'packing-assistant.php', 'label' => 'Packing Assistant'];
+            }
+            ?>
+            <?php if ($offlineKitItems): ?>
+            <div class="mt-card" id="mtOfflineCard">
+                <h4><i class="fa fa-wifi"></i> Save This Trip for Offline</h4>
+                <p style="font-size:13px;color:#888;margin-bottom:12px;">
+                    Stores these real pages on this device so you can still open them with no signal:
+                </p>
+                <ul style="font-size:13px;color:#555;margin:0 0 14px;padding-left:20px;">
+                    <?php foreach ($offlineKitItems as $item): ?>
+                    <li><?php echo htmlspecialchars($item['label'], ENT_QUOTES, 'UTF-8'); ?></li>
+                    <?php endforeach; ?>
+                </ul>
+                <button type="button" class="mt-generate-btn" id="mtOfflineBtn" onclick="mtSaveOffline()">
+                    <i class="fa fa-download"></i> Save for Offline
+                </button>
+                <div id="mtOfflineStatus" style="font-size:12.5px;color:#888;margin-top:10px;"></div>
+                <p style="font-size:11.5px;color:#aaa;margin-top:10px;">
+                    Live features (payment, weather, AI Copilot, live chat) still need a
+                    connection and won't work offline -- only the pages above are saved as
+                    a snapshot of what they show right now.
+                </p>
+            </div>
+            <?php endif; ?>
+
             <?php if (($trip->PaymentStatus ?? 'unpaid') === 'unpaid' && $trip->status != 2): ?>
             <div class="mt-card">
                 <h4><i class="fa fa-credit-card"></i> Payment</h4>
@@ -407,6 +455,66 @@ function mtGenerateItinerary() {
             alert('Network error — please try again.');
         });
 }
+
+// Round 83 (master prompt item 52): talks to sw.js's message handler over a
+// MessageChannel so this page gets a real per-call reply instead of firing
+// postMessage() blind. Every URL in mtOfflineItems is real -- built
+// server-side above from this exact booking's own data, not invented here.
+<?php if ($offlineKitItems): ?>
+var mtOfflineItems = <?php echo json_encode($offlineKitItems, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE); ?>;
+var mtOfflineStorageKey = 'tms_offline_trip_<?php echo (int)$trip->BookingId; ?>';
+
+function mtSwMessage(msg) {
+    return new Promise(function (resolve, reject) {
+        if (!('serviceWorker' in navigator)) { reject(new Error('Service worker not supported in this browser.')); return; }
+        navigator.serviceWorker.ready.then(function (reg) {
+            if (!reg.active) { reject(new Error('No active service worker yet.')); return; }
+            var channel = new MessageChannel();
+            channel.port1.onmessage = function (e) { resolve(e.data); };
+            reg.active.postMessage(msg, [channel.port2]);
+        }).catch(reject);
+    });
+}
+
+function mtSaveOffline() {
+    var btn = document.getElementById('mtOfflineBtn');
+    var status = document.getElementById('mtOfflineStatus');
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fa fa-spinner fa-spin"></i> Saving…';
+    status.textContent = '';
+
+    mtSwMessage({ type: 'TMS_CACHE_TRIP', urls: mtOfflineItems.map(function (i) { return i.url; }) })
+        .then(function (res) {
+            var results = (res && res.results) || [];
+            var okCount = results.filter(function (r) { return r.ok; }).length;
+            btn.disabled = false;
+            if (okCount === mtOfflineItems.length) {
+                btn.innerHTML = '<i class="fa fa-check-circle"></i> Saved for Offline';
+                localStorage.setItem(mtOfflineStorageKey, String(Date.now()));
+                status.textContent = 'All ' + okCount + ' pages saved. Last saved: ' + new Date().toLocaleString();
+            } else {
+                btn.innerHTML = '<i class="fa fa-download"></i> Retry Save for Offline';
+                status.textContent = okCount + ' of ' + mtOfflineItems.length + ' pages saved -- some failed (check your connection and try again).';
+            }
+        })
+        .catch(function (err) {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fa fa-download"></i> Save for Offline';
+            status.textContent = 'Could not save for offline right now: ' + (err && err.message ? err.message : 'unknown error');
+        });
+}
+
+// On load, just reflect whatever this browser last recorded for this trip
+// (a hint, not a guarantee the cache entries are still there) -- clicking
+// the button always re-saves fresh regardless of this label.
+(function () {
+    var last = localStorage.getItem(mtOfflineStorageKey);
+    if (last) {
+        var status = document.getElementById('mtOfflineStatus');
+        if (status) { status.textContent = 'Last saved for offline: ' + new Date(parseInt(last, 10)).toLocaleString(); }
+    }
+})();
+<?php endif; ?>
 </script>
 
 <?php endif; ?>

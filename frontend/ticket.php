@@ -34,6 +34,21 @@ $passenger = $uq->fetchColumn() ?: $email;
 
 $notFound   = !$booking;
 $notReady   = $booking && (int)$booking->status !== 1;
+
+// Round 87 (item 7): show purchased add-ons on the e-ticket. Snapshotted rows
+// (Name/Price/Quantity at booking time — see tblbookingaddons), never a live
+// join back to tblpackageaddons, so this stays correct even if the add-on
+// catalog changes or an add-on is later removed.
+$bookingAddons = [];
+$bookingAddonTotal = 0;
+if ($booking) {
+    try {
+        $baq = $dbh->prepare("SELECT Name, Price, Quantity FROM tblbookingaddons WHERE BookingId=:bid ORDER BY Id ASC");
+        $baq->execute([':bid' => $bid]);
+        $bookingAddons = $baq->fetchAll(PDO::FETCH_OBJ);
+        foreach ($bookingAddons as $ba) { $bookingAddonTotal += (int)$ba->Price * (int)$ba->Quantity; }
+    } catch (Exception $e) { $bookingAddons = []; }
+}
 ?>
 <!DOCTYPE html>
 <html lang="<?php echo htmlspecialchars(tms_active_language(), ENT_QUOTES, 'UTF-8'); ?>">
@@ -188,16 +203,27 @@ $notReady   = $booking && (int)$booking->status !== 1;
 
         <div class="cost-box">
           <?php
-            $unitPrice = (float)$booking->PackagePrice;
+            // Round 84 (master prompt items 8/37 -- "never use floating-point
+            // arithmetic for money"): PackagePrice/TotalCost/DiscountApplied
+            // are all whole-currency-unit INT columns -- (int) is exact for
+            // the same real values (float) was carrying.
+            $unitPrice = (int)$booking->PackagePrice;
             $persons   = max(1, (int)($booking->NoOfPersons ?: 1));
-            $subtotal  = !empty($booking->TotalCost) ? (float)$booking->TotalCost + (float)($booking->DiscountApplied ?? 0) : $unitPrice * $persons;
-            $discount  = (float)($booking->DiscountApplied ?? 0);
-            $total     = !empty($booking->TotalCost) ? (float)$booking->TotalCost : max(0, $subtotal - $discount);
+            $discount  = (int)($booking->DiscountApplied ?? 0);
+            // Round 87: TotalCost now also includes $bookingAddonTotal (see
+            // package-details.php's submit2 handler), so it has to be backed
+            // out here too, or the add-ons' cost would silently get relabeled
+            // as part of the package subtotal.
+            $subtotal  = !empty($booking->TotalCost) ? (int)$booking->TotalCost + $discount - $bookingAddonTotal : $unitPrice * $persons;
+            $total     = !empty($booking->TotalCost) ? (int)$booking->TotalCost : max(0, $subtotal - $discount);
           ?>
           <div class="cost-row"><span>Package price × <?php echo $persons; ?> traveler(s)</span><span><?php echo tms_currency($subtotal); ?></span></div>
           <?php if ($discount > 0): ?>
           <div class="cost-row"><span>Discount <?php echo !empty($booking->CouponCode) ? '(' . htmlspecialchars($booking->CouponCode, ENT_QUOTES, 'UTF-8') . ')' : ''; ?></span><span>&minus; <?php echo tms_currency($discount); ?></span></div>
           <?php endif; ?>
+          <?php foreach ($bookingAddons as $ba): ?>
+          <div class="cost-row"><span><?php echo htmlspecialchars($ba->Name, ENT_QUOTES, 'UTF-8'); ?><?php echo ((int)$ba->Quantity > 1 ? ' × ' . (int)$ba->Quantity : ''); ?></span><span><?php echo tms_currency((int)$ba->Price * (int)$ba->Quantity); ?></span></div>
+          <?php endforeach; ?>
           <div class="cost-row total"><span>Total Paid</span><span><?php echo tms_currency($total); ?></span></div>
         </div>
       </div>

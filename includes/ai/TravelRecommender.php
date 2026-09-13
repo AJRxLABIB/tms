@@ -298,7 +298,16 @@ Return: {\"score\": <int>, \"reason\": \"<string>\"}";
                 $rec['price']         = $pkgMap[$id]->PackagePrice;
                 $rec['duration']      = $pkgMap[$id]->PackageDuration;
                 $rec['avg_rating']    = $pkgMap[$id]->AvgRating;
-                $rec['package_url']   = "package-details.php?pid={$id}";
+                // Round 99 fix (items 19/31/66 audit): this used to read
+                // "?pid={$id}" -- package-details.php only ever reads
+                // $_GET['pkgid'] (never 'pid'), and tms_int($_GET['pkgid'] ??
+                // 0, 1) clamps a missing value to a MINIMUM of 1, not an
+                // error. That meant every "View & Book" click from the AI
+                // Travel Recommender silently landed on PackageId=1
+                // regardless of which package was actually recommended --
+                // confirmed live, not a hypothetical (see SESSION_SUMMARY_
+                // INDEX-1.md Round 99).
+                $rec['package_url']   = "package-details.php?pkgid={$id}";
             }
         }
         return $recommendations;
@@ -338,7 +347,11 @@ Return: {\"score\": <int>, \"reason\": \"<string>\"}";
                 'price'             => $pkg->PackagePrice,
                 'duration'          => $pkg->PackageDuration,
                 'avg_rating'        => $pkg->AvgRating ?? 4.0,
-                'package_url'       => "package-details.php?pid={$pkg->PackageId}",
+                // Round 99 fix: same "?pid=" -> "?pkgid=" bug as the AI path
+                // above -- this is the deterministic fallback used when the
+                // AI call is unavailable, so it had the identical broken
+                // link too.
+                'package_url'       => "package-details.php?pkgid={$pkg->PackageId}",
             ];
         }
         usort($results, fn($a,$b) => $b['overall_match'] <=> $a['overall_match']);

@@ -3,6 +3,29 @@
 $currentPage = basename($_SERVER['PHP_SELF']);
 ?>
 <script>
+// Round 61 (item 36, multilingual system): every page already renders the
+// correct <html lang="..."> server-side (tms_active_language()), but never
+// set a matching dir="rtl" for Arabic -- language.php's own language list
+// has carried dir=>'rtl' for Arabic since it was built, but nothing ever
+// read it back out at render time, so selecting Arabic translated every
+// string but silently kept the whole site's layout left-to-right (logo,
+// nav, buttons all stayed on their LTR sides -- confirmed live via
+// screenshot). Fixed here rather than in each of the ~70 individual page
+// files that each open their own <html> tag (touching all of them for one
+// attribute would be a lot of surface area for a single-line fix) --
+// this reads the lang the page already rendered and flips dir immediately,
+// using the same "first thing in <body>, before paint" placement already
+// used below for the dark-mode flash-prevention script, so there's no
+// flash of wrong direction either.
+(function(){
+    try {
+        if (document.documentElement.lang === 'ar') {
+            document.documentElement.dir = 'rtl';
+        }
+    } catch(e) {}
+})();
+</script>
+<script>
 // Applied before any visible markup renders (this is the first thing output
 // in <body>) so the correct theme is set with no flash-of-wrong-theme.
 (function(){
@@ -106,6 +129,7 @@ $currentPage = basename($_SERVER['PHP_SELF']);
                             <div class="tms-notif-time"><?php echo htmlspecialchars($n->CreatedAt, ENT_QUOTES, 'UTF-8'); ?></div>
                         </a>
                     <?php endforeach; endif; ?>
+                    <a href="notifications.php" class="tms-notif-viewall" style="display:block;text-align:center;padding:10px;font-size:12.5px;font-weight:600;color:var(--secondary);border-top:1px solid #eef1f6;">View all notifications</a>
                 </div>
             </div>
             <span class="tms-topbar-divider"></span>

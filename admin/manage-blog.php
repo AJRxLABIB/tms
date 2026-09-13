@@ -51,23 +51,36 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'delet
     $msg="Blog post deleted."; $msgType='success';
 }
 try{
-    $posts=$dbh->query("SELECT * FROM tblblog ORDER BY id DESC")->fetchAll(PDO::FETCH_OBJ);
+    // BUG FIX (caught while working on Round 82, master prompt item 54):
+    // this listing referenced $p->Author and $p->PostingDate, neither of
+    // which is a real tblblog column (the schema has AuthorId + CreatedAt) --
+    // so both always silently fell back to their '??' defaults ('Admin' /
+    // '—') regardless of the post's real author or date. Joining to admin
+    // the same way blog.php/blog-post.php already do surfaces the real
+    // values here too.
+    $posts=$dbh->query("SELECT b.*, a.UserName AS AuthorName FROM tblblog b LEFT JOIN admin a ON b.AuthorId=a.id ORDER BY b.id DESC")->fetchAll(PDO::FETCH_OBJ);
 }catch(Exception $e){ $posts=[]; }
 ?>
 <?php if($msg): ?><div class="alert-msg alert-<?=$msgType?>"><i class="fa fa-check-circle"></i><?=htmlspecialchars($msg)?></div><?php endif; ?>
 <div style="margin-bottom:16px;"><a href="add-blog.php" class="btn-v6 primary"><i class="fa fa-plus"></i> Add Blog Post</a></div>
 <div class="table-responsive">
 <table class="tms-table" style="font-size:13px;">
-  <thead><tr><th>#</th><th>Title</th><th>Author</th><th>Date</th><th>Actions</th></tr></thead>
+  <thead><tr><th>#</th><th>Title</th><th>Author</th><th>Published</th><th>Updated</th><th>Related</th><th>Actions</th></tr></thead>
   <tbody>
   <?php if(empty($posts)): ?>
-  <tr><td colspan="5" style="text-align:center;padding:40px;color:#94a3b8;">No blog posts yet. <a href="add-blog.php">Add one</a>.</td></tr>
+  <tr><td colspan="7" style="text-align:center;padding:40px;color:#94a3b8;">No blog posts yet. <a href="add-blog.php">Add one</a>.</td></tr>
   <?php else: $i=1; foreach($posts as $p): ?>
   <tr>
     <td><?=$i++?></td>
-    <td><?=htmlspecialchars($p->Title??$p->title??'—')?></td>
-    <td><?=htmlspecialchars($p->Author??$p->author??'Admin')?></td>
-    <td><?=$p->PostingDate??$p->created_at??'—'?></td>
+    <td><?=htmlspecialchars($p->Title??'—')?></td>
+    <td><?=htmlspecialchars($p->AuthorName??'Admin')?></td>
+    <td><?= !empty($p->CreatedAt) ? date('d M Y', strtotime($p->CreatedAt)) : '—' ?></td>
+    <td><?= !empty($p->UpdatedAt) ? date('d M Y', strtotime($p->UpdatedAt)) : '<span style="color:#c7c7c7;">—</span>' ?></td>
+    <td style="font-size:12px;">
+      <?php if (!empty($p->RelatedDestination)): ?><span style="display:inline-block;background:#eafaf1;color:#1a8754;padding:2px 8px;border-radius:12px;margin:0 4px 2px 0;"><?=htmlspecialchars($p->RelatedDestination)?></span><?php endif; ?>
+      <?php if (!empty($p->RelatedPackageId)): ?><span style="display:inline-block;background:#e3f2fd;color:#1976d2;padding:2px 8px;border-radius:12px;margin:0 4px 2px 0;">Pkg #<?=(int)$p->RelatedPackageId?></span><?php endif; ?>
+      <?php if (empty($p->RelatedDestination) && empty($p->RelatedPackageId)): ?><span style="color:#c7c7c7;">—</span><?php endif; ?>
+    </td>
     <td style="display:flex;gap:5px;">
       <a href="edit-blog.php?id=<?=$p->id?>" class="action-btn btn-edit"><i class="fa fa-edit"></i> Edit</a>
       <form method="post" style="display:contents"><input type="hidden" name="action" value="delete"><input type="hidden" name="id" value="<?=$p->id?>"><?php tms_csrf_field(); ?><button type="submit" class="action-btn btn-delete" onclick="return confirm('Delete this post?')"><i class="fa fa-trash"></i></button></form>

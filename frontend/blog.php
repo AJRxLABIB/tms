@@ -53,6 +53,10 @@ $blogSeoDesc  = $blogTotal > 0
 tms_seo_meta([
     'title'       => $blogSeoTitle,
     'description' => $blogSeoDesc,
+    'breadcrumbs' => [
+        ['label' => 'Home', 'url' => 'index.php'],
+        ['label' => 'Blog'],
+    ],
 ]);
 ?>
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -91,6 +95,10 @@ html[data-theme="dark"] .blog-body p { color: var(--text-muted) !important; }
   </div>
 </div>
 <div class="container" style="padding-bottom:50px;">
+<?php tms_render_breadcrumb_nav([
+    ['label' => 'Home', 'url' => 'index.php'],
+    ['label' => 'Blog'],
+]); ?>
 <?php if (count($posts) === 0): ?>
   <div style="text-align:center;padding:60px 0;color:#aaa;">
     <i class="fa fa-pencil-square-o" style="font-size:56px;"></i>

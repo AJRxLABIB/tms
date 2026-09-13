@@ -7,8 +7,13 @@ tms_require_user();
 $email = $_SESSION['login'];
 
 if (isset($_GET['remove'])) {
+    $removeId = tms_int($_GET['remove'], 1);
+    // Round 91: no FK CASCADE in this project's convention (see config.php's
+    // tblcartaddons comment), so a removed cart item's add-on selections
+    // must be cleared explicitly here or they'd silently orphan.
+    $dbh->prepare("DELETE FROM tblcartaddons WHERE CartId=:id")->execute([':id' => $removeId]);
     $dbh->prepare("DELETE FROM tblcart WHERE id=:id AND UserEmail=:e")
-        ->execute([':id' => tms_int($_GET['remove'], 1), ':e' => $email]);
+        ->execute([':id' => $removeId, ':e' => $email]);
     header('Location: cart.php');
     exit;
 }
@@ -28,10 +33,34 @@ foreach ($items as $it) {
     // cart (see package-details.php). Older cart rows added before this
     // column existed fall back to a fresh live calculation instead of the
     // flat base price, so dynamic pricing stays consistent everywhere.
+    // Round 84 (master prompt items 8/37 -- "never use floating-point
+    // arithmetic for money"): PackagePrice/DynamicPrice/TotalCost are all
+    // whole-currency-unit INT columns (no cents/paisa subunit in this
+    // schema) -- (int) is exact for the same real values (float) was
+    // carrying, without the theoretical risk the spec warns about.
     $it->EffectivePrice = ($it->DynamicPrice !== null)
-        ? (float)$it->DynamicPrice
-        : (float)tms_dynamic_price($dbh, (int)$it->PackageId, (float)$it->PackagePrice, $it->FromDate)['final'];
-    $total += $it->EffectivePrice * max(1, (int)$it->NoOfPersons);
+        ? (int)$it->DynamicPrice
+        : (int)tms_dynamic_price($dbh, (int)$it->PackageId, (float)$it->PackagePrice, $it->FromDate)['final'];
+
+    // Round 91 (items 10/81): add-ons selected via package-details.php's
+    // "Add to Cart" button. Read live from tblpackageaddons (not
+    // snapshotted -- see config.php's tblcartaddons comment for why), and
+    // silently skip any that were deactivated/deleted since being added --
+    // the same "don't crash, just don't charge for it" approach checkout.php
+    // already uses for an unpriced package.
+    $aq = $dbh->prepare(
+        "SELECT ca.Quantity, pa.Name, pa.Price
+         FROM tblcartaddons ca JOIN tblpackageaddons pa ON pa.AddOnId = ca.AddOnId
+         WHERE ca.CartId = :cid AND pa.IsActive = 1"
+    );
+    $aq->execute([':cid' => $it->id]);
+    $it->Addons = $aq->fetchAll(PDO::FETCH_OBJ);
+    $it->AddonTotal = 0;
+    foreach ($it->Addons as $ao) {
+        $it->AddonTotal += (int)$ao->Price * (int)$ao->Quantity;
+    }
+
+    $total += ($it->EffectivePrice * max(1, (int)$it->NoOfPersons)) + $it->AddonTotal;
 }
 ?>
 <!DOCTYPE HTML><html lang="<?php echo htmlspecialchars(tms_active_language(), ENT_QUOTES, 'UTF-8'); ?>"><head>
@@ -103,6 +132,15 @@ html[data-theme="dark"] .summary-row.total { color: var(--text) !important; }
           <?php elseif ($itSeatsLeft !== null && $itSeatsLeft <= 5): ?>
           <div class="meta" style="color:#b45309;font-weight:600;"><i class="fa fa-users"></i> Only <?php echo $itSeatsLeft; ?> seats left for this package</div>
           <?php endif; ?>
+          <?php if (!empty($it->Addons)): ?>
+          <div class="meta" style="margin-top:4px;">
+            <i class="fa fa-plus-circle"></i> Add-ons:
+            <?php foreach ($it->Addons as $ao): ?>
+              <?php echo htmlspecialchars($ao->Name, ENT_QUOTES, 'UTF-8'); ?><?php echo $ao->Quantity > 1 ? ' ×' . (int)$ao->Quantity : ''; ?><?php echo $ao !== end($it->Addons) ? ',' : ''; ?>
+            <?php endforeach; ?>
+            (<?php echo tms_currency($it->AddonTotal); ?>)
+          </div>
+          <?php endif; ?>
         </div>
         <?php /* FIX (Round 14): this showed the PER-PERSON price while the Total
                  multiplies by NoOfPersons — and the traveller count appeared nowhere
@@ -111,13 +149,19 @@ html[data-theme="dark"] .summary-row.total { color: var(--text) !important; }
                  overcharge. ticket.php already did this correctly. */
            $pax = max(1, (int)$it->NoOfPersons); ?>
         <div class="price">
-          <?php echo tms_currency((float)$it->EffectivePrice); ?>
+          <?php echo tms_currency((int)$it->EffectivePrice); ?>
           <div style="font-weight:400;font-size:12px;opacity:.75;">
             × <?php echo $pax; ?> traveller<?php echo $pax > 1 ? 's' : ''; ?>
             <?php if ($pax > 1): ?>
-              = <strong><?php echo tms_currency((float)$it->EffectivePrice * $pax); ?></strong>
+              = <strong><?php echo tms_currency((int)$it->EffectivePrice * $pax); ?></strong>
             <?php endif; ?>
           </div>
+          <?php if ($it->AddonTotal > 0): ?>
+          <div style="font-weight:400;font-size:12px;opacity:.75;">+ add-ons: <?php echo tms_currency($it->AddonTotal); ?></div>
+          <div style="font-weight:700;font-size:13px;border-top:1px solid #eee;margin-top:4px;padding-top:4px;">
+            <?php echo tms_currency(((int)$it->EffectivePrice * $pax) + $it->AddonTotal); ?>
+          </div>
+          <?php endif; ?>
         </div>
         <button class="cart-remove" onclick="if(confirm('Remove this item from your cart?')) window.location='cart.php?remove=<?php echo (int)$it->id; ?>'"><i class="fa fa-trash"></i></button>
       </div>

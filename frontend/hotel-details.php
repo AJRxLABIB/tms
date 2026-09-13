@@ -21,6 +21,19 @@ if (!$hotel) {
     exit;
 }
 
+// NEW (Round 80, master prompt item 12 -- Hotel System "reviews"
+// requirement): real reviews for this hotel, same pattern as
+// package-details.php's "Recent Reviews" section. See frontend/reviews.php
+// for the write flow (reviews.php?hotel=ID pre-selects this hotel).
+$hRevQ = $dbh->prepare("SELECT r.*, u.FullName as UserFullName
+    FROM tblreviews r LEFT JOIN tblusers u ON r.UserEmail=u.EmailId
+    WHERE r.HotelId=:hid AND r.Status=1 ORDER BY r.id DESC LIMIT 5");
+$hRevQ->execute([':hid' => $hotelId]);
+$hotelReviews = $hRevQ->fetchAll(PDO::FETCH_OBJ);
+$hrcQ = $dbh->prepare("SELECT COUNT(*) FROM tblreviews WHERE HotelId=:hid AND Status=1");
+$hrcQ->execute([':hid' => $hotelId]);
+$hotelReviewCount = (int)$hrcQ->fetchColumn();
+
 if (isset($_POST['book_hotel'])) {
     tms_csrf_validate();
     if (empty($_SESSION['login'])) {
@@ -109,6 +122,11 @@ tms_seo_meta([
     'description' => $hotelSeoDesc,
     'image'       => $hotel->HotelImage ?: '',
     'canonical'   => $hdScheme . '://' . $hdHost . $hdPath . '?id=' . (int)$hotelId,
+    'breadcrumbs' => [
+        ['label' => 'Home', 'url' => 'index.php'],
+        ['label' => 'Hotels', 'url' => 'hotels.php'],
+        ['label' => $hotel->HotelName],
+    ],
 ]);
 ?>
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -131,6 +149,9 @@ tms_seo_meta([
 .btn-book{background:var(--secondary);color:#fff;border:none;border-radius:7px;height:44px;padding:0 26px;font-weight:700;width:100%;margin-top:6px;}
 .alert-error{background:#fee2e2;color:#b91c1c;border:1px solid #fecaca;border-radius:8px;padding:12px 16px;margin-bottom:16px;}
 .alert-success{background:#d1fae5;color:#065f46;border:1px solid #a7f3d0;border-radius:8px;padding:12px 16px;margin-bottom:16px;}
+.review-mini{background:#f8f9fa;border-radius:8px;padding:14px;margin-bottom:12px;}
+.review-mini h6{font-size:13px;font-weight:700;color:#333;margin:0 0 4px;}
+.stars-sm{color:#f0ad4e;font-size:13px;}
 </style>
 </head>
 <body>
@@ -139,6 +160,11 @@ tms_seo_meta([
 <div class="banner-3"><div class="container"><h1 class="wow zoomIn animated" data-wow-delay=".1s"><?php echo htmlspecialchars($hotel->HotelName, ENT_QUOTES, 'UTF-8'); ?></h1></div></div>
 
 <div class="container" style="padding:30px 15px;">
+    <?php tms_render_breadcrumb_nav([
+        ['label' => 'Home', 'url' => 'index.php'],
+        ['label' => 'Hotels', 'url' => 'hotels.php'],
+        ['label' => $hotel->HotelName],
+    ]); ?>
     <div class="tms-sample-banner">
         <i class="fa fa-info-circle"></i> This is a <strong>sample/demo hotel listing</strong> used to showcase the TMS hotel marketplace feature -- not a real, live-supplier property. A booking here creates a real record in your account for demonstration purposes.
     </div>
@@ -155,12 +181,32 @@ tms_seo_meta([
                     <h1 style="margin-top:10px;"><?php echo htmlspecialchars($hotel->HotelName, ENT_QUOTES, 'UTF-8'); ?></h1>
                     <p><i class="fa fa-map-marker" style="color:#e74c3c"></i> <?php echo htmlspecialchars($hotel->City.', '.$hotel->Country, ENT_QUOTES, 'UTF-8'); ?></p>
                     <p><?php for ($s=1;$s<=5;$s++): ?><i class="fa fa-star<?php echo $s<=(int)$hotel->StarRating?'':'-o'; ?>" style="color:#f0ad4e;"></i><?php endfor; ?>
-                    &nbsp; <?php if ((float)$hotel->AvgRating>0): ?><span style="color:#888;font-size:13px;"><?php echo number_format((float)$hotel->AvgRating,1); ?>/5 guest rating</span><?php endif; ?></p>
+                    &nbsp; <?php if ((float)$hotel->AvgRating>0): ?><span style="color:#888;font-size:13px;"><?php echo number_format((float)$hotel->AvgRating,1); ?>/5 guest rating<?php if ($hotelReviewCount > 0): ?> (<?php echo $hotelReviewCount; ?> review<?php echo $hotelReviewCount===1?'':'s'; ?>)<?php endif; ?></span><?php endif; ?></p>
                     <p style="color:var(--text-muted);"><?php echo nl2br(htmlspecialchars($hotel->Description ?? '', ENT_QUOTES, 'UTF-8')); ?></p>
                     <p><i class="fa fa-list" style="color:#27ae60"></i> <strong>Amenities:</strong> <?php echo htmlspecialchars($hotel->Amenities ?? '', ENT_QUOTES, 'UTF-8'); ?></p>
                     <h3 style="color:var(--primary);margin-top:16px;"><?php echo tms_currency((float)$hotel->PricePerNight); ?> <span style="font-size:13px;color:#999;font-weight:400;">/night</span></h3>
                 </div>
             </div>
+
+            <!-- NEW (Round 80, master prompt item 12 -- "reviews"): same
+                 pattern as package-details.php's Recent Reviews card. -->
+            <?php if (count($hotelReviews) > 0): ?>
+            <div class="hd-wrap">
+                <div class="hd-body">
+                    <h4 style="font-weight:700;margin-bottom:16px;"><i class="fa fa-star" style="color:#f0ad4e"></i> Recent Reviews</h4>
+                    <?php foreach ($hotelReviews as $rev): ?>
+                    <div class="review-mini">
+                        <div style="display:flex;justify-content:space-between;align-items:center;">
+                            <h6><?php echo htmlspecialchars($rev->UserName, ENT_QUOTES, 'UTF-8'); ?></h6>
+                            <div class="stars-sm"><?php for ($i=1;$i<=5;$i++) echo $i<=$rev->Rating?'★':'☆'; ?></div>
+                        </div>
+                        <p style="font-size:13px;color:#666;margin:4px 0 0;"><?php echo htmlspecialchars(substr($rev->ReviewText,0,150), ENT_QUOTES, 'UTF-8'); ?>…</p>
+                    </div>
+                    <?php endforeach; ?>
+                    <a href="reviews.php?hotel=<?php echo $hotelId; ?>" style="font-size:13px;color:var(--secondary);">View all reviews <i class="fa fa-arrow-right"></i></a>
+                </div>
+            </div>
+            <?php endif; ?>
         </div>
         <div class="col-md-5">
             <div class="hd-wrap">
@@ -214,7 +260,11 @@ tms_seo_meta([
             </div>
         </div>
     </div>
-    <p style="margin-top:10px;"><a href="hotels.php"><i class="fa fa-arrow-left"></i> Back to Hotels</a></p>
+    <p style="margin-top:10px;">
+        <a href="hotels.php"><i class="fa fa-arrow-left"></i> Back to Hotels</a>
+        &nbsp;·&nbsp;
+        <a href="reviews.php?hotel=<?php echo $hotelId; ?>"><i class="fa fa-star"></i> Write a Review</a>
+    </p>
 </div>
 
 <?php include('backend/footer.php'); ?>

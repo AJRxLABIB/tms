@@ -374,9 +374,16 @@ function api_book(PDO $dbh): void {
     if ($rawPrice === null || (float)$rawPrice <= 0) {
         api_error(422, "This package doesn't have a price set yet and can't be booked.");
     }
-    $unitPrice = (float)$rawPrice;
+    // Round 84 (master prompt items 8/37 -- "never use floating-point
+    // arithmetic for money"): PackagePrice is a whole-currency-unit INT
+    // column -- (int) is exact for the same real values (float) was
+    // carrying. The coupon discount math just below still uses
+    // round(...,2) percentage arithmetic, unchanged here to stay mirrored
+    // with package-details.php's identical, pre-existing coupon logic
+    // (not touched this round -- Rule 73).
+    $unitPrice = (int)$rawPrice;
 
-    $subtotal = (float)$unitPrice * $persons;
+    $subtotal = $unitPrice * $persons;
     $discountAmt = 0.0;
     $couponCode  = null;
     $couponNote  = null;

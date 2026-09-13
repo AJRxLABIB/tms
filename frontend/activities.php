@@ -81,6 +81,10 @@ function activityPageUrl(int $p): string {
 tms_seo_meta([
     'title'       => 'Activities',
     'description' => 'Browse activities and tours by city, category, and price. Sample/demo listings for the TMS activities marketplace feature.',
+    'breadcrumbs' => [
+        ['label' => 'Home', 'url' => 'index.php'],
+        ['label' => 'Activities'],
+    ],
 ]);
 ?>
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -121,6 +125,10 @@ tms_seo_meta([
 
 <div class="rooms">
     <div class="container">
+        <?php tms_render_breadcrumb_nav([
+            ['label' => 'Home', 'url' => 'index.php'],
+            ['label' => 'Activities'],
+        ]); ?>
         <div class="tms-sample-banner wow fadeIn">
             <i class="fa fa-info-circle"></i> These activity listings are <strong>sample/demo data</strong> for showcasing the TMS activities marketplace feature -- not a live, real-world booking inventory from an actual tour operator. Bookings you make are recorded for demonstration purposes.
         </div>

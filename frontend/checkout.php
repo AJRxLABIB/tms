@@ -30,10 +30,34 @@ foreach ($items as $it) {
     // Use the price locked in at add-to-cart time (DynamicPrice) so what
     // was shown in the cart is exactly what gets charged here — falls back
     // to a fresh calc only for cart rows added before this column existed.
+    // Round 84 (master prompt items 8/37 -- "never use floating-point
+    // arithmetic for money"): PackagePrice/DynamicPrice/TotalCost are all
+    // whole-currency-unit INT columns (no cents/paisa subunit exists in
+    // this schema) -- casting to (float) here bought nothing but the
+    // theoretical risk the spec warns about, since every real value flowing
+    // through this is already a whole integer. (int) is exact and correct
+    // for the same values.
     $it->EffectivePrice = ($it->DynamicPrice !== null)
-        ? (float)$it->DynamicPrice
-        : (float)tms_dynamic_price($dbh, (int)$it->PackageId, (float)$it->PackagePrice, $it->FromDate)['final'];
-    $total += $it->EffectivePrice * max(1, (int)$it->NoOfPersons);
+        ? (int)$it->DynamicPrice
+        : (int)tms_dynamic_price($dbh, (int)$it->PackageId, (float)$it->PackagePrice, $it->FromDate)['final'];
+
+    // Round 91 (items 10/81): add-ons selected via "Add to Cart". Read live
+    // from tblpackageaddons (not snapshotted at cart time -- see config.php's
+    // tblcartaddons comment), silently dropping any deactivated/deleted since
+    // being added, same as cart.php.
+    $aq = $dbh->prepare(
+        "SELECT ca.AddOnId, ca.Quantity, pa.Name, pa.Price
+         FROM tblcartaddons ca JOIN tblpackageaddons pa ON pa.AddOnId = ca.AddOnId
+         WHERE ca.CartId = :cid AND pa.IsActive = 1"
+    );
+    $aq->execute([':cid' => $it->id]);
+    $it->Addons = $aq->fetchAll(PDO::FETCH_OBJ);
+    $it->AddonTotal = 0;
+    foreach ($it->Addons as $ao) {
+        $it->AddonTotal += (int)$ao->Price * (int)$ao->Quantity;
+    }
+
+    $total += ($it->EffectivePrice * max(1, (int)$it->NoOfPersons)) + $it->AddonTotal;
 }
 
 if (empty($items)) {
@@ -106,7 +130,10 @@ if (isset($_POST['confirm_checkout'])) {
         // (e-ticket, expense tracker, loyalty spend totals, AI trip copilot)
         // all read TotalCost assuming it was populated.
         $itemPersons = max(1, (int)$it->NoOfPersons);
-        $itemTotal   = (float)$it->EffectivePrice * $itemPersons;
+        // Round 84 (items 8/37): integer arithmetic -- $it->EffectivePrice is
+        // already an int (see above), and TotalCost is an INT column.
+        // Round 91 (items 10/81): + this item's cart add-ons, computed above.
+        $itemTotal   = ((int)$it->EffectivePrice * $itemPersons) + (int)$it->AddonTotal;
         $verificationCode = strtoupper(bin2hex(random_bytes(5)));
 
         $ins = $dbh->prepare(
@@ -133,6 +160,21 @@ if (isset($_POST['confirm_checkout'])) {
         $newId = $dbh->lastInsertId();
         if ($newId) {
             $createdIds[] = $newId;
+            // Round 91 (items 10/81): snapshot this item's cart add-ons into
+            // tblbookingaddons now, exactly like the direct "Book Now" path
+            // in package-details.php -- AddOnId kept only as an optional
+            // back-reference, Name/Price frozen so a later catalog edit never
+            // rewrites what this customer was actually charged and told
+            // they'd get.
+            if (!empty($it->Addons)) {
+                $baIns = $dbh->prepare("INSERT INTO tblbookingaddons (BookingId, AddOnId, Name, Price, Quantity) VALUES (:bid,:aid,:n,:p,:q)");
+                foreach ($it->Addons as $ao) {
+                    $baIns->execute([
+                        ':bid' => $newId, ':aid' => (int)$ao->AddOnId,
+                        ':n' => $ao->Name, ':p' => (int)$ao->Price, ':q' => (int)$ao->Quantity,
+                    ]);
+                }
+            }
             $dbh->prepare("INSERT INTO tblloyalty(UserEmail,Points,TotalEarned) VALUES(:e,100,100)
                 ON DUPLICATE KEY UPDATE Points=Points+100, TotalEarned=TotalEarned+100")->execute([':e'=>$email]);
             try {
@@ -144,7 +186,15 @@ if (isset($_POST['confirm_checkout'])) {
         }
     }
 
-    // Clear the cart now that everything has become real bookings
+    // Clear the cart now that everything has become real bookings. Round 91:
+    // tblcartaddons has no FK CASCADE (this project's convention -- see
+    // config.php), so its rows for these same cart ids must be deleted
+    // explicitly too, or they'd silently orphan once tblcart's rows are gone.
+    $cartIds = array_column($items, 'id');
+    if (!empty($cartIds)) {
+        $placeholders = implode(',', array_fill(0, count($cartIds), '?'));
+        $dbh->prepare("DELETE FROM tblcartaddons WHERE CartId IN ($placeholders)")->execute($cartIds);
+    }
     $dbh->prepare("DELETE FROM tblcart WHERE UserEmail=:e")->execute([':e' => $email]);
 
     // Everything above (capacity lock, booking inserts, loyalty credit, cart
@@ -232,16 +282,25 @@ html[data-theme="dark"] .summary-row.total { color: var(--text) !important; }
       <div>
         <strong><?php echo htmlspecialchars($it->PackageName, ENT_QUOTES, 'UTF-8'); ?></strong><br>
         <small style="color:#888;"><?php echo date('d M Y', strtotime($it->FromDate)); ?> &rarr; <?php echo date('d M Y', strtotime($it->ToDate)); ?></small>
+        <?php if (!empty($it->Addons)): ?>
+        <br><small style="color:#888;">
+          <i class="fa fa-plus-circle"></i>
+          <?php foreach ($it->Addons as $ao): ?>
+            <?php echo htmlspecialchars($ao->Name, ENT_QUOTES, 'UTF-8'); ?><?php echo $ao->Quantity > 1 ? ' ×' . (int)$ao->Quantity : ''; ?><?php echo $ao !== end($it->Addons) ? ',' : ''; ?>
+          <?php endforeach; ?>
+        </small>
+        <?php endif; ?>
       </div>
       <?php $pax = max(1, (int)$it->NoOfPersons); ?>
       <div style="text-align:right;">
         <?php if ($it->PackagePrice === null || (float)$it->PackagePrice <= 0): ?>
           <span style="color:#e11d48;">Price not set</span>
         <?php else: ?>
-          <?php echo tms_currency((float)$it->EffectivePrice); ?>
+          <?php echo tms_currency((int)$it->EffectivePrice); ?>
           <div style="font-size:12px;color:#888;">
             × <?php echo $pax; ?> traveller<?php echo $pax > 1 ? 's' : ''; ?>
-            = <strong><?php echo tms_currency((float)$it->EffectivePrice * $pax); ?></strong>
+            <?php if ($it->AddonTotal > 0): ?>+ <?php echo tms_currency($it->AddonTotal); ?> add-ons<?php endif; ?>
+            = <strong><?php echo tms_currency(((int)$it->EffectivePrice * $pax) + $it->AddonTotal); ?></strong>
           </div>
         <?php endif; ?>
       </div>

@@ -129,6 +129,7 @@ $currentPage = basename($_SERVER['PHP_SELF']);
                             <div class="tms-notif-time"><?php echo htmlspecialchars($n->CreatedAt, ENT_QUOTES, 'UTF-8'); ?></div>
                         </a>
                     <?php endforeach; endif; ?>
+                    <a href="notifications.php" class="tms-notif-viewall" style="display:block;text-align:center;padding:10px;font-size:12.5px;font-weight:600;color:var(--secondary);border-top:1px solid #eef1f6;">View all notifications</a>
                 </div>
             </div>
             <span class="tms-topbar-divider"></span>

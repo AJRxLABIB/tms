@@ -55,6 +55,10 @@ if(isset($_POST['submit'])) {
     $mealplan = tms_clean($_POST['mealplan'] ?? '');
     $transportmode = tms_clean($_POST['transportmode'] ?? '');
     $seatsavailable = ($_POST['seatsavailable'] ?? '') !== '' ? (int)$_POST['seatsavailable'] : null;
+    // Round 87 (item 7): structured Inclusions/Exclusions/Cancellation Policy.
+    $inclusions         = tms_clean($_POST['inclusions']         ?? '');
+    $exclusions         = tms_clean($_POST['exclusions']         ?? '');
+    $cancellationpolicy = tms_clean($_POST['cancellationpolicy'] ?? '');
     $packageimage = $package->PackageImage;
 
     if(isset($_FILES['packageimage']) && $_FILES['packageimage']['size'] > 0) {
@@ -90,7 +94,7 @@ if(isset($_POST['submit'])) {
     }
 
     if(empty($error)) {
-        $sql2 = "UPDATE tbltourpackages SET PackageName=:pname, PackageType=:ptype, PackageLocation=:ploc, PackagePrice=:pprice, PackageFetures=:pfeatures, PackageDetails=:pdetails, PackageImage=:pimage, PackageDuration=:pduration, MapLat=:maplat, MapLng=:maplng, HotelName=:hotelname, HotelRating=:hotelrating, MealPlan=:mealplan, TransportMode=:transportmode, SeatsAvailable=:seatsavailable WHERE PackageId=:pid";
+        $sql2 = "UPDATE tbltourpackages SET PackageName=:pname, PackageType=:ptype, PackageLocation=:ploc, PackagePrice=:pprice, PackageFetures=:pfeatures, PackageDetails=:pdetails, PackageImage=:pimage, PackageDuration=:pduration, MapLat=:maplat, MapLng=:maplng, HotelName=:hotelname, HotelRating=:hotelrating, MealPlan=:mealplan, TransportMode=:transportmode, SeatsAvailable=:seatsavailable, Inclusions=:inclusions, Exclusions=:exclusions, CancellationPolicy=:cancellationpolicy WHERE PackageId=:pid";
         $query2 = $dbh->prepare($sql2);
         $query2->bindParam(':pname', $packagename, PDO::PARAM_STR);
         $query2->bindParam(':ptype', $packagetype, PDO::PARAM_STR);
@@ -107,10 +111,16 @@ if(isset($_POST['submit'])) {
         $query2->bindParam(':mealplan', $mealplan, PDO::PARAM_STR);
         $query2->bindParam(':transportmode', $transportmode, PDO::PARAM_STR);
         $query2->bindValue(':seatsavailable', $seatsavailable, $seatsavailable === null ? PDO::PARAM_NULL : PDO::PARAM_INT);
+        $query2->bindParam(':inclusions', $inclusions, PDO::PARAM_STR);
+        $query2->bindParam(':exclusions', $exclusions, PDO::PARAM_STR);
+        $query2->bindParam(':cancellationpolicy', $cancellationpolicy, PDO::PARAM_STR);
         $query2->bindParam(':pid', $pid, PDO::PARAM_INT);
         $query2->execute();
-        // Audit log coverage (Round 52).
-        tms_log_activity($dbh, $_SESSION['alogin'], 'Package Edited', "PackageId=$pid, Name: \"$packagename\"");
+        // Audit log coverage (Round 52). Round 96 (item 47): $package still
+        // holds the PRE-update row here (the refresh re-fetch happens a few
+        // lines below) -- the price can change on any edit but was never
+        // logged either way before this.
+        tms_log_activity($dbh, $_SESSION['alogin'], 'Package Edited', "PackageId=$pid, Name: \"$packagename\"", 'package', $pid, (string)$package->PackagePrice, (string)$packageprice);
         $success = 'Package updated successfully!';
         // Refresh package data
         $query->execute();
@@ -134,12 +144,12 @@ if(isset($_POST['submit'])) {
                 <form method="post" enctype="multipart/form-data">
                 <?php tms_csrf_field(); ?>
                     <div class="form-group">
-                        <label for="packagename">Package Name *</label>
-                        <input type="text" name="packagename" id="packagename" class="form-control" value="<?php echo htmlentities($package->PackageName); ?>" required>
+                        <label>Package Name *</label>
+                        <input type="text" name="packagename" class="form-control" value="<?php echo htmlentities($package->PackageName); ?>" required>
                     </div>
                     <div class="form-group">
-                        <label for="packagetype">Package Type *</label>
-                        <select name="packagetype" id="packagetype" class="form-control" required>
+                        <label>Package Type *</label>
+                        <select name="packagetype" class="form-control" required>
                             <?php $types = ['Family Package','Couple Package','Group Package','Domestic Packages','International Package'];
                             foreach($types as $t): ?>
                             <option value="<?php echo $t; ?>" <?php echo ($package->PackageType==$t)?'selected':''; ?>><?php echo $t; ?></option>
@@ -147,11 +157,11 @@ if(isset($_POST['submit'])) {
                         </select>
                     </div>
                     <div class="form-group">
-                        <label for="packagelocation">Package Location *</label>
-                        <input type="text" name="packagelocation" id="packagelocation" class="form-control" value="<?php echo htmlentities($package->PackageLocation); ?>" required>
+                        <label>Package Location *</label>
+                        <input type="text" name="packagelocation" class="form-control" value="<?php echo htmlentities($package->PackageLocation); ?>" required>
                     </div>
                     <div class="form-group">
-                        <label for="packagePriceInput">Package Price (৳) *</label>
+                        <label>Package Price (৳) *</label>
                         <div style="display:flex;gap:8px;">
                             <input type="number" name="packageprice" id="packagePriceInput" class="form-control" value="<?php echo htmlentities($package->PackagePrice); ?>" required>
                             <button type="button" id="suggestPriceBtn" class="btn btn-info" style="white-space:nowrap;"
@@ -162,57 +172,75 @@ if(isset($_POST['submit'])) {
                         <div id="priceSuggestionBox" style="display:none;margin-top:8px;padding:10px 12px;background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;font-size:12.5px;color:#1e40af;"></div>
                     </div>
                     <div class="form-group">
-                        <label for="packagefeatures">Package Features</label>
-                        <textarea name="packagefeatures" id="packagefeatures" class="form-control" rows="3"><?php echo htmlentities($package->PackageFetures); ?></textarea>
+                        <label>Package Features</label>
+                        <textarea name="packagefeatures" class="form-control" rows="3"><?php echo htmlentities($package->PackageFetures); ?></textarea>
                     </div>
                     <div class="form-group">
-                        <label for="packagedetails">Package Details</label>
-                        <textarea name="packagedetails" id="packagedetails" class="form-control" rows="5"><?php echo htmlentities($package->PackageDetails); ?></textarea>
+                        <label>Package Details</label>
+                        <textarea name="packagedetails" class="form-control" rows="5"><?php echo htmlentities($package->PackageDetails); ?></textarea>
                     </div>
                     <div class="form-group">
-                        <label for="packageduration">Duration <small style="font-weight:400;color:#94a3b8;">(e.g. "5 Days 4 Nights")</small></label>
-                        <input type="text" name="packageduration" id="packageduration" class="form-control" value="<?php echo htmlentities($package->PackageDuration ?? ''); ?>" placeholder="5 Days 4 Nights">
+                        <label>Duration <small style="font-weight:400;color:#94a3b8;">(e.g. "5 Days 4 Nights")</small></label>
+                        <input type="text" name="packageduration" class="form-control" value="<?php echo htmlentities($package->PackageDuration ?? ''); ?>" placeholder="5 Days 4 Nights">
                     </div>
                     <div class="form-group">
-                        <label id="mapCoordsLabel_edit">Map Coordinates <small style="font-weight:400;color:#94a3b8;">(powers the interactive map, nearby-places widget, and price comparison — leave blank if unknown)</small></label>
-                        <div style="display:flex;gap:8px;" role="group" aria-labelledby="mapCoordsLabel_edit">
-                            <input type="number" step="any" name="maplat" id="maplat_edit" class="form-control" placeholder="Latitude" aria-label="Latitude" value="<?php echo htmlentities($package->MapLat ?? ''); ?>">
-                            <input type="number" step="any" name="maplng" id="maplng_edit" class="form-control" placeholder="Longitude" aria-label="Longitude" value="<?php echo htmlentities($package->MapLng ?? ''); ?>">
+                        <label>Map Coordinates <small style="font-weight:400;color:#94a3b8;">(powers the interactive map, nearby-places widget, and price comparison — leave blank if unknown)</small></label>
+                        <div style="display:flex;gap:8px;">
+                            <input type="number" step="any" name="maplat" class="form-control" placeholder="Latitude" value="<?php echo htmlentities($package->MapLat ?? ''); ?>">
+                            <input type="number" step="any" name="maplng" class="form-control" placeholder="Longitude" value="<?php echo htmlentities($package->MapLng ?? ''); ?>">
                         </div>
                         <p><small><a href="https://www.latlong.net/" target="_blank" rel="noopener">Look up coordinates for this destination &rarr;</a></small></p>
                     </div>
                     <div class="form-group">
-                        <label for="hotelname">Hotel Name <small style="font-weight:400;color:#94a3b8;">(shown in package comparison)</small></label>
-                        <input type="text" name="hotelname" id="hotelname" class="form-control" value="<?php echo htmlentities($package->HotelName ?? ''); ?>" placeholder="e.g. Sea Pearl Beach Resort">
+                        <label>Hotel Name <small style="font-weight:400;color:#94a3b8;">(shown in package comparison)</small></label>
+                        <input type="text" name="hotelname" class="form-control" value="<?php echo htmlentities($package->HotelName ?? ''); ?>" placeholder="e.g. Sea Pearl Beach Resort">
                     </div>
                     <div style="display:flex;gap:12px;">
                         <div class="form-group" style="flex:1;">
-                            <label for="hotelrating">Hotel Rating <small style="font-weight:400;color:#94a3b8;">(1&ndash;5 stars)</small></label>
-                            <input type="number" step="0.5" min="1" max="5" name="hotelrating" id="hotelrating" class="form-control" value="<?php echo htmlentities($package->HotelRating ?? ''); ?>" placeholder="4.5">
+                            <label>Hotel Rating <small style="font-weight:400;color:#94a3b8;">(1&ndash;5 stars)</small></label>
+                            <input type="number" step="0.5" min="1" max="5" name="hotelrating" class="form-control" value="<?php echo htmlentities($package->HotelRating ?? ''); ?>" placeholder="4.5">
                         </div>
                         <div class="form-group" style="flex:1;">
-                            <label for="mealplan">Meal Plan</label>
-                            <input type="text" name="mealplan" id="mealplan" class="form-control" value="<?php echo htmlentities($package->MealPlan ?? ''); ?>" placeholder="e.g. Breakfast Included">
+                            <label>Meal Plan</label>
+                            <input type="text" name="mealplan" class="form-control" value="<?php echo htmlentities($package->MealPlan ?? ''); ?>" placeholder="e.g. Breakfast Included">
                         </div>
                     </div>
                     <div style="display:flex;gap:12px;">
                         <div class="form-group" style="flex:1;">
-                            <label for="transportmode">Transport Mode</label>
-                            <input type="text" name="transportmode" id="transportmode" class="form-control" value="<?php echo htmlentities($package->TransportMode ?? ''); ?>" placeholder="e.g. AC Bus, Flight">
+                            <label>Transport Mode</label>
+                            <input type="text" name="transportmode" class="form-control" value="<?php echo htmlentities($package->TransportMode ?? ''); ?>" placeholder="e.g. AC Bus, Flight">
                         </div>
                         <div class="form-group" style="flex:1;">
-                            <label for="seatsavailable">Seats Available <small style="font-weight:400;color:#94a3b8;">(leave blank = unlimited/not tracked)</small></label>
-                            <input type="number" min="0" name="seatsavailable" id="seatsavailable" class="form-control" value="<?php echo htmlentities($package->SeatsAvailable ?? ''); ?>" placeholder="e.g. 30">
+                            <label>Seats Available <small style="font-weight:400;color:#94a3b8;">(leave blank = unlimited/not tracked)</small></label>
+                            <input type="number" min="0" name="seatsavailable" class="form-control" value="<?php echo htmlentities($package->SeatsAvailable ?? ''); ?>" placeholder="e.g. 30">
                         </div>
                     </div>
                     <div class="form-group">
-                        <label for="packageimage">Package Image (leave blank to keep current)</label>
+                        <label>Inclusions <small style="font-weight:400;color:#94a3b8;">(one item per line)</small></label>
+                        <textarea name="inclusions" class="form-control" rows="4"
+                                  placeholder="Hotel accommodation&#10;Daily breakfast&#10;Airport transfers"><?php echo htmlentities($package->Inclusions ?? ''); ?></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label>Exclusions <small style="font-weight:400;color:#94a3b8;">(one item per line)</small></label>
+                        <textarea name="exclusions" class="form-control" rows="4"
+                                  placeholder="International airfare&#10;Travel insurance&#10;Personal expenses"><?php echo htmlentities($package->Exclusions ?? ''); ?></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label>Cancellation Policy <small style="font-weight:400;color:#94a3b8;">(one rule per line, shown to travelers before booking)</small></label>
+                        <textarea name="cancellationpolicy" class="form-control" rows="4"
+                                  placeholder="Free cancellation up to 7 days before departure&#10;50% refund within 3-7 days&#10;No refund within 48 hours"><?php echo htmlentities($package->CancellationPolicy ?? ''); ?></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label>Package Image (leave blank to keep current)</label>
                         <?php if($package->PackageImage): ?>
                         <p><small>Current image: <strong><?php echo htmlentities($package->PackageImage); ?></strong></small></p>
                         <?php endif; ?>
-                        <input type="file" name="packageimage" id="packageimage" class="form-control">
+                        <input type="file" name="packageimage" class="form-control">
                     </div>
                     <button type="submit" name="submit" class="btn-v6 success">Update Package</button>
+                    <a href="manage-package-addons.php?pkgid=<?php echo (int)$pid; ?>" class="btn-v6 ghost">
+                        <i class="fa fa-plus-square"></i> Manage Add-ons
+                    </a>
                     <a href="manage-packages.php" class="btn-v6 ghost">Cancel</a>
                 </form>
             </div>

@@ -16,6 +16,19 @@ $q = $dbh->prepare("SELECT b.*,a.UserName as AuthorName FROM tblblog b LEFT JOIN
 $q->execute([':id'=>$id]);
 $post = $q->fetch(PDO::FETCH_OBJ);
 if (!$post) { header('Location: blog.php'); exit; }
+
+// Round 82 (master prompt item 54): resolve the related package to its real,
+// current name via a fresh lookup rather than trusting any name stored at
+// write time -- RelatedPackageId has no DB-level FK constraint (consistent
+// with every other cross-table reference in this schema), so the package it
+// points at could since have been deleted or unpublished. Only show the
+// link when it still resolves to a real, currently-published package.
+$relatedPackage = null;
+if (!empty($post->RelatedPackageId)) {
+    $rpQ = $dbh->prepare("SELECT PackageId, PackageName FROM tbltourpackages WHERE PackageId=:pid AND Status=1 LIMIT 1");
+    $rpQ->execute([':pid' => $post->RelatedPackageId]);
+    $relatedPackage = $rpQ->fetch(PDO::FETCH_OBJ) ?: null;
+}
 ?>
 <!DOCTYPE HTML><html lang="<?php echo htmlspecialchars(tms_active_language(), ENT_QUOTES, 'UTF-8'); ?>"><head>
 <link rel="manifest" href="manifest.json">
@@ -44,12 +57,24 @@ tms_seo_meta([
     'image'       => $post->CoverImage ? ('admin/blogimages/' . $post->CoverImage) : '',
     'type'        => 'article',
     'canonical'   => $scheme . '://' . $host . $path . '?id=' . (int)$post->id,
-    'jsonld'      => [
+    'jsonld'      => array_filter([
         '@context'      => 'https://schema.org',
         '@type'         => 'Article',
         'headline'      => $post->Title,
         'datePublished' => date('c', strtotime($post->CreatedAt)),
+        // Round 82 (master prompt item 54 -- "updated date"): only present
+        // once a post has actually been edited since this column was added
+        // (it's NULL until then, see backend/config.php's tms_ensure_columns()
+        // call) -- array_filter drops the whole key rather than emitting a
+        // dateModified that just duplicates datePublished for every
+        // never-edited post.
+        'dateModified'  => !empty($post->UpdatedAt) ? date('c', strtotime($post->UpdatedAt)) : null,
         'author'        => ['@type' => 'Person', 'name' => $post->AuthorName ?? 'TMS'],
+    ]),
+    'breadcrumbs' => [
+        ['label' => 'Home', 'url' => 'index.php'],
+        ['label' => 'Blog', 'url' => 'blog.php'],
+        ['label' => $post->Title],
     ],
 ]);
 ?>
@@ -75,6 +100,11 @@ html[data-theme="dark"] .post-content { color: var(--text) !important; }
 </head><body>
 <?php include('backend/header.php'); ?>
 <div class="container" style="padding:40px 15px 60px;">
+  <?php tms_render_breadcrumb_nav([
+      ['label' => 'Home', 'url' => 'index.php'],
+      ['label' => 'Blog', 'url' => 'blog.php'],
+      ['label' => $post->Title],
+  ]); ?>
   <a href="blog.php" style="color:var(--secondary);font-size:14px;"><i class="fa fa-arrow-left"></i> Back to Blog</a>
   <div class="post-body" style="margin-top:20px;">
     <?php if ($post->CoverImage): ?>
@@ -84,9 +114,43 @@ html[data-theme="dark"] .post-content { color: var(--text) !important; }
     <h1 style="margin-top:12px;"><?= htmlspecialchars($post->Title) ?></h1>
     <div class="post-meta">
       <i class="fa fa-user"></i> <?= htmlspecialchars($post->AuthorName ?? 'Admin') ?>
-      &nbsp;·&nbsp; <i class="fa fa-calendar"></i> <?= date('d M Y', strtotime($post->CreatedAt)) ?>
+      &nbsp;·&nbsp; <i class="fa fa-calendar"></i> Published <?= date('d M Y', strtotime($post->CreatedAt)) ?>
+      <?php if (!empty($post->UpdatedAt)): ?>
+      &nbsp;·&nbsp; <i class="fa fa-pencil"></i> Updated <?= date('d M Y', strtotime($post->UpdatedAt)) ?>
+      <?php endif; ?>
     </div>
+    <?php if (!empty($post->RelatedDestination) || $relatedPackage): ?>
+    <div class="post-related-tags" style="margin-bottom:20px;">
+      <?php if (!empty($post->RelatedDestination)): ?>
+      <a href="destinations.php?country=<?= urlencode($post->RelatedDestination) ?>" style="display:inline-block;background:#eafaf1;color:#1a8754;padding:5px 12px;border-radius:20px;font-size:13px;margin:0 8px 8px 0;text-decoration:none;">
+        <i class="fa fa-map-marker"></i> <?= htmlspecialchars($post->RelatedDestination, ENT_QUOTES, 'UTF-8') ?>
+      </a>
+      <?php endif; ?>
+      <?php if ($relatedPackage): ?>
+      <a href="package-details.php?pkgid=<?= (int)$relatedPackage->PackageId ?>" style="display:inline-block;background:#e3f2fd;color:#1976d2;padding:5px 12px;border-radius:20px;font-size:13px;margin:0 8px 8px 0;text-decoration:none;">
+        <i class="fa fa-suitcase"></i> <?= htmlspecialchars($relatedPackage->PackageName, ENT_QUOTES, 'UTF-8') ?>
+      </a>
+      <?php endif; ?>
+    </div>
+    <?php endif; ?>
     <div class="post-content"><?= nl2br(htmlspecialchars($post->Content)) ?></div>
+    <?php if (!empty($post->Sources)): ?>
+    <div class="post-sources" style="margin-top:28px;padding-top:18px;border-top:1px solid #eee;font-size:13.5px;color:#777;">
+      <strong>Sources:</strong>
+      <ul style="margin:8px 0 0;padding-left:20px;">
+        <?php foreach (preg_split('/\r\n|\r|\n/', trim($post->Sources)) as $srcLine): ?>
+          <?php $srcLine = trim($srcLine); if ($srcLine === '') continue; ?>
+          <li>
+            <?php if (preg_match('#^https?://#i', $srcLine)): ?>
+              <a href="<?= htmlspecialchars($srcLine, ENT_QUOTES, 'UTF-8') ?>" target="_blank" rel="noopener noreferrer nofollow"><?= htmlspecialchars($srcLine, ENT_QUOTES, 'UTF-8') ?></a>
+            <?php else: ?>
+              <?= htmlspecialchars($srcLine, ENT_QUOTES, 'UTF-8') ?>
+            <?php endif; ?>
+          </li>
+        <?php endforeach; ?>
+      </ul>
+    </div>
+    <?php endif; ?>
     <div class="share-row">
       <strong>Share:</strong>
       <a href="https://wa.me/?text=<?= urlencode($post->Title . ' - ' . 'https://'.$_SERVER['HTTP_HOST'].$_SERVER['REQUEST_URI']) ?>" target="_blank" class="btn btn-success btn-sm"><i class="fa fa-whatsapp"></i> WhatsApp</a>

@@ -14,18 +14,22 @@ require_once '../backend/ai/SentimentAnalyser.php';
 require_once '../backend/ai/FraudDetector.php';
 require_once '../backend/ai/AIEvaluator.php';
 
-// Round 35 (item 22, "AI Evaluation suite"): admin-triggered only, never
-// automatic -- this makes ~8 real AI calls (real quota cost), so it must
-// never run on a normal page load. See AIEvaluator.php's own docblock for
-// what it covers and what it deliberately doesn't.
+// Round 35 (item 22, "AI Evaluation suite"), extended Round 95 with 3 more
+// content-accuracy cases and Round 98 with a 4th (weather_accuracy):
+// admin-triggered only, never automatic -- this makes 13 real AI calls
+// (real quota cost -- weather_accuracy runs a full second itinerary
+// generation to check against real weather data, so it's two itinerary-
+// shaped calls now, not one), so it must never run on a normal page load.
+// See AIEvaluator.php's own docblock for what it covers and what it
+// deliberately doesn't.
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['run_eval_suite'])) {
     tms_csrf_validate();
-    // The itinerary case alone can legitimately take up to ~90s (see
-    // ItineraryPlanner's own extended budget for that workload), this runs
-    // 8 cases in sequence with a small deliberate gap between each (see
-    // AIEvaluator::runAll()) -- a default 30s max_execution_time would kill
-    // this mid-run.
-    set_time_limit(240);
+    // Two of the 13 cases (itinerary, weather_accuracy) can each legitimately
+    // take up to ~90s (see ItineraryPlanner's own extended budget for that
+    // workload), and this runs all 13 cases in sequence with a small
+    // deliberate gap between each (see AIEvaluator::runAll()) -- a default
+    // 30s max_execution_time would kill this mid-run.
+    set_time_limit(450);
     $evalSummary = (new AIEvaluator($dbh))->runAll();
     header('Content-Type: application/json');
     echo json_encode($evalSummary);
@@ -980,7 +984,7 @@ async function runEvalSuite() {
   btn.innerHTML = '<i class="fa fa-spinner fa-spin"></i> Running (up to ~3 min)…';
   btn.disabled  = true;
   output.style.display = 'block';
-  output.textContent   = 'Running 8 real AI calls against the live provider -- this can take a minute or two, especially the itinerary case…';
+  output.textContent   = 'Running 13 real AI calls against the live provider -- this can take a few minutes, especially the itinerary and weather-accuracy cases…';
 
   try {
     const res = await fetch('', {
@@ -994,7 +998,19 @@ async function runEvalSuite() {
       const mark = c.passed ? '✅' : '❌';
       const cachedNote = (c.telemetry && Number(c.telemetry.cached) === 1) ? ' [cached]' : '';
       const sanityNote = c.passed && !c.sanity_ok ? ' (⚠ succeeded but response shape looked off)' : '';
-      const errNote = !c.passed ? ' — ' + (c.run_error || (c.telemetry ? c.telemetry.error_message : 'no telemetry recorded for this call')) : '';
+      // Round 95: a content-accuracy case (package_accuracy,
+      // factual_accuracy_policy, refusal_offtopic) can fail with no
+      // run_error and a telemetry row that itself shows success=1 -- the
+      // AI call worked fine, the CONTENT was wrong/hallucinated/off-script.
+      // Without this branch that showed as a confusing blank or
+      // "no telemetry recorded" note despite telemetry existing.
+      let errNote = '';
+      if (!c.passed) {
+        if (c.run_error) errNote = ' — ' + c.run_error;
+        else if (c.telemetry && c.telemetry.error_message) errNote = ' — ' + c.telemetry.error_message;
+        else if (!c.sanity_ok) errNote = ' — response failed this case\'s content/accuracy check';
+        else errNote = ' — no telemetry recorded for this call';
+      }
       lines.push(`${mark} ${c.label}${cachedNote} (${c.wall_ms} ms)${sanityNote}${errNote}`);
     });
     output.textContent = lines.join('\n');

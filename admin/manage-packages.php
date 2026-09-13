@@ -109,7 +109,7 @@ try{
     <td><?=$p->PackagePrice?tms_currency($p->PackagePrice):'—'?></td>
     <td style="max-width:300px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;"><?=htmlspecialchars(substr($p->PackageDescription??'',0,80))?></td>
     <td>
-      <a href="edit-package.php?id=<?=$p->PackageId?>" class="action-btn btn-edit"><i class="fa fa-edit"></i> Edit</a>
+      <a href="edit-package.php?pid=<?=$p->PackageId?>" class="action-btn btn-edit"><i class="fa fa-edit"></i> Edit</a>
       <form method="post" style="display:contents"><input type="hidden" name="action" value="delete"><input type="hidden" name="id" value="<?=$p->PackageId?>"><?php tms_csrf_field(); ?><button type="submit" class="action-btn btn-delete" onclick="return confirm('Delete this package?')"><i class="fa fa-trash"></i> Delete</button></form>
     </td>
   </tr>

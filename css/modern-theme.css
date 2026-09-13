@@ -1753,6 +1753,18 @@ html[data-theme="dark"] .tms-sample-banner {
   color: #ffd76a;
 }
 
+/* Breadcrumb trail (Round 81, master prompt item 53 -- SEO breadcrumbs).
+   Pairs with tms_render_breadcrumb_nav() in backend/config.php +
+   includes/config.php, which emits this exact markup shape. */
+.tms-breadcrumb { margin: 0 0 14px; }
+.tms-breadcrumb ol { list-style: none; display: flex; flex-wrap: wrap; gap: 6px; margin: 0; padding: 0; font-size: 13px; }
+.tms-breadcrumb li { display: flex; align-items: center; gap: 6px; color: var(--text-muted); }
+.tms-breadcrumb li:not(:first-child)::before { content: "/"; color: #ccc; }
+.tms-breadcrumb a { color: var(--secondary); text-decoration: none; }
+.tms-breadcrumb a:hover { text-decoration: underline; }
+.tms-breadcrumb li span[aria-current] { color: var(--text); font-weight: 600; }
+html[data-theme="dark"] .tms-breadcrumb li:not(:first-child)::before { color: #444; }
+
 /* ACCESSIBILITY FIX (Round 69, WCAG 2.5.8 target size): Bootstrap's stock
    .btn-xs (padding:1px 5px; font-size:12px; line-height:1.5, from
    bootstrap.css) renders a clickable box only ~20px tall regardless of

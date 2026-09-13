@@ -10,6 +10,14 @@ include('backend/config.php');
 // redirected to the homepage instead of seeing this page. Intentionally
 // left public; booking/account actions on this page still check
 // $_SESSION['login'] individually where needed.
+//
+// ROUND 80 (master prompt items 12/13 -- Hotel System / Activities
+// Marketplace "reviews" requirement): this page used to only support
+// reviewing tour packages. tblreviews now has nullable HotelId/ActivityId
+// columns alongside the original PackageId, and this page lets a review
+// point at exactly one of the three (never more than one, enforced below
+// via $reviewType). Package reviews behave exactly as before -- nothing
+// about that path changed other than sharing code with the two new paths.
 
 $error   = '';
 $success = '';
@@ -17,15 +25,27 @@ $success = '';
 if (isset($_POST['submitreview']) && !empty($_SESSION['login'])) {
     tms_csrf_validate();
 
-    $pkgId      = tms_int($_POST['pkgid']      ?? 0, 1);
+    $reviewType = in_array($_POST['reviewtype'] ?? '', ['package', 'hotel', 'activity'], true) ? $_POST['reviewtype'] : 'package';
+    $pkgId      = $reviewType === 'package'  ? tms_int($_POST['pkgid']      ?? 0, 1) : 0;
+    $hotelId    = $reviewType === 'hotel'    ? tms_int($_POST['hotelid']    ?? 0, 1) : 0;
+    $activityId = $reviewType === 'activity' ? tms_int($_POST['activityid'] ?? 0, 1) : 0;
+    $entityId   = $pkgId ?: ($hotelId ?: $activityId);
     $rating     = tms_int($_POST['rating']     ?? 0, 1, 5);
     $reviewText = tms_clean($_POST['reviewtext'] ?? '');
     $userEmail  = $_SESSION['login'];
 
+    // Fixed, whitelisted maps -- $reviewType is validated against exactly
+    // three literal values above, so these are never built from raw user
+    // input and are safe to use as SQL identifiers below.
+    $entityCol   = ['package' => 'PackageId',      'hotel' => 'HotelId',   'activity' => 'ActivityId'][$reviewType];
+    $entityTable = ['package' => 'tbltourpackages', 'hotel' => 'tblhotels', 'activity' => 'tblactivities'][$reviewType];
+    $entityUrl   = ['package' => 'package-details.php?pkgid=', 'hotel' => 'hotel-details.php?id=', 'activity' => 'activity-details.php?id='][$reviewType];
+    $entityLabel = ['package' => 'package', 'hotel' => 'hotel', 'activity' => 'activity'][$reviewType];
+
     if (empty($reviewText)) {
         $error = 'Please write your experience before submitting.';
-    } elseif ($pkgId === 0) {
-        $error = 'Please select a package.';
+    } elseif ($entityId === 0) {
+        $error = 'Please select what you are reviewing.';
     } else {
         // Get username
         $uq = $dbh->prepare("SELECT FullName FROM tblusers WHERE EmailId=:e LIMIT 1");
@@ -34,14 +54,14 @@ if (isset($_POST['submitreview']) && !empty($_SESSION['login'])) {
         $uRow     = $uq->fetch(PDO::FETCH_OBJ);
         $userName = $uRow ? $uRow->FullName : $userEmail;
 
-        // Duplicate check
-        $dc = $dbh->prepare("SELECT id FROM tblreviews WHERE PackageId=:pid AND UserEmail=:ue LIMIT 1");
-        $dc->bindParam(':pid', $pkgId);
+        // Duplicate check (one review per user per entity, same rule as before)
+        $dc = $dbh->prepare("SELECT id FROM tblreviews WHERE $entityCol=:eid AND UserEmail=:ue LIMIT 1");
+        $dc->bindParam(':eid', $entityId, PDO::PARAM_INT);
         $dc->bindParam(':ue',  $userEmail);
         $dc->execute();
 
         if ($dc->rowCount() > 0) {
-            $error = 'You have already reviewed this package.';
+            $error = "You have already reviewed this $entityLabel.";
         } else {
             $reviewImage = '';
             if (!empty($_FILES['reviewimage']['size'])) {
@@ -77,23 +97,22 @@ if (isset($_POST['submitreview']) && !empty($_SESSION['login'])) {
                 $initialStatus = $needsModeration ? 0 : 1;
 
                 $ins = $dbh->prepare("INSERT INTO tblreviews
-                    (PackageId,UserEmail,UserName,Rating,ReviewText,ReviewImage,Status)
-                    VALUES(:pid,:ue,:un,:r,:rt,:ri,:st)");
-                $ins->bindParam(':pid', $pkgId);
-                $ins->bindParam(':ue',  $userEmail);
-                $ins->bindParam(':un',  $userName);
-                $ins->bindParam(':r',   $rating);
-                $ins->bindParam(':rt',  $reviewText);
-                $ins->bindParam(':ri',  $reviewImage);
-                $ins->bindParam(':st',  $initialStatus, PDO::PARAM_INT);
-                $ins->execute();
+                    (PackageId,HotelId,ActivityId,UserEmail,UserName,Rating,ReviewText,ReviewImage,Status)
+                    VALUES(:pid,:hid,:aid,:ue,:un,:r,:rt,:ri,:st)");
+                $ins->execute([
+                    ':pid' => $pkgId ?: null, ':hid' => $hotelId ?: null, ':aid' => $activityId ?: null,
+                    ':ue' => $userEmail, ':un' => $userName, ':r' => $rating, ':rt' => $reviewText,
+                    ':ri' => $reviewImage, ':st' => $initialStatus,
+                ]);
 
-                // Recalculate avg rating (only ever counts Status=1 rows, so a
-                // pending photo review correctly doesn't affect it yet)
-                $dbh->prepare("UPDATE tbltourpackages
-                    SET AvgRating=(SELECT AVG(Rating) FROM tblreviews WHERE PackageId=:p AND Status=1)
-                    WHERE PackageId=:p2")
-                    ->execute([':p' => $pkgId, ':p2' => $pkgId]);
+                // Recalculate the entity's avg rating (only ever counts
+                // Status=1 rows, so a pending photo review correctly
+                // doesn't affect it yet) -- same mechanic as before,
+                // just now targeting whichever of the 3 tables applies.
+                $dbh->prepare("UPDATE $entityTable
+                    SET AvgRating=(SELECT AVG(Rating) FROM tblreviews WHERE $entityCol=:e AND Status=1)
+                    WHERE $entityCol=:e2")
+                    ->execute([':e' => $entityId, ':e2' => $entityId]);
 
                 // Award 20 loyalty points for review
                 $dbh->prepare("INSERT INTO tblloyalty(UserEmail,Points,TotalEarned) VALUES(:e,20,20)
@@ -108,7 +127,7 @@ if (isset($_POST['submitreview']) && !empty($_SESSION['login'])) {
                 $notifyMsg = $needsModeration
                     ? "⭐ Your review was received and is awaiting approval (photo reviews are moderated) — you still earned 20 loyalty points."
                     : "⭐ Your review was posted — thanks for sharing! You earned 20 loyalty points.";
-                tms_notify($dbh, $userEmail, $notifyMsg, 'package-details.php?pkgid=' . (int)$pkgId);
+                tms_notify($dbh, $userEmail, $notifyMsg, $entityUrl . (int)$entityId);
 
                 $success = $needsModeration
                     ? 'Thank you! Your review has been submitted. Since it includes a photo, it will appear once our team approves it. You still earned 20 loyalty points!'
@@ -118,26 +137,44 @@ if (isset($_POST['submitreview']) && !empty($_SESSION['login'])) {
     }
 }
 
-$filterPkg = tms_int($_GET['pkg'] ?? 0, 0);
+$filterPkg      = tms_int($_GET['pkg']      ?? 0, 0);
+$filterHotel    = tms_int($_GET['hotel']    ?? 0, 0);
+$filterActivity = tms_int($_GET['activity'] ?? 0, 0);
 
-$pkgsQ = $dbh->query("SELECT PackageId, PackageName FROM tbltourpackages ORDER BY PackageName");
-$packages = $pkgsQ->fetchAll(PDO::FETCH_OBJ);
+$filterType = $filterPkg ? 'package' : ($filterHotel ? 'hotel' : ($filterActivity ? 'activity' : ''));
+$filterId   = $filterPkg ?: ($filterHotel ?: $filterActivity);
 
-$filterWhere = $filterPkg ? "AND r.PackageId = :fpid" : "";
-$revQ = $dbh->prepare("SELECT r.*, p.PackageName
-    FROM tblreviews r JOIN tbltourpackages p ON r.PackageId=p.PackageId
+$packages   = $dbh->query("SELECT PackageId, PackageName FROM tbltourpackages ORDER BY PackageName")->fetchAll(PDO::FETCH_OBJ);
+$hotelsList = $dbh->query("SELECT HotelId, HotelName FROM tblhotels WHERE Status=1 ORDER BY HotelName")->fetchAll(PDO::FETCH_OBJ);
+$activitiesList = $dbh->query("SELECT ActivityId, ActivityName FROM tblactivities WHERE Status=1 ORDER BY ActivityName")->fetchAll(PDO::FETCH_OBJ);
+
+$filterColMap = ['package' => 'r.PackageId', 'hotel' => 'r.HotelId', 'activity' => 'r.ActivityId'];
+$filterWhere  = $filterType ? "AND {$filterColMap[$filterType]} = :fid" : "";
+
+$revQ = $dbh->prepare("SELECT r.*,
+        COALESCE(p.PackageName, h.HotelName, a.ActivityName) AS EntityName,
+        CASE WHEN r.PackageId IS NOT NULL THEN 'package' WHEN r.HotelId IS NOT NULL THEN 'hotel' ELSE 'activity' END AS EntityType
+    FROM tblreviews r
+    LEFT JOIN tbltourpackages p ON r.PackageId=p.PackageId
+    LEFT JOIN tblhotels h ON r.HotelId=h.HotelId
+    LEFT JOIN tblactivities a ON r.ActivityId=a.ActivityId
     WHERE r.Status=1 $filterWhere ORDER BY r.id DESC");
-if ($filterPkg) $revQ->bindParam(':fpid', $filterPkg, PDO::PARAM_INT);
+if ($filterType) $revQ->bindValue(':fid', $filterId, PDO::PARAM_INT);
 $revQ->execute();
 $reviews = $revQ->fetchAll(PDO::FETCH_OBJ);
 
-// Stats
-$statsWhere = $filterPkg ? "AND PackageId=$filterPkg" : "";
+// Stats (same column reference, no "r." alias needed against the bare table)
+$statsColMap = ['package' => 'PackageId', 'hotel' => 'HotelId', 'activity' => 'ActivityId'];
+$statsWhere  = $filterType ? "AND {$statsColMap[$filterType]} = " . (int)$filterId : "";
 $statsQ = $dbh->query("SELECT AVG(Rating) as avg, COUNT(*) as total,
     SUM(Rating=5) as s5, SUM(Rating=4) as s4, SUM(Rating=3) as s3,
     SUM(Rating=2) as s2, SUM(Rating=1) as s1
     FROM tblreviews WHERE Status=1 $statsWhere");
 $stats = $statsQ->fetch(PDO::FETCH_OBJ);
+
+// Pre-select the write-review form to match an incoming ?hotel=/?activity=/
+// ?pkg= deep link (e.g. a "Write a Review" link from hotel-details.php).
+$preselectType = $filterType ?: 'package';
 ?>
 <!DOCTYPE HTML>
 <html lang="<?php echo htmlspecialchars(tms_active_language(), ENT_QUOTES, 'UTF-8'); ?>">
@@ -157,7 +194,6 @@ $stats = $statsQ->fetch(PDO::FETCH_OBJ);
 <link href="css/animate.css" rel="stylesheet">
 <script src="js/jquery-1.12.0.min.js" defer></script>
 <script src="js/bootstrap.min.js" defer></script>
-<script src="js/wow.min.js" defer></script>
 <style>
 .review-hero{background:linear-gradient(135deg,#f093fb,#f5576c);color:#fff;padding:55px 0 30px;text-align:center;}
 .review-hero h1{font-size:2.3em;}
@@ -239,16 +275,48 @@ html[data-theme="dark"] .review-text { color: var(--text-muted) !important; }
                 <?php if ($success): ?><div class="alert alert-success"><?php echo htmlspecialchars($success, ENT_QUOTES,'UTF-8'); ?></div><?php endif; ?>
 
                 <?php if (!empty($_SESSION['login'])): ?>
-                <form method="post" enctype="multipart/form-data">
+                <form method="post" enctype="multipart/form-data" id="reviewForm">
                     <?php tms_csrf_field(); ?>
                     <div class="form-group">
+                        <label for="reviewTypeSelect">What are you reviewing?</label>
+                        <select name="reviewtype" id="reviewTypeSelect" class="form-control" onchange="tmsReviewTypeChange()">
+                            <option value="package"  <?php echo $preselectType==='package'  ? 'selected' : ''; ?>>Tour Package</option>
+                            <option value="hotel"    <?php echo $preselectType==='hotel'    ? 'selected' : ''; ?>>Hotel</option>
+                            <option value="activity" <?php echo $preselectType==='activity' ? 'selected' : ''; ?>>Activity</option>
+                        </select>
+                    </div>
+                    <div class="form-group" id="reviewPkgWrap">
                         <label for="reviewPkgSelect">Package</label>
-                        <select name="pkgid" id="reviewPkgSelect" class="form-control" required>
+                        <select name="pkgid" id="reviewPkgSelect" class="form-control">
                             <option value="">-- Select Package --</option>
                             <?php foreach ($packages as $p): ?>
                             <option value="<?php echo (int)$p->PackageId; ?>"
                                 <?php echo ($filterPkg==$p->PackageId)?'selected':''; ?>>
                                 <?php echo htmlspecialchars($p->PackageName, ENT_QUOTES,'UTF-8'); ?>
+                            </option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+                    <div class="form-group" id="reviewHotelWrap" style="display:none;">
+                        <label for="reviewHotelSelect">Hotel</label>
+                        <select name="hotelid" id="reviewHotelSelect" class="form-control">
+                            <option value="">-- Select Hotel --</option>
+                            <?php foreach ($hotelsList as $h): ?>
+                            <option value="<?php echo (int)$h->HotelId; ?>"
+                                <?php echo ($filterHotel==$h->HotelId)?'selected':''; ?>>
+                                <?php echo htmlspecialchars($h->HotelName, ENT_QUOTES,'UTF-8'); ?>
+                            </option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+                    <div class="form-group" id="reviewActivityWrap" style="display:none;">
+                        <label for="reviewActivitySelect">Activity</label>
+                        <select name="activityid" id="reviewActivitySelect" class="form-control">
+                            <option value="">-- Select Activity --</option>
+                            <?php foreach ($activitiesList as $a): ?>
+                            <option value="<?php echo (int)$a->ActivityId; ?>"
+                                <?php echo ($filterActivity==$a->ActivityId)?'selected':''; ?>>
+                                <?php echo htmlspecialchars($a->ActivityName, ENT_QUOTES,'UTF-8'); ?>
                             </option>
                             <?php endforeach; ?>
                         </select>
@@ -281,6 +349,19 @@ html[data-theme="dark"] .review-text { color: var(--text-muted) !important; }
                         <i class="fa fa-paper-plane"></i> Submit Review
                     </button>
                 </form>
+                <script>
+                // Round 80: show only the select matching the chosen review
+                // type, so the form never submits an id for the wrong kind
+                // of entity. Runs once on load (to match a ?hotel=/?activity=
+                // deep link's pre-selected type) and again on every change.
+                function tmsReviewTypeChange() {
+                    var type = document.getElementById('reviewTypeSelect').value;
+                    document.getElementById('reviewPkgWrap').style.display      = (type === 'package')  ? '' : 'none';
+                    document.getElementById('reviewHotelWrap').style.display    = (type === 'hotel')    ? '' : 'none';
+                    document.getElementById('reviewActivityWrap').style.display = (type === 'activity') ? '' : 'none';
+                }
+                tmsReviewTypeChange();
+                </script>
                 <?php else: ?>
                 <div style="text-align:center;padding:20px;">
                     <i class="fa fa-lock" style="font-size:40px;color:#ddd;display:block;margin-bottom:15px;"></i>
@@ -294,18 +375,33 @@ html[data-theme="dark"] .review-text { color: var(--text-muted) !important; }
 
         <div class="col-md-8">
             <div class="filter-row wow fadeInRight">
-                <form method="get" class="form-inline">
-                    <label for="reviewFilterPkg" style="margin-right:10px;color:#555;">Filter by Package:</label>
-                    <select name="pkg" id="reviewFilterPkg" class="form-control" onchange="this.form.submit()" style="margin-right:10px;min-width:200px;">
-                        <option value="">All Packages</option>
+                <label for="reviewFilterSelect" style="margin-right:10px;color:#555;">Filter by:</label>
+                <select name="filter" id="reviewFilterSelect" class="form-control" style="display:inline-block;width:auto;min-width:240px;margin-right:10px;"
+                        onchange="if(this.value) location.href=this.value;">
+                    <option value="reviews.php">All Reviews</option>
+                    <optgroup label="Tour Packages">
                         <?php foreach ($packages as $p): ?>
-                        <option value="<?php echo (int)$p->PackageId; ?>" <?php echo ($filterPkg==$p->PackageId)?'selected':''; ?>>
+                        <option value="reviews.php?pkg=<?php echo (int)$p->PackageId; ?>" <?php echo ($filterPkg==$p->PackageId)?'selected':''; ?>>
                             <?php echo htmlspecialchars($p->PackageName, ENT_QUOTES,'UTF-8'); ?>
                         </option>
                         <?php endforeach; ?>
-                    </select>
-                    <span style="color:#aaa;font-size:14px;"><?php echo count($reviews); ?> review(s)</span>
-                </form>
+                    </optgroup>
+                    <optgroup label="Hotels">
+                        <?php foreach ($hotelsList as $h): ?>
+                        <option value="reviews.php?hotel=<?php echo (int)$h->HotelId; ?>" <?php echo ($filterHotel==$h->HotelId)?'selected':''; ?>>
+                            <?php echo htmlspecialchars($h->HotelName, ENT_QUOTES,'UTF-8'); ?>
+                        </option>
+                        <?php endforeach; ?>
+                    </optgroup>
+                    <optgroup label="Activities">
+                        <?php foreach ($activitiesList as $a): ?>
+                        <option value="reviews.php?activity=<?php echo (int)$a->ActivityId; ?>" <?php echo ($filterActivity==$a->ActivityId)?'selected':''; ?>>
+                            <?php echo htmlspecialchars($a->ActivityName, ENT_QUOTES,'UTF-8'); ?>
+                        </option>
+                        <?php endforeach; ?>
+                    </optgroup>
+                </select>
+                <span style="color:#aaa;font-size:14px;"><?php echo count($reviews); ?> review(s)</span>
             </div>
 
             <?php if (count($reviews) > 0): ?>
@@ -320,7 +416,8 @@ html[data-theme="dark"] .review-text { color: var(--text-muted) !important; }
                                 <p><?php echo date('d M Y', strtotime($rev->PostingDate)); ?></p>
                             </div>
                             <span class="pkg-badge">
-                                <i class="fa fa-briefcase"></i> <?php echo htmlspecialchars($rev->PackageName, ENT_QUOTES,'UTF-8'); ?>
+                                <i class="fa <?php echo ['package'=>'fa-briefcase','hotel'=>'fa-hotel','activity'=>'fa-hiking'][$rev->EntityType] ?? 'fa-briefcase'; ?>"></i>
+                                <?php echo htmlspecialchars($rev->EntityName ?? '—', ENT_QUOTES,'UTF-8'); ?>
                             </span>
                         </div>
                         <div class="review-stars">

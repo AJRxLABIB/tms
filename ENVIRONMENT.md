@@ -20,6 +20,7 @@ running against local XAMPP defaults exactly as it always has.
 | `APP_DEBUG` | No | `true`/`false`. Currently not read anywhere else in the codebase (confirmed via grep) — kept for forward compatibility, not wired to anything yet. |
 | `PAYMENT_PROVIDER` | No | Which payment provider `PaymentService` should use. Only `sandbox` actually works today — see `PAYMENTS.md`. |
 | `SSLCOMMERZ_*`, `BKASH_*`, `NAGAD_*` | Only once you have a real merchant account | Leave blank. Each provider class refuses to run without ALL of its own required keys present — see `PAYMENTS.md` before filling these in. |
+| `WALLET_ENCRYPTION_KEY` | For Travel Wallet uploads | 64-char hex (32-byte) AES-256-GCM key encrypting uploaded passport/visa/ID documents at rest (Round 86, master prompt item 28 — see `backend/wallet-crypto.php`). Without it, `wallet.php` refuses new uploads rather than storing one unencrypted; documents uploaded before this key existed are unaffected and remain readable. Generate with `php -r "echo bin2hex(random_bytes(32));"`. |
 
 ## Rules for this file and `.env`
 

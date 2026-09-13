@@ -32,7 +32,14 @@ $bookingIds = array_values(array_filter(array_map('intval', (array)$bookingIds))
 
 $paymentService = new PaymentService($dbh);
 $bookings = [];
-$totalFloat = 0.0;
+// Round 84 (master prompt items 8/37 -- "never use floating-point
+// arithmetic for money"): TotalCost is a whole-currency-unit INT column
+// (no cents/paisa subunit at this layer) -- (int) is exact here. The
+// (float) cast a few lines down into PaymentService::createPendingPayment()
+// is left as-is: that function's float parameter is a deliberate, contained
+// conversion boundary into AmountMinor (integer minor units), same as
+// tms_dynamic_price()'s $basePrice parameter elsewhere.
+$totalAmount = 0;
 $error = '';
 
 if (empty($bookingIds)) {
@@ -54,7 +61,7 @@ if (empty($bookingIds)) {
         $bookings = [];
     } else {
         foreach ($bookings as $b) {
-            $totalFloat += (float)$b->TotalCost;
+            $totalAmount += (int)$b->TotalCost;
         }
     }
 }
@@ -117,12 +124,12 @@ html[data-theme="dark"] .pay-total{color:var(--text) !important;}
   <?php else: ?>
   <div class="pay-box">
     <?php foreach ($bookings as $b): ?>
-      <div class="pay-row"><span><?php echo htmlspecialchars($b->PackageName ?: ('Booking #'.$b->BookingId), ENT_QUOTES, 'UTF-8'); ?> (<?php echo (int)$b->NoOfPersons; ?> traveler<?php echo ((int)$b->NoOfPersons===1?'':'s'); ?>)</span><span><?php echo tms_currency((float)$b->TotalCost); ?></span></div>
+      <div class="pay-row"><span><?php echo htmlspecialchars($b->PackageName ?: ('Booking #'.$b->BookingId), ENT_QUOTES, 'UTF-8'); ?> (<?php echo (int)$b->NoOfPersons; ?> traveler<?php echo ((int)$b->NoOfPersons===1?'':'s'); ?>)</span><span><?php echo tms_currency((int)$b->TotalCost); ?></span></div>
     <?php endforeach; ?>
-    <div class="pay-total"><span>Total</span><span><?php echo tms_currency($totalFloat); ?></span></div>
+    <div class="pay-total"><span>Total</span><span><?php echo tms_currency($totalAmount); ?></span></div>
     <form method="POST">
       <?php tms_csrf_field(); ?>
-      <button type="submit" class="btn-pay"><i class="fa fa-flask"></i> Pay <?php echo tms_currency($totalFloat); ?> (Sandbox)</button>
+      <button type="submit" class="btn-pay"><i class="fa fa-flask"></i> Pay <?php echo tms_currency($totalAmount); ?> (Sandbox)</button>
     </form>
     <p style="font-size:12px;color:#888;margin-top:14px;text-align:center;">You can also skip this — your booking stays Pending and our team can confirm it manually, exactly like before.</p>
   </div>

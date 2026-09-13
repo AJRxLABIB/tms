@@ -85,6 +85,10 @@ function hotelPageUrl(int $p): string {
 tms_seo_meta([
     'title'       => 'Hotels',
     'description' => 'Browse hotels by city, star rating, and price. Sample/demo listings for the TMS hotel marketplace feature.',
+    'breadcrumbs' => [
+        ['label' => 'Home', 'url' => 'index.php'],
+        ['label' => 'Hotels'],
+    ],
 ]);
 ?>
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -125,6 +129,10 @@ tms_seo_meta([
 
 <div class="rooms">
     <div class="container">
+        <?php tms_render_breadcrumb_nav([
+            ['label' => 'Home', 'url' => 'index.php'],
+            ['label' => 'Hotels'],
+        ]); ?>
         <div class="tms-sample-banner wow fadeIn">
             <i class="fa fa-info-circle"></i> These hotel listings are <strong>sample/demo data</strong> for showcasing the TMS hotel marketplace feature -- not a live, real-world booking inventory from an actual supplier. Bookings you make are recorded for demonstration purposes.
         </div>

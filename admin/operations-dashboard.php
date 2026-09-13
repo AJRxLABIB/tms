@@ -51,6 +51,83 @@ $lowInventory = $dbh->query(
      ORDER BY Remaining ASC"
 )->fetchAll();
 
+// WEATHER ALERTS (Round 88, master prompt item 55): live weather for every
+// destination with a confirmed booking arriving in the next N days, using
+// this platform's existing real weather integration (tms_get_weather() --
+// OpenWeatherMap if OPENWEATHER_API_KEY is set, otherwise the free
+// Open-Meteo fallback -- see includes/config.php/backend/config.php; DB-
+// cached, so this costs nothing extra on repeat dashboard loads). This was
+// the one genuinely missing piece of this page -- arrivals/departures/
+// pending/payment-failures/refunds/tickets/low-inventory above were already
+// real and live.
+//
+// "Flight disruptions" (also listed in master prompt item 55) is
+// deliberately NOT implemented: this platform has no flight-booking model
+// anywhere in the schema (no tblflightbooking-style table, no flight
+// numbers/carriers on tblbooking) -- frontend/flight-status.php is a
+// standalone, unrelated lookup tool a visitor can use for any flight
+// number, not tied to any booking here. A "flight disruptions" widget would
+// have nothing real to show, so per Rule 7 (no fake placeholder features)
+// this is disclosed here in the UI itself rather than fabricated or
+// silently dropped.
+$weatherWindowDays = 7;
+$weatherUntil = date('Y-m-d', strtotime("+{$weatherWindowDays} days"));
+$upcomingDestinations = $dbh->prepare(
+    "SELECT p.PackageId, p.PackageName, p.PackageLocation, p.MapLat, p.MapLng,
+            MIN(b.FromDate) AS NextArrival, COUNT(*) AS BookingCount, SUM(b.NoOfPersons) AS TravelerCount
+     FROM tblbooking b JOIN tbltourpackages p ON p.PackageId = b.PackageId
+     WHERE b.status = 1 AND b.FromDate BETWEEN :today AND :until
+       AND p.MapLat IS NOT NULL AND p.MapLng IS NOT NULL
+     GROUP BY p.PackageId, p.PackageName, p.PackageLocation, p.MapLat, p.MapLng
+     ORDER BY NextArrival ASC"
+);
+$upcomingDestinations->execute([':today' => $today, ':until' => $weatherUntil]);
+$upcomingDestinations = $upcomingDestinations->fetchAll(PDO::FETCH_OBJ);
+
+/**
+ * Keyword match over a weather condition/description string. Works across
+ * both providers this platform uses: OpenWeatherMap's `condition` field uses
+ * short categories (Thunderstorm, Snow, Squall, Tornado, Extreme...) and
+ * Open-Meteo's provider (backend/weather/OpenMeteoProvider.php, as of
+ * Round 89) returns descriptive phrases (e.g. "Heavy rain", "Thunderstorm
+ * with hail", "Violent rain showers").
+ */
+function tms_ops_weather_is_severe(string $text): bool {
+    static $needles = ['thunderstorm','tornado','hurricane','squall','extreme',
+        'heavy rain','heavy snow','violent','hail','blizzard','freezing rain'];
+    $text = strtolower($text);
+    foreach ($needles as $n) { if (strpos($text, $n) !== false) return true; }
+    return false;
+}
+
+$weatherAlerts = [];
+$weatherCheckFailed = 0;
+foreach ($upcomingDestinations as $dest) {
+    $w = tms_get_weather($dbh, (float)$dest->MapLat, (float)$dest->MapLng, $dest->PackageLocation);
+    if (!$w['ok']) { $weatherCheckFailed++; continue; }
+
+    $hits = [];
+    if (tms_ops_weather_is_severe(($w['condition'] ?? '') . ' ' . ($w['description'] ?? ''))) {
+        $hits[] = 'Now: ' . ($w['description'] ?: $w['condition']);
+    }
+    foreach (($w['forecast'] ?? []) as $day) {
+        if (empty($day['date']) || $day['date'] > $weatherUntil) continue; // only what's within the booking window
+        if (tms_ops_weather_is_severe($day['condition'] ?? '')) {
+            $hits[] = ($day['day_label'] ?? $day['date']) . ' (' . $day['date'] . '): ' . $day['condition'];
+        }
+    }
+    if (!empty($hits)) {
+        $weatherAlerts[] = [
+            'package'      => $dest->PackageName,
+            'location'     => $dest->PackageLocation,
+            'next_arrival' => $dest->NextArrival,
+            'travelers'    => (int)$dest->TravelerCount,
+            'hits'         => $hits,
+            'source'       => $w['source'] ?? 'unknown',
+        ];
+    }
+}
+
 $pageTitle = 'Operations Dashboard';
 ?>
 <!DOCTYPE html>
@@ -105,6 +182,10 @@ $pageTitle = 'Operations Dashboard';
         <div style="font-size:28px;font-weight:800;color:<?php echo count($lowInventory)>0?'#e74c3c':'#333'; ?>;"><?php echo count($lowInventory); ?></div>
         <div style="color:#888;">Low-inventory packages</div>
       </div>
+      <div class="ops-card" style="background:#fff;border-radius:10px;padding:18px;box-shadow:0 2px 8px rgba(0,0,0,.06);">
+        <div style="font-size:28px;font-weight:800;color:<?php echo count($weatherAlerts)>0?'#e74c3c':'#333'; ?>;"><?php echo count($weatherAlerts); ?></div>
+        <div style="color:#888;">Weather alerts (next <?php echo (int)$weatherWindowDays; ?>d)</div>
+      </div>
     </div>
 
     <?php if (!empty($lowInventory)): ?>
@@ -130,6 +211,36 @@ $pageTitle = 'Operations Dashboard';
       </tbody>
     </table>
     <?php endif; ?>
+
+    <h4><i class="fa fa-cloud" style="color:#0ea5e9;"></i> Weather alerts <small style="font-weight:400;color:#94a3b8;">— destinations with confirmed travelers arriving in the next <?php echo (int)$weatherWindowDays; ?> days, checked against live weather</small></h4>
+    <?php if (!empty($weatherAlerts)): ?>
+    <table class="table table-striped">
+      <thead><tr><th>Package</th><th>Destination</th><th>Next Arrival</th><th>Travelers</th><th>Alert</th><th>Source</th></tr></thead>
+      <tbody>
+        <?php foreach ($weatherAlerts as $wa): ?>
+        <tr>
+          <td><?php echo htmlspecialchars($wa['package'], ENT_QUOTES, 'UTF-8'); ?></td>
+          <td><?php echo htmlspecialchars($wa['location'], ENT_QUOTES, 'UTF-8'); ?></td>
+          <td><?php echo htmlspecialchars($wa['next_arrival'], ENT_QUOTES, 'UTF-8'); ?></td>
+          <td><?php echo (int)$wa['travelers']; ?></td>
+          <td style="color:#c0392b;font-weight:600;">
+            <?php foreach ($wa['hits'] as $hit): ?>
+              <div><i class="fa fa-exclamation-triangle"></i> <?php echo htmlspecialchars($hit, ENT_QUOTES, 'UTF-8'); ?></div>
+            <?php endforeach; ?>
+          </td>
+          <td style="color:#94a3b8;font-size:12px;"><?php echo htmlspecialchars($wa['source'], ENT_QUOTES, 'UTF-8'); ?></td>
+        </tr>
+        <?php endforeach; ?>
+      </tbody>
+    </table>
+    <?php elseif (empty($upcomingDestinations)): ?>
+    <p style="color:#888;">No confirmed bookings with a destination arriving in the next <?php echo (int)$weatherWindowDays; ?> days (or none of those packages have map coordinates set yet — weather needs a location).</p>
+    <?php else: ?>
+    <p style="color:#2e9e5b;"><i class="fa fa-check-circle"></i> No severe weather found for any destination with travelers arriving in the next <?php echo (int)$weatherWindowDays; ?> days.<?php if ($weatherCheckFailed > 0): ?> (<?php echo (int)$weatherCheckFailed; ?> destination<?php echo $weatherCheckFailed===1?'':'s'; ?> could not be checked right now — the weather provider didn't respond.)<?php endif; ?></p>
+    <?php endif; ?>
+
+    <h4><i class="fa fa-plane" style="color:#94a3b8;"></i> Flight disruptions</h4>
+    <p style="color:#888;">Not applicable on this platform — TMS has no flight-booking model (no flight numbers, carriers, or a flight-booking table anywhere in the schema). <a href="../flight-status.php">Flight Status Lookup</a> is a standalone tool a visitor can use to check any flight, but it isn't tied to any booking here, so there is nothing real for this dashboard to monitor. Shown here rather than a fabricated widget, per this project's "no fake placeholder features" rule.</p>
 </div><!-- /.tms-content -->
 <?php include('includes/footer.php'); ?>
 </main>

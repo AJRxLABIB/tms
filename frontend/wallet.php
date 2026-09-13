@@ -9,13 +9,21 @@
  *
  * SECURITY: uploaded documents are personal, sensitive PII (passport/visa
  * scans). Files are stored in uploads/wallet/, which has a .htaccess denying
- * all direct web access — the ONLY way to retrieve a file is through
- * wallet-document.php, which re-checks session ownership on every request.
- * There is no direct/guessable public URL to any uploaded document.
+ * all direct web access (written by this file itself on first use — see the
+ * upload handler below, Round 86) — the ONLY way to retrieve a file is
+ * through wallet-document.php, which re-checks session ownership on every
+ * request. There is no direct/guessable public URL to any uploaded document.
+ * Every new upload is also encrypted at rest with AES-256-GCM (Round 86,
+ * master prompt item 28 -- see backend/wallet-crypto.php); a document
+ * uploaded before this round remains plaintext on disk (tracked via the
+ * Encrypted column) rather than being silently rewritten (Rule 2). Upload,
+ * download, and delete are each logged to the existing tblactivity_log audit
+ * trail via tms_log_activity() (Rule 47), viewable at admin/activity-log.php.
  */
 session_start();
 error_reporting(E_ALL); ini_set('display_errors', '0'); ini_set('log_errors', '1');
 include('backend/config.php');
+require_once('backend/wallet-crypto.php'); // Round 86, item 28: encryption at rest
 tms_require_user();
 
 $email = $_SESSION['login'];
@@ -64,19 +72,49 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['upload_doc'])) {
             $error = 'File must be under 8 MB.';
         } elseif (!$realMime || !in_array($realMime, ALLOWED_MIME, true)) {
             $error = "That file's actual content doesn't match an allowed document type.";
+        } elseif (!is_uploaded_file($tmpPath)) {
+            // Defense in depth: reject anything that isn't a genuine
+            // this-request upload before ever reading it as a file path.
+            $error = 'Upload failed — please try again.';
         } else {
             if (!is_dir('uploads/wallet/')) mkdir('uploads/wallet/', 0755, true);
+            // Round 86 (item 28): mirrors scripts/backup_database.php's
+            // identical belt-and-suspenders .htaccess write -- the directory
+            // itself denying direct web access should not depend on a file
+            // that has to be remembered and copied by hand on every fresh
+            // deploy, or that silently stops existing if uploads/ is ever
+            // recreated.
+            if (!file_exists('uploads/wallet/.htaccess')) {
+                file_put_contents('uploads/wallet/.htaccess', "Require all denied\n");
+            }
             $stored = time() . '_' . bin2hex(random_bytes(8)) . '.' . $ext;
-            if (move_uploaded_file($tmpPath, 'uploads/wallet/' . $stored)) {
-                $stmt = $dbh->prepare(
-                    "INSERT INTO tbltraveldocuments (UserEmail, DocType, OriginalFilename, StoredFilename, MimeType, FileSize, Notes, ExpiryDate)
-                     VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
-                );
-                $stmt->execute([$email, $docType, tms_clean($_FILES['document']['name']), $stored, $realMime, $size, $notes, $expiryDate]);
-                $msg = 'Document uploaded securely.';
-                tms_notify($dbh, $email, "📁 Your \"" . $docType . "\" document was added to your Travel Wallet.", 'wallet.php');
+
+            // Round 86 (item 28): encrypt at rest with AES-256-GCM (same
+            // cipher/layout this project already uses for database backups
+            // -- see backend/wallet-crypto.php's docblock). Fails closed: if
+            // WALLET_ENCRYPTION_KEY isn't configured, refuse the upload
+            // rather than silently storing a new document unencrypted --
+            // the same choice backup_database.php already makes for the same
+            // reason (Rule 3: never pretend to protect something we didn't).
+            $encKey = tms_wallet_encryption_key();
+            if ($encKey === null) {
+                $error = 'Document uploads are temporarily unavailable — server-side encryption is not configured. Please contact the site operator.';
             } else {
-                $error = 'Upload failed — please try again.';
+                $plaintext = file_get_contents($tmpPath);
+                $blob = $plaintext === false ? false : tms_wallet_encrypt_bytes($plaintext, $encKey);
+                if ($blob === false || file_put_contents('uploads/wallet/' . $stored, $blob) === false) {
+                    $error = 'Upload failed — please try again.';
+                } else {
+                    $stmt = $dbh->prepare(
+                        "INSERT INTO tbltraveldocuments (UserEmail, DocType, OriginalFilename, StoredFilename, MimeType, FileSize, Notes, ExpiryDate, Encrypted)
+                         VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1)"
+                    );
+                    $stmt->execute([$email, $docType, tms_clean($_FILES['document']['name']), $stored, $realMime, $size, $notes, $expiryDate]);
+                    $newDocId = (int)$dbh->lastInsertId();
+                    $msg = 'Document uploaded securely.';
+                    tms_notify($dbh, $email, "📁 Your \"" . $docType . "\" document was added to your Travel Wallet.", 'wallet.php');
+                    tms_log_activity($dbh, $email, 'Wallet Document Uploaded', "DocId={$newDocId}, DocType={$docType}, Encrypted=1");
+                }
             }
         }
     }
@@ -88,14 +126,17 @@ if (isset($_POST['delete_doc'])) {
     $docId = tms_int($_POST['doc_id'] ?? 0, 1);
     // Scoped to UserEmail so a document can never be deleted (or its file
     // path discovered) by anyone but its owner, even with a guessed DocId.
-    $stmt = $dbh->prepare("SELECT StoredFilename FROM tbltraveldocuments WHERE DocId = ? AND UserEmail = ?");
+    $stmt = $dbh->prepare("SELECT StoredFilename, DocType FROM tbltraveldocuments WHERE DocId = ? AND UserEmail = ?");
     $stmt->execute([$docId, $email]);
-    $stored = $stmt->fetchColumn();
-    if ($stored) {
+    $row = $stmt->fetch(PDO::FETCH_ASSOC);
+    if ($row) {
         $dbh->prepare("DELETE FROM tbltraveldocuments WHERE DocId = ? AND UserEmail = ?")->execute([$docId, $email]);
-        $path = 'uploads/wallet/' . $stored;
+        $path = 'uploads/wallet/' . $row['StoredFilename'];
         if (is_file($path)) @unlink($path);
         $msg = 'Document removed.';
+        // Round 86 (item 28 -- access audit trail): reuse the project's
+        // existing tblactivity_log mechanism rather than a new table.
+        tms_log_activity($dbh, $email, 'Wallet Document Deleted', "DocId={$docId}, DocType={$row['DocType']}");
     }
 }
 

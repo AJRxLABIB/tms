@@ -16,8 +16,10 @@
  * (backend/system-events.php), added this round specifically because
  * neither had ANY admin-visible tracking before (both only ever reached
  * the PHP error log). Weather and Maps/Explore now have the same kind of
- * real per-call tracking: tms_get_weather()/tms_get_weather_openmeteo()
- * (backend/config.php) and ExploreService::httpRequest() both call
+ * real per-call tracking: tms_get_weather() (backend/config.php) -- which,
+ * as of Round 89, delegates the actual fetch to whichever
+ * WeatherProviderInterface implementation is configured, see
+ * backend/weather/ -- and ExploreService::httpRequest() both call
  * tms_log_system_event() on every attempt, so the Weather/Maps cards below
  * are genuine success/failure counts from tbl_system_events, not a
  * configured/not-configured guess. Other External-API providers without
@@ -86,8 +88,9 @@ try {
 
 // ── Weather / Maps: new (Round 72), from tbl_system_events (last 7 days).
 //    Previously reported below as "not implemented yet" -- now real,
-//    logged at every live fetch in tms_get_weather()/tms_get_weather_openmeteo()
-//    (backend/config.php) and ExploreService::httpRequest(). ────────────────
+//    logged at every live fetch in tms_get_weather() (backend/config.php,
+//    which as of Round 89 delegates to a WeatherProviderInterface --
+//    backend/weather/) and ExploreService::httpRequest(). ────────────────
 try {
     $stmt = $dbh->prepare(
         "SELECT COUNT(*) AS total, SUM(success) AS successes

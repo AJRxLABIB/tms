@@ -51,9 +51,15 @@ if(isset($_POST['add_coupon'])){
         try{
             $dbh->prepare("INSERT INTO tblcoupons (Code,DiscountPercent,ExpiryDate,IsUsed) VALUES(:c,:d,:e,0)")
                 ->execute([':c'=>$code,':d'=>$disc,':e'=>$exp ?: null]);
+            // Round 96 bugfix (item 47): capture the real insert id immediately,
+            // before tms_notify_all() runs -- that call performs its own INSERT(s)
+            // internally, so a lastInsertId() read after it silently returns the
+            // WRONG id (confirmed live: a test coupon logged ObjectId=19 while its
+            // real id was 5). Capturing it right here is the only correct order.
+            $newCouponId = $dbh->lastInsertId();
             tms_notify_all($dbh, "🎁 New offer: use code \"" . $code . "\" for " . $disc . "% off — " . ($exp ? "valid until " . $exp : "limited time"), 'package-list.php');
             // Audit log coverage (Round 52).
-            tms_log_activity($dbh, $_SESSION['alogin'], 'Coupon Created', "Code: $code, Discount: {$disc}%" . ($exp ? ", Expires: $exp" : ''));
+            tms_log_activity($dbh, $_SESSION['alogin'], 'Coupon Created', "Code: $code, Discount: {$disc}%" . ($exp ? ", Expires: $exp" : ''), 'coupon', $newCouponId, null, $code);
             $msg="Coupon added."; $msgType='success';
         }catch(Exception $e){ $msg="Error: ".$e->getMessage(); $msgType='error'; }
     } else { $msg="Please fill all fields."; $msgType='error'; }
@@ -64,11 +70,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && in_array($_POST['action'] ?? '', ['
     if($_POST['action']==='delete'){
         $dbh->prepare("DELETE FROM tblcoupons WHERE id=:id")->execute([':id'=>$cid]);
         // Audit log coverage (Round 52).
-        tms_log_activity($dbh, $_SESSION['alogin'], 'Coupon Deleted', "id=$cid");
+        tms_log_activity($dbh, $_SESSION['alogin'], 'Coupon Deleted', "id=$cid", 'coupon', $cid);
         $msg="Coupon deleted."; $msgType='success';
     } elseif($_POST['action']==='toggle'){
+        // Round 96 (item 47): read the pre-toggle value first -- the UPDATE
+        // itself flips it in SQL (IF(IsUsed=1,0,1)) without ever surfacing
+        // the old/new state to PHP, so there was nothing to log before.
+        $prevStmt = $dbh->prepare("SELECT IsUsed FROM tblcoupons WHERE id=:id");
+        $prevStmt->execute([':id'=>$cid]);
+        $prevUsed = (int)$prevStmt->fetchColumn();
         $dbh->prepare("UPDATE tblcoupons SET IsUsed=IF(IsUsed=1,0,1) WHERE id=:id")->execute([':id'=>$cid]);
-        tms_log_activity($dbh, $_SESSION['alogin'], 'Coupon Status Toggled', "id=$cid");
+        tms_log_activity($dbh, $_SESSION['alogin'], 'Coupon Status Toggled', "id=$cid", 'coupon', $cid, (string)$prevUsed, (string)(1 - $prevUsed));
         $msg="Coupon status updated."; $msgType='success';
     }
 }

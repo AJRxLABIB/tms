@@ -125,7 +125,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'], $_POST['id'
             // stale-data path is now closed at the source (tour-history.php's
             // cancel_booking clears the request), but this check stays as a
             // second line of defense against acting on a cancelled booking.
-            $bq = $dbh->prepare("SELECT RequestedFromDate, RequestedToDate, status FROM tblbooking WHERE BookingId=:id");
+            // FromDate/ToDate added (Round 96, item 47) so the pre-change
+            // dates are available to the audit log below without a second
+            // query -- RequestedFromDate/RequestedToDate/status were already
+            // being selected for the guard logic above.
+            $bq = $dbh->prepare("SELECT FromDate, ToDate, RequestedFromDate, RequestedToDate, status FROM tblbooking WHERE BookingId=:id");
             $bq->execute([':id'=>$bid]);
             $row = $bq->fetch(PDO::FETCH_OBJ);
             if ($row && (int)$row->status === 2) {
@@ -140,8 +144,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'], $_POST['id'
                     "<p>Your requested date change for booking <strong>#$ref</strong> has been approved and applied.</p>");
                 $msg = "Date change approved for #BK$bid.";
                 $msgType = 'success';
-                // Audit log coverage (Round 52).
-                tms_log_activity($dbh, $_SESSION['alogin'], 'Booking Date-Change Approved', "BookingId=$bid, New dates: {$row->RequestedFromDate} to {$row->RequestedToDate}");
+                // Audit log coverage (Round 52). Round 96 (item 47): $row was
+                // already fetched above (before the UPDATE), so the prior
+                // dates were sitting right there and just never logged.
+                tms_log_activity($dbh, $_SESSION['alogin'], 'Booking Date-Change Approved', "BookingId=$bid, New dates: {$row->RequestedFromDate} to {$row->RequestedToDate}", 'booking', $bid, "{$row->FromDate} to {$row->ToDate}", "{$row->RequestedFromDate} to {$row->RequestedToDate}");
             } else {
                 $msg = "No pending date-change request found for that booking.";
                 $msgType = 'error';
@@ -161,6 +167,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'], $_POST['id'
             tms_log_activity($dbh, $_SESSION['alogin'], 'Booking Date-Change Rejected', "BookingId=$bid, Note: $note");
             break;
         case 'refund_processed':
+            // Round 96 (item 47): read the pre-change RefundStatus first --
+            // never captured before, even though this is exactly the kind of
+            // financial-status change an audit trail must cover.
+            $prevRefundStmt = $dbh->prepare("SELECT RefundStatus FROM tblbooking WHERE BookingId=:id");
+            $prevRefundStmt->execute([':id'=>$bid]);
+            $prevRefundStatus = (string)$prevRefundStmt->fetchColumn();
             $dbh->prepare("UPDATE tblbooking SET RefundStatus='processed' WHERE BookingId=:id")->execute([':id'=>$bid]);
             // Keeps tblpayments/tblpayment_refunds truthful when this booking
             // was actually paid through payment.php's sandbox flow; a no-op
@@ -174,10 +186,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'], $_POST['id'
             $msgType = 'success';
             // Audit log coverage (Round 52). A financial-status change is
             // exactly the category of action an audit trail must cover.
-            tms_log_activity($dbh, $_SESSION['alogin'], 'Booking Refund Processed', "BookingId=$bid");
+            tms_log_activity($dbh, $_SESSION['alogin'], 'Booking Refund Processed', "BookingId=$bid", 'booking', $bid, $prevRefundStatus, 'processed');
             break;
         case 'refund_rejected':
             $note = tms_clean($_POST['note'] ?? '') ?: 'Refund could not be verified.';
+            // Round 96 (item 47): same reasoning as refund_processed above.
+            $prevRefundStmt = $dbh->prepare("SELECT RefundStatus FROM tblbooking WHERE BookingId=:id");
+            $prevRefundStmt->execute([':id'=>$bid]);
+            $prevRefundStatus = (string)$prevRefundStmt->fetchColumn();
             $dbh->prepare("UPDATE tblbooking SET RefundStatus='rejected', RefundNote=:n WHERE BookingId=:id")->execute([':n'=>$note, ':id'=>$bid]);
             $paymentService->markRefundRejected($bid, $note);
             $ref = 'BK'.str_pad($bid,3,'0',STR_PAD_LEFT);
@@ -187,7 +203,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'], $_POST['id'
             $msg = "Refund declined for #BK$bid.";
             $msgType = 'success';
             // Audit log coverage (Round 52).
-            tms_log_activity($dbh, $_SESSION['alogin'], 'Booking Refund Rejected', "BookingId=$bid, Note: $note");
+            tms_log_activity($dbh, $_SESSION['alogin'], 'Booking Refund Rejected', "BookingId=$bid, Note: $note", 'booking', $bid, $prevRefundStatus, 'rejected');
             break;
     }
 }

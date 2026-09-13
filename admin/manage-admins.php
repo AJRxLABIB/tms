@@ -68,7 +68,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['create_admin'])) {
             try {
                 $dbh->prepare("INSERT INTO admin (UserName, Password, Role, updationDate) VALUES (:u, :p, :r, NOW())")
                     ->execute([':u' => $newUser, ':p' => tms_hash_password($newPass), ':r' => $newRole]);
-                tms_log_activity($dbh, $_SESSION['alogin'], 'Admin Created', "Created admin '$newUser' with role '$newRole'");
+                tms_log_activity($dbh, $_SESSION['alogin'], 'Admin Created', "Created admin '$newUser' with role '$newRole'", 'admin', $newUser, null, $newRole);
                 $msg = "Admin '$newUser' created with role '$newRole'."; $msgType = 'success';
             } catch (Exception $e) {
                 error_log('[TMS Admin] Failed to create admin: ' . $e->getMessage());
@@ -109,13 +109,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['change_role'])) {
         } else {
             $dbh->prepare("UPDATE admin SET Role=:r WHERE id=:id")->execute([':r' => $targetRole, ':id' => $targetId]);
             $label = tms_admin_role_labels()[$targetRole] ?? $targetRole;
-            tms_log_activity($dbh, $_SESSION['alogin'], 'Admin Role Changed', "Demoted '{$targetRow->UserName}' from superadmin to '$targetRole'");
+            // Round 96 (item 47): $targetRow->Role is the OLD role, read
+            // before this UPDATE ran -- previously discarded instead of
+            // logged.
+            tms_log_activity($dbh, $_SESSION['alogin'], 'Admin Role Changed', "Demoted '{$targetRow->UserName}' from superadmin to '$targetRole'", 'admin', $targetId, $targetRow->Role, $targetRole);
             $msg = "'{$targetRow->UserName}' is now {$label}."; $msgType = 'success';
         }
     } else {
         $dbh->prepare("UPDATE admin SET Role=:r WHERE id=:id")->execute([':r' => $targetRole, ':id' => $targetId]);
         $label = tms_admin_role_labels()[$targetRole] ?? $targetRole;
-        tms_log_activity($dbh, $_SESSION['alogin'], 'Admin Role Changed', "Set '{$targetRow->UserName}' to role '$targetRole'");
+        tms_log_activity($dbh, $_SESSION['alogin'], 'Admin Role Changed', "Set '{$targetRow->UserName}' to role '$targetRole'", 'admin', $targetId, $targetRow->Role, $targetRole);
         $msg = "'{$targetRow->UserName}' is now {$label}."; $msgType = 'success';
     }
 }
@@ -136,7 +139,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'delet
         $msg = 'Cannot delete the last remaining super-admin.'; $msgType = 'error';
     } else {
         $dbh->prepare("DELETE FROM admin WHERE id = :id")->execute([':id' => $targetId]);
-        tms_log_activity($dbh, $_SESSION['alogin'], 'Admin Deleted', "Deleted admin '{$targetRow->UserName}'");
+        tms_log_activity($dbh, $_SESSION['alogin'], 'Admin Deleted', "Deleted admin '{$targetRow->UserName}'", 'admin', $targetId, $targetRow->Role, null);
         $msg = "Admin '{$targetRow->UserName}' deleted."; $msgType = 'success';
     }
 }

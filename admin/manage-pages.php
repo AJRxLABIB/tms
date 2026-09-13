@@ -47,10 +47,18 @@ if(isset($_POST['save_page'])){
     $pid = (int)($_POST['page_id'] ?? 0);
     $detail = $_POST['detail'] ?? '';
     if ($pid) {
+        // Round 96 (item 47): read the pre-edit content before overwriting
+        // it, so there's an actual before/after to log -- page content can
+        // be long, so tms_log_activity() itself truncates Old/NewValue to
+        // 500 chars; this isn't meant to be a full revision history, just
+        // enough to see that a real change happened and roughly what it was.
+        $prevStmt = $dbh->prepare("SELECT detail FROM tblpages WHERE id=:id");
+        $prevStmt->execute([':id'=>$pid]);
+        $prevDetail = (string)$prevStmt->fetchColumn();
         $dbh->prepare("UPDATE tblpages SET detail=:d, UpdatedAt=NOW() WHERE id=:id")
             ->execute([':d'=>$detail, ':id'=>$pid]);
         // Audit log coverage (Round 52).
-        tms_log_activity($dbh, $_SESSION['alogin'], 'Static Page Edited', "PageId=$pid");
+        tms_log_activity($dbh, $_SESSION['alogin'], 'Static Page Edited', "PageId=$pid", 'page', $pid, $prevDetail, $detail);
         $msg="Page updated."; $msgType='success';
     }
 }
@@ -58,7 +66,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'delet
     tms_csrf_validate();
     $pid=(int)$_POST['id'];
     $dbh->prepare("DELETE FROM tblpages WHERE id=:id")->execute([':id'=>$pid]);
-    tms_log_activity($dbh, $_SESSION['alogin'], 'Static Page Deleted', "PageId=$pid");
+    tms_log_activity($dbh, $_SESSION['alogin'], 'Static Page Deleted', "PageId=$pid", 'page', $pid);
     $msg="Page deleted."; $msgType='success';
 }
 try{ $pages=$dbh->query("SELECT * FROM tblpages ORDER BY id DESC")->fetchAll(PDO::FETCH_OBJ); }

@@ -52,13 +52,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && in_array($_POST['action'] ?? '', ['
         $msg="Review deleted."; $msgType='success';
     } elseif($_POST['action']==='approve'){
         $dbh->prepare("UPDATE tblreviews SET Status=1 WHERE id=:id")->execute([':id'=>$rid]);
-        // Recalculate the package's average rating now that this review counts
-        $pidRow = $dbh->prepare("SELECT PackageId FROM tblreviews WHERE id=:id");
-        $pidRow->execute([':id'=>$rid]);
-        $pid = $pidRow->fetchColumn();
-        if ($pid) {
-            $dbh->prepare("UPDATE tbltourpackages SET AvgRating=(SELECT AVG(Rating) FROM tblreviews WHERE PackageId=:p AND Status=1) WHERE PackageId=:p2")
-                ->execute([':p'=>$pid, ':p2'=>$pid]);
+        // Recalculate the reviewed entity's average rating now that this
+        // review counts. ROUND 80: a review can now target a package, a
+        // hotel, or an activity (never more than one), so this checks all
+        // three FK columns instead of assuming PackageId.
+        $idRow = $dbh->prepare("SELECT PackageId, HotelId, ActivityId FROM tblreviews WHERE id=:id");
+        $idRow->execute([':id'=>$rid]);
+        $row = $idRow->fetch(PDO::FETCH_ASSOC);
+        if ($row) {
+            if ($row['PackageId']) {
+                $dbh->prepare("UPDATE tbltourpackages SET AvgRating=(SELECT AVG(Rating) FROM tblreviews WHERE PackageId=:p AND Status=1) WHERE PackageId=:p2")
+                    ->execute([':p'=>$row['PackageId'], ':p2'=>$row['PackageId']]);
+            } elseif ($row['HotelId']) {
+                $dbh->prepare("UPDATE tblhotels SET AvgRating=(SELECT AVG(Rating) FROM tblreviews WHERE HotelId=:p AND Status=1) WHERE HotelId=:p2")
+                    ->execute([':p'=>$row['HotelId'], ':p2'=>$row['HotelId']]);
+            } elseif ($row['ActivityId']) {
+                $dbh->prepare("UPDATE tblactivities SET AvgRating=(SELECT AVG(Rating) FROM tblreviews WHERE ActivityId=:p AND Status=1) WHERE ActivityId=:p2")
+                    ->execute([':p'=>$row['ActivityId'], ':p2'=>$row['ActivityId']]);
+            }
         }
         tms_log_activity($dbh, $_SESSION['alogin'], 'Review Approved', "id=$rid");
         $msg="Review approved."; $msgType='success';
@@ -78,7 +89,18 @@ try{
     $revPage    = min($revPage, $revTotalPages);
     $revOffset  = ($revPage - 1) * $revPerPage;
 
-    $rq = $dbh->prepare("SELECT r.*, p.PackageName FROM tblreviews r LEFT JOIN tbltourpackages p ON p.PackageId=r.PackageId ORDER BY r.id DESC LIMIT :lim OFFSET :off");
+    // ROUND 80: LEFT JOIN all three possible targets (package/hotel/
+    // activity) and pick whichever one this row actually has -- was a
+    // single INNER JOIN to tbltourpackages only, which would have silently
+    // hidden any hotel/activity review from this admin list entirely.
+    $rq = $dbh->prepare("SELECT r.*,
+            COALESCE(p.PackageName, h.HotelName, a.ActivityName) AS EntityName,
+            CASE WHEN r.PackageId IS NOT NULL THEN 'Package' WHEN r.HotelId IS NOT NULL THEN 'Hotel' ELSE 'Activity' END AS EntityType
+        FROM tblreviews r
+        LEFT JOIN tbltourpackages p ON p.PackageId=r.PackageId
+        LEFT JOIN tblhotels h ON h.HotelId=r.HotelId
+        LEFT JOIN tblactivities a ON a.ActivityId=r.ActivityId
+        ORDER BY r.id DESC LIMIT :lim OFFSET :off");
     $rq->bindValue(':lim', $revPerPage, PDO::PARAM_INT);
     $rq->bindValue(':off', $revOffset, PDO::PARAM_INT);
     $rq->execute();
@@ -88,10 +110,10 @@ try{
 <?php if($msg): ?><div class="alert-msg alert-<?=$msgType?>"><i class="fa fa-check-circle"></i><?=htmlspecialchars($msg)?></div><?php endif; ?>
 <div class="table-responsive">
 <table class="tms-table" style="font-size:13px;">
-  <thead><tr><th>#</th><th>User</th><th>Package</th><th>Rating</th><th>Review</th><th>Photo</th><th>Status</th><th>Date</th><th>Actions</th></tr></thead>
+  <thead><tr><th>#</th><th>User</th><th>Type</th><th>Reviewing</th><th>Rating</th><th>Review</th><th>Photo</th><th>Status</th><th>Date</th><th>Actions</th></tr></thead>
   <tbody>
   <?php if(empty($reviews)): ?>
-  <tr><td colspan="9" style="text-align:center;padding:40px;color:#94a3b8;">No reviews yet.</td></tr>
+  <tr><td colspan="10" style="text-align:center;padding:40px;color:#94a3b8;">No reviews yet.</td></tr>
   <?php else: $i=1; foreach($reviews as $r): ?>
   <?php
     $statusVal = (int)($r->Status ?? 0);
@@ -104,7 +126,8 @@ try{
   <tr>
     <td><?=$i++?></td>
     <td><?=htmlspecialchars($r->UserName ?? '—')?></td>
-    <td><?=htmlspecialchars($r->PackageName ?? '—')?></td>
+    <td><?=htmlspecialchars($r->EntityType ?? '—')?></td>
+    <td><?=htmlspecialchars($r->EntityName ?? '—')?></td>
     <td><?php $rat=(int)($r->Rating??0); for($s=1;$s<=5;$s++) echo '<i class="fa fa-star" style="color:'.($s<=$rat?'#f59e0b':'#e2e8f0').'"></i>'; ?></td>
     <td style="max-width:220px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;"><?=htmlspecialchars(substr($r->ReviewText??'',0,80))?></td>
     <td>

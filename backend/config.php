@@ -615,6 +615,89 @@ function _tms_repair_schema_drift(PDO $dbh): void {
         'ExpiryDate'      => 'ExpiryDate DATE DEFAULT NULL',
         'ExpiryNotifiedAt' => 'ExpiryNotifiedAt TIMESTAMP NULL DEFAULT NULL',
     ]);
+    // Round 86 (master prompt item 28 -- encryption at rest for wallet
+    // documents, see backend/wallet-crypto.php). Encrypted=0 (the default)
+    // means this row's file on disk is plaintext -- true for every document
+    // uploaded before this round, and left that way rather than rewriting
+    // files that already exist (Rule 2). Encrypted=1 means the file is an
+    // AES-256-GCM blob ([IV][tag][ciphertext]) that wallet-document.php must
+    // decrypt before serving. Every upload from this round forward sets 1.
+    tms_ensure_columns($dbh, 'tbltraveldocuments', [
+        'Encrypted' => 'Encrypted TINYINT(1) NOT NULL DEFAULT 0',
+    ]);
+    // Round 87 (master prompt item 7 -- "Package System"): before this,
+    // Inclusions/Exclusions/Cancellation Policy did not exist anywhere in
+    // this codebase -- not a column, not a PackageMeta JSON key, not an
+    // admin form field, confirmed by direct code read rather than assuming
+    // the prior gap-audit's "unstructured blob" framing was accurate (it
+    // wasn't quite -- the concepts were simply absent, not just
+    // unstructured). One item per line, consistent with how PackageFetures/
+    // PackageDetails already store simple admin-authored text -- no need
+    // for a JSON structure for what's fundamentally a short list.
+    tms_ensure_columns($dbh, 'tbltourpackages', [
+        'Inclusions'         => 'Inclusions MEDIUMTEXT DEFAULT NULL',
+        'Exclusions'         => 'Exclusions MEDIUMTEXT DEFAULT NULL',
+        'CancellationPolicy' => 'CancellationPolicy MEDIUMTEXT DEFAULT NULL',
+    ]);
+    // Round 87: Add-ons are relational (a package defines what's available;
+    // a booking records what was actually selected and at what price), so
+    // unlike Inclusions/Exclusions this needs real tables, not columns --
+    // same CREATE TABLE IF NOT EXISTS idiom already used for
+    // tbltraveldocuments just above. tblbookingaddons.AddOnId is nullable
+    // and Name/Price are snapshotted at booking time so a later edit or
+    // deletion of the catalog add-on never rewrites what a customer was
+    // actually charged and told they'd get.
+    try {
+        $dbh->exec("
+            CREATE TABLE IF NOT EXISTS tblpackageaddons (
+                AddOnId INT(11) NOT NULL AUTO_INCREMENT,
+                PackageId INT(11) NOT NULL,
+                Name VARCHAR(150) NOT NULL,
+                Description VARCHAR(500) DEFAULT NULL,
+                Price INT(11) NOT NULL DEFAULT 0,
+                IsActive TINYINT(1) NOT NULL DEFAULT 1,
+                CreatedAt TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                PRIMARY KEY (AddOnId),
+                INDEX idx_addon_package (PackageId)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+        ");
+        $dbh->exec("
+            CREATE TABLE IF NOT EXISTS tblbookingaddons (
+                Id INT(11) NOT NULL AUTO_INCREMENT,
+                BookingId INT(11) NOT NULL,
+                AddOnId INT(11) DEFAULT NULL,
+                Name VARCHAR(150) NOT NULL,
+                Price INT(11) NOT NULL DEFAULT 0,
+                Quantity INT(11) NOT NULL DEFAULT 1,
+                CreatedAt TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                PRIMARY KEY (Id),
+                INDEX idx_bookingaddons_booking (BookingId)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+        ");
+        // Round 91 (items 10/81 -- Add to Cart never carried add-on selections
+        // through to checkout, a disclosed scope limit from Round 87). Cart
+        // add-ons are NOT snapshotted like tblbookingaddons -- a cart is
+        // transient scratch state (hours/days, not a permanent receipt), so
+        // Name/Price are read live from tblpackageaddons at cart/checkout
+        // display time; only the real booking created at checkout gets a
+        // snapshotted tblbookingaddons row. No FK CASCADE (this project's
+        // convention throughout -- see tblbookingaddons above): cart.php's
+        // single-item removal and checkout.php's post-checkout cart clear
+        // both explicitly delete the matching tblcartaddons rows themselves.
+        $dbh->exec("
+            CREATE TABLE IF NOT EXISTS tblcartaddons (
+                Id INT(11) NOT NULL AUTO_INCREMENT,
+                CartId INT(11) NOT NULL,
+                AddOnId INT(11) NOT NULL,
+                Quantity INT(11) NOT NULL DEFAULT 1,
+                CreatedAt TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                PRIMARY KEY (Id),
+                INDEX idx_cartaddons_cart (CartId)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+        ");
+    } catch (Exception $e) {
+        error_log('[TMS] tblpackageaddons/tblbookingaddons/tblcartaddons migration failed: ' . $e->getMessage());
+    }
     // Feature Phase 2c: persist the issues/highlights the AI was already
     // being asked for (and silently discarding), plus lightweight fake-review
     // flagging fields.
@@ -642,6 +725,41 @@ function _tms_repair_schema_drift(PDO $dbh): void {
     // other field here -- never assumed for a user who hasn't set one.
     tms_ensure_columns($dbh, 'tbl_user_profile', [
         'food_preference' => 'food_preference VARCHAR(30) DEFAULT NULL',
+    ]);
+    // Round 80 (master prompt items 12/13 -- Hotel System / Activities
+    // Marketplace "reviews" requirement): tblreviews was package-only
+    // (PackageId, with no way to attach a review to a hotel or activity).
+    // Two new nullable FK columns let one review row point at exactly one
+    // of the three entity types (enforced in application code, not a DB
+    // constraint, to stay consistent with how PackageId itself was never
+    // constrained either) -- existing package reviews are unaffected
+    // (both new columns default NULL for every pre-existing row).
+    tms_ensure_columns($dbh, 'tblreviews', [
+        'HotelId'    => 'HotelId INT DEFAULT NULL',
+        'ActivityId' => 'ActivityId INT DEFAULT NULL',
+    ]);
+    // Round 82 (master prompt item 54 -- "Content/Blog"): the spec names six
+    // fields every article "should have" -- author, published date, updated
+    // date, sources, related destinations, related packages. author
+    // (AuthorId) and published date (CreatedAt) already existed; the other
+    // four did not. UpdatedAt mirrors tblpages's own existing pattern exactly
+    // (DEFAULT NULL, not DEFAULT CURRENT_TIMESTAMP, so every pre-existing
+    // post stays NULL here rather than falsely showing "just updated" the
+    // moment this migration runs -- it only gets a real value the next time
+    // that specific post is actually edited). RelatedDestination is a plain
+    // string (matching the real Country values tbltourpackages/
+    // destinations.php already use), not a foreign key to a "destinations"
+    // table -- no such table exists in this schema (destinations are derived
+    // from tbltourpackages.Country everywhere else too), so a fake FK would
+    // violate Rule 3. RelatedPackageId is a real nullable reference to
+    // tbltourpackages.PackageId, unenforced at the DB level (consistent with
+    // every other cross-table reference in this schema, e.g. tblreviews'
+    // PackageId/HotelId/ActivityId above).
+    tms_ensure_columns($dbh, 'tblblog', [
+        'UpdatedAt'          => 'UpdatedAt TIMESTAMP NULL DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP',
+        'Sources'            => 'Sources MEDIUMTEXT DEFAULT NULL',
+        'RelatedDestination' => 'RelatedDestination VARCHAR(100) DEFAULT NULL',
+        'RelatedPackageId'   => 'RelatedPackageId INT DEFAULT NULL',
     ]);
     // RBAC (Phase 1b): existing installs have exactly one flat admin role.
     // Default every pre-existing admin row to 'superadmin' so nobody already
@@ -691,6 +809,46 @@ function _tms_repair_schema_drift(PDO $dbh): void {
         'Status'          => "Status VARCHAR(50) DEFAULT 'Pending'",
         'AdminNote'       => 'AdminNote MEDIUMTEXT DEFAULT NULL',
         'CreatedAt'       => 'CreatedAt TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP',
+    ]);
+
+    // Round 84 (master prompt items 8/37 -- discovered while live-testing the
+    // money-arithmetic fix, not something I set out to change): tblpayment_events
+    // has always been missing 4 columns that PaymentService.php's own code
+    // requires -- ProviderEventId/Signature/ProcessingStatus/RetryCount are
+    // read and written throughout confirmSandboxPayment() and handleWebhook(),
+    // but neither the CREATE TABLE IF NOT EXISTS fallback just above nor
+    // database/migrations/002_payments.sql ever declared them (both still say
+    // so; kept as historical record, not edited, per Rule 39 -- this
+    // tms_ensure_columns call is the actual fix, additive-only per Rule 8).
+    // Confirmed via a real PDOException reproduced live: "SQLSTATE[42S22]:
+    // Column not found: 1054 Unknown column 'ProcessingStatus' in 'field
+    // list'" -- every sandbox payment confirmation was silently failing
+    // (caught, logged, returns false) with no visible error to the customer
+    // beyond "Payment could not be processed right now."
+    tms_ensure_columns($dbh, 'tblpayment_events', [
+        'ProviderEventId'  => 'ProviderEventId VARCHAR(150) DEFAULT NULL',
+        'Signature'        => 'Signature VARCHAR(255) DEFAULT NULL',
+        'ProcessingStatus' => "ProcessingStatus VARCHAR(20) NOT NULL DEFAULT 'received'",
+        'RetryCount'       => 'RetryCount INT(11) NOT NULL DEFAULT 0',
+    ]);
+
+    // Round 96 (item 47 -- Audit Log): tblactivity_log has only ever had
+    // Actor/Action/Details/IPAddress/CreatedAt -- everything gets packed
+    // into one free-text Details string with no structured before/after
+    // state, and no request metadata at all. The master prompt asks for
+    // "object, old value, new value... request information where
+    // appropriate". Additive-only (Rule 8) -- every one of the ~65
+    // existing tms_log_activity() call sites keeps writing exactly as
+    // before; these columns are simply NULL for rows/call sites that
+    // don't pass them.
+    tms_ensure_columns($dbh, 'tblactivity_log', [
+        'ObjectType'    => 'ObjectType VARCHAR(40) DEFAULT NULL',
+        'ObjectId'      => 'ObjectId VARCHAR(40) DEFAULT NULL',
+        'OldValue'      => 'OldValue VARCHAR(500) DEFAULT NULL',
+        'NewValue'      => 'NewValue VARCHAR(500) DEFAULT NULL',
+        'RequestMethod' => 'RequestMethod VARCHAR(10) DEFAULT NULL',
+        'RequestUri'    => 'RequestUri VARCHAR(255) DEFAULT NULL',
+        'UserAgent'     => 'UserAgent VARCHAR(255) DEFAULT NULL',
     ]);
 
     // Backfill PriceAtAdd for wishlist rows added before this column existed,
@@ -967,6 +1125,10 @@ function _tms_run_core_migrations(PDO $dbh): void {
   `Content` mediumtext DEFAULT NULL, `Tag` varchar(100) DEFAULT NULL,
   `CoverImage` varchar(200) DEFAULT NULL, `AuthorId` int(11) DEFAULT NULL,
   `CreatedAt` timestamp NULL DEFAULT current_timestamp(),
+  `UpdatedAt` timestamp NULL DEFAULT NULL ON UPDATE current_timestamp(),
+  `Sources` mediumtext DEFAULT NULL,
+  `RelatedDestination` varchar(100) DEFAULT NULL,
+  `RelatedPackageId` int(11) DEFAULT NULL,
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4",
 
@@ -1086,11 +1248,20 @@ function _tms_run_core_migrations(PDO $dbh): void {
   KEY `idx_booking` (`BookingId`), KEY `idx_status` (`Status`)
 ) ENGINE=InnoDB DEFAULT CHARSET=latin1",
 
+// Round 84: added ProviderEventId/Signature/ProcessingStatus/RetryCount here
+// too, for a brand-new install -- PaymentService.php's webhook dedup/retry
+// logic needs all four (see the tms_ensure_columns call further down, which
+// is what actually repairs an install that already had this table without
+// them).
 "CREATE TABLE IF NOT EXISTS `tblpayment_events` (
   `EventId` INT(11) NOT NULL AUTO_INCREMENT,
   `PaymentId` INT(11) DEFAULT NULL, `Provider` VARCHAR(30) NOT NULL,
+  `ProviderEventId` VARCHAR(150) DEFAULT NULL,
   `EventType` VARCHAR(60) NOT NULL, `SignatureValid` TINYINT(1) NOT NULL DEFAULT 0,
+  `Signature` VARCHAR(255) DEFAULT NULL,
   `Payload` MEDIUMTEXT DEFAULT NULL, `ProcessedAt` TIMESTAMP NULL DEFAULT NULL,
+  `ProcessingStatus` VARCHAR(20) NOT NULL DEFAULT 'received',
+  `RetryCount` INT(11) NOT NULL DEFAULT 0,
   `ReceivedAt` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`EventId`), KEY `idx_payment` (`PaymentId`)
 ) ENGINE=InnoDB DEFAULT CHARSET=latin1",
@@ -1121,6 +1292,22 @@ function _tms_run_core_migrations(PDO $dbh): void {
   `IsActive` TINYINT(1) NOT NULL DEFAULT 1, `NotifiedAt` TIMESTAMP NULL DEFAULT NULL,
   `CreatedAt` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`), KEY `idx_active` (`IsActive`), KEY `idx_package` (`PackageId`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4",
+
+// Price history (Rule 26 -- "Track historical prices where legitimate data
+// is available"). One row per package per calendar day, upserted by
+// tms_record_price_snapshot() -- never backfilled or fabricated (Rule 3):
+// this table starts empty and only ever grows real snapshots forward from
+// whenever scripts/check_alerts.php's cron next runs. RecordedDate is a
+// plain DATE column (not derived from RecordedAt via a DATE() expression)
+// specifically so the UNIQUE KEY below can dedupe "already snapshotted
+// today" with a portable INSERT ... ON DUPLICATE KEY UPDATE.
+"CREATE TABLE IF NOT EXISTS `tbl_price_history` (
+  `Id` INT(11) NOT NULL AUTO_INCREMENT, `PackageId` INT(11) NOT NULL,
+  `Price` INT(11) NOT NULL, `RecordedDate` DATE NOT NULL,
+  `RecordedAt` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`Id`), UNIQUE KEY `idx_pkg_date` (`PackageId`, `RecordedDate`),
+  KEY `idx_package` (`PackageId`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4",
 
 // Group travel + expense splitting (Rule 24/25). Money here is
@@ -1257,6 +1444,9 @@ function _tms_run_core_migrations(PDO $dbh): void {
         "CREATE INDEX IF NOT EXISTS idx_pkg_status ON tbltourpackages(Status)",
         "CREATE INDEX IF NOT EXISTS idx_booking_email ON tblbooking(UserEmail)",
         "CREATE INDEX IF NOT EXISTS idx_reviews_pkg ON tblreviews(PackageId)",
+        // Round 80: mirror idx_reviews_pkg for the two new review targets.
+        "CREATE INDEX IF NOT EXISTS idx_reviews_hotel ON tblreviews(HotelId)",
+        "CREATE INDEX IF NOT EXISTS idx_reviews_activity ON tblreviews(ActivityId)",
         // PERFORMANCE FIX (Section 9 audit): admin/manage-bookings.php filters
         // by status (the pending/confirmed/cancelled stat strip + status
         // dropdown) and joins on PackageId, with neither column indexed —
@@ -2218,6 +2408,26 @@ function tms_anonymize_user(PDO $dbh, string $email, int $userId): bool {
     $anonEmail = 'deleted-user-' . $userId . '-' . substr(bin2hex(random_bytes(4)), 0, 8) . '@deleted.invalid';
     $lockedPassword = tms_hash_password(bin2hex(random_bytes(32))); // unguessable, unusable
 
+    // Travel Wallet documents (passport/visa/ID scans -- see tbltraveldocuments
+    // and uploads/wallet/) are the one exception to this function's general
+    // "anonymize, don't hard-delete" policy explained above: they are not a
+    // financial/audit record like a booking, they're sensitive personal
+    // document files with no legitimate reason to survive account deletion.
+    // wallet.php's own single-document delete button already hard-deletes the
+    // row and unlink()s the file (see the `delete_doc` handler there) -- this
+    // does the same for every document this user has, rather than leaving the
+    // generic anonymize-loop below just repoint an orphaned file's UserEmail
+    // to the new anonymous identifier and call it deleted.
+    $walletFilesToUnlink = [];
+    try {
+        $wq = $dbh->prepare("SELECT StoredFilename FROM tbltraveldocuments WHERE UserEmail = :e");
+        $wq->execute([':e' => $email]);
+        $walletFilesToUnlink = $wq->fetchAll(PDO::FETCH_COLUMN);
+    } catch (Exception $e) {
+        // Table may not exist on an older/partial install -- nothing to do.
+        $walletFilesToUnlink = [];
+    }
+
     try {
         $dbh->beginTransaction();
 
@@ -2225,6 +2435,12 @@ function tms_anonymize_user(PDO $dbh, string $email, int $userId): bool {
             "UPDATE tblusers SET FullName = 'Deleted User', MobileNumber = NULL,
              EmailId = :anon, Password = :pw, DeletedAt = NOW() WHERE id = :id"
         )->execute([':anon' => $anonEmail, ':pw' => $lockedPassword, ':id' => $userId]);
+
+        try {
+            $dbh->prepare("DELETE FROM tbltraveldocuments WHERE UserEmail = :e")->execute([':e' => $email]);
+        } catch (Exception $e) {
+            error_log("[TMS Privacy] Could not delete tbltraveldocuments rows for user {$userId}: " . $e->getMessage());
+        }
 
         foreach (tms_privacy_tables() as [$table, $col]) {
             try {
@@ -2241,12 +2457,23 @@ function tms_anonymize_user(PDO $dbh, string $email, int $userId): bool {
         }
 
         $dbh->commit();
-        return true;
     } catch (Exception $e) {
         if ($dbh->inTransaction()) $dbh->rollBack();
         error_log('[TMS Privacy] Account anonymization failed for user ' . $userId . ': ' . $e->getMessage());
         return false;
     }
+
+    // Only unlink the actual files once the DB transaction has committed --
+    // if it had rolled back instead, the tbltraveldocuments rows (and the
+    // account) would still exist, and deleting the files first would have
+    // orphaned them the other way around (a row pointing at a file that no
+    // longer exists).
+    foreach ($walletFilesToUnlink as $storedFilename) {
+        $path = 'uploads/wallet/' . $storedFilename;
+        if (is_file($path)) @unlink($path);
+    }
+
+    return true;
 }
 
 /**
@@ -2435,6 +2662,69 @@ function tms_seo_meta(array $o): void {
             . json_encode($o['jsonld'], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE)
             . '</script>' . "\n";
     }
+
+    // NEW (Round 81, master prompt item 53 -- SEO "breadcrumbs"
+    // requirement): 'breadcrumbs' is an optional array of ['label','url']
+    // pairs (last entry's 'url' may be omitted -- it's the current page).
+    // This emits a SEPARATE BreadcrumbList JSON-LD script tag, independent
+    // of whatever the caller already passed as 'jsonld' above (e.g.
+    // package-details.php's Product+Review schema) -- a page having more
+    // than one <script type="application/ld+json"> block is standard,
+    // valid schema.org practice, so no existing call site's 'jsonld' array
+    // needs to change shape. Pair with tms_render_breadcrumb_nav() for the
+    // matching visible trail in the page body.
+    if (!empty($o['breadcrumbs']) && is_array($o['breadcrumbs'])) {
+        $items = [];
+        foreach (array_values($o['breadcrumbs']) as $i => $crumb) {
+            $crumbUrl = $crumb['url'] ?? $canonical;
+            // schema.org expects an absolute URL per ListItem -- site-relative
+            // hrefs like 'index.php' (fine for the visible <a> in
+            // tms_render_breadcrumb_nav()) need resolving here the same way
+            // tms_seo_meta()'s own 'image' handling above already does.
+            if (!preg_match('#^https?://#i', $crumbUrl)) {
+                $crumbUrl = $scheme . '://' . $host . '/' . ltrim($crumbUrl, '/');
+            }
+            $items[] = [
+                '@type'    => 'ListItem',
+                'position' => $i + 1,
+                'name'     => (string)($crumb['label'] ?? ''),
+                'item'     => $crumbUrl,
+            ];
+        }
+        if ($items) {
+            echo '<script type="application/ld+json">'
+                . json_encode(['@context' => 'https://schema.org', '@type' => 'BreadcrumbList', 'itemListElement' => $items],
+                    JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE)
+                . '</script>' . "\n";
+        }
+    }
+}
+
+/**
+ * Visible breadcrumb trail matching tms_seo_meta()'s 'breadcrumbs' JSON-LD
+ * (master prompt item 53). Pass the same ['label','url'] array to both --
+ * this renders the accessible <nav><ol> version in the page body. The
+ * last item is rendered as plain text (aria-current="page"), never a link,
+ * regardless of whether a 'url' was given for it.
+ *
+ * @param array $items  [['label'=>'Home','url'=>'index.php'], ..., ['label'=>'Current Page']]
+ */
+function tms_render_breadcrumb_nav(array $items): void {
+    $items = array_values($items);
+    if (count($items) < 2) return; // a single crumb ("Home" alone) isn't worth showing
+    echo '<nav class="tms-breadcrumb" aria-label="Breadcrumb"><ol>';
+    $last = count($items) - 1;
+    foreach ($items as $i => $item) {
+        $label = htmlspecialchars((string)($item['label'] ?? ''), ENT_QUOTES, 'UTF-8');
+        echo '<li>';
+        if ($i !== $last && !empty($item['url'])) {
+            echo '<a href="' . htmlspecialchars($item['url'], ENT_QUOTES, 'UTF-8') . '">' . $label . '</a>';
+        } else {
+            echo '<span aria-current="page">' . $label . '</span>';
+        }
+        echo '</li>';
+    }
+    echo '</ol></nav>' . "\n";
 }
 
 /**
@@ -2652,10 +2942,28 @@ function tms_admin_role(PDO $dbh): string {
         $stmt = $dbh->prepare("SELECT Role FROM admin WHERE UserName = :u LIMIT 1");
         $stmt->execute([':u' => $_SESSION['alogin']]);
         $role = $stmt->fetchColumn();
-        return $role ?: 'superadmin'; // fail open to the historical behavior, not locked-out
+        // A NULL/empty Role means this admin predates the RBAC column
+        // entirely (the original seed `admin` account has no Role value at
+        // all -- see tms.sql). Falling open to 'superadmin' here is a
+        // deliberate, narrow compatibility decision so that pre-existing
+        // installation never silently loses its one working admin account
+        // (Rule 2) -- NOT a general license to fail open below.
+        return $role ?: 'superadmin';
     } catch (Exception $e) {
-        error_log('[TMS RBAC] Role lookup failed: ' . $e->getMessage());
-        return 'superadmin'; // fail open — an infra hiccup should never lock the admin out
+        // Round 97 security fix (item 44/46): a *query failure* is not the
+        // same situation as "this admin predates the Role column" above --
+        // it can be hit by ANY logged-in admin, including deliberately
+        // low-privileged ones, on a transient DB hiccup, a lock timeout, or
+        // schema drift. The previous code returned 'superadmin' here too,
+        // which meant a momentary DB error silently escalated every admin
+        // (not just legacy ones) to full access for that request -- a
+        // fail-OPEN authorization bypass, not a resilience feature.
+        // tms_require_admin() (session-only) still works fine on '' , and
+        // tms_admin_require_role() degrades to a normal 403 -- so failing
+        // closed here costs nothing except (correctly) refusing a
+        // role-gated action when the role genuinely couldn't be verified.
+        error_log('[TMS RBAC] Role lookup failed, failing closed (no elevated role granted): ' . $e->getMessage());
+        return '';
     }
 }
 
@@ -2961,14 +3269,31 @@ function tms_prune_ai_logs(PDO $dbh): void {
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
-// WEATHER (OpenWeatherMap) — real live weather + 5-day forecast, DB-cached
+// WEATHER — real live weather + 5-day forecast, DB-cached, provider-abstracted
 // ══════════════════════════════════════════════════════════════════════════════
+
+require_once __DIR__ . '/weather/WeatherProviderInterface.php';
+require_once __DIR__ . '/weather/OpenWeatherMapProvider.php';
+require_once __DIR__ . '/weather/OpenMeteoProvider.php';
 
 /**
  * Fetch live weather + forecast for a lat/lng. Returns an array with keys:
  * ok(bool), city, temp, feels_like, humidity, wind_speed, condition, icon,
  * forecast(array of daily summaries), error(string, only if !ok).
  * Never throws — always returns a usable array so the page can render gracefully.
+ *
+ * PROVIDER ABSTRACTION (Round 89, master prompt items 41/71): this function
+ * used to hardcode OpenWeatherMap's exact request/response shape inline,
+ * with the Open-Meteo fallback as a second hardcoded code path in the same
+ * function -- exactly what this project's own AIProviderInterface /
+ * PaymentProviderInterface pattern (backend/ai/providers,
+ * backend/payments) already exists to avoid elsewhere. This function now
+ * owns only what does NOT vary by provider -- coordinate validation, the
+ * shared cache, negative-caching on failure, and system-health telemetry --
+ * and delegates the actual fetch to whichever WeatherProviderInterface
+ * implementation is configured (see backend/weather/). Behavior (cache
+ * keys/TTLs, provider priority/fallback order, returned field shape) is
+ * unchanged from before this refactor.
  */
 function tms_get_weather(PDO $dbh, float $lat, float $lng, string $label = ''): array {
     // FIX (Round 14): this was `if (!$lat && !$lng)` — it required BOTH to be
@@ -2993,259 +3318,56 @@ function tms_get_weather(PDO $dbh, float $lat, float $lng, string $label = ''): 
         if (is_array($cachedData)) return $cachedData;
     }
 
-    // ROOT-CAUSE FIX: this function used to require a paid/registered
-    // OpenWeatherMap API key and simply gave up — falling back to fake
-    // seasonal-average weather — the instant that key was empty. That means
-    // "Integrate a real weather API" was only ever actually true for a
-    // deployer who went and signed up for OpenWeatherMap; everyone else
-    // silently saw simulated data with no indication it wasn't live. The
-    // project already has a proven, free, no-signup weather integration
-    // (Open-Meteo, in includes/ExploreService.php) — reuse that as the
-    // fallback here instead of giving up, so the Weather page shows real
-    // live data out of the box regardless of whether an OWM key exists.
-    if (empty(OPENWEATHER_API_KEY)) {
-        return tms_get_weather_openmeteo($dbh, $lat, $lng, $label, $cacheKey, $tmsCache ?? null);
-    }
+    // Provider priority: OpenWeatherMap first if configured (richer data --
+    // "feels like", named city), Open-Meteo always included as the free,
+    // no-signup fallback so real live weather still works out of the box
+    // with zero configuration (this is the same behavior the old inline
+    // "if empty(OPENWEATHER_API_KEY)" branch used to give -- just expressed
+    // as a provider list instead of a hardcoded if/else).
+    $providers = [];
+    $owm = new OpenWeatherMapProvider();
+    if ($owm->isConfigured()) { $providers[] = $owm; }
+    $providers[] = new OpenMeteoProvider();
 
     $result = ['ok' => false, 'error' => 'fetch_failed'];
-
-    try {
-        $curBase = 'https://api.openweathermap.org/data/2.5/weather';
-        $curUrl  = $curBase . '?lat=' . urlencode($lat) . '&lon=' . urlencode($lng)
-                 . '&units=metric&appid=' . urlencode(OPENWEATHER_API_KEY);
-
-        $fcBase = 'https://api.openweathermap.org/data/2.5/forecast';
-        $fcUrl  = $fcBase . '?lat=' . urlencode($lat) . '&lon=' . urlencode($lng)
-                . '&units=metric&appid=' . urlencode(OPENWEATHER_API_KEY);
-
-        $curJson = _tms_http_get($curUrl);
-        $cur = $curJson ? json_decode($curJson, true) : null;
-
-        if (!$cur || !isset($cur['main'])) {
-            // Live OWM call failed even though a key is configured (bad key,
-            // rate limit, network blip, etc.) — fall back to the free
-            // Open-Meteo path rather than giving up straight to simulated
-            // seasonal averages, so a temporary OWM problem doesn't take
-            // real weather away entirely.
-            tms_log_system_event($dbh, 'weather', 'openweathermap', false, 'empty/malformed current-weather response');
-            return tms_get_weather_openmeteo($dbh, $lat, $lng, $label, $cacheKey, $tmsCache ?? null);
-        }
-
-        $forecast = [];
-        $fcJson = _tms_http_get($fcUrl);
-        $fc = $fcJson ? json_decode($fcJson, true) : null;
-        // FIX (Round 14): days used to be bucketed with date() — i.e. in the
-        // SERVER's timezone — so for any destination in a different zone the
-        // daily highs/lows blended two local days, and the "skip partial today"
-        // test could skip the wrong day or nothing at all. Bucket in the
-        // destination's own offset instead (OWM returns it as `timezone`).
-        $fcTzOffset = (int)($cur['timezone'] ?? 0);
-        $localToday = gmdate('Y-m-d', time() + $fcTzOffset);
-        if ($fc && !empty($fc['list'])) {
-            $byDay = [];
-            foreach ($fc['list'] as $slot) {
-                if (empty($slot['dt'])) { continue; }
-                $day = gmdate('Y-m-d', (int)$slot['dt'] + $fcTzOffset);
-                $byDay[$day][] = $slot;
-            }
-            foreach ($byDay as $day => $slots) {
-                if ($day === $localToday) { continue; } // skip the partial current day
-                // array_column silently drops slots with no 'main', so this can
-                // legitimately come back empty on a degraded payload — and
-                // max([])/min([]) throw a ValueError (an Error, NOT an Exception,
-                // so the catch below would not have caught it: uncaught fatal).
-                $temps = array_filter(array_column(array_column($slots, 'main'), 'temp'), 'is_numeric');
-                if (!$temps) { continue; }
-                $midSlot = $slots[intval(count($slots) / 2)];
-                $forecast[] = [
-                    'date'      => $day,
-                    'day_label' => date('D', strtotime($day)),
-                    'temp_max'  => round(max($temps)),
-                    'temp_min'  => round(min($temps)),
-                    'condition' => $midSlot['weather'][0]['main'] ?? '',
-                    'icon'      => $midSlot['weather'][0]['icon'] ?? '01d',
-                ];
-                if (count($forecast) >= 5) break;
-            }
-        }
-
-        // sys.sunrise/sunset are UTC unix timestamps; sys.timezone-less
-        // builds still give a top-level 'timezone' offset (seconds from UTC)
-        // we can apply with gmdate() to show the destination's local time
-        // rather than the server's.
-        $tzOffset = (int)($cur['timezone'] ?? 0);
-        $sunrise  = isset($cur['sys']['sunrise']) ? gmdate('h:i A', $cur['sys']['sunrise'] + $tzOffset) : null;
-        $sunset   = isset($cur['sys']['sunset'])  ? gmdate('h:i A', $cur['sys']['sunset']  + $tzOffset) : null;
-
-        $result = [
-            'ok'         => true,
-            'source'     => 'openweathermap',
-            // FIX (Round 14): these four were the only unguarded reads in the
-            // block (wind/weather already used ??). A degraded payload produced
-            // "Undefined array key" warnings plus round(null) deprecations and a
-            // blank temperature on screen.
-            'city'       => ($cur['name'] ?? '') ?: $label,
-            'temp'       => round($cur['main']['temp'] ?? 0),
-            'feels_like' => round($cur['main']['feels_like'] ?? ($cur['main']['temp'] ?? 0)),
-            'humidity'   => $cur['main']['humidity'] ?? null,
-            'wind_speed' => round($cur['wind']['speed'] ?? 0, 1),
-            'condition'  => $cur['weather'][0]['main'] ?? 'Clear',
-            'description'=> ucfirst($cur['weather'][0]['description'] ?? ''),
-            'icon'       => $cur['weather'][0]['icon'] ?? '01d',
-            'sunrise'    => $sunrise,
-            'sunset'     => $sunset,
-            'forecast'   => $forecast,
-            'fetched_at' => date('c'),
-        ];
-
-        // Save to cache (Phase 1d: shared CacheService)
-        if (isset($tmsCache)) {
-            $tmsCache->set($cacheKey, $result, WEATHER_CACHE_TTL);
-        }
+    foreach ($providers as $provider) {
+        $attempt = $provider->fetch($lat, $lng, $label);
 
         // MONITORING (Round 72, master prompt item 56): a real success/
-        // latency signal for the "Weather" line on admin/system-health.php,
-        // which previously reported this provider as "not tracked" (only
-        // configured/not-configured, same as AI's own detailed telemetry
-        // now covers). Only logged on an actual live fetch, not a cache hit
+        // latency signal for the "Weather" line on admin/system-health.php.
+        // Only logged on an actual live fetch attempt, never a cache hit
         // (the early `return $cachedData` above never reaches here) --
         // matches how AI telemetry's own health-page query already filters
         // to `cached = 0` so a cache hit can't flatter the numbers.
-        tms_log_system_event($dbh, 'weather', 'openweathermap', true);
+        tms_log_system_event($dbh, 'weather', $provider->name(), (bool)$attempt['ok'],
+            $attempt['ok'] ? null : ($attempt['error'] ?? 'unknown error'));
 
-    } catch (Throwable $e) {
-        // Even an unexpected error from the OWM path falls back to the free API
-        // rather than giving up on real weather entirely. (Throwable, not
-        // Exception: PHP 8 throws ValueError/TypeError, which are Errors.)
-        error_log('[TMS Weather] OpenWeatherMap path failed: ' . $e->getMessage());
-        tms_log_system_event($dbh, 'weather', 'openweathermap', false, $e->getMessage());
-        return tms_get_weather_openmeteo($dbh, $lat, $lng, $label, $cacheKey, $tmsCache ?? null);
+        if ($attempt['ok']) {
+            $result = $attempt;
+            break; // success -- don't fall through to the next provider
+        }
+        // else: fall through and try the next provider, exactly like the
+        // old inline code falling from the OWM branch to
+        // tms_get_weather_openmeteo() on any failure.
     }
 
-    return $result;
-}
-
-/**
- * Free, no-signup-required weather via Open-Meteo — same provider and
- * request shape already proven in includes/ExploreService.php, adapted to
- * return the field names weather.php / tms_get_weather()'s callers expect.
- * Icons come back as Font-Awesome class names (e.g. "fa-cloud-sun") rather
- * than OpenWeatherMap's icon codes (e.g. "01d") — callers must check
- * `source` before deciding whether to render an <img> (OWM) or an <i> (this).
- */
-function tms_get_weather_openmeteo(PDO $dbh, float $lat, float $lng, string $label, string $cacheKey, $tmsCache): array {
-    $result = ['ok' => false, 'error' => 'fetch_failed'];
-    try {
-        $url = 'https://api.open-meteo.com/v1/forecast?' . http_build_query([
-            'latitude'      => $lat,
-            'longitude'     => $lng,
-            'current'       => 'temperature_2m,relative_humidity_2m,apparent_temperature,weather_code,wind_speed_10m,is_day',
-            'daily'         => 'weather_code,temperature_2m_max,temperature_2m_min,sunrise,sunset',
-            'forecast_days' => 6,
-            'timezone'      => 'auto',
-        ]);
-        $json = _tms_http_get($url);
-        $w = $json ? json_decode($json, true) : null;
-        // FIX (Round 14): this only checked that `current` existed, so a partial
-        // payload returned ok:true with temp = null — rendering "°C" with no
-        // number on weather.php and a fabricated "0°C" on compare.php.
-        if (!$w || !isset($w['current']) || !isset($w['current']['temperature_2m'])) {
-            if ($tmsCache) { $tmsCache->set($cacheKey, $result, 120); }
-            tms_log_system_event($dbh, 'weather', 'open-meteo', false, 'empty/malformed current-weather response');
-            return $result;
-        }
-
-        $code    = (int)($w['current']['weather_code'] ?? 0);
-        $isDay   = (bool)($w['current']['is_day'] ?? 1);
-
-        $forecast = [];
-        if (!empty($w['daily']['time'])) {
-            foreach ($w['daily']['time'] as $i => $date) {
-                if ($i === 0) continue; // skip today, matches the OWM path (starts from tomorrow)
-                $forecast[] = [
-                    'date'      => $date,
-                    'day_label' => date('D', strtotime($date)),
-                    'temp_max'  => isset($w['daily']['temperature_2m_max'][$i]) ? round($w['daily']['temperature_2m_max'][$i]) : null,
-                    'temp_min'  => isset($w['daily']['temperature_2m_min'][$i]) ? round($w['daily']['temperature_2m_min'][$i]) : null,
-                    'condition' => tms_openmeteo_code_to_text((int)($w['daily']['weather_code'][$i] ?? 0)),
-                    'icon'      => tms_openmeteo_code_to_icon((int)($w['daily']['weather_code'][$i] ?? 0), true),
-                ];
-                if (count($forecast) >= 5) break;
-            }
-        }
-
-        $result = [
-            'ok'         => true,
-            'source'     => 'open-meteo',
-            'city'       => $label,
-            'temp'       => isset($w['current']['temperature_2m']) ? round($w['current']['temperature_2m']) : null,
-            'feels_like' => isset($w['current']['apparent_temperature']) ? round($w['current']['apparent_temperature']) : null,
-            'humidity'   => $w['current']['relative_humidity_2m'] ?? null,
-            'wind_speed' => isset($w['current']['wind_speed_10m']) ? round($w['current']['wind_speed_10m'] / 3.6, 1) : null, // km/h -> m/s to match OWM units
-            'condition'  => tms_openmeteo_code_to_text($code),
-            'description'=> tms_openmeteo_code_to_text($code),
-            'icon'       => tms_openmeteo_code_to_icon($code, $isDay),
-            'sunrise'    => isset($w['daily']['sunrise'][0]) ? date('h:i A', strtotime($w['daily']['sunrise'][0])) : null,
-            'sunset'     => isset($w['daily']['sunset'][0])  ? date('h:i A', strtotime($w['daily']['sunset'][0]))  : null,
-            'forecast'   => $forecast,
-            'fetched_at' => date('c'),
-        ];
-
-        if ($tmsCache) {
+    if ($result['ok']) {
+        if (isset($tmsCache)) {
             $tmsCache->set($cacheKey, $result, WEATHER_CACHE_TTL);
         }
-    } catch (Throwable $e) {
-        error_log('[TMS Weather] Open-Meteo path failed: ' . $e->getMessage());
-        $result = ['ok' => false, 'error' => 'exception'];
-        tms_log_system_event($dbh, 'weather', 'open-meteo', false, $e->getMessage());
+    } else {
+        // FIX (Round 14): failures used to be left uncached, so during an
+        // outage EVERY page load re-attempted every provider — up to 6s
+        // each, and compare.php looped it over 3 packages (up to 36s),
+        // blowing max_execution_time and replacing the whole page with the
+        // generic fatal-error screen. A short negative TTL keeps the site
+        // responsive while every provider is down.
+        if (isset($tmsCache)) {
+            $tmsCache->set($cacheKey, $result, 120);
+        }
     }
-    // FIX (Round 14): failures used to be left uncached, so during an outage
-    // EVERY page load re-attempted the call — up to 6s each, and compare.php
-    // looped it over 3 packages (up to 36s), blowing max_execution_time and
-    // replacing the whole page with the generic fatal-error screen. A short
-    // negative TTL keeps the site responsive while an API is down.
-    if (!$result['ok'] && $tmsCache) {
-        $tmsCache->set($cacheKey, $result, 120);
-    }
-    // MONITORING (Round 72, master prompt item 56): logs the success case
-    // here (the two failure branches above already logged their own, more
-    // specific message and return early via their own `return`, so this
-    // line is only reached, for a failure, by nothing -- it's success-only
-    // in practice, but guarded on $result['ok'] to stay correct if a future
-    // edit adds another path through this function).
-    if ($result['ok']) {
-        tms_log_system_event($dbh, 'weather', 'open-meteo', true);
-    }
+
     return $result;
-}
-
-/** WMO weather code -> human text (Open-Meteo uses WMO codes, not OWM's condition strings). */
-function tms_openmeteo_code_to_text(int $code): string {
-    $map = [
-        0=>'Clear sky',1=>'Mainly clear',2=>'Partly cloudy',3=>'Overcast',
-        45=>'Fog',48=>'Depositing rime fog',
-        51=>'Light drizzle',53=>'Moderate drizzle',55=>'Dense drizzle',
-        56=>'Light freezing drizzle',57=>'Dense freezing drizzle',
-        61=>'Slight rain',63=>'Moderate rain',65=>'Heavy rain',
-        66=>'Light freezing rain',67=>'Heavy freezing rain',
-        71=>'Slight snow fall',73=>'Moderate snow fall',75=>'Heavy snow fall',77=>'Snow grains',
-        80=>'Slight rain showers',81=>'Moderate rain showers',82=>'Violent rain showers',
-        85=>'Slight snow showers',86=>'Heavy snow showers',
-        95=>'Thunderstorm',96=>'Thunderstorm with hail',99=>'Thunderstorm with heavy hail',
-    ];
-    return $map[$code] ?? 'Clear';
-}
-
-/** WMO weather code -> Font Awesome icon class (matches ExploreService.php's mapping). */
-function tms_openmeteo_code_to_icon(int $code, bool $isDay): string {
-    if (in_array($code, [0, 1], true)) return $isDay ? 'fa-sun' : 'fa-moon-o';
-    if ($code === 2) return $isDay ? 'fa-cloud' : 'fa-cloud';
-    if ($code === 3) return 'fa-cloud';
-    if (in_array($code, [45, 48], true)) return 'fa-align-justify'; // fog — no dedicated FA glyph in the FA4 set this project uses
-    if (in_array($code, [51,53,55,56,57,61,63,65,66,67,80,81,82], true)) return 'fa-tint';
-    if (in_array($code, [71,73,75,77,85,86], true)) return 'fa-snowflake-o';
-    if (in_array($code, [95,96,99], true)) return 'fa-bolt';
-    return 'fa-cloud';
 }
 
 /** Small cURL GET wrapper with a strict timeout so a slow/dead API never hangs the page. */

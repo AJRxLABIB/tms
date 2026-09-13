@@ -12,18 +12,24 @@
 
 require_once __DIR__ . '/AIClient.php';
 require_once __DIR__ . '/../CacheService.php';
+require_once __DIR__ . '/../ExploreService.php';
 
 class TripCopilot {
 
     private AIClient $ai;
     private PDO      $db;
     private CacheService $cache;
+    private ExploreService $explore;
 
     public function __construct(PDO $db, ?CacheService $cache = null) {
         $this->db    = $db;
         $this->ai    = new AIClient($db);
         // ensureTable=false: includes/config.php's own $tmsCache already migrates the shared table.
         $this->cache = $cache ?? new CacheService($db, false);
+        // Round 100 (items 19/20 audit): reuses the exact same Open-Meteo/
+        // Nominatim integration ItineraryPlanner already uses -- no second
+        // weather implementation. See buildLiveWeatherLine() below for why.
+        $this->explore = new ExploreService($db, $this->cache);
     }
 
     /**
@@ -186,6 +192,11 @@ Rules:
 - The trip context above is a condensed summary, not the full itinerary receipt —
   if asked for exact per-item costs/notes you don't have, say you'll pull up the
   full itinerary rather than inventing specific numbers
+- For any question about current or near-term conditions (today, tomorrow, "should
+  I bring an umbrella", etc.), trust the "Live weather right now" line if present —
+  it's a real, fresh fetch. The separate "Weather outlook at trip-planning time"
+  line, if also present, is only what the forecast looked like when the itinerary
+  was first generated and can be outdated by now — don't treat it as current.
 SYSTEM;
     }
 
@@ -200,10 +211,31 @@ SYSTEM;
                  . "({$booking['PackageDuration']}), booked for {$booking['NoOfPersons']} traveler(s), "
                  . "total cost {$booking['TotalCost']} BDT, trip date {$booking['BookingDate']}.";
 
+        // Round 100 (items 19/20 -- context-grounding audit): this used to
+        // be the ONLY weather signal the copilot ever had -- a snapshot
+        // baked into the itinerary JSON once, at generation time, which can
+        // be days or weeks old by the time someone actually asks "what
+        // should I do tomorrow" mid-trip. Item 20's own grounding rule is
+        // "real data -> validation -> structured context -> AI", and a
+        // stale forecast presented as current is exactly the failure mode
+        // that rule exists to prevent. This re-fetches a REAL, current
+        // forecast every call (cheap: ExploreService's own weather cache,
+        // ~20 min TTL, means a fast-moving conversation reuses one real
+        // fetch rather than hitting Open-Meteo on every message) and is
+        // added ALONGSIDE the original trip-planning outlook below, not in
+        // place of it -- one is "what the forecast looked like when this
+        // itinerary was planned", the other is "what it's actually like
+        // right now" -- both are useful, and Rule 2 means the original
+        // line is never removed.
+        $liveWeather = $this->buildLiveWeatherLine($booking['PackageLocation'] ?? '');
+        if ($liveWeather !== '') {
+            $lines[] = $liveWeather;
+        }
+
         $itinerary = $booking['itinerary'] ?? null;
         if (is_array($itinerary) && !empty($itinerary['days'])) {
             if (!empty($itinerary['weather_risk_analysis']['summary'])) {
-                $lines[] = "Weather outlook: " . $itinerary['weather_risk_analysis']['summary'];
+                $lines[] = "Weather outlook at trip-planning time: " . $itinerary['weather_risk_analysis']['summary'];
             }
             $lines[] = "Day-by-day plan:";
             foreach ($itinerary['days'] as $day) {
@@ -221,6 +253,46 @@ SYSTEM;
         }
 
         return implode("\n", $lines);
+    }
+
+    /**
+     * Round 100 (items 19/20): a real, current weather line for the
+     * copilot's system prompt, fetched fresh every call (subject to
+     * ExploreService's own ~20-minute weather cache — see the call site's
+     * comment above for why that's the right cadence). Fully fail-soft:
+     * geocoding failure or a weather API miss just means no live-weather
+     * line is added, same as ItineraryPlanner::buildWeatherContext()'s own
+     * philosophy of degrading quietly rather than blocking the chat.
+     */
+    private function buildLiveWeatherLine(string $destination): string {
+        if ($destination === '') return '';
+        try {
+            $geo = $this->explore->searchDestinations($destination, 1);
+            if (empty($geo['success']) || empty($geo['results'][0])) return '';
+            $wx = $this->explore->getWeather((float)$geo['results'][0]['lat'], (float)$geo['results'][0]['lng']);
+            if (empty($wx['success']) || empty($wx['data'])) return '';
+            $data = $wx['data'];
+
+            $line = "Live weather right now in {$destination} (real, fetched just now): "
+                  . "{$data['current']['temp']}°C (feels like {$data['current']['feels_like']}°C), "
+                  . "{$data['current']['description']}, humidity {$data['current']['humidity']}%.";
+
+            // daily[0] is today, daily[1] is tomorrow -- exactly what a
+            // "what should I do tomorrow" question needs, real and current
+            // rather than whatever the itinerary happened to say weeks ago.
+            if (!empty($data['daily'][0])) {
+                $d = $data['daily'][0];
+                $line .= " Today: {$d['tmin']}–{$d['tmax']}°C, rain chance {$d['pop']}%.";
+            }
+            if (!empty($data['daily'][1])) {
+                $d = $data['daily'][1];
+                $line .= " Tomorrow: {$d['tmin']}–{$d['tmax']}°C, rain chance {$d['pop']}%.";
+            }
+            return $line;
+        } catch (Exception $e) {
+            error_log('[TMS] TripCopilot live weather fetch failed (non-fatal): ' . $e->getMessage());
+            return '';
+        }
     }
 
     private function getBookingContext(int $bookingId, string $email): ?array {

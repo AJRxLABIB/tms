@@ -1,10 +1,62 @@
 <!DOCTYPE html><html><head><title>TMS – Offline</title>
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <style>body{font-family:Arial,sans-serif;text-align:center;padding:60px 20px;background:#f5f8ff;}
-h1{color:#3F84B1;font-size:36px;}p{color:#666;font-size:18px;}</style>
+h1{color:#3F84B1;font-size:36px;}p{color:#666;font-size:18px;}
+#tmsOfflineKit{max-width:420px;margin:30px auto 0;text-align:left;}
+#tmsOfflineKit h3{font-size:15px;color:#333;margin:0 0 10px;}
+#tmsOfflineKit a{display:block;background:#fff;border:1px solid #dde6f0;border-radius:8px;padding:12px 16px;margin-bottom:8px;color:#3F84B1;text-decoration:none;font-size:14px;font-weight:600;}
+#tmsOfflineKit a:hover{border-color:#3F84B1;}
+#tmsOfflineKit p.empty{font-size:13px;color:#999;text-align:center;}</style>
 </head><body>
 <h1>✈️ TMS</h1>
 <h2>You're offline</h2>
 <p>Please check your internet connection and try again.</p>
 <button onclick="window.location.reload()" style="background:#3F84B1;color:#fff;border:none;padding:12px 28px;border-radius:8px;font-size:16px;cursor:pointer;">Try Again</button>
+
+<!-- Round 83 (master prompt item 52 -- "PWA / Offline", "previously cached
+     trip information"): this used to be a dead end with no way back to
+     anything a traveler had already saved. If they used my-trip.php's
+     "Save for Offline" button before losing signal, list those real,
+     already-cached pages here so they're actually reachable while offline,
+     instead of leaving the person stuck on this one static screen. Every
+     link/title below comes from a real cached HTTP response's own <title>
+     tag -- nothing invented if the cache is empty or unsupported. -->
+<div id="tmsOfflineKit">
+  <h3>Saved for offline:</h3>
+  <p class="empty" id="tmsOfflineKitEmpty">Checking what you've saved…</p>
+</div>
+
+<script>
+(function () {
+  var listEl = document.getElementById('tmsOfflineKit');
+  var emptyEl = document.getElementById('tmsOfflineKitEmpty');
+  if (!('caches' in window)) {
+    emptyEl.textContent = "This browser can't check saved pages.";
+    return;
+  }
+  caches.open('tms-tripkit').then(function (cache) {
+    return cache.keys().then(function (requests) {
+      if (!requests.length) {
+        emptyEl.textContent = "Nothing saved yet -- open a trip's page and tap \"Save for Offline\" while you still have a connection.";
+        return;
+      }
+      emptyEl.remove();
+      return Promise.all(requests.map(function (req) {
+        return cache.match(req).then(function (res) {
+          return res.text().then(function (html) {
+            var m = html.match(/<title>([^<]*)<\/title>/i);
+            var title = m ? m[1].replace(/^TMS \| /, '') : req.url;
+            var a = document.createElement('a');
+            a.href = req.url;
+            a.textContent = title;
+            listEl.appendChild(a);
+          });
+        });
+      }));
+    });
+  }).catch(function () {
+    emptyEl.textContent = "Couldn't read saved pages right now.";
+  });
+})();
+</script>
 </body></html>

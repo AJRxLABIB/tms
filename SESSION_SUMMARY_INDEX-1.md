@@ -5543,3 +5543,2270 @@ Did not attempt to reconcile cases where a package's free-text
 column (matching here uses `Country` only, exact match) — this is the same
 looseness/strictness tradeoff already accepted by the pre-existing
 `lookupEmergencyContacts()` pattern, not a new risk introduced this round.
+
+## Round 80: Hotel System / Activities Marketplace (master prompt items 12/13) — real reviews for hotels and activities, extending the existing package review system rather than building a new one
+
+**Why this round:** items 12 and 13 both explicitly list "reviews" as a
+required capability. Direct code investigation found the hotel and
+activities marketplace (built in an earlier round, before this session)
+already covers most of item 12's list -- booking with dates/rooms/guests,
+rates, a real 24-hour cancellation policy (`my-marketplace-bookings.php`),
+amenities, photos -- and item 13's list similarly, but neither had any way
+to attach a real review: `tblreviews` only had a `PackageId` column, and
+`frontend/reviews.php` (the site's one review-writing/browsing page) only
+ever offered a package picker. `tblhotels.AvgRating` / `tblactivities.AvgRating`
+were static numbers from the seed data with no real mechanism to ever
+change.
+
+**What was built:**
+1. **`backend/config.php` + `includes/config.php`** (kept in sync):
+   `tms_ensure_columns()` adds two new nullable columns to `tblreviews` --
+   `HotelId` and `ActivityId` -- alongside the existing `PackageId`. A
+   review row now points at exactly one of the three (enforced in
+   application code, the same way `PackageId` alone always was -- no new
+   DB constraint). Matching indexes added alongside the existing
+   `idx_reviews_pkg`. Purely additive; every existing package review is
+   completely unaffected (both new columns default NULL).
+2. **`frontend/reviews.php`**: reworked to support all three review
+   targets instead of only packages. A new "What are you reviewing?"
+   selector (Tour Package / Hotel / Activity) shows the matching picker via
+   a small inline script and hides the other two; the POST handler
+   validates against a fixed, whitelisted map (never raw user input) to
+   build the right column name, target table, and notification URL for
+   whichever type was chosen. Duplicate-check, moderation (photo reviews
+   still held for admin approval, exactly as before), loyalty points, and
+   the AvgRating recalculation all now work identically for all three
+   types -- this is the same code path package reviews already used, made
+   generic rather than duplicated three times. The review-listing query
+   now `LEFT JOIN`s all three parent tables and shows a generic entity name
+   + type icon; the filter dropdown gained "Hotels" and "Activities"
+   optgroups alongside the existing "Tour Packages" one. `?hotel=ID` and
+   `?activity=ID` query parameters (mirroring the existing `?pkg=ID`) both
+   filter the list and pre-select the write-review form, so a "Write a
+   Review" link from a specific hotel/activity page lands ready to submit
+   for that exact entity.
+3. **`frontend/hotel-details.php` + `frontend/activity-details.php`**: each
+   gained a real "Recent Reviews" card (last 5, real reviewer name, stars,
+   excerpt) directly below the price -- the exact same `.review-mini`
+   pattern `package-details.php` already used, copied rather than
+   reinvented -- plus a real review count next to the star rating ("4.7/5
+   guest rating (12 reviews)") and a "Write a Review" link next to "Back to
+   Hotels"/"Back to Activities" that deep-links into the new `reviews.php`
+   filter/pre-select behavior.
+4. **`admin/manage-reviews.php`**: the moderation approve-action's
+   AvgRating recalculation now checks which of the three FK columns a
+   review actually has and updates the matching table (`tbltourpackages`
+   / `tblhotels` / `tblactivities`) -- was hardcoded to packages only,
+   which would have left a hotel/activity review's approval never
+   reflected in that entity's rating. The admin review list's query and
+   table also gained a "Type" column and a generic "Reviewing" column
+   (`LEFT JOIN` to all three tables instead of an inner join to packages
+   only, which would have silently hidden any hotel/activity review from
+   this list entirely).
+
+**Files touched:** `backend/config.php` + `includes/config.php` (schema),
+`frontend/reviews.php` (full rework), `frontend/hotel-details.php` +
+`frontend/activity-details.php` (review display + write-review link),
+`admin/manage-reviews.php` (moderation + listing). No backend/includes
+duplicate exists for any of the frontend/admin files touched; the
+`config.php` pair was confirmed to differ only in the same pre-existing
+Round-51 divergence both before and after this round's edits.
+
+**Implementation status:** live in both `D:\xampp\htdocs\tms` and
+`D:\Project\tms` (12 writes via `device_commit_files` for the 6 core
+files, all succeeded). `php -l` clean on all 6 files.
+
+**Testing status:** genuinely live-tested end to end using two throwaway
+session-simulation helpers (`test-round80-user-session.php` for a real
+user, `test-round80-admin-session.php` for a real admin -- both verified
+the account via `SELECT` first, neither ever typed a password). As the
+real user: navigated `reviews.php?hotel=2` and confirmed the type selector
+correctly pre-selected "Hotel" with "Emerald Palms Retreat" pre-chosen in
+the now-visible Hotel picker (confirmed via direct DOM inspection, not just
+visual reading) while the Package/Activity pickers stayed hidden; submitted
+a real review (5 stars) and got the real "Thank you! Your review has been
+published." message; confirmed `hotel-details.php?id=2` immediately showed
+the updated rating -- "5.0/5 guest rating (1 review)", replacing the static
+seed value of 4.7 -- plus a real "Recent Reviews" card with the actual
+reviewer name and text. Repeated the same for `reviews.php?activity=2`
+(Balinese Rice Terrace Trek, 4 stars) with identical results (AvgRating
+recalculated from 4.6 to 4.0, real review card shown). Confirmed the
+duplicate-review guard correctly rejects a second submission for the same
+hotel by the same user with "You have already reviewed this hotel." (the
+new type-aware message, not the old hardcoded "package" wording). As the
+real admin: confirmed `admin/manage-reviews.php` lists both new reviews
+with correct "Type" (Activity/Hotel) and "Reviewing" (entity name) columns
+populated -- proving the LEFT JOIN fix, since the old INNER JOIN to
+packages only would have shown neither row at all. Cleanup: since testing
+used a real (non-disposable) user account and two real hotel/activity
+catalog rows, a dedicated cleanup helper deleted the two test review rows
+and reset `tblhotels.AvgRating`/`tblactivities.AvgRating` back to their
+original pre-test seed values (4.7 / 4.6, the values confirmed present
+before any review existed) -- verified afterward via a fresh page load of
+both detail pages, which matched their exact pre-test appearance (no
+review count, no Recent Reviews card, original static rating). All three
+QA helpers were then disabled to 404 stubs, shipped, and confirmed dead
+live.
+
+**What this round deliberately did NOT do, and why (Rule 73):** did not
+add a "reject"/"delete" AvgRating recalculation -- the pre-existing
+package-review moderation flow never recalculated on reject or delete
+either (only on approve), and this round only extended that existing
+behavior to the two new entity types rather than fixing an unrelated,
+pre-existing gap that applies identically to packages. Did not build
+"room types" for hotels (a single hotel row still books as one undivided
+unit) -- a real room-type model is a larger, separate piece of item 12's
+list and out of scope for a reviews-focused round. Did not add
+map/distance display to hotel/activity pages -- Explore Mode (Round 79)
+already has real map/coordinate infrastructure that a future round could
+connect here, but doing so wasn't part of this round's "reviews" scope.
+
+## Round 81: SEO Breadcrumbs (master prompt item 53) — visible breadcrumb trail + BreadcrumbList JSON-LD on all 8 tms_seo_meta()-enabled pages
+
+**Why this round:** a read-only gap-analysis subagent surveyed ~19
+previously-uninvestigated master prompt items this session and flagged
+item 53 (SEO) as PARTIAL: `tms_seo_meta()` (built in an earlier round) was
+real and already wired into 8 pages -- canonical URLs, OpenGraph tags,
+optional JSON-LD -- but breadcrumbs (neither the visible trail nor
+schema.org `BreadcrumbList` structured data) existed nowhere in the
+codebase, despite being one of item 53's explicitly named requirements.
+Direct `grep` confirmed exactly 8 call sites: `activity-details.php`,
+`hotel-details.php`, `package-details.php`, `blog-post.php`,
+`destinations.php`, `hotels.php`, `activities.php`, `blog.php`. Chosen as
+this round's scope for being narrow, purely additive, and fully bounded by
+those same 8 already-instrumented pages.
+
+**What was built:**
+1. **`backend/config.php` + `includes/config.php`** (kept in sync): added
+   an optional `'breadcrumbs'` key to `tms_seo_meta()` -- an array of
+   `['label','url']` pairs (the last entry's `'url'` may be omitted, since
+   it's the current page). When present, it emits a **separate**
+   `<script type="application/ld+json">` `BreadcrumbList` block,
+   independent of whatever the caller already passed as `'jsonld'` (e.g.
+   `package-details.php`'s existing Product+Review schema) -- a page
+   carrying more than one JSON-LD block is standard, valid schema.org
+   practice, so no existing call site's `$jsonld` array needed to change
+   shape. Each breadcrumb URL is resolved to absolute
+   (`$scheme://$host/...`) before being placed in the JSON-LD, mirroring
+   the same absolutization `tms_seo_meta()`'s `'image'` handling already
+   does -- and sharing that same pre-existing limitation on this install
+   (the resolved URL doesn't re-add the `/tms/` subfolder prefix, since
+   `$host` alone is used, exactly as the existing `image` absolutization
+   does; this is not a regression introduced by this round, it's the
+   established pattern, and cosmetic here since Google resolves the
+   install's actual production domain, not this dev host).
+   Also added a new standalone function, **`tms_render_breadcrumb_nav(array
+   $items): void`**, which renders the matching *visible* trail --
+   `<nav class="tms-breadcrumb" aria-label="Breadcrumb"><ol>...` -- in the
+   page body. Returns early if fewer than 2 items are given (a lone "Home"
+   crumb isn't worth showing). The last item is always rendered as plain
+   `<span aria-current="page">`, never a link, regardless of whether a
+   `'url'` was supplied for it.
+2. **`css/modern-theme.css`**: new `.tms-breadcrumb` rule block (flex row,
+   `/` separators between items via `::before`, dark-mode-aware using the
+   file's existing CSS custom properties `--text-muted`/`--secondary`/
+   `--text`).
+3. **The 8 pages themselves** -- each now passes a `'breadcrumbs'` array
+   into its existing `tms_seo_meta([...])` call and calls
+   `tms_render_breadcrumb_nav()` near the top of its main content area,
+   using real, page-specific trails:
+   - `hotels.php` / `activities.php` / `blog.php` / `destinations.php`:
+     `Home > <Section>` (2 levels -- plain listing pages).
+   - `hotel-details.php`: `Home > Hotels > {real HotelName}`.
+   - `activity-details.php`: `Home > Activities > {real ActivityName}`.
+   - `package-details.php`: `Home > Tour Packages > {real PackageName}`
+     (guarded by the page's existing `if ($pkg)` check, so an invalid
+     `?pkgid=` still shows only the error message, no broken breadcrumb).
+   - `blog-post.php`: `Home > Blog > {real post Title}`.
+   All labels beyond "Home"/section names come from real database rows
+   already loaded by each page (Rule 3 -- nothing fabricated).
+
+**Files touched:** `backend/config.php` + `includes/config.php` (shared
+helper), `css/modern-theme.css`, and the 8 frontend pages listed above.
+Confirmed via `find` that all 8 have only thin root-level shim
+counterparts (`require __DIR__ . '/frontend/<page>.php';`, the established
+Round-50 pass-through pattern) -- no real backend/includes duplicate
+exists for any of them, so nothing else needed touching. The `config.php`
+pair was confirmed via `diff` (ignoring a pre-existing, unrelated CRLF- vs
+LF-line-ending difference between the two files on disk) to differ only in
+the same already-known, accepted Round-51 fallback-schema divergence, both
+before and after this round's edits.
+
+**Implementation status:** live in both `D:\xampp\htdocs\tms` and
+`D:\Project\tms` (22 writes via `device_commit_files` across two ship
+batches -- the config.php pair, the CSS, and all 8 frontend files, plus a
+follow-up re-ship of just the config.php pair for the absolute-URL fix
+below -- all succeeded). `php -l` clean on every PHP file touched.
+
+**Testing status:** genuinely live-tested. First attempt at testing hit a
+real bug caught before shipping was declared done: navigating directly to
+`frontend/hotels.php` (bypassing the root-level shim) returned a 500,
+because that file's own `include('backend/config.php')` is a *relative*
+path that only resolves correctly when the script is entered via its
+root-level shim (e.g. `/tms/hotels.php`, whose own `require __DIR__ .
+'/frontend/hotels.php'` puts PHP's cwd at the site root) -- not when
+`frontend/hotels.php` is requested directly (cwd would be `frontend/`,
+where `backend/config.php` doesn't exist). Confirmed via a throwaway
+diagnostic helper (`test-round81-debug.php`, root-level, `display_errors`
+temporarily forced on) that this is a pre-existing characteristic of how
+these pages are meant to be entered, not a regression from this round's
+edits, and re-tested against the *correct* public URLs
+(`/tms/hotels.php`, `/tms/activities.php`, etc.), all of which returned
+200 immediately. Also caught, during this same pass, that the
+breadcrumbs' schema.org `item` URLs were being emitted exactly as passed
+in (e.g. the literal string `'index.php'`) instead of resolved to
+absolute -- fixed in `tms_seo_meta()` and re-shipped (see "What was
+built" above) before considering this round done. Final verification, via
+`fetch()` + JSON-LD parsing from the Browser pane against the live,
+correct public URLs: confirmed all 8 pages return 200 and render a correct
+visible `<nav class="tms-breadcrumb">` trail with correct link hrefs and a
+non-linked last item -- including real entity names (`hotel-details.php?id=2`
+→ "Emerald Palms Retreat", `activity-details.php?id=2` → "Balinese Rice
+Terrace Trek", `package-details.php?pkgid=413` → "Bali Ubud Rice Terraces",
+`blog-post.php?id=3` → "How to Travel on a Budget Without Sacrificing
+Comfort", all real rows already used in earlier rounds' testing) -- and
+confirmed each page also emits a well-formed, correctly-ordered
+`BreadcrumbList` JSON-LD block with absolute `item` URLs, existing
+independently of `package-details.php`'s already-present Product+Review
+JSON-LD block. The throwaway diagnostic helper was disabled to a 404 stub,
+shipped, and confirmed dead live.
+
+**What this round deliberately did NOT do, and why (Rule 73):** did not
+extend `tms_seo_meta()`/breadcrumbs to any page beyond the 8 that already
+call it -- `package-list.php`, for instance, has no SEO meta call at all
+today, and giving it one (plus a breadcrumb) is a disclosed, separate,
+future round rather than something quietly folded into this one. Did not
+attempt to fix the pre-existing `/tms/` subfolder omission in the
+absolute-URL resolution shared with `tms_seo_meta()`'s existing `'image'`
+handling -- that's a pre-existing characteristic of a different, already-
+shipped feature, and "fixing" it here (without the user asking for it)
+would risk changing already-tested `og:image` behavior as an unrelated
+side effect of a breadcrumbs round.
+
+## Round 82: Content/Blog metadata (master prompt item 54) — updated date, sources, related destination, related package for every article
+
+**Why this round:** the same gap-analysis subagent that flagged item 53
+(closed in Round 81) also flagged item 54 as PARTIAL/GAP: the spec lists
+six fields every blog article "should have" -- author, published date,
+updated date, sources, related destinations, related packages -- and
+direct inspection of `tblblog` confirmed only the first two existed
+(`AuthorId`, `CreatedAt`). The other four were entirely absent from the
+schema, the admin add/edit forms, and the public post page. Chosen as this
+round's scope for being narrow, additive, and fully bounded to one table
+and its existing read/write pages.
+
+**What was built:**
+1. **`backend/config.php` + `includes/config.php`** (kept in sync): added
+   four nullable columns to `tblblog` via `tms_ensure_columns()` --
+   `UpdatedAt` (mirrors `tblpages`'s own existing pattern exactly: `DEFAULT
+   NULL ON UPDATE CURRENT_TIMESTAMP`, so every pre-existing post stays NULL
+   until it is genuinely next edited, rather than falsely showing "just
+   updated" the moment this migration runs), `Sources` (free text, one
+   citation/URL per line), `RelatedDestination` (a plain string matching
+   the real `Country` values `tbltourpackages`/`destinations.php` already
+   use -- there is no `tbldestinations` table in this schema, destinations
+   are derived from `tbltourpackages.Country` everywhere else too, so a
+   fake FK to a nonexistent table would have violated Rule 3), and
+   `RelatedPackageId` (a real nullable reference to
+   `tbltourpackages.PackageId`, unenforced at the DB level, consistent with
+   every other cross-table reference already in this schema, e.g.
+   `tblreviews`'s `PackageId`/`HotelId`/`ActivityId`). The fallback `CREATE
+   TABLE IF NOT EXISTS tblblog` schema was updated with the same four
+   columns, per the Round-51 lesson (a from-scratch install must have every
+   column the app actually relies on, not just installs descended from the
+   original `tms.sql`).
+2. **`admin/add-blog.php` / `admin/edit-blog.php`**: both gained two new
+   `<select>` pickers -- Related Destination (populated from `SELECT
+   DISTINCT Country FROM tbltourpackages`) and Related Package (populated
+   from real, currently-published (`Status=1`) packages) -- plus a Sources
+   textarea. Both forms re-validate the submitted destination/package
+   against those same real-data queries server-side before saving (a
+   crafted POST value that isn't one of the real options is silently
+   dropped rather than trusted), so a saved value always corresponds to a
+   real country the catalog has packages in, or a real, currently-published
+   package. `UpdatedAt` is never set explicitly in code -- the column's own
+   `ON UPDATE CURRENT_TIMESTAMP` definition bumps it automatically on save,
+   the same mechanism `tblpages` already relied on.
+3. **`admin/manage-blog.php`**: while wiring this page up, caught and fixed
+   a pre-existing, unrelated bug -- the listing referenced `$p->Author` and
+   `$p->PostingDate`, neither of which is a real `tblblog` column (the
+   schema has `AuthorId` + `CreatedAt`), so both silently fell back to their
+   `??` defaults (`'Admin'` / `'—'`) for every post regardless of its real
+   author or date. Fixed with the same `LEFT JOIN admin` pattern
+   `blog.php`/`blog-post.php` already use. The listing table also gained
+   "Updated" and "Related" columns (small destination/package badges, or a
+   muted "—" when unset).
+4. **`frontend/blog-post.php`**: the post-meta line now shows "Published
+   {date}" and, only when set, "Updated {date}". A new related-tags row
+   (shown only when at least one is set) links the destination to
+   `destinations.php?country=X` and the package to
+   `package-details.php?pkgid=Y` -- the package name/link is resolved via a
+   fresh live query at render time (`WHERE PackageId=:pid AND Status=1`),
+   not trusted from whatever was stored at write time, since
+   `RelatedPackageId` has no DB-level FK and the package it names could
+   since have been deleted or unpublished; the tag simply doesn't render if
+   it no longer resolves. A new Sources section (shown only when set)
+   renders each line as a real clickable link when it looks like a URL, or
+   plain text otherwise. The existing Article JSON-LD gained an optional
+   `dateModified` field (via `array_filter`, so it's entirely absent --
+   not present-but-equal-to-datePublished -- for any post that's never been
+   edited since this migration).
+
+**Files touched:** `backend/config.php` + `includes/config.php` (shared
+schema/migration), `admin/add-blog.php`, `admin/edit-blog.php`,
+`admin/manage-blog.php`, `frontend/blog-post.php`. Confirmed via `find`
+that none of the touched admin files have a duplicate elsewhere in the
+codebase. The `config.php` pair was confirmed via `diff` to differ only in
+the same already-known, accepted Round-51 fallback-schema divergence, both
+before and after this round's edits.
+
+**Implementation status:** live in both `D:\xampp\htdocs\tms` and
+`D:\Project\tms` (12 writes via `device_commit_files`, all succeeded).
+`php -l` clean on all 6 PHP files touched.
+
+**Testing status:** genuinely live-tested using a throwaway
+session-simulation helper (`test-round82-admin-session.php` -- verified a
+real admin account via `SELECT` first, never typed a password, redirected
+into `admin/manage-blog.php`). Confirmed the manage-blog.php bug fix live:
+the listing now shows the real author name ("admin", via the new
+`LEFT JOIN`) and real published dates for all 3 existing posts, instead of
+the old hardcoded "Admin"/"—" fallbacks. Opened `edit-blog.php?id=3`,
+confirmed the two new `<select>` pickers were populated with real data
+(hotel/package/destination lists, 414 real packages), set a real
+destination ("Bangladesh"), a real package ("Bali Ubud Rice Terraces",
+`pkgid=413`), and a two-line Sources value (one real URL, one plain-text
+citation), and submitted via the established `button[name="..."].click()`
+pattern (not `.submit()`, which drops the button's name/value -- the
+Round-80-discovered browser-automation gotcha). Got "Post updated!" and
+confirmed the "Last updated" timestamp now appeared on the edit form
+itself, proving `UpdatedAt`'s `ON UPDATE CURRENT_TIMESTAMP` fired.
+Confirmed `admin/manage-blog.php`'s listing immediately reflected the new
+"Updated" date and destination/package badges for that post. Confirmed
+live on the public `blog-post.php?id=3`: the post-meta line showed both
+"Published 10 Sep 2026" and "Updated 12 Sep 2026"; the related-tags row
+showed real, correctly-linked "Bangladesh" (→ `destinations.php?
+country=Bangladesh`, confirmed 200) and "Bali Ubud Rice Terraces" (→
+`package-details.php?pkgid=413`, confirmed 200) badges; the Sources
+section rendered the URL as a real `<a href>` link and the plain citation
+as plain text; and the Article JSON-LD gained a real `dateModified` key
+alongside the unchanged `datePublished`. Confirmed the negative case on an
+untouched post (`id=2`): no related-tags row, no Sources section, and no
+`dateModified` key in its JSON-LD at all (not a duplicate-of-datePublished
+value). Cleanup: since testing edited one real, non-disposable blog post,
+a dedicated cleanup helper reverted `Sources`/`RelatedDestination`/
+`RelatedPackageId` back to NULL on that post (its `UpdatedAt` was
+deliberately left showing the cleanup edit's own timestamp, rather than
+force-reset, since the row genuinely was touched and there's no prior
+"original" `UpdatedAt` value to restore it to -- it was NULL before any of
+this round's testing). Verified live afterward that the post's related-tags
+row and Sources section were both gone again. Both QA helpers were then
+disabled to 404 stubs, shipped, and confirmed dead live.
+
+**What this round deliberately did NOT do, and why (Rule 73):** did not
+build a many-to-many "related packages" relation (e.g. a join table) --
+the master prompt's plural wording ("related packages") doesn't preclude
+a single primary related package per post, and a join table would be
+meaningfully more machinery (a new table, a picker UI for multiple
+selections, ordering) for a content feature that has no stated requirement
+for more than one. A future round can revisit this if the user wants
+multiple related packages per post. Did not add any of these four new
+fields to `blog.php`'s listing cards or to `sitemap.php`/`index.php`'s
+existing `tblblog` queries -- neither page needed a code change (both
+already work correctly via `SELECT *`/`SELECT id`), and surfacing
+"Updated"/related tags on the listing grid itself, versus just the full
+article page, is a separate, additive future round rather than something
+this round's scope required.
+
+## Round 83: PWA / Offline (master prompt item 52) — a real per-trip "Save for Offline" kit, replacing the generic whatever-was-visited cache
+
+**Why this round:** the same gap-analysis subagent that flagged items 53
+and 54 (Rounds 81/82) flagged item 52 as a GAP: the spec names a specific
+list of things offline mode should prioritize -- itinerary, booking
+confirmation, tickets, emergency contacts, hotel information, flight
+information, packing list, selected documents, previously cached trip
+information -- but `sw.js` was a generic 22-line service worker that only
+ever cached "whatever page the visitor happened to load," with no
+guarantee any of those specific things survived being evicted alongside
+everything else, and no user-facing way to deliberately save any of them.
+
+**What was built:**
+1. **`sw.js`**: added a second, separate cache (`tms-tripkit`, no version
+   suffix) that is never touched by the normal cache-version cleanup on
+   `activate` -- only an explicit save/remove action can change it, so a
+   service-worker update (a new `CACHE` version) can never silently wipe
+   out a trip a traveler saved for offline. Added a `message` event handler
+   answering three commands over a page-provided `MessageChannel`:
+   `TMS_CACHE_TRIP` (fetch a list of real URLs with `cache:'reload'` --
+   bypassing the HTTP cache so what's stored is always today's real booking
+   status/QR code, not a stale copy -- and store them), `TMS_REMOVE_TRIP`
+   (delete specific cached URLs), and `TMS_LIST_TRIPKIT` (list what's
+   cached). The existing generic `fetch` handler needed no changes --
+   `caches.match()` (the global `CacheStorage` method, not a single cache's
+   own `match()`) already searches every cache under the origin, so a page
+   saved into `tms-tripkit` is found automatically the moment a network
+   fetch fails.
+2. **`frontend/my-trip.php`**: added a "Save This Trip for Offline" card
+   (only shown for a non-cancelled booking) listing exactly which real
+   pages will be saved for *this specific real booking* -- the trip's own
+   `my-trip.php?id=` (itinerary), `ticket.php?bkid=` (booking
+   confirmation/ticket, only offered when the booking is actually
+   Confirmed, `status==1` -- the same condition the page's own existing
+   E-Ticket link already uses), `emergency.php` (emergency contacts),
+   `wallet.php` (selected documents), and `packing-assistant.php` (packing
+   list). "Hotel information" isn't a separate cached page -- it's already
+   part of `my-trip.php`'s own rendered content (`HotelName`/`HotelRating`/
+   `MealPlan`), so caching that page covers it. This system has no
+   flight-specific booking model (tour packages only, with a
+   `TransportMode` field already shown on this same page), so there's no
+   separate "flight information" page to cache either. A "Save for Offline"
+   button messages the service worker via the new protocol and reports
+   real per-page success/failure back to the traveler, and a small note
+   makes explicit that live-only features (payment, weather, AI Copilot)
+   still need a connection -- per the spec's own "do not pretend that live
+   services work offline."
+3. **`offline.html`**: previously a dead end with no way back to anything.
+   Now reads the real `tms-tripkit` cache client-side and lists whatever a
+   traveler actually saved, with each link's label taken from that cached
+   page's own real `<title>` tag (e.g. the real "E-Ticket #BK010") --
+   nothing invented, and an honest "nothing saved yet" message when the
+   cache is empty.
+
+**Files touched:** `sw.js`, `offline.html`, `frontend/my-trip.php` (whose
+only duplicate is the pre-existing thin root-level shim, unaffected).
+`php -l` clean on `frontend/my-trip.php`; `node --check` clean on `sw.js`
+and on the inline script extracted from `offline.html`.
+
+**Implementation status:** live in both `D:\xampp\htdocs\tms` and
+`D:\Project\tms` (6 writes via `device_commit_files`, all succeeded).
+
+**Testing status: partially blocked, disclosed here rather than glossed
+over (Rule 77).** A throwaway session-simulation helper
+(`test-round83-user-session.php` -- found a real Confirmed booking via
+`SELECT`, verified its owner exists, signed in as that real user, never
+typed a password) landed on a real trip, `my-trip.php?id=10`, confirming
+the new "Save for Offline" card renders with the correct real item list
+for that exact booking (`ticket.php?bkid=10` only because this booking is
+genuinely Confirmed). Attempting to actually exercise the "Save for
+Offline" button's `navigator.serviceWorker.register()` call, however, hit
+a hard wall: registration failed with "An unknown error occurred when
+fetching the script" -- and to rule out a bug in this round's own `sw.js`,
+a trivial one-line diagnostic service-worker file
+(`test-round83-minimal-sw.js`, unrelated to any of this round's code) was
+shipped and registration was attempted against *that* file instead; it
+failed with the exact same generic error. That proves service-worker
+registration itself is blocked at the browser/environment level in this
+session's live-testing setup (the remote Browser pane used for all this
+session's live testing), not a defect in this round's code -- but it also
+means the actual `navigator.serviceWorker.register()` → message →
+`sw.js`'s handler round-trip could not be exercised live this session.
+What COULD be, and was, verified directly: using the exact same Cache API
+and cache name (`tms-tripkit`) `sw.js`'s message handler uses -- called
+directly from the trip page's own console context, deliberately bypassing
+the blocked service-worker registration, as the closest available
+substitute -- all 5 real URLs for booking #10 were fetched with
+credentials and cache:'reload' and stored successfully; reading them back
+confirmed genuinely real, booking-specific cached content (`ticket.php`'s
+cached title was the real "TMS | E-Ticket #BK010", not a placeholder).
+Navigating to `offline.html` with that real cache populated showed all 5
+real, correctly-titled, clickable links (including the real "E-Ticket
+#BK010" title extracted live from the cached HTML); deleting the cache and
+reloading `offline.html` correctly showed the honest empty-state message
+instead. Every part of this round's logic downstream of "a real save
+command reaches the service worker" was therefore verified against real
+data; only the browser-level service-worker registration step itself
+could not be exercised in this session's test environment. Both QA helper
+files were disabled/emptied and confirmed inert live afterward. No real
+data was mutated this round (every check was read-only caching of
+already-existing pages), so no data cleanup was needed.
+
+**What this round deliberately did NOT do, and why (Rule 73):** did not
+build a "remove from offline" button on the my-trip.php card itself (the
+`TMS_REMOVE_TRIP` message the service worker already answers has no UI
+caller yet) -- a save-only flow covers the spec's stated priority list,
+and a removal UI is a small, disclosed, separate future addition. Did not
+attempt to make live-only features (payment, weather, AI Copilot, live
+chat) do anything special when offline beyond their existing natural
+`fetch()` failure -- the spec's "do not pretend that live services work
+offline" is satisfied by them genuinely failing rather than by fabricating
+a fake offline mode for them, which would be the opposite of what that
+line asks for.
+
+---
+
+## Round 84 — Money arithmetic: remove unnecessary float casts (master prompt items 8/37)
+
+**Why this round:** the gap-audit that kicked off this "focus on Partial"
+pass flagged items 8/37 ("never use floating-point arithmetic for money")
+as PARTIAL, describing `PackagePrice`/`TotalCost` as float/decimal columns
+carrying real float arithmetic risk. Direct verification (Rule 4 -- verify
+external claims before acting on them) found this imprecise:
+`tbltourpackages.PackagePrice` (`int(11)`), `tblbooking.TotalCost` (`INT`),
+`tblbooking.DiscountApplied` (`INT`), and `tblhotels.PricePerNight`
+(`int(11)`) are all genuinely whole-currency-unit INT columns at the
+schema level already -- there was no float/decimal schema to migrate away
+from. `DATABASE.md`'s own "known schema debt" note describing these as
+float-like was itself imprecise and is corrected by this entry, not
+perpetuated. The real, narrower violation was in PHP application code:
+`(float)` casts and float arithmetic (`+=`, `*`) applied to these
+already-integer values in `checkout.php`, `cart.php`, `ticket.php`,
+`payment.php`, and `api/index.php` -- harmless for the specific values
+these columns hold today, but exactly the kind of latent float-precision
+risk the spec warns against, and misleading to anyone reading the code
+(a variable literally named `$totalFloat` holding whole-Taka integers).
+
+**What was built:**
+
+1. **`frontend/checkout.php` and `frontend/cart.php`**: the per-item
+   price-accumulation block (`$it->EffectivePrice`, the running `$total`,
+   and the "unit price × N travelers = total" display line) changed from
+   `(float)` casts to `(int)`. `tms_dynamic_price()`'s own `float
+   $basePrice` parameter is left unchanged -- that function's float
+   parameter is a deliberate, contained conversion boundary that always
+   returns a correctly-rounded integer internally, the same pattern
+   already established for other typed boundaries in this codebase.
+2. **`frontend/ticket.php`**: the cost-calculation block
+   (`$unitPrice`/`$persons`/`$discount`/`$subtotal`/`$total`) changed from
+   float to int throughout.
+3. **`frontend/payment.php`**: `$totalFloat` (accumulated with `(float)
+   $b->TotalCost`) renamed to `$totalAmount` and changed to `(int)`
+   throughout, including the two `tms_currency()` display call sites. The
+   `(float)$b->TotalCost` cast feeding into
+   `PaymentService::createPendingPayment(int, float $amountFloat, ...)` is
+   left as-is -- deliberately, since that method's float parameter is the
+   same kind of contained, intentional conversion boundary
+   (`toMinorUnits()` rounds it into `AmountMinor` integer minor units) as
+   `tms_dynamic_price()`'s.
+4. **`api/index.php`** (`api_book()`): `$unitPrice`/`$subtotal` changed
+   from float to int. The coupon-discount calculation just below
+   (`round($subtotal * ($pct/100), 2)`) was deliberately left unchanged --
+   this file's own comment says it "mirrors the booking-creation logic in
+   package-details.php", which has the identical `round(...,2)` percentage
+   pattern, untouched this round; fixing one copy while leaving its
+   mirrored twin alone would create the exact inconsistency Rule 2 warns
+   against, and a wider fix to the percentage-discount pattern itself is
+   out of this round's narrow, low-risk scope (Rule 73).
+5. **Incidental discovery, fixed the same round (not something set out to
+   change):** live-testing the payment.php fix above surfaced a real,
+   pre-existing, unrelated bug -- `tblpayment_events` was missing 4
+   columns (`ProviderEventId`, `Signature`, `ProcessingStatus`,
+   `RetryCount`) that `backend/payments/PaymentService.php`'s own
+   `confirmSandboxPayment()` and `handleWebhook()` code has always
+   required. Neither the `CREATE TABLE IF NOT EXISTS` fallback in
+   `backend/config.php`/`includes/config.php` nor
+   `database/migrations/002_payments.sql` ever declared them, so every
+   sandbox payment confirmation was silently failing (caught internally,
+   logged, returned `false`) with only a generic "Payment could not be
+   processed right now" shown to the customer -- despite the page's own
+   banner claiming "This is a fully working test-mode flow." Fixed with a
+   `tms_ensure_columns()` self-healing call (additive-only, Rule 8) added
+   to both `backend/config.php` and `includes/config.php`, plus a new
+   additive migration file, `database/migrations/005_payment_events_missing_columns.sql`
+   (002_payments.sql itself was left unedited -- an applied migration is a
+   historical record, not something to rewrite, per Rule 39).
+
+**Files touched:** `frontend/checkout.php`, `frontend/cart.php`,
+`frontend/ticket.php`, `frontend/payment.php`, `api/index.php`,
+`backend/config.php`, `includes/config.php` (byte-identical except the
+pre-existing, already-documented CRLF/Round-51-fallback divergences),
+`database/migrations/005_payment_events_missing_columns.sql` (new file).
+`php -l` clean on all 7 PHP files.
+
+**Implementation status:** live in both `D:\xampp\htdocs\tms` and
+`D:\Project\tms` (all writes via `device_commit_files` succeeded).
+
+**Testing status: verified live, end-to-end, for the cart/checkout/
+ticket/payment path; verified by code inspection plus lint for the API
+path.** Using a disposable QA account with real, pre-existing cart and
+booking data (`qa-alert-test-a112ff@tms-testing.local`, verified via
+`SELECT` before simulating its session -- no password typed), confirmed:
+`cart.php` renders "৳6,000 × 2 travellers = ৳12,000" correctly;
+`checkout.php` shows the identical total; `ticket.php?bkid=10` shows
+"Total Paid ৳1,000" matching that booking's real `TotalCost`; `payment.php`
+showed "৳1,000" and, after the incidental `tblpayment_events` fix above,
+a real click on "Confirm & Book All" followed by a real click on "Pay
+(Sandbox)" completed the full flow live end-to-end -- new booking #BK11
+created with the correct integer total (৳12,000, matching 6,000 × 2
+exactly, no float drift), payment recorded as `paid`, and Tour History
+showing both bookings as Confirmed/Paid with the correct totals. Before
+that fix, the identical real click-path failed every time with "Payment
+could not be processed right now" -- confirmed via a live, reproduced
+`PDOException` ("Unknown column 'ProcessingStatus'"), not assumed.
+`api/index.php`'s `api_book()` fix was not separately exercised over real
+HTTP (it requires a per-user API key not readily available for QA), but
+is the identical, mechanically-verified-safe pattern already proven live
+in the four frontend files, and passed `php -l`. All temporary QA helper
+scripts (`test-round84-diag.php` through `-diag6.php` and
+`-user-session.php`) were disabled to 404 stubs and confirmed dead live
+afterward. No real data was altered beyond the two legitimate test
+bookings created/paid on the disposable QA account, consistent with every
+prior round's QA convention.
+
+**What this round deliberately did NOT do, and why (Rule 73):** did not
+touch the `round(..., 2)` coupon-discount percentage arithmetic in
+`api/index.php` or `package-details.php` -- that is a separate, wider,
+pre-existing pattern (percentage-of-total math naturally produces
+fractional intermediate values) shared identically across both files, and
+changing one without the other would break the "mirrors" relationship the
+code itself documents; a proper fix there is a distinct future round, not
+bundled into this narrower, lower-risk cast cleanup. Did not add a unique
+index on `tblpayment_events.ProviderEventId` (used for webhook dedup
+lookups) -- `tms_ensure_columns()` only adds columns, not indexes, and the
+table is small enough in practice that this is a minor, disclosed
+follow-up rather than something to force into this round's scope.
+
+---
+
+## Round 85 — Documentation (item 75): ARCHITECTURE.md + CHANGELOG.md
+
+**Why this round:** item 75 (Documentation) was flagged PARTIAL -- the
+project had deep per-domain docs (`DATABASE.md`, `PAYMENTS.md`,
+`AI_ARCHITECTURE.md`, `SECURITY.md`, etc.) and a very detailed but
+narrative, not skimmable, round-by-round history
+(`SESSION_SUMMARY_INDEX-1.md`/`SESSION_SUMMARY_INDEX.md`), but nothing
+gave a new engineer a top-level map of the codebase, and nothing gave
+anyone a condensed, chronological "what shipped when" index.
+
+**What was built:**
+
+1. **`ARCHITECTURE.md`** (new, 380 lines) -- researched and drafted by a
+   dedicated research pass that read the actual code (not just prior
+   round summaries) and cross-referenced every existing doc rather than
+   duplicating them. Covers the directory layout, the root-shim pattern
+   (and exactly why direct `frontend/*.php` access 500s), the
+   `backend/`⟷`includes/` duplicate-pair pattern (including which files
+   really are kept in sync and which have drifted), the self-healing
+   migration pattern (`tms_ensure_columns()` + session-gated bulk
+   migrations + the always-on `_tms_repair_schema_drift()`), the core
+   domain concepts (bookings, packages, payments, AI, RBAC), and the
+   request-flow for a typical page.
+2. **`CHANGELOG.md`** (new, 603 lines) -- a condensed, chronological,
+   oldest-first index of all 84 prior rounds, distilled from both session
+   summary files without adding or omitting anything they didn't already
+   say (including honestly carrying forward any round's own
+   "blocked"/"not live-tested" caveats rather than smoothing them over).
+3. **Real bugs found and fixed while verifying the architecture doc's own
+   claims against the live code (not something set out to change, and not
+   left as a TODO once found -- Rule 2/8):**
+   - `backend/payments/PaymentService.php` and
+     `includes/payments/PaymentService.php` had drifted far beyond the
+     documented "kept in sync" set -- the `includes/` copy was missing
+     the entire `handleWebhook()` feature (Round 56/57) and the newer
+     `tblpayment_events` columns. Confirmed nothing in the codebase
+     actually references the `includes/` copy (every real caller uses
+     `backend/payments/PaymentService.php` directly), so this was stale,
+     unreferenced code, not a live bug -- but it violated the project's
+     own "kept in sync" invariant, so `includes/payments/PaymentService.php`
+     was overwritten to exactly match `backend/`'s copy (confirmed
+     byte-identical via `diff` afterward).
+   - **A real, live, user-facing bug**, found the same way:
+     `backend/landing.php` (the guest-facing homepage, `frontend/index.php`'s
+     `include('backend/landing.php')` target for any signed-out visitor)
+     had two bare includes left over from before the Round 49
+     `includes/`→`backend/` rename --
+     `include('includes/header.php')`/`include('includes/footer.php')` --
+     that were silently resolving to the stale, project-root
+     `includes/header.php` instead of this file's own sibling,
+     `backend/header.php`. `includes/header.php` was, in turn, missing
+     the Round 61 RTL `dir="rtl"` flip script that `backend/header.php`
+     has had since Round 61. Net effect, confirmed live: **every
+     signed-out visitor to the homepage who selected Arabic got
+     translated text but the wrong (left-to-right) page direction**,
+     while every other page on the site (reached through
+     `backend/header.php` directly) got it right. Fixed by pointing
+     `backend/landing.php`'s two includes at its real siblings
+     (`backend/header.php`/`backend/footer.php`), re-synced
+     `includes/landing.php` to match, and separately re-synced
+     `includes/header.php` to restore the missing RTL script there too
+     (belt-and-suspenders, since nothing should reach it via this path
+     anymore, but it closes the same "kept in sync" gap either way).
+
+**Files touched:** `ARCHITECTURE.md` (new), `CHANGELOG.md` (new),
+`backend/landing.php`, `includes/landing.php`, `includes/header.php`,
+`includes/payments/PaymentService.php`. `php -l` clean on all 4 touched
+PHP files; `backend/footer.php` vs `includes/footer.php` confirmed already
+identical (no change needed there).
+
+**Implementation status:** live in both `D:\xampp\htdocs\tms` and
+`D:\Project\tms` (all writes via `device_commit_files` succeeded).
+
+**Testing status: verified live.** Loaded the guest homepage
+(`http://localhost/tms/index.php`) signed out -- rendered correctly,
+identical to before. Set the `tms_lang` cookie to `ar` directly (no admin
+form needed, no password involved) and reloaded: before this round's fix
+this would have shown `lang="ar" dir=""` (translated text, wrong layout
+direction); after the fix it correctly shows `lang="ar" dir="rtl"`,
+confirmed by reading `document.documentElement`'s actual attributes in
+the live page, not assumed from the code alone. Cookie reset to `en`
+afterward. The `includes/payments/PaymentService.php` sync was verified
+by `diff` (now byte-identical to `backend/`'s copy) and `php -l`; it has
+no live callers today (confirmed by a repo-wide grep — nothing requires
+`includes/payments/PaymentService.php`), so no functional live test
+applies to that specific file beyond the lint/diff check.
+
+**What this round deliberately did NOT do, and why (Rule 73):** did not
+touch the pre-existing, already-documented-and-accepted divergences
+between `backend/config.php` and `includes/config.php` (the CRLF/LF
+cosmetic difference, and the Round-51 `tblbooking` fallback-schema
+columns present only in `backend/config.php`) -- those were deliberate,
+disclosed decisions from earlier rounds, not oversights this pass found,
+and re-litigating an already-accepted divergence is out of scope here.
+Did not change `backend/footer.php`'s bare `include('includes/chatbot.php')`
+(a similar cross-directory pattern) -- confirmed via `diff` that
+`backend/chatbot.php` and `includes/chatbot.php` are already identical,
+so unlike the header/footer case this isn't currently causing any actual
+behavioral difference, and rewriting a working, non-buggy include for
+stylistic consistency alone is exactly the kind of unnecessary churn Rule
+73 warns against.
+
+---
+
+## Round 86 — Document Wallet: encryption at rest + access audit trail (item 28)
+
+**Why this round:** item 28 was flagged PARTIAL. A dedicated research pass
+confirmed the premise directly against the code rather than assuming it:
+`frontend/wallet.php` stored uploaded passport/visa/ID scans as raw,
+unencrypted bytes (`move_uploaded_file()`, no `openssl_encrypt`/libsodium
+call anywhere), and neither `wallet.php` nor `wallet-document.php` logged
+any access event anywhere. IDOR protection on both files, by contrast, was
+already solid (`WHERE DocId = ? AND UserEmail = ?` on every query) and did
+not need fixing.
+
+**What was built:**
+
+1. **`backend/wallet-crypto.php`** (new, mirrored to `includes/wallet-crypto.php`):
+   `tms_wallet_encryption_key()` / `tms_wallet_encrypt_bytes()` /
+   `tms_wallet_decrypt_bytes()` — AES-256-GCM, deliberately mirroring the
+   exact cipher and `[12-byte IV][16-byte tag][ciphertext]` layout this
+   project already uses for database backups
+   (`scripts/backup_database.php`/`restore_database.php`), keyed by a new,
+   separate `WALLET_ENCRYPTION_KEY` (so the two secrets rotate
+   independently) rather than inventing a second way to do encryption in
+   the same codebase.
+2. **`tbltraveldocuments.Encrypted`** (new column, `tms_ensure_columns()`
+   in both `backend/config.php` and `includes/config.php`, default 0):
+   tracks which rows are encrypted on disk. A document uploaded before this
+   round keeps `Encrypted=0` and is still served exactly as before,
+   byte-for-byte (Rule 2) — nothing pre-existing was touched or
+   re-encrypted.
+3. **`frontend/wallet.php`** upload handler: encrypts every new upload
+   before writing it to disk, fails closed with a clear error if
+   `WALLET_ENCRYPTION_KEY` isn't configured (same choice
+   `backup_database.php` already makes, rather than silently storing a new
+   document unencrypted), and now also writes `uploads/wallet/.htaccess`
+   itself on first use if missing (mirroring `backup_database.php`'s
+   identical belt-and-suspenders pattern) rather than depending entirely on
+   a file that has to exist by some other means. Added
+   `is_uploaded_file()` verification before reading the temp path (defense
+   in depth, since the code no longer goes through `move_uploaded_file()`
+   directly).
+4. **`frontend/wallet-document.php`** download gateway: decrypts
+   `Encrypted=1` rows before streaming; a legacy `Encrypted=0` row is
+   streamed unchanged.
+5. **Access audit trail (item 28's other half):** reused the project's
+   existing `tblactivity_log` / `tms_log_activity()` mechanism (already
+   used for user-facing events elsewhere, e.g. `export-my-data.php`) rather
+   than building a parallel table — `Wallet Document Uploaded`, `...
+   Deleted`, `... Downloaded`, `... Access Denied` (wrong owner or
+   nonexistent DocId), and `... Access Failed` (missing file, decryption
+   failure, misconfigured key) are all now logged with the real DocId and
+   actor email, automatically visible at `admin/activity-log.php` with no
+   UI changes needed.
+6. **`.env` / `.env.example` / `ENVIRONMENT.md`**: documented the new
+   `WALLET_ENCRYPTION_KEY` variable the same way `BACKUP_ENCRYPTION_KEY` is
+   documented, with a real, freshly-generated 32-byte key added to this
+   deployment's own `.env` (blank placeholder only in the git-committed
+   `.env.example`, per this project's own "never put a real secret in
+   `.env.example`" rule).
+
+**Files touched:** `backend/wallet-crypto.php` (new), `includes/wallet-crypto.php`
+(new), `backend/config.php`, `includes/config.php`, `frontend/wallet.php`,
+`frontend/wallet-document.php`, `.env`, `.env.example`, `ENVIRONMENT.md`.
+`php -l` clean on all 6 touched/new PHP files.
+
+**Implementation status:** live in both `D:\xampp\htdocs\tms` and
+`D:\Project\tms` for every file except `.env` itself — **`.env` could not
+be written from this session** (the remote file-write tool explicitly
+refuses writes to `.env` as a safety measure, which is the correct,
+intended behavior for a secrets file, not a bug to route around).
+
+**Action needed from the site operator:** add this one line to `.env` in
+both `D:\xampp\htdocs\tms\` and `D:\Project\tms\` to activate encrypted
+uploads (a freshly-generated, real key — safe to use as-is, or regenerate
+your own with `php -r "echo bin2hex(random_bytes(32));"`):
+```
+WALLET_ENCRYPTION_KEY=02cd6ef8cd3c1a7516fcf4173bf39d75ccfb9df22c426c8b54060029241b8daa
+```
+Until this line is added, `wallet.php` correctly refuses new uploads
+(confirmed live, see below) rather than silently storing them
+unencrypted — it does not affect any other part of the site.
+
+**Testing status: verified live and directly, except the one piece that
+depends on the operator adding the key above.** Confirmed via direct code
+read that `tbltraveldocuments` currently has zero rows on this deployment,
+so there was no legacy plaintext document available to test the
+backward-compatibility path against real data (the logic itself was
+still reviewed carefully: an `Encrypted=0` row skips decryption entirely
+and streams the file exactly as the pre-Round-86 code did). What WAS
+verified live: (1) the crypto functions themselves, via a standalone
+round-trip test with a locally-generated test key (not tied to `.env`) --
+encrypt-then-decrypt returned byte-identical plaintext, decrypting with a
+wrong key correctly returned null, a single-byte tamper to the ciphertext
+was correctly caught by the GCM auth tag, and a truncated blob was
+correctly rejected; (2) the fail-closed upload path, via a real POST to
+`wallet.php` (a signed-in QA session, a JS `fetch()`+`FormData` carrying a
+real 1x1 JPEG blob and a valid CSRF token -- a genuine multipart upload,
+not a bypass) with `WALLET_ENCRYPTION_KEY` still unset on this
+deployment: the page correctly showed "Document uploads are temporarily
+unavailable — server-side encryption is not configured," no row was
+inserted; (3) the audit trail, by requesting a nonexistent `DocId` from
+`wallet-document.php` and confirming a real `Wallet Document Access
+Denied` row landed in `tblactivity_log` with the correct actor and
+details; (4) that `wallet.php`'s new `.htaccess`-if-missing write doesn't
+clobber anything -- this live deployment's `uploads/wallet/.htaccess`
+already existed (a more thorough version than what this round's code
+would write, with both `Require all denied` and legacy
+`Order allow,deny`/`Deny from all` directives) and was correctly left
+untouched. The one thing that could not be tested end-to-end this round
+is an actual successful encrypted upload + decrypted download round-trip
+through the real HTTP paths, since that requires the operator's `.env` key
+above -- the crypto correctness and the fail-closed behavior were each
+verified independently instead, and the encrypt/decrypt code paths in
+`wallet.php`/`wallet-document.php` are otherwise a direct, mechanical call
+into the same already-tested `tms_wallet_encrypt_bytes()`/
+`tms_wallet_decrypt_bytes()` functions. All temporary QA helper scripts
+were disabled to 404 stubs and confirmed dead live afterward.
+
+**What this round deliberately did NOT do, and why (Rule 73):** did not
+re-encrypt any pre-existing plaintext document (there weren't any on this
+deployment to migrate, and a general migration script for a future
+deployment that does have legacy rows is a small, separate, disclosed
+follow-up rather than something to build speculatively here). Did not add
+a full "when was this document last accessed" summary UI on `wallet.php`
+itself -- `admin/activity-log.php` already surfaces every logged event
+with its own filter box, and duplicating that view on the user-facing page
+is a separate, distinct feature request, not implied by "access audit
+trail."
+
+---
+
+## Round 87 — Package System: structured Inclusions/Exclusions/Cancellation Policy + add-ons (item 7)
+
+**Why this round:** item 7 was flagged PARTIAL. Direct research against the
+schema and code corrected the prior gap-audit's own framing: it had
+described the gap as "stores itinerary/inclusions/policies as free text or a
+`PackageMeta` JSON blob" — that turned out to be imprecise. `tbltourpackages`
+had no such concept anywhere: not a column, not free text, not a key inside
+`PackageMeta` (which only ever holds destination-guide data — `history`,
+`climate`, `best_time_to_visit`, `nearby_hotels`, etc. — seeded once from
+`data/packages_seed.json`), not an admin form field, and nothing rendered on
+`frontend/package-details.php`. A separate, unrelated subsystem
+(`backend/ai/PackageGenerator.php`, the ephemeral AI custom-trip generator,
+writing to `tbl_ai_packages`) already has `included`/`excluded`/
+`cancellation_policy` JSON keys as prior art, but it isn't wired to real
+packages at all. This was therefore a fully additive fix, not a
+restructuring of existing unstructured data.
+
+**What was built:**
+
+1. **Schema (`tms_ensure_columns()` in `backend/config.php` /
+   `includes/config.php`, plus `database/migrations/006_package_addons_and_inclusions.sql`
+   as the historical-record companion):**
+   - `tbltourpackages.Inclusions` / `.Exclusions` / `.CancellationPolicy` —
+     `MEDIUMTEXT DEFAULT NULL`, one item per line (plain text, matching this
+     project's existing convention for `PackageFetures`/`PackageDetails`
+     rather than inventing a new JSON micro-format for three fields).
+   - **`tblpackageaddons`** (new table): the per-package add-on catalog —
+     `AddOnId, PackageId, Name, Description, Price, IsActive, CreatedAt`.
+   - **`tblbookingaddons`** (new table): a per-booking snapshot of selected
+     add-ons — `Id, BookingId, AddOnId (nullable), Name, Price, Quantity,
+     CreatedAt`. `AddOnId` is kept only as an optional back-reference;
+     `Name`/`Price` are copied at booking time on purpose, so a later catalog
+     edit or delete in `admin/manage-package-addons.php` never rewrites a
+     past booking's receipt.
+2. **`admin/add-package.php` / `admin/edit-package.php`:** three new
+   `<textarea>` fields (Inclusions, Exclusions, Cancellation Policy),
+   wired into the existing `tms_clean()` → bind → `INSERT`/`UPDATE` pattern
+   each file already used for every other field.
+3. **`admin/manage-package-addons.php`** (new): add/toggle-active/delete CRUD
+   for one package's add-on catalog, scoped by `?pkgid=`, following
+   `admin/manage-coupons.php`'s own established admin-CRUD conventions
+   (CSRF, `tms_admin_require_role(['package_manager','manager'])`,
+   `tms_log_activity()` on every mutation). Linked from a new "Manage
+   Add-ons" button on `edit-package.php`.
+4. **`frontend/package-details.php`:**
+   - Renders "What's Included" / "What's Excluded" / "Cancellation Policy"
+     sections right after the existing Package Details paragraph and before
+     the `PackageMeta` destination-guide block, parsing the newline-separated
+     admin text into list items.
+   - Add-on selection UI (checkbox + quantity per active add-on) added to
+     the booking form, scoped **only to the direct "Book Now" path**
+     (`submit2`) — deliberately **not** wired into "Add to Cart" /
+     `cart.php` / `checkout.php` this round, consistent with `addcart`'s
+     existing reduced feature parity (it already skips coupon logic too).
+     This is a disclosed scope limit, not an oversight.
+   - The `submit2` handler re-validates every posted `AddOnId` against the
+     DB (`PackageId` + `IsActive=1`) rather than trusting posted
+     name/price, computes the add-on total, adds it to the booking's
+     `TotalCost` (coupons still discount only the package subtotal, never
+     add-ons), and — once the booking insert succeeds — writes the
+     snapshotted `tblbookingaddons` rows.
+   - Updated the now-outdated FAQ line that told customers to request
+     add-ons via "Special Requests," since packages can now expose real,
+     selectable add-ons directly.
+5. **`frontend/ticket.php`** (stretch, completed): the e-ticket now lists
+   each purchased add-on as its own cost-row (from the snapshotted
+   `tblbookingaddons`, never re-joined against the live catalog) and
+   correctly backs the add-on total out of the displayed package subtotal
+   (`TotalCost + discount - addonTotal`), so add-ons never get silently
+   mislabeled as part of the per-traveler package price.
+6. **Incidental fix:** `admin/manage-packages.php`'s "Edit" link pointed to
+   `edit-package.php?id=...`, but `edit-package.php` has only ever read
+   `$_GET['pid']` — confirmed live that clicking "Edit" from the package
+   list has been silently broken (redirects straight back with "Package not
+   found") for as long as that mismatch existed. Not part of item 7, but
+   found while testing this round's own edit-package.php changes and fixed
+   as a one-line correction (`id=` → `pid=`) rather than left for a future
+   round.
+
+**Files touched:** `backend/config.php`, `includes/config.php`,
+`admin/add-package.php`, `admin/edit-package.php`,
+`admin/manage-package-addons.php` (new), `admin/manage-packages.php` (one-line
+fix), `frontend/package-details.php`, `frontend/ticket.php`,
+`database/migrations/006_package_addons_and_inclusions.sql` (new). `php -l`
+clean on all 8 touched/new PHP files.
+
+**Implementation status:** live in both `D:\xampp\htdocs\tms` and
+`D:\Project\tms` — every file shipped successfully, no `.env` or other
+manual step required this round.
+
+**Testing status: verified live, end-to-end, via the Browser pane (session
+simulation only — no password ever typed into any form field).** Using a
+temporary admin QA helper (`qa_test_admin`, the pre-existing disposable admin
+account from Round 42, verified via `SELECT` before setting
+`$_SESSION['alogin']`) and the existing disposable customer QA account
+(`qa-alert-test-a112ff@tms-testing.local`):
+1. Created a real test package via `add-package.php` with real Inclusions/
+   Exclusions/Cancellation Policy text — confirmed the success message and
+   the row's presence in `manage-packages.php`.
+2. Opened it in `edit-package.php` and confirmed all three fields came back
+   pre-populated exactly as saved, and that the new "Manage Add-ons" link
+   was present.
+3. Added a real add-on ("Private Boat Safari", ৳2,500) via
+   `manage-package-addons.php` — confirmed it listed correctly with
+   currency formatting and an Active badge.
+4. Loaded the package as the signed-in QA customer on `package-details.php`
+   — confirmed the "What's Included"/"What's Excluded"/"Cancellation
+   Policy" sections rendered with the exact saved text, and the add-on
+   appeared as a selectable checkbox with its price.
+5. Booked the package (2 travelers, dynamic price ৳15,900/traveler) with the
+   add-on checked — booking succeeded, and `tour-history.php` showed the
+   correct combined total (৳34,300 = ৳31,800 package + ৳2,500 add-on).
+6. Confirmed the booking via `admin/manage-bookings.php`, then viewed
+   `frontend/ticket.php` — confirmed the itemized breakdown was exactly
+   correct: "Package price × 2 traveler(s): ৳31,800", "Private Boat Safari:
+   ৳2,500", "Total Paid: ৳34,300" — the add-on total was correctly backed
+   out of the package subtotal rather than inflating it.
+7. **Regression check:** re-viewed a pre-existing booking (`BK010`, created
+   before this round, no add-ons) on `ticket.php` — confirmed it still shows
+   exactly ৳1,000 with no add-on rows, i.e. this round's ticket.php change
+   is additive and doesn't alter any pre-existing booking's display.
+8. **Cleanup:** deleted the test booking, the test add-on, and the test
+   package itself (via the real admin delete actions, not raw SQL) once
+   testing was confirmed — a fake package should not linger in the live,
+   publicly-browsable catalog the way disposable QA account bookings on
+   real packages safely can. This left one orphaned `tblbookingaddons` row
+   (that table has no `ON DELETE CASCADE` back to `tblbooking` by design —
+   see below); a small one-time cleanup helper removed it, confirmed
+   `Deleted rows: 1`, then was disabled to a 404 stub like the other QA
+   helpers. All temporary QA/cleanup scripts were disabled to 404 stubs and
+   confirmed dead live afterward.
+
+**What this round deliberately did NOT do, and why (Rule 73):** did not wire
+add-ons into `addcart`/`cart.php`/`checkout.php` — a disclosed scope limit
+matching `addcart`'s existing reduced feature parity (see above), not an
+oversight; extending that path is a separate, larger piece of follow-up work
+if wanted later. Did not add an `ON DELETE CASCADE` from `tblbookingaddons`
+to `tblbooking` — a booking is never expected to be hard-deleted in normal
+operation (admin/manage-bookings.php's delete action is an existing,
+pre-Round-87 admin capability, not something this round added), so this
+was treated as out of scope rather than added speculatively; the one orphan
+row created by this round's own test cleanup was removed by hand instead.
+Did not invent a JSON micro-format for Inclusions/Exclusions/Cancellation
+Policy — plain newline-per-item text matches this project's existing
+convention for every other free-text package field and needed no new
+parsing/validation layer.
+
+---
+
+## Round 88 — Operations Dashboard: live weather-alert widget + flight-disruption disclosure (item 55)
+
+**Why this round:** item 55 ("Admin Operations Dashboard") was flagged
+PARTIAL. Research corrected an assumption from the prior gap-audit's
+framing: `admin/operations-dashboard.php` (a dedicated, already-built Rule-
+55 page — separate from the historical/analytics `admin/dashboard.php`)
+already had real, live implementations of *every* metric the master prompt
+lists **except** two: Weather alerts and Flight disruptions. Today's
+arrivals/departures, pending bookings, payment failures/pending, refund
+requests, open support tickets, and low-inventory packages were all already
+correct, live queries — nothing there needed touching.
+
+**What was built:**
+
+1. **Weather alerts widget** (the real gap): a new query on
+   `admin/operations-dashboard.php` finds every distinct destination
+   (`tbltourpackages.MapLat`/`MapLng`) with a **confirmed** (`status=1`)
+   booking arriving in the next 7 days, then calls this platform's existing,
+   already-live `tms_get_weather()` (OpenWeatherMap if
+   `OPENWEATHER_API_KEY` is set — confirmed live on this deployment — else
+   the free Open-Meteo fallback; both DB-cached) once per unique
+   destination. A new `tms_ops_weather_is_severe()` keyword check (matching
+   `thunderstorm`, `tornado`, `hurricane`, `squall`, `extreme`, `heavy
+   rain`/`heavy snow`, `violent`, `hail`, `blizzard`, `freezing rain`) scans
+   both the current condition and each forecast day that falls within the
+   booking window, across both weather providers' different text shapes
+   (OpenWeatherMap's short categories like "Thunderstorm", and Open-Meteo's
+   descriptive phrases like "Heavy rain" / "Thunderstorm with hail"). Flagged
+   destinations get a new stat tile plus a table (package, destination, next
+   arrival, traveler count, the specific alert(s), and which provider
+   answered); an unflagged-but-checked state shows a clear "no severe
+   weather found" message rather than nothing.
+2. **Flight disruptions — explicit disclosure, not a fabricated widget:**
+   confirmed (again, directly against the schema) that this platform has no
+   flight-booking model anywhere — no flight numbers, carriers, or a
+   `tblflightbooking`-style table. `frontend/flight-status.php` is a
+   standalone lookup tool for any flight, unconnected to any booking here.
+   Rather than inventing fake "disruption" data or silently omitting the
+   line item the master prompt names, the dashboard now says so directly,
+   with a link to the (real, but unrelated) lookup tool — matching Rule 7
+   ("no fake placeholder features").
+
+**Files touched:** `admin/operations-dashboard.php`. `php -l` clean.
+
+**Implementation status:** live in both `D:\xampp\htdocs\tms` and
+`D:\Project\tms`.
+
+**Testing status: verified live, via the Browser pane, using a temporary
+session-simulated admin QA helper** (the pre-existing disposable
+`qa_test_admin` account, verified via `SELECT` before setting
+`$_SESSION['alogin']` — no password typed anywhere):
+1. First load, with no upcoming confirmed bookings on any package with map
+   coordinates: confirmed the honest "No confirmed bookings with a
+   destination arriving in the next 7 days..." message, not a false "all
+   clear."
+2. Inserted one real test booking (a genuine `INSERT`, not a UI bypass of
+   anything under test) on a real package with real coordinates (Cox's
+   Bazar Sea Beach, PackageId 10), dated 3 days out — reloaded the
+   dashboard and confirmed the widget now correctly found the destination,
+   made a live weather call, and rendered the "no severe weather found"
+   state (verified separately, see below, that this wasn't a
+   silently-failed call reading as a false negative).
+3. Called `tms_get_weather()` directly for those same coordinates and
+   confirmed a real, live OpenWeatherMap response — "Rain"/"Light rain"
+   currently, "Rain"/"Clouds" in the 5-day forecast — correctly did **not**
+   trip the severity check, confirming step 2's "no severe weather" result
+   was a genuine live negative, not a hidden failure.
+4. Unit-tested `tms_ops_weather_is_severe()` directly (10 cases): correctly
+   flagged "Thunderstorm", "Heavy rain", "Violent rain showers",
+   "Thunderstorm with hail", "Squall", "Extreme", and correctly did **not**
+   flag "Light rain", "Clouds", "Rain", "Clear sky" — confirming the keyword
+   match is neither trigger-happy nor blind to real severe-weather text from
+   either provider.
+5. Confirmed the Flight Disruptions section renders its disclosure text and
+   a working link to `flight-status.php`.
+6. **Cleanup:** deleted the test booking via the real admin delete action.
+   All five temporary QA/diagnostic scripts were disabled to 404 stubs and
+   confirmed dead live afterward.
+
+**What this round deliberately did NOT do, and why (Rule 73):** did not
+touch `admin/dashboard.php` (the historical/analytics dashboard) — item 55
+specifically concerns operational visibility, which already had its own
+dedicated page; duplicating the widget there would be redundant, not
+additive. Did not build a flight-disruption feature of any kind — there is
+nothing real behind it on this platform, and Rule 3/7 rule out fabricating
+one just to fill the checklist item; the disclosure is the honest answer.
+Did not add a configurable alert-window length (hardcoded 7 days) — a
+single, clearly-labeled constant matches this page's existing style (no
+other widget on this page is user-configurable either), and a real future
+need for a different window is a small, separate follow-up if it ever
+comes up.
+
+---
+
+## Round 89 — Weather integration: Provider abstraction (items 41/71)
+
+**Why this round:** items 41/71 (architecture — provider abstraction
+pattern) were flagged PARTIAL. This project already had the pattern fully
+established for two integrations (`backend/ai/` with
+`AIProviderInterface`, `backend/payments/` with `PaymentProviderInterface`
++ `PaymentService`), but the weather integration (`tms_get_weather()` in
+`backend/config.php`/`includes/config.php`) still had both its providers —
+OpenWeatherMap and the Open-Meteo fallback — written inline inside one
+~287-line function, rather than following the same abstraction the rest of
+the codebase uses. That's a real architectural inconsistency: a
+contributor reading `backend/ai/` or `backend/payments/` would expect the
+same shape from `backend/weather/`, and it wasn't there.
+
+**What was built:** Extracted the two inline provider code paths into
+their own classes, matching the existing pattern exactly rather than
+inventing a new one:
+
+- `backend/weather/WeatherProviderInterface.php` (mirrored to
+  `includes/weather/`) — `name(): string`, `isConfigured(): bool`,
+  `fetch(float $lat, float $lng, string $label): array`.
+- `backend/weather/OpenWeatherMapProvider.php` — the real OpenWeatherMap
+  two-endpoint (current + forecast) integration, moved verbatim; catches
+  `Throwable` internally and returns `['ok' => false, 'error' => ...]`
+  rather than throwing or logging (that's the orchestrator's job now, not
+  the provider's).
+- `backend/weather/OpenMeteoProvider.php` — the free, no-API-key fallback,
+  moved verbatim; the former free functions
+  `tms_openmeteo_code_to_text()`/`tms_openmeteo_code_to_icon()` (confirmed
+  via grep to have no other callers anywhere in the codebase) became
+  private methods `codeToText()`/`codeToIcon()` on this class.
+- `tms_get_weather()` itself shrank to an orchestrator: cache lookup
+  (unchanged key format `'owm_' . round($lat,3) . '_' . round($lng,3)`,
+  unchanged TTLs), builds the provider list (OpenWeatherMap first only if
+  configured, Open-Meteo always as it needs no key), tries each in order,
+  logs each attempt via the existing `tms_log_system_event()` using
+  `$provider->name()` as the event type (`'openweathermap'`/`'open-meteo'`
+  — the exact same strings the old inline code already used, so
+  `admin/system-health.php`'s telemetry needed no changes), and caches the
+  first success (or the failure, on a shorter 120s negative-cache TTL) —
+  all identical to the pre-refactor behavior.
+
+Also updated stale comments in `admin/operations-dashboard.php` and
+`admin/system-health.php` that referenced the now-removed free functions
+by name, so they point at the new provider classes instead.
+
+**Files touched:** `backend/config.php` + `includes/config.php` (major —
+~287 lines replaced with a ~35-line orchestrator plus three new
+`require_once`s), 6 new provider files (3 classes × `backend/`/`includes/`
+mirrors), `admin/operations-dashboard.php` + `admin/system-health.php`
+(comment-only). `php -l` clean on every changed/new file; grep confirmed
+no dangling references to the removed free functions anywhere in the
+codebase.
+
+**Implementation status:** live in both `D:\xampp\htdocs\tms` and
+`D:\Project\tms`.
+
+**Testing status: verified live**, via the Browser pane, using the
+pre-existing disposable `qa_test_admin` session-simulation technique (a
+`SELECT` to confirm the account first, then `$_SESSION['alogin']` set
+directly — no password typed anywhere):
+
+1. Called the refactored `tms_get_weather()` for real coordinates (Cox's
+   Bazar, 21.4272/91.9736) through a temporary diagnostic script: got back
+   a real, live, correctly-shaped OpenWeatherMap response (`"source":
+   "openweathermap"`, real temperature/humidity/wind/condition/forecast
+   data), confirming the primary-provider path through the new
+   orchestrator works exactly as before.
+2. Called `OpenMeteoProvider` directly, in isolation (bypassing
+   `tms_get_weather()`'s provider-selection order entirely, so the live
+   `OPENWEATHER_API_KEY` didn't need to be touched to test the fallback):
+   got back a real, live, correctly-shaped Open-Meteo response with
+   working `codeToText()`/`codeToIcon()` mappings ("Mainly clear", "Light
+   drizzle", "Thunderstorm", "Overcast" with matching `fa-*` icon names),
+   confirming the extracted fallback provider is itself still correct.
+3. Reloaded `admin/operations-dashboard.php` (the Round 88 weather-alert
+   widget, the refactor's actual production caller): rendered without
+   error, honest "no confirmed bookings in the next 7 days" state (no
+   qualifying test booking existed at the time — expected, not a bug).
+4. Reloaded `admin/system-health.php`: the Weather telemetry card and
+   "Recent system events" feed both showed fresh `Weather | openweathermap
+   | OK` rows from step 1's live call, confirming
+   `tms_log_system_event()` still receives the exact same event-type
+   strings post-refactor.
+5. **Cleanup:** both temporary QA scripts (`admin/test-round89-diag.php`,
+   `admin/test-round89-admin-session.php`) disabled to 404 stubs and
+   confirmed dead live.
+
+**What this round deliberately did NOT do, and why (Rule 73):** did not
+change any returned field, cache key, TTL, or fallback ordering — this was
+a pure architectural refactor, not a behavior or feature change, and
+treating it as an opportunity to also "improve" the weather data shape
+would have made it much harder to verify nothing broke. Did not add a
+third weather provider — no third integration exists or was requested;
+the interface is ready for one whenever that's real. Did not touch the
+`.env` `OPENWEATHER_API_KEY` to force-test the fallback path live end-to-
+end through the orchestrator (testing `OpenMeteoProvider` directly in
+isolation, item 2 above, covers the same code without risking the one
+credential this project has configured for real).
+
+---
+
+## Round 90 — Architecture: Repository layer (items 40/71) + Design System documentation (item 34)
+
+**Why this round:** item 40/71 (architecture — repository layer) was
+flagged PARTIAL: this project had a service-layer example
+(`PaymentService`) but no Repository class anywhere, despite `tblbooking`
+— the most central entity in the app — being queried inline, differently,
+in half a dozen different files. Item 34 (Design System) was flagged
+PARTIAL because, while `css/modern-theme.css` already had a real,
+documented token system and shared component classes (since Round 20),
+nothing wrote that system down anywhere a contributor could find it
+without opening a 1,785-line CSS file and reading its comments.
+
+**What was built:**
+
+1. **`BookingRepository`** (`backend/repositories/BookingRepository.php`,
+   mirrored to `includes/repositories/`) — the project's first Repository-
+   layer class, styled identically to `PaymentService` (no namespace,
+   constructor-injected `PDO $dbh`, typed properties) rather than
+   inventing a new convention. Three methods:
+   - `findByUserEmail(string $email): array` — the customer booking-history
+     query, including the exact same PaymentStatus-column
+     migration-resilience try/catch fallback `frontend/tour-history.php`
+     already had inline (Rule 2: a database missing the Round-whatever
+     `PaymentStatus` migration must not crash this page for every
+     visitor).
+   - `findActiveForUser(int $bookingId, string $email): ?object` — the
+     ownership+not-cancelled guard used before letting a customer cancel
+     or request a date change on their own booking.
+   - `findById(int $bookingId): ?object` — an unscoped lookup for
+     admin-side use (not yet called anywhere; ready for the next admin
+     booking page that needs it).
+
+   Wired into **one real call site**, `frontend/tour-history.php`:
+   replaced its ~30-line inline dual-query booking-history fetch and both
+   of its inline ownership-check queries (in the cancel and
+   request-modification POST handlers) with calls to the new repository.
+   The two `UPDATE` statements in those same handlers were deliberately
+   left as direct `$dbh->prepare()` calls — this round scoped itself to
+   read/lookup queries, not to also design a write-side repository API in
+   the same pass.
+
+2. **`DESIGN_SYSTEM.md`** — documents the token system already in
+   `css/modern-theme.css` (colors, spacing/radius/shadow scale, typography,
+   the light/dark-mode `html[data-theme="dark"]` convention) and the
+   handful of centrally-defined component classes (`.btn-primary-tms`/
+   `.btn-outline-tms`, `.tms-glass`, `.tms-sample-badge`/`.tms-sample-banner`
+   for Rule 3 sample-data disclosure, `.tms-breadcrumb`, utility classes).
+   Every claim in it (the `tms_asset_ver()` cache-busting behavior, the
+   `tms_render_breadcrumb_nav()` pairing) was checked directly against the
+   actual function implementations before being written down, not assumed
+   (Rule 4). Includes an explicit **Known inconsistency** section: many
+   pages (tour-history.php among them) define their own page-local card/
+   badge/modal styles instead of pulling from these tokens — documented
+   honestly as a real gap to close incrementally, not silently glossed
+   over or "fixed" by rewriting every page's CSS in one pass.
+
+**Files touched:** `backend/repositories/BookingRepository.php` +
+`includes/repositories/BookingRepository.php` (new), `frontend/tour-
+history.php` (edited — 3 call sites replaced, rest of the ~520-line file
+untouched), `DESIGN_SYSTEM.md` (new, project root). `php -l` clean on
+every PHP file.
+
+**Implementation status:** live in both `D:\xampp\htdocs\tms` and
+`D:\Project\tms`.
+
+**Testing status: verified live**, via the Browser pane, using the
+existing disposable QA accounts (`SELECT`-verified before setting
+`$_SESSION['login']`/`$_SESSION['alogin']` directly — no password typed
+anywhere):
+
+1. Loaded `frontend/tour-history.php` as the disposable QA customer
+   (`qa-alert-test-a112ff@tms-testing.local`, which had 2 real existing
+   bookings): both bookings rendered correctly with all fields intact
+   (package name, dates, traveler count, total cost, payment-status badge,
+   timeline, QR code, action buttons) — confirming
+   `findByUserEmail()`'s migration-resilience fallback logic still behaves
+   identically to the inline version it replaced.
+2. Exercised the refactored `findActiveForUser()` guard through a real
+   mutation, not just a read: submitted an actual date-change request on
+   booking #BK10 through the page's own "Change Dates" modal (real form
+   submission, real CSRF token, real POST). The request was accepted,
+   written to the database, and immediately reflected on page reload
+   ("Date change requested: 2026-11-15 → 2026-11-20 (pending review)"),
+   confirming the repository-backed ownership/status check in that
+   handler works correctly end-to-end, not just in the read-only listing
+   path.
+3. **Cleanup:** reverted booking #BK10's test date-change request back to
+   its original `NULL` state via a temporary admin-session helper
+   (confirmed before/after via `SELECT`). All three temporary QA/cleanup
+   scripts (`test-round90-user-session.php`,
+   `admin/test-round90-openmeteo-diag.php`,
+   `admin/cleanup-round90-mod-request.php`) disabled to 404 stubs and
+   confirmed dead live, alongside the two Round 89 scripts from the same
+   session (see above).
+
+`DESIGN_SYSTEM.md` required no live testing — it makes no runtime
+behavior claims, only documents existing, already-shipped CSS and PHP
+helper functions, each individually verified by reading the actual source
+rather than assumed.
+
+**What this round deliberately did NOT do, and why (Rule 73):** did not
+convert every booking query in the app to use `BookingRepository` —
+`admin/manage-bookings.php`, `frontend/ticket.php`,
+`frontend/package-details.php`, and others keep their own inline SQL,
+exactly as `PaymentService` was adopted by `checkout.php`/`payment.php`
+without forcing every payment-adjacent file to switch over in the same
+round. Did not add write methods (`cancel()`, `updateStatus()`, etc.) to
+`BookingRepository` — the two `UPDATE` statements in
+`frontend/tour-history.php` were left inline deliberately, since designing
+a write-side repository API is a separate decision (should refund-request
+side effects live inside the repository or stay in the caller?) better
+made once more than one write call site exists to generalize from, not
+guessed at in this pass. Did not rewrite `css/modern-theme.css` or
+consolidate any page's page-local styles into it — `DESIGN_SYSTEM.md`
+documents what exists and names the gap; closing that gap page-by-page is
+future work, not a same-round CSS refactor across dozens of live pages
+with no way to visually regression-test all of them at once.
+
+---
+
+## Round 91 — Booking Engine: Add to Cart now carries add-ons through to checkout (items 10/81)
+
+**Why this round:** item 10 (Booking Engine) asks for a complete workflow
+including Room/Transport/Activities/Add-ons steps; item 81 (Unified
+Platform Principle) wants the app to feel like one system, not a set of
+disconnected sub-tools. Investigation found genuine reasons NOT to fabricate
+Room or Transport as booking-time selections: `tblhotels`/`tblactivities`
+are explicitly flagged sample data (Round 37/39, no real supplier feed
+exists) and already have their own separate marketplace-booking system
+(`my-marketplace-bookings.php`), and `TransportComparator` computes a live
+geocoded distance/mode estimate between two points, not a fixed-price
+purchasable inventory item — treating either as a real bookable line item
+on the main package booking would fabricate data behind it (Rule 3). Add-ons
+were different: real catalog data already existed (`tblpackageaddons`,
+Round 87), with a real, disclosed gap — Round 87 explicitly scoped
+selection to the direct "Book Now" path only, leaving "Add to Cart" /
+`cart.php` / `checkout.php` silently dropping any add-ons a customer
+checked on that same form. That's the honest, non-fabricated piece of item
+10 left to close.
+
+**What was built:**
+
+1. **`tblcartaddons`** (new table, self-healing `CREATE TABLE IF NOT
+   EXISTS` in `backend/config.php`/`includes/config.php`, migration
+   `007_cart_addons.sql` as the historical record) — `CartId`, `AddOnId`,
+   `Quantity`. Deliberately **not** a snapshot table like
+   `tblbookingaddons`: a cart is transient (hours/days, never a permanent
+   receipt), so `cart.php`/`checkout.php` read `Name`/`Price` live from
+   `tblpackageaddons` each time, silently dropping any add-on deactivated
+   or deleted since it was added to the cart — the same "don't crash, just
+   don't charge for it" approach `checkout.php` already used for a package
+   with no price set. No FK CASCADE (this project's convention throughout,
+   same as `tblbookingaddons`) — `cart.php`'s single-item removal and
+   `checkout.php`'s post-checkout cart clear both explicitly delete the
+   matching `tblcartaddons` rows themselves.
+2. **`package-details.php`'s `addcart` handler** — the add-on checkboxes
+   already existed in the one shared `<form>` serving both "Book Now" and
+   "Add to Cart" (Round 87 posted them regardless of which button was
+   clicked; only the `addcart` branch ignored them). Added the identical
+   re-validation-against-the-DB pattern the `submit2` (Book Now) handler
+   already used — never trust a posted price — and inserts into
+   `tblcartaddons` instead of `tblbookingaddons`, since nothing has become
+   a real booking yet. Updated three stale Round-87 comments that
+   documented the old scope limit as still current.
+3. **`cart.php`** — each item now shows its selected add-ons and their
+   subtotal, folded into both the per-item price and the cart-wide total;
+   the `remove` action now also deletes that item's `tblcartaddons` rows.
+4. **`checkout.php`** — the Review step shows the same per-item add-on
+   breakdown; `TotalCost` on the real `tblbooking` row created at checkout
+   now includes the add-on subtotal (previously would have silently
+   dropped it, undercharging and under-recording what the customer
+   actually selected); a `tblbookingaddons` snapshot row is inserted for
+   each cart add-on immediately after each booking is created, mirroring
+   `package-details.php`'s `submit2` handler exactly; the post-checkout
+   cart-clear step now also deletes the corresponding `tblcartaddons` rows.
+
+**Files touched:** `backend/config.php` + `includes/config.php` (new
+self-healing table), `frontend/package-details.php`, `frontend/cart.php`,
+`frontend/checkout.php`, `database/migrations/007_cart_addons.sql` (new).
+`php -l` clean on every changed/new PHP file.
+
+**Implementation status:** live in both `D:\xampp\htdocs\tms` and
+`D:\Project\tms`.
+
+**Testing status: verified live end-to-end**, via the Browser pane, using
+the existing disposable QA accounts (`SELECT`-verified before setting
+`$_SESSION['login']`/`$_SESSION['alogin']` directly — no password typed
+anywhere) and one temporary, real catalog add-on created through the
+actual admin UI (`admin/manage-package-addons.php`), not inserted directly:
+
+1. Added "Cox's Bazar Sea Beach" (a real package, #10) to the QA
+   customer's cart with 2 travelers and 3× of the new test add-on
+   selected, through the real form's "Add to Cart" button.
+2. `cart.php`: rendered "Add-ons: Round91 QA Test Addon ×3 (৳750)" and a
+   correct running total (৳26,800 × 2 + ৳750 = ৳54,350).
+3. `checkout.php`: Review step showed the identical breakdown and total.
+4. Confirmed the booking (`Confirm & Book All`): redirected to
+   `payment.php` showing the same ৳54,350; `tour-history.php` showed the
+   new booking (#BK14) with `TotalCost` = ৳54,350, confirming the add-on
+   subtotal reached the real `tblbooking` row this time (previously it
+   would have been silently dropped).
+5. Paid via the sandbox provider to move the booking to
+   Confirmed/Paid, then loaded `ticket.php?bkid=14`: the e-ticket
+   (unmodified since Round 87) correctly itemized "Package price × 2
+   traveler(s) ৳53,600" and "Round91 QA Test Addon × 3 ৳750" summing to
+   "Total Paid ৳54,350" — confirming the `tblbookingaddons` snapshot
+   insert in `checkout.php` produced a row in exactly the shape Round 87's
+   ticket rendering already expects, with zero changes needed to
+   `ticket.php` itself.
+6. **Cleanup:** deactivated the temporary catalog add-on via
+   `admin/manage-package-addons.php`'s real "Toggle" action (so it can no
+   longer be selected by an actual customer browsing package #10). Left
+   the resulting test booking (#BK14) in place as a real, Confirmed,
+   correctly-priced booking on the QA account — the same standing
+   convention this session has followed for #BK10/#BK11 (genuine
+   transactions through the real UI on disposable QA accounts are kept as
+   ordinary history, not deleted; only mutated *state* like a pending
+   modification request gets reverted). All three temporary QA scripts
+   (`admin/test-round91-diag.php`, `admin/test-round91-admin-session.php`,
+   `test-round91-user-session.php`) disabled to 404 stubs and confirmed
+   dead live.
+
+**What this round deliberately did NOT do, and why (Rule 3/73):** did not
+add Room or Transport selection to the booking flow — `tblhotels`/
+`tblactivities` are explicitly sample data with their own separate
+marketplace-booking system, and `TransportComparator` produces a live
+distance/mode *estimate*, not a fixed-price bookable item; wiring either
+into the main package booking as if it were a real purchasable line item
+would fabricate data behind it. Did not apply a coupon discount to cart
+add-ons — coupons remain a "Book Now"-only feature (unchanged from Round
+87), and extending coupon logic to cart/checkout is a separate, larger
+decision (does a coupon discount the whole order or just the package
+portion?) not implied by "carry add-ons through to checkout." Did not add
+per-add-on removal/quantity-editing inside `cart.php` after the item is
+added — a customer can still remove add-ons by removing the whole cart
+item and re-adding it with different selections, which was judged
+sufficient scope for this round; a finer-grained cart-editing UI is a
+separate, larger piece of work.
+
+## Round 92 — Price Alerts: real price-history tracking (item 26)
+
+**Why this round:** a research subagent was asked to independently
+identify genuinely-incomplete master-prompt items not yet mentioned in
+this file. It ranked item 26 (Price Alerts) highest-value/lowest-risk: the
+prompt explicitly asks to "track historical prices where legitimate data
+is available," but Round 26's original build only ever compared a stored
+`TargetPrice` against the live dynamic price at alert-check time — nothing
+was ever recorded anywhere, so a customer setting an alert had no way to
+see whether ৳15,000 was actually a good target given where the price had
+been. Verified independently before writing any code: grepped
+`AlertService.php`, `PricingEngine.php`, and both `config.php` files for
+`price_history`/`PriceHistory`/`price_log` — no matches, confirming the
+gap was real (this session's established discipline after Round 88's
+lesson that agent research needs independent verification, not just
+trust).
+
+**What was built:**
+
+1. **`tbl_price_history`** (new table, self-healing `CREATE TABLE IF NOT
+   EXISTS` in `backend/config.php`/`includes/config.php`, migration
+   `008_price_history.sql` as the historical record) — `PackageId`,
+   `Price`, `RecordedDate` (plain `DATE`, not a `DATE()` expression over
+   `RecordedAt`), `RecordedAt`. `UNIQUE KEY (PackageId, RecordedDate)` so
+   at most one row per package per calendar day can ever exist.
+2. **Three new functions in `PricingEngine.php`/`includes/PricingEngine.php`:**
+   `tms_record_price_snapshot()` (upserts today's price for one package via
+   `INSERT ... ON DUPLICATE KEY UPDATE`, never throws), `tms_snapshot_all_package_prices()`
+   (loops every `Status=1`, priced package, snapshotting the same undated
+   canonical price `tms_check_and_fire_alerts()` itself already compares
+   against — no travel date, so one stable number per package per day, not
+   one per possible departure date), and `tms_get_price_history()` (returns
+   an empty array — never a fabricated placeholder point — for a package
+   with no snapshots yet).
+3. **`scripts/check_alerts.php`** now calls `tms_snapshot_all_package_prices()`
+   before firing alerts, on the exact same 30–60-minute cron this script
+   already runs (Rule 73 — no new scheduled job needed).
+4. **`frontend/package-details.php`** now shows a small inline SVG
+   sparkline (no charting library) with Low/High labels and a "Set a price
+   alert" link next to the live dynamic price — but only once a package
+   has 2+ recorded days; a single point isn't a "history," so nothing
+   renders until real data actually exists (Rule 3/7 — no placeholder
+   chart).
+5. **Incidental fix:** `includes/config.php`'s `tblbooking` fallback
+   `CREATE TABLE` was missing the `FromDate`/`ToDate`/`Comment` columns
+   Round 51 had added only to `backend/config.php`'s copy — a real drift
+   between the two directories this project's own convention says to keep
+   in sync. Dormant (only `backend/` is actually `require`'d by live code,
+   and `CREATE TABLE IF NOT EXISTS` is a no-op either way) but fixed while
+   already editing this exact block.
+
+**Files touched:** `backend/config.php`, `includes/config.php`,
+`backend/PricingEngine.php`, `includes/PricingEngine.php`,
+`scripts/check_alerts.php`, `frontend/package-details.php`,
+`database/migrations/008_price_history.sql` (new). `php -l` clean on every
+changed/new PHP file.
+
+**Implementation status:** live in both `D:\xampp\htdocs\tms` and
+`D:\Project\tms`.
+
+**Testing status: verified live**, via the Browser pane, using the
+existing disposable QA admin account (`SELECT`-verified before setting
+`$_SESSION['alogin']` directly — no password typed anywhere) through a
+temporary admin-only diagnostic endpoint:
+
+1. Confirmed `tbl_price_history` didn't exist yet on first check — this
+   browser session's `$_SESSION['tms_db_init']` flag was already `true`
+   from earlier rounds' testing (same cookie), so `config.php`'s
+   once-per-session migration gate skipped re-running the table-creation
+   step; called `_tms_run_core_migrations()` directly to force it for
+   this one QA session (real users hit it fresh on their first request).
+2. Ran `tms_snapshot_all_package_prices()` live: snapshotted 413 real
+   packages in one call. Ran it again: same row count, same `Id`,
+   `RecordedAt` advanced — confirmed the daily upsert dedupes correctly
+   instead of creating duplicates.
+3. Confirmed `package-details.php` (package #10, Cox's Bazar Sea Beach)
+   showed no price-history section with only 1 recorded day — the honest
+   empty state.
+4. Seeded one clearly-labeled synthetic second-day point for package #10
+   only (10% above today's real snapshot, computed from PHP's `date()` to
+   match exactly how the real snapshot function stamps `RecordedDate` —
+   a first attempt using MySQL's `CURDATE()` turned up a real ~4-hour
+   clock skew between PHP's `date.timezone` (Europe/Berlin) and this
+   box's MySQL server (`SYSTEM` timezone), which would have made the test
+   silently miss today's row; fixed the test script to use PHP's clock
+   consistently, matching production's `tms_record_price_snapshot()`).
+   Reloaded `package-details.php` and confirmed the sparkline, "Price
+   history (2 recorded days)" label, and Low/High text all rendered.
+5. **Fixed a real visual bug found during this check:** the first version
+   used slate-gray text/borders (`#64748b`, `#94a3b8`, `var(--secondary)`)
+   that were nearly invisible against the price panel's green gradient
+   background — screenshotted, confirmed illegible, and switched to
+   white/`rgba(255,255,255,*)` tones plus a visible pill background on the
+   "Set a price alert" link, matching how the rest of that panel already
+   handles text-on-color. Re-screenshotted and confirmed all three
+   elements are now clearly legible.
+6. Clicked "Set a price alert" and confirmed it lands on `alerts.php` with
+   package #10 correctly preselected in the dropdown.
+7. **Cleanup:** deleted the synthetic second-day row immediately (Rule 3 —
+   a fabricated point must not persist as if it were real), reconfirmed
+   `package-details.php` reverted to the honest empty state. Left the 413
+   real snapshot rows (including package #10's genuine today's-price row)
+   in place — real data the shipped feature itself produced, not test
+   fabrication. Both temporary QA scripts
+   (`test-round92-admin-session.php`, `admin/test-round92-diag.php`)
+   disabled to 404 stubs and confirmed dead live on both device paths.
+
+**What this round did NOT verify, and why:** `scripts/check_alerts.php`'s
+CLI entry point itself was not directly executed — this session's device
+shell (`device_bash`) was unavailable this segment (a Windows-update
+issue affecting this specific desktop build, unrelated to this project).
+The function it calls, `tms_snapshot_all_package_prices()`, was instead
+exercised live through the exact same code path via a temporary
+HTTP-reachable admin endpoint, so the actual logic is verified — only the
+literal CLI invocation (`php.exe check_alerts.php`) itself wasn't run this
+round. Also did not add any admin-facing view of price history (e.g. an
+operations-dashboard trend chart) — item 26 asks for customer-facing
+tracking to support alerts, not an admin analytics feature; that would be
+a separate, later addition if requested.
+
+## Round 93 — Notification Center: full history page (item 29)
+
+**Why this round:** the same research subagent's second-ranked finding.
+Verified independently before writing code: read `backend/header.php`
+directly and confirmed the topbar bell's dropdown query is
+`... ORDER BY id DESC LIMIT 8` with no "view all" link anywhere in the
+markup, and confirmed no `notifications.php` (or equivalent history page)
+existed anywhere in the project — so any notification past the 8 most
+recent was genuinely unreachable by a customer, not just undiscoverable.
+
+**What was built:**
+
+1. **`frontend/notifications.php`** (new) — a paginated (20/page) list of
+   the signed-in user's complete notification history: `Message`, `Link`,
+   read/unread state, timestamp, newest first. Reuses `tbl_notifications`
+   exactly as the dropdown does; no new table, no new
+   notification-creation path. Mirrors the dropdown's own mark-all-read
+   behavior (`UPDATE ... SET IsRead=1` fires on page load, matching
+   `frontend/mark-notifications-read.php`'s existing AJAX behavior for the
+   dropdown). Honest empty state ("You're all caught up") when a user has
+   no notifications at all.
+2. **Root-level `notifications.php`** (new) — thin pass-through shim,
+   the same pattern every other root page in this project already uses
+   (`require __DIR__ . '/frontend/notifications.php';`), so the public
+   URL resolves and every future link to it works the same way as
+   `alerts.php`, `cart.php`, etc.
+3. **`backend/header.php` + `includes/header.php`** — added a "View all
+   notifications" link at the bottom of the existing dropdown, pointing
+   at the new page. Confirmed the two files were still byte-identical
+   (ignoring line endings — both actually use plain LF, not the
+   CRLF/LF split some other file pairs in this project have) before
+   mirroring the exact same one-line addition into both.
+
+**Files touched:** `frontend/notifications.php` (new), root
+`notifications.php` (new), `backend/header.php`, `includes/header.php`.
+`php -l` clean on both new/changed PHP files.
+
+**Implementation status:** live in both `D:\xampp\htdocs\tms` and
+`D:\Project\tms`.
+
+**Testing status: verified live**, via the Browser pane, using the
+existing disposable QA customer account
+(`qa-alert-test-a112ff@tms-testing.local`, `SELECT`-verified before
+setting `$_SESSION['login']` directly — no password typed anywhere):
+
+1. Loaded `notifications.php` directly — it correctly rendered this
+   account's 5 real notifications from earlier rounds' own testing
+   (booking confirmations/cancellations), newest first, each with its
+   real timestamp.
+2. Requested `?page=99` against only 1 real page of data (5 items,
+   `perPage=20`) — the page-clamp logic (`$page = min($page,
+   $totalPages)`) correctly served page 1 instead of an empty result or
+   a PDO error from a nonsensical `OFFSET`.
+3. Confirmed the "View all notifications" link renders in the
+   dropdown markup on a normal signed-in page load, with the correct
+   `href="notifications.php"`.
+4. Screenshotted the rendered page — clean, legible list matching this
+   project's existing card/box styling (same visual language as
+   `alerts.php`, not a one-off design).
+5. **Cleanup:** temporary QA session helper
+   (`test-round93-user-session.php`) disabled to a 404 stub and confirmed
+   dead live on both device paths. No other QA scripts were needed this
+   round (no session-state mutation to revert — this round only reads
+   and displays existing data).
+
+**What this round deliberately did NOT do, and why (Rule 3/73):** did not
+implement item 29's "support user preferences for channels." No existing
+groundwork exists for it — `tbl_notifications` has no category/event-type
+column, and there is no per-channel (email vs in-app) delivery mechanism
+or preference storage anywhere in the codebase. Building it would mean a
+new schema, a new settings UI, and changes to every `tms_notify()` call
+site's semantics — a separate, larger feature decision, not something to
+bolt onto a history-page round. Did not add per-notification-type icons
+or filtering on the new history page, for the same reason: there is no
+structured category to filter or icon-key by, only a free-text `Message`;
+inferring a category from message text would be fragile pattern-matching,
+not a real classification.
+
+## Round 94 — Privacy: account anonymization now deletes Travel Wallet documents, not just their UserEmail column (item 48)
+
+**Why this round:** `frontend/privacy.php`'s "delete my account" flow
+calls `tms_anonymize_user()`, which anonymizes a generic list of
+table/column pairs (`tms_privacy_tables()`) by rewriting each row's email
+to a random `deleted-user-<id>-...@deleted.invalid` address. That's
+correct for most tables (bookings, reviews) where the transaction record
+should survive. `tbltraveldocuments` — Travel Wallet passport/visa/ID
+scans — was going through that same generic path, which only rewrote
+`UserEmail`; the actual uploaded file stayed on disk under
+`uploads/wallet/`, fully intact and still decryptable, with a DB row
+still pointing at it. Confirmed this live by reading
+`tms_anonymize_user()` and `tms_privacy_tables()` directly — no
+`tbltraveldocuments`-specific handling existed anywhere in the
+anonymization path before this round.
+
+**What was built:**
+
+1. **`backend/config.php` + `includes/config.php`** —
+   `tms_anonymize_user()` rewritten to treat `tbltraveldocuments` as an
+   explicit exception, handled before the generic loop: reads every
+   `StoredFilename` still on file for the user's real email, `DELETE`s
+   those `tbltraveldocuments` rows outright inside the same transaction
+   as the rest of the anonymization, and — only after that transaction
+   has committed — unlinks each corresponding file from
+   `uploads/wallet/` on disk. Deliberately did NOT remove
+   `tbltraveldocuments` from `tms_privacy_tables()`: that list is also
+   read by `tms_export_user_data()` ("export my data"), which still needs
+   it to include wallet-document metadata in an export; after the
+   explicit delete, the generic loop's `UPDATE` on that table just
+   matches zero rows.
+2. **QA harness bugs found and fixed along the way (not production
+   code):** (a) `admin/` has its own local `admin/includes/` shim folder
+   (a `config.php` forwarder only, no `wallet-crypto.php` mirror) — a
+   bare `include('includes/wallet-crypto.php')` from a script living in
+   `admin/` 404s because PHP resolves it against the including script's
+   own directory, not the project root; confirmed via the actual fatal
+   error in `error.log`, fixed with `__DIR__`-anchored requires plus a
+   `chdir()` to the project root so the script's cwd matches what real
+   production code always runs under (this matters because
+   `tms_anonymize_user()` itself uses bare relative `uploads/wallet/...`
+   paths, correct only under that cwd). (b) Discovered the real `.env` on
+   this install has no `WALLET_ENCRYPTION_KEY` at all (only
+   `.env.example` documents it, marked "REQUIRED for Travel Wallet
+   uploads") — `tms_wallet_encryption_key()` currently returns null and
+   `frontend/wallet.php` is refusing every new wallet upload on this box
+   right now. This is a genuine, separate, currently-live bug, not
+   something this round introduced or was scoped to fix — `.env` can't
+   be edited through this session's tools, so it's disclosed here: adding
+   a real 64-hex-character `WALLET_ENCRYPTION_KEY` to `.env` directly on
+   the machine is needed before new uploads will work again. The test
+   itself worked around it by generating its own throwaway 32-byte key
+   locally, used only to build a realistic encrypted fixture file via the
+   same `tms_wallet_encrypt_bytes()` function `wallet.php` uses — the
+   thing actually under test (does anonymization delete an *existing*
+   file) doesn't depend on new-upload capability.
+
+**Files touched:** `backend/config.php`, `includes/config.php`. `php -l`
+clean on both.
+
+**Implementation status:** live in both `D:\xampp\htdocs\tms` and
+`D:\Project\tms`.
+
+**Testing status: verified live end-to-end**, using a brand-new,
+single-use throwaway test account created directly via SQL (locked
+random password hash, never typed into any form) — not one of the
+reusable shared QA accounts, since this test destroys the account by
+design:
+
+1. **Setup:** created test user id 26
+   (`qa-round94-wallet-test@tms-testing.local`), wrote one real encrypted
+   fixture file (`qa_round94_2c024b2032c79856.pdf`) to `uploads/wallet/`
+   through the exact same encrypt-and-store logic `wallet.php`'s real
+   upload handler uses, and inserted a matching `tbltraveldocuments` row.
+2. **Check (before):** confirmed the file genuinely existed on disk
+   (`file_exists_on_disk: true`) and the DB row referenced it, and that
+   the user's `DeletedAt` was still `null`.
+3. **Anonymize:** called `tms_anonymize_user($dbh, $testEmail, 26)` for
+   real (not simulated) — returned `true`.
+4. **Check (after):** `EmailId` was rewritten to
+   `deleted-user-26-b0bcbea8@deleted.invalid`, `DeletedAt` was set to a
+   real timestamp, `remaining_document_rows_for_original_email` was `[]`,
+   and `file_still_on_disk` was `false`.
+5. **Independent reconfirmation:** listed `uploads/wallet/` directly
+   (outside the test script's own claims) — only `.htaccess` remained,
+   confirming the file was actually gone from the filesystem, not just
+   reported as gone.
+6. **Cleanup:** `admin/test-round94-diag.php` disabled to a 404 stub and
+   confirmed dead live on both device paths.
+
+**What this round deliberately did NOT do, and why (Rule 3/8):** did not
+edit `.env` to add the missing `WALLET_ENCRYPTION_KEY` — that file cannot
+be written through this session's available tools, so the gap is
+disclosed above rather than silently patched around or left unmentioned.
+Did not remove `tbltraveldocuments` from `tms_privacy_tables()`, since
+`tms_export_user_data()` still depends on that list including it for data
+exports; the now-redundant generic anonymize pass over that table is a
+harmless no-op rather than something worth the risk of restructuring a
+shared list mid-round.
+
+## Round 95 — AI Evaluation suite gets real content checks; uncovers a critical live bug in the process (item 22)
+
+**Why this round:** `AIEvaluator.php` only ever checked "did the AI call
+itself succeed" (telemetry) plus a shape-only sanity check that never
+gated pass/fail — item 22 explicitly asks the suite to test factual
+accuracy, hallucination, package accuracy, and refusal behavior, none of
+which a shape check can catch (a hallucinated package or a wrong
+cancellation-refund figure can still be valid, well-shaped JSON).
+
+**What was built:**
+
+1. **Three new eval cases** in `backend/ai/AIEvaluator.php` /
+   `includes/ai/AIEvaluator.php`:
+   - `package_accuracy` — calls `TravelRecommender::recommend()` and
+     cross-checks every returned `package_id`/`package_name` against real
+     `tbltourpackages` rows. A referenced package that doesn't exist, or a
+     name that doesn't match the real row, is a hallucinated/fabricated
+     claim about actual inventory, not a formatting nitpick.
+   - `factual_accuracy_policy` — asks the site assistant chatbot about a
+     10-days-before-departure cancellation, whose correct answer ("25%
+     refund") is stated verbatim in the assistant's own system prompt.
+     Ground truth is the assistant's own instructions, never a second AI
+     call judging the first (which would just be one unreliable model
+     grading another).
+   - `refusal_offtopic` — asks the chatbot to write a Python quicksort
+     function and checks the reply declines/redirects rather than
+     complying, per the system prompt's own "never discuss unrelated
+     topics" instruction. Heuristic (absence of quicksort-specific
+     signals like "pivot", "def quicksort(", a code fence), disclosed as
+     such rather than presented as a perfect classifier.
+2. **New `gate_on_sanity` opt-in flag** on `runCase()` — when a case sets
+   it, a failed content check is now a real `❌`, not just the dashboard's
+   existing "(⚠ succeeded but response shape looked off)" warning next to
+   a `✅`. Every pre-existing case leaves this unset, so their behavior is
+   completely unchanged (Rule 2).
+3. **`telemetry_feature` override field** — found live, the hard way: the
+   3 new cases initially looked up their telemetry row by their own case
+   key, but `TravelRecommender`/`SiteAssistant` tag their *own* internal
+   AIClient calls `recommender`/`site_assistant` respectively, so the
+   lookup never matched (telemetry always came back null despite a real,
+   successful underlying call). Fixed with the same override pattern the
+   pre-existing `sentiment` case already used for its own
+   email-vs-identity mismatch.
+4. **`admin/ai-dashboard.php`** — updated the "8 real AI calls" doc
+   comment/UI copy to 11→12 (miscounted once, corrected), bumped
+   `set_time_limit()` for the extra cases, and gave the JS result renderer
+   an honest message for a case that fails with no `run_error` and a
+   *successful* telemetry row (a content-check failure, not a call
+   failure) instead of a confusing blank or "no telemetry recorded" line.
+
+**The critical fix this round actually turned up:** building a QA harness
+to run the new cases live kept showing zero telemetry for every case —
+not just the new ones. Reading `AIClient::call()` end to end found that
+it, `::askWithImage()`, and the private `httpPost()` were still the
+verbatim pre-Round-34 Gemini-hardcoded implementation: they reference
+`$this->apiKey`, `$this->model`, and `self::GEMINI_BASE`, none of which
+exist anywhere on the class since the Round 34 provider-abstraction
+refactor (the constructor only ever sets `$this->provider`). Concretely:
+`empty($this->apiKey)` was always true, so **every AI feature in the
+project** — recommender, sentiment, itinerary, both budget tools, crowd
+predictor, package generator, site assistant chatbot, NL search — has
+been silently returning the "AI assistant is not switched on" fallback
+since Round 34, regardless of a valid `GEMINI_API_KEY` in `.env`. This
+masked a second, worse bug (`self::GEMINI_BASE` isn't a defined constant
+at all — a real key would have hit a fatal error, not a graceful
+fallback, the moment bug #1 was fixed alone). Separately,
+`askWithImage()`'s signature had no `$feature` parameter at all while
+`api/ai.php` calls it with a named `feature: 'image_classifier'` argument
+— a guaranteed fatal "Unknown named parameter" error for every AI Image
+Analyzer request, not a fallback either.
+
+Fixed by rewiring `call()`/`askWithImage()` to actually build their
+request via `$this->provider->buildTextRequest()`/`buildImageRequest()`
+and interpret the response via `$this->provider->parseResponse()`, as the
+Round 34 docblock always said they did; genericized `httpPost()` into a
+provider-agnostic retry/backoff loop driven by each provider's own
+`retriable` flag instead of a hardcoded Gemini-specific status-code list;
+added the missing `$feature` parameter to `askWithImage()`.
+`GeminiProvider.php` and `OpenAIProvider.php` themselves were already
+complete and correct — only `AIClient.php`'s own wiring had been left
+behind mid-refactor. This is precisely the class of bug Round 34/35's
+own telemetry-plus-eval-suite system exists to catch, and it caught it —
+just two months after the fact, because nobody had run the eval suite
+and actually read its ground-truth output until this round.
+
+**Files touched:** `backend/ai/AIClient.php`, `includes/ai/AIClient.php`,
+`backend/ai/AIEvaluator.php`, `includes/ai/AIEvaluator.php`,
+`admin/ai-dashboard.php`. `php -l` clean on all five.
+
+**Implementation status:** live in both `D:\xampp\htdocs\tms` and
+`D:\Project\tms`.
+
+**Testing status: verified live, with an honest gap disclosed below.**
+Session-simulated as the existing shared `qa_test_admin` account
+(superadmin role, `SELECT`-verified before setting `$_SESSION['alogin']`
+directly — no password typed) against the real AI Evaluation dashboard:
+
+1. First post-fix run: got genuine successful Gemini responses with real
+   token counts (sentiment: 104 prompt / 99 completion tokens; itinerary:
+   892 / 6417, a real generated multi-day plan) before the shared key's
+   free daily quota was exhausted partway through — correctly classified
+   by `GeminiProvider`'s existing quota-detection logic as a non-retriable
+   daily-limit error, not a new bug.
+2. Second full run (quota already spent) confirmed the `telemetry_feature`
+   fix specifically: all 12 cases, including the 3 new ones, now show a
+   real telemetry row (uniformly the daily-quota message this time),
+   where every one of the 3 new cases showed `telemetry: null` before
+   that fix regardless of how the underlying call actually went.
+3. Both runs returned clean, well-formed JSON with no PHP fatal errors
+   (an earlier, very first attempt — before the `telemetry_feature` fix
+   was even identified — did return one HTML-fragment-corrupted response;
+   not reproduced on either subsequent run, and not something this round
+   could pin down further without a repeat occurrence to inspect).
+4. **Honest gap:** could not observe an actual green `✅` on
+   `package_accuracy`, `factual_accuracy_policy`, or `refusal_offtopic`
+   today, because the shared QA key's free daily quota ran out during the
+   very first run. Confirmed the *mechanism* (real call → real telemetry
+   → gated pass/fail) works; confirming the *content checks themselves*
+   pass on a real successful response needs a re-run once quota resets.
+5. **Cleanup:** `test-round95-admin-session.php` disabled to a 404 stub
+   and confirmed dead live.
+
+**What this round deliberately did NOT do, and why (Rule 73/77):** did
+not attempt "source usage", full "weather accuracy", "booking accuracy",
+or general "travel safety" coverage — see the addendum in
+`AIEvaluator.php`'s own docblock for why each of those needs either
+infrastructure this round didn't build (a fixture booking, a live
+weather-data comparison) or a second AI judge (unreliable, and its own
+false negatives would be invisible), and is honestly left as a disclosed
+gap rather than a superficial pass. Did not re-run the suite a third time
+today to chase a green result on the new cases — the daily quota is a
+real, external constraint, not something to work around by hammering the
+API further.
+
+## Round 96 — Structured audit-log columns (item 47), and a real live mutation mistake caught and corrected mid-round
+
+**Why this round:** `tblactivity_log` only ever had `Actor`/`Action`/
+`Details`/`IPAddress`/`CreatedAt` — free-text columns with no structured
+way to see WHAT record an action touched or WHAT actually changed on it.
+Item 47 asks for real audit trail depth: object identity and before/after
+values on sensitive mutations, not just a human-readable sentence.
+
+**What was built:**
+
+1. **Seven new nullable/additive columns** on `tblactivity_log`:
+   `ObjectType`, `ObjectId`, `OldValue`, `NewValue`, `RequestMethod`,
+   `RequestUri`, `UserAgent` — added via the existing self-healing
+   `tms_ensure_columns($dbh, $table, $colDefs)` mechanism inside
+   `_tms_repair_schema_drift()` in `backend/config.php` /
+   `includes/config.php` (Rule 8: no manual `ALTER TABLE`, no casual
+   schema breakage — this runs unconditionally on every request and only
+   adds genuinely-missing columns).
+2. **`tms_log_activity()` rewritten** (`backend/log-activity.php` /
+   `includes/log-activity.php`) with four new optional trailing
+   parameters (`$objectType`, `$objectId`, `$oldValue`, `$newValue`), plus
+   automatic capture of `RequestMethod`/`RequestUri`/`UserAgent` from
+   `$_SERVER` with no caller changes needed — mirrors how `IPAddress` was
+   already auto-captured. `OldValue`/`NewValue` are truncated to 500
+   chars each (`mb_substr`) since page-content edits can be long and this
+   is meant as an audit trail, not a full revision-history diff store.
+   Backward compatible: every pre-existing call site with no trailing
+   args still works exactly as before, just with the new columns left
+   `NULL`.
+3. **Six admin files retrofitted** with real before/after values on their
+   genuinely sensitive/stateful mutations (chosen deliberately, not
+   exhaustively — see "did NOT do" below):
+   - `admin/manage-admins.php` — Admin Created, Admin Role Changed (both
+     the superadmin-demote and generic branches, using the pre-UPDATE
+     role fetched earlier in the same request), Admin Deleted.
+   - `admin/edit-package.php` — Package Edited, using the pre-UPDATE
+     `$package->PackagePrice` still held from the top-of-file fetch.
+   - `admin/manage-coupons.php` — Coupon Created, Coupon Deleted, Coupon
+     Status Toggled (the toggle needed a new pre-UPDATE `SELECT IsUsed`
+     added, since the UPDATE itself flips the value in raw SQL
+     `IF(IsUsed=1,0,1)` without ever surfacing old/new to PHP).
+   - `admin/manage-package-addons.php` — same three actions, same pattern,
+     for `tblpackageaddons`.
+   - `admin/manage-bookings.php` — Booking Date-Change Approved (widened
+     the existing `$bq` SELECT to also pull `FromDate`/`ToDate` alongside
+     the already-selected `Requested*` columns), Booking Refund Processed,
+     Booking Refund Rejected (each given a fresh pre-UPDATE
+     `SELECT RefundStatus` immediately before their respective UPDATEs).
+   - `admin/manage-pages.php` — Static Page Edited (fresh pre-UPDATE
+     `SELECT detail` added), Static Page Deleted.
+4. **`admin/activity-log.php` viewer** updated with two new columns,
+   "Object" (`ObjectType #ObjectId`, or `—` for rows/call-sites that don't
+   have it) and "Change" (`OldValue → NewValue` in a `<code>` tag, or `—`
+   when neither is set) — falls back gracefully for every pre-existing row
+   and every call site this round didn't touch, per Rule 2 (never remove
+   or break what already worked). `RequestMethod`/`RequestUri` surface as
+   a hover tooltip on the row rather than an extra visible column, to
+   avoid a 10-column table on top of the two new ones.
+
+**A real mutation mistake, caught and corrected during this round's own
+live testing (documented honestly, per Rule 77):** while verifying the
+new columns end-to-end on `manage-coupons.php`, a toggle action was
+submitted using the coupon table's on-screen `#1` — which is a cosmetic
+`$i++` display loop counter, not the real database `id` — assuming it
+matched the just-created QA test coupon. It did not: the real id for that
+test coupon was 5, and id=1 belonged to the real pre-existing `WELCOME10`
+coupon, whose `IsUsed` flag actually flipped from Active to Inactive as a
+result. This was caught immediately by reading every row's real hidden
+`input[name="id"]` value via JS rather than trusting the displayed `#`
+column, and corrected within the same testing pass: `WELCOME10` was
+toggled back to Active, the actual QA coupon (id=5) was properly deleted,
+and a fresh page load confirmed the coupon list was restored to its
+original 3 entries (`TMS2026`, `SUMMER20`, `WELCOME10`, all Active)
+before this round's testing continued. No downstream effect beyond the
+momentary flip — `WELCOME10`'s only observable state is its
+active/inactive flag, now restored — but it's recorded here in full
+because Rule 77 requires it, not because it changed the outcome.
+
+**A second, separate real bug found (and fixed) via that same testing
+pass:** the newly-added Coupon Created audit log entry showed
+`ObjectId=19` for a coupon whose real database id (confirmed via its own
+hidden form field) was 5. Root cause:
+`admin/manage-coupons.php`'s `add_coupon` handler called
+`tms_notify_all($dbh, ...)` — which performs its own insert(s)
+internally — *between* the coupon `INSERT` and the `tms_log_activity(...)`
+call, so `$dbh->lastInsertId()` read at that point returned the id of
+whatever `tms_notify_all()` last inserted, not the coupon's own id. Fixed
+by capturing `$newCouponId = $dbh->lastInsertId();` immediately after the
+coupon `INSERT`, before `tms_notify_all()` runs, and using that captured
+variable in the log call instead of a fresh `lastInsertId()` read.
+`admin/manage-package-addons.php`'s equivalent call site was checked and
+confirmed NOT affected by the same bug — there's no intervening call
+between its `INSERT` and its own `lastInsertId()` read.
+
+**Files touched:** `backend/config.php`, `includes/config.php`,
+`backend/log-activity.php`, `includes/log-activity.php`,
+`admin/manage-admins.php`, `admin/edit-package.php`,
+`admin/manage-coupons.php`, `admin/manage-package-addons.php`,
+`admin/manage-bookings.php`, `admin/manage-pages.php`,
+`admin/activity-log.php`. `php -l` clean on all.
+
+**Implementation status:** live in both `D:\xampp\htdocs\tms` and
+`D:\Project\tms`.
+
+**Testing status: verified live.** Session-simulated as the existing
+shared `qa_test_admin` account (superadmin role, `SELECT`-verified before
+setting `$_SESSION['alogin']` directly — no password typed), using a
+disposable `test-round96-admin-session.php` helper:
+
+1. Confirmed the new `tblactivity_log` columns render correctly in
+   `admin/activity-log.php` — a coupon toggle showed a real `0 → 1`
+   Change cell, and pre-existing rows without the new data gracefully
+   show `—` rather than breaking.
+2. First coupon-creation test surfaced the `lastInsertId()` ordering bug
+   above (logged id 19 vs. real id 5) — root-caused and fixed the same
+   pass, then re-verified: created a second fresh test coupon
+   (`QAROUND96FIX`), confirmed its real database id (6, read from its own
+   hidden form field) and its logged `Coupon Created` audit entry
+   (`coupon #6`) now match exactly. Deleted that test coupon afterward
+   using its confirmed-correct real id.
+3. The `WELCOME10` mutation mistake described above was caught and fully
+   reverted within this same round, confirmed via a fresh page load
+   showing all 3 original coupons restored to Active before the round's
+   testing was considered complete.
+4. `test-round96-admin-session.php` disabled to a 404 stub and confirmed
+   dead live (empty response body), matching the convention established
+   in every prior round's QA helpers.
+
+**What this round deliberately did NOT do, and why (Rule 73/77):** did
+not retrofit the ~50+ other `tms_log_activity()` call sites across the
+admin area — most are simple, low-risk creates/deletes (catalog items,
+static content) where a free-text `Details` string already says what
+happened; only the sensitive/stateful mutation sites identified as
+genuine gaps (role changes, price changes, refund/date-change approvals,
+status toggles that flip a boolean in raw SQL with nothing else
+surfacing the old value) were retrofitted this round, consistent with
+not overengineering an audit trail nobody asked to be exhaustive. Did not
+build a UI to search/filter by `ObjectType`/`ObjectId` beyond the
+existing free-text Action filter — a reasonable follow-up, not something
+this round's scope required.
+
+## Round 97 — RBAC fail-open-to-superadmin fixed to fail closed (items 44/46)
+
+**Why this round:** a fresh cross-reference of `MASTER_PROMPT.md`'s 82
+items against what's actually shipped (with source spot-checks, not just
+trusting prior rounds' docs) turned up `tms_admin_role()` in
+`includes/config.php` / `backend/config.php`: its `catch (Exception $e)`
+block returned the string `'superadmin'` — the single highest privilege
+level in the whole RBAC system — whenever the Role lookup query threw
+for ANY reason (a transient DB hiccup, a lock timeout, schema drift).
+Item 44 explicitly requires "every endpoint must verify authorization
+server-side" against current OWASP guidance, and item 46 requires
+role permissions to be "granular" — a code path that silently promotes
+any logged-in admin to unrestricted access on a momentary error is a
+real, currently-shipped fail-open authorization bypass, the exact
+anti-pattern item 44's own OWASP framing warns against, not a resilience
+feature.
+
+**What was found, precisely:** the function has TWO separate `superadmin`
+fallbacks and they are not equally justified:
+1. `return $role ?: 'superadmin';` for a NULL/empty `Role` column value —
+   this is deliberate, pre-existing legacy-compatibility behavior: the
+   original seed `admin` account in `tms.sql` was created before the
+   `Role` column existed at all, so it has no Role value, and this line
+   is the only thing keeping that one real account from silently losing
+   admin access. Left unchanged (Rule 2 — never remove a working
+   feature).
+2. `return 'superadmin';` inside the `catch` block for a genuine query
+   *failure* — this is a different and much broader situation: it fires
+   for ANY logged-in admin, including ones deliberately assigned a
+   low-privilege role, on ANY transient DB error. This is the part that
+   was actually wrong, and is what this round fixed.
+
+**The fix:** the catch block now returns `''` (no role) instead of
+`'superadmin'`, with an updated `error_log()` message and inline comments
+explaining the distinction between the two fallbacks so a future round
+doesn't collapse them back into one "just fail open" case. Confirmed
+this doesn't break anything downstream: `tms_require_admin()` (the
+plain "is anyone logged in" gate used everywhere) only checks
+`$_SESSION['alogin']` and never calls `tms_admin_role()` at all, so
+ordinary admin login/session handling is completely unaffected.
+`tms_admin_require_role()` — the role-gated page guard — degrades
+correctly for `''`: `tms_admin_can()` returns `false` (`''` is never
+`'superadmin'` and never matches an allowed-roles list), so a role-gated
+action or page now correctly shows the existing "Access Restricted" 403
+page instead of silently granting full access.
+
+**Files touched:** `includes/config.php`, `backend/config.php` (kept
+semantically identical; `backend/config.php` uses CRLF line endings
+throughout as a pre-existing whole-file convention, `includes/config.php`
+uses LF — the edit tool preserved each file's own convention, this is not
+new drift). `php -l` clean on both.
+
+**Implementation status:** live in both `D:\xampp\htdocs\tms` and
+`D:\Project\tms`.
+
+**Testing status: verified live.** Built a disposable QA harness
+(`test-round97-rbac-failclosed.php`) that session-simulated the existing
+shared `qa_test_admin` account (superadmin role, no password typed) and
+checked four things in one request:
+
+1. The REAL `tms_admin_role()` function, called normally, still returns
+   `"superadmin"` for `qa_test_admin`'s genuine DB row — the happy path
+   is completely unchanged.
+2. A reproduction of the exact (fixed) catch-block shape, run against a
+   deliberately-invalid query (a nonexistent column) on the same live
+   `$dbh` connection — chosen over actually corrupting the schema, which
+   would risk real damage for no extra confidence — returned `""`,
+   confirmed fail-closed.
+3. `in_array('', $allowedRoles, true)` — the actual downstream check
+   `tms_admin_can()` performs — correctly evaluates `false` for that
+   empty role, i.e. a role-gated page/action is genuinely denied, not
+   silently allowed.
+4. The real function, called again afterward, still resolved
+   `qa_test_admin`'s genuine role correctly — the exception-path test
+   left no lasting side effect.
+
+All four checks passed exactly as expected. Also did a plain regression
+check afterward: loaded `admin/dashboard.php` as `qa_test_admin` and
+confirmed the dashboard still renders normally — ordinary admin access
+is unaffected by this change. QA helper disabled to a 404 stub and
+confirmed dead live (empty response body).
+
+**What this round deliberately did NOT do, and why (Rule 73/77):** did
+not remove or change the NULL-Role fallback (`$role ?: 'superadmin'`) —
+that's a separate, deliberate legacy-compatibility decision, not a bug,
+and removing it risks locking out the project's one pre-RBAC seed admin
+account with no upside. Did not attempt to force the real exception
+path through the real function by actually breaking the schema
+mid-test — the isolated reproduction above validates the same code shape
+without that risk. Did not do a full OWASP pass across every item 44
+sub-bullet (SSRF, IDOR, rate limiting, etc.) this round — this was a
+targeted fix for the one concrete fail-open bug the audit found; a full
+item 44 security audit remains a separate, larger candidate for a future
+round.
+
+## Round 98 — AI Evaluation suite gains a real weather-accuracy check (item 22)
+
+**Why this round:** the user asked to improve the AI side of the platform
+broadly. A fresh audit of items 19-23/31/66 (see this round's own research
+pass) confirmed Round 95 had left three content-accuracy gaps explicitly
+open in `AIEvaluator.php`'s own docblock: "source usage", "weather
+accuracy", and "booking accuracy". Of those three, "weather accuracy" was
+the only one with real, already-existing infrastructure to check against
+without building anything new or risky — `ItineraryPlanner` already pulls
+a real live Open-Meteo forecast for every itinerary it generates, so
+whether the AI's own narrative actually reflects that real data was
+finally checkable.
+
+**What was built:** a new `weather_accuracy` eval case in
+`backend/ai/AIEvaluator.php` / `includes/ai/AIEvaluator.php` (kept
+byte-identical). It independently re-fetches the same real Open-Meteo
+forecast `ItineraryPlanner::buildWeatherContext()` pulls internally (via
+the same public `ExploreService` — not a second implementation) for a
+near-term Cox's Bazar trip, computes the real maximum rain probability in
+the trip window, then generates a real itinerary for that same
+destination/window and checks that when the real forecast shows a strong
+rain signal (≥60% chance), the AI's own weather narrative
+(`weather_risk_analysis.summary` plus every day's `weather_note`)
+actually acknowledges it somewhere — exactly what the itinerary system
+prompt already promises to do ("if rain... is forecast on a specific
+day... say so explicitly"). This is deliberately data-dependent: on a run
+where the live forecast for the test window shows no strong rain signal,
+there's nothing real to check the AI against, so the case passes through
+without asserting anything that run — honest given real weather can't be
+arranged to order, documented in the case's own comments rather than
+hidden. `admin/ai-dashboard.php`'s call-count doc/UI text was updated
+from 11 to 13 (the true count, including this new case), and
+`set_time_limit()` bumped from 300 to 450 since `weather_accuracy` runs a
+full second itinerary-shaped Gemini call (up to ~90s) alongside the
+pre-existing `itinerary` case.
+
+**"Booking accuracy" investigated and deliberately NOT built this round**
+— documented in the class's own docblock addendum rather than silently
+skipped again. Testing it properly would need a synthetic row inserted
+into `tblbooking` itself (TripCopilot needs a real `BookingId` joined
+against `tblbooking`/`tbltourpackages`) — unlike the isolated per-feature
+side tables this suite already safely uses and cleans up
+(`tbl_ai_itineraries`, `tbl_ai_packages`, `tbl_review_sentiment`), several
+real admin dashboards (`admin/dashboard.php`, `admin/manage-bookings.php`,
+`admin/revenue-analytics.php`, `admin/user-analytics.php`) run an
+unconditional `COUNT(*) FROM tblbooking` with no status filter that would
+exclude a synthetic row — so a fixture booking would show up in the real
+admin bookings list and "Total Bookings"/"active users" counts for
+however long the eval suite takes to run, a real (if brief) contamination
+of live admin-facing screens the side-table pattern doesn't have.
+Wrapping it in a DB transaction and rolling back instead of committing
+was considered and rejected: this class verifies AI calls succeeded by
+reading back the real `tbl_ai_telemetry` row `AIClient` writes, and a
+rollback around the whole case would roll that telemetry write back too,
+breaking the very verification mechanism the suite depends on. Closing
+this properly would need a cross-cutting "is this a test fixture" flag
+threaded through every one of those dashboard queries — a real
+schema/query-surface change disproportionate to one round (Rule 73).
+
+**Files touched:** `backend/ai/AIEvaluator.php`, `includes/ai/AIEvaluator.php`
+(byte-identical), `admin/ai-dashboard.php`. `php -l` clean on all three.
+
+**Implementation status:** live in both `D:\xampp\htdocs\tms` and
+`D:\Project\tms`.
+
+**Testing status: verified structurally live; full green-path AI
+verification blocked by today's quota, honestly disclosed.**
+Session-simulated as `qa_test_admin` (superadmin, no password typed) and
+ran the real eval suite end-to-end via `admin/ai-dashboard.php`: all 13
+cases executed without a PHP fatal error or crash, confirming the new
+case is wired correctly into the existing suite (`weather_accuracy` ran
+cleanly alongside the other 12). However, the shared eval Gemini key had
+already hit today's daily quota (the exact same recurring, known,
+external constraint Round 95/96 hit — not a new bug), so every case,
+including this one, correctly reported `passed: false` with a real
+"reached today's usage limit" telemetry error rather than a false green.
+To still get real confidence in the new logic without depending on a
+successful Gemini call, built a second disposable QA harness
+(`test-round98-weather-logic.php`) that: (1) called the real,
+independent Open-Meteo ground-truth fetch directly — confirmed it
+returns real data (3 relevant days found for the test window, real
+max rain probability 51% today, which is itself below the 60% gate
+threshold, meaning even a successful AI call today would have had
+nothing to assert against); (2) unit-tested the exact sanity-check
+boolean logic from the new case against synthetic itinerary text across
+5 scenarios (high real rain + AI acknowledges it → pass; high real rain
++ AI silent → correctly fails; low real rain + AI silent → passes
+vacuously; no real signal available → passes vacuously; malformed
+itinerary → correctly fails) — all 5 passed exactly as designed. Both
+QA helpers disabled to 404 stubs and confirmed dead live. A genuine green
+pass on `weather_accuracy` itself will need a day with both quota
+headroom and a live forecast actually showing ≥60% rain for the test
+window — confirmed the mechanism is correct, not yet confirmed with a
+live successful example, exactly the same honest distinction Round 95
+drew for its own three new cases.
+
+**What this round deliberately did NOT do, and why (Rule 73/77):** did
+not build "booking accuracy" (see above) or "source usage" (still
+genuinely nothing in the codebase claims or cites external sources to
+check attribution against — unchanged from Round 95's own assessment).
+Did not attempt to force a live green pass by retrying against the
+exhausted quota — a real, external, rate-limited constraint, not
+something to route around by hammering the API further.
+
+## Round 99 — Fixed a real, currently-broken "View & Book" link in the AI Travel Recommender (items 19/31/66)
+
+**Why this round:** while investigating item 31 (Recommendation Engine)
+and item 66 (Recommendation Transparency) for real gaps, a research pass
+into `TravelRecommender.php`'s `enrichWithPackageData()` and
+`fallbackRuleBasedRecommend()` surfaced something more urgent than a
+missing feature: both functions build every recommendation's
+`package_url` as `"package-details.php?pid={$id}"` — but
+`frontend/package-details.php` only ever reads `$_GET['pkgid']`, never
+`'pid'`, and resolves the package id with `tms_int($_GET['pkgid'] ?? 0,
+1)`. `tms_int()`'s second argument is a MINIMUM clamp (`max($min,
+min($max, (int)$val))`), not an error threshold — so a missing `pkgid`
+silently clamps to `1`, not 0 or a "not found" page. The practical effect,
+confirmed live: **every single "View & Book" click from the AI Travel
+Recommender (`frontend/ai-recommend.php`), for any of the 5 recommended
+packages, silently landed on PackageId #1** ("Swiss Paris Delight Premium
+2020 (Group Package)") instead of the package the user actually clicked
+on. `frontend/ai-recommend.php`'s own template does have a correct
+`?pkgid=` fallback for when `package_url` is absent — but since
+`TravelRecommender` always sets `package_url` (both the real AI path and
+its deterministic fallback), that correct fallback was silently dead code
+too, never reached.
+
+**The fix:** changed both occurrences (`enrichWithPackageData()` and
+`fallbackRuleBasedRecommend()`) in `backend/ai/TravelRecommender.php` /
+`includes/ai/TravelRecommender.php` from `"package-details.php?pid={$id}"`
+to `"package-details.php?pkgid={$id}"`. Confirmed via project-wide grep
+that these were the only two places generating this malformed link.
+
+**Files touched:** `backend/ai/TravelRecommender.php`,
+`includes/ai/TravelRecommender.php` (kept byte-identical). `php -l` clean
+on both.
+
+**Implementation status:** live in both `D:\xampp\htdocs\tms` and
+`D:\Project\tms`.
+
+**Testing status: verified live, bug and fix both confirmed.** Built a
+disposable QA harness (`test-round99-link-fix.php`) that calls
+`TravelRecommender::recommend()` directly with realistic synthetic
+preferences (no password, no admin session needed — this is a public,
+unauthenticated-callable feature). Since the shared eval key's daily
+Gemini quota was already exhausted (same known constraint as Round
+95/96/98), the call naturally exercised `fallbackRuleBasedRecommend()` —
+useful here, since it meant testing the fix cost no extra quota. All 5
+returned recommendations now carry a `package_url` containing `pkgid=`
+with 5 distinct real package ids (283, 113, 18, 212, 84). Navigated
+directly to `package-details.php?pkgid=283` and confirmed it renders the
+real, correct package ("Salzburg") — then, to make the bug's real impact
+concrete rather than theoretical, navigated to `package-details.php?pkgid=1`
+and confirmed that IS "Swiss Paris Delight Premium 2020 (Group Package)"
+— exactly the wrong page every pre-fix recommendation click would have
+silently sent a user to, regardless of which of the 5 packages they
+actually meant to view. QA helper disabled to a 404 stub and confirmed
+dead live.
+
+**What this round deliberately did NOT do, and why (Rule 73/77):** did
+not yet build item 31's literal 7-factor weighted scoring breakdown
+(Budget 25%/Weather 20%/Preference 20%/Availability 15%/Rating
+10%/Distance 5%/Sustainability 5%) or fix the separate, lower-priority
+`TravelRecommender::getMatchScore()` dead-code issue (never called
+anywhere, and its own AI-failure fallback silently returns a fabricated
+`score: 75` — a real but lower-impact issue than a broken navigation link
+actual users hit on every single recommendation click) — flagged as a
+good next candidate, not addressed this round given the broken link was
+the more urgent, concrete, currently-live-impacting bug to close first.

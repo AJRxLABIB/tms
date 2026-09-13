@@ -107,11 +107,28 @@ class AIClient {
         string $feature = ''
     ): array {
 
-        if (empty($this->apiKey) || $this->apiKey === 'YOUR_GEMINI_API_KEY_HERE') {
-            // FIX (Round 14): this exact string was rendered to visitors — the
-            // first thing anyone saw on Explore Mode was "Add your key to
-            // includes/config.php". The operator detail belongs in the log.
-            error_log('[TMS AI] No GEMINI_API_KEY configured — set it in .env (see .env.example).');
+        // Round 95 FIX (severity: critical, live, previously undetected):
+        // this whole method -- along with askWithImage() and httpPost() right
+        // below -- was still the pre-Round-34 Gemini-hardcoded body, left
+        // behind untouched when the AIProviderInterface abstraction shipped.
+        // It referenced $this->apiKey, $this->model and self::GEMINI_BASE --
+        // none of which exist ANYWHERE on this class (the constructor only
+        // ever sets $this->provider) -- so `empty($this->apiKey)` was always
+        // true and every single real AI feature (recommender, sentiment,
+        // itinerary, budget tools, crowd predictor, package generator, site
+        // assistant chatbot, NL search) has been silently returning the
+        // generic "not switched on" fallback since Round 34, REGARDLESS of a
+        // valid GEMINI_API_KEY in .env -- masking a second, worse bug one
+        // line further down (`self::GEMINI_BASE` isn't a defined constant at
+        // all -- a fatal "Undefined constant" error was one working API key
+        // away from happening on every real call). Found only now because
+        // Round 95's AI Evaluation suite finally checks tbl_ai_telemetry
+        // ground truth instead of trusting a fallback's still-valid-looking
+        // JSON shape -- exactly the gap that suite was built to catch.
+        // Fixed by actually routing through $this->provider, as the Round 34
+        // docblock always claimed this method did.
+        if (!$this->provider->isConfigured()) {
+            error_log('[TMS AI] Provider "' . $this->provider->name() . '" is not configured -- set its API key in .env (see .env.example).');
             return $this->fallback('The AI assistant is not switched on for this site yet.');
         }
 
@@ -136,44 +153,19 @@ class AIClient {
             return $m;
         }, $messages);
 
-        // ── Convert Anthropic-style messages → Gemini format ──────────────────
-        $geminiContents = [];
-
-        // Prepend system prompt as a "user" turn (Gemini handles system via systemInstruction)
-        foreach ($messages as $msg) {
-            $role = ($msg['role'] === 'assistant') ? 'model' : 'user';
-            $geminiContents[] = [
-                'role'  => $role,
-                'parts' => [['text' => $msg['content']]],
-            ];
+        // ── Build the provider-specific request (vendor payload shape lives
+        // in the provider class now, not here) ────────────────────────────
+        try {
+            $request = $this->provider->buildTextRequest($system, $messages, ['maxTokens' => $this->maxTokens]);
+        } catch (\RuntimeException $e) {
+            return $this->fallback($e->getMessage());
         }
 
-        // ── Build Gemini payload ──────────────────────────────────────────────
-        $payload = [
-            'system_instruction' => [
-                'parts' => [['text' => $system]],
-            ],
-            'contents'           => $geminiContents,
-            'generationConfig'   => [
-                'maxOutputTokens' => $this->maxTokens,
-                'temperature'     => 0.7,
-                'topP'            => 0.9,
-            ],
-            'safetySettings'     => [
-                // Round 14: all four were BLOCK_ONLY_HIGH, the loosest available
-                // setting, on a public consumer travel site.
-                ['category' => 'HARM_CATEGORY_HARASSMENT',        'threshold' => 'BLOCK_MEDIUM_AND_ABOVE'],
-                ['category' => 'HARM_CATEGORY_HATE_SPEECH',       'threshold' => 'BLOCK_MEDIUM_AND_ABOVE'],
-                ['category' => 'HARM_CATEGORY_SEXUALLY_EXPLICIT', 'threshold' => 'BLOCK_MEDIUM_AND_ABOVE'],
-                ['category' => 'HARM_CATEGORY_DANGEROUS_CONTENT', 'threshold' => 'BLOCK_MEDIUM_AND_ABOVE'],
-            ],
-        ];
-
-        // ── API call ──────────────────────────────────────────────────────────
-        // Round 14: the key used to travel in the query string, which lands in
-        // every proxy access log. Gemini accepts it as a header instead.
-        $url    = self::GEMINI_BASE . $this->model . ':generateContent';
-        $result = $this->httpPost($url, $payload);
+        // ── API call (generic retry/backoff; vendor-specific parsing via
+        // the provider's own parseResponse()) ──────────────────────────────
+        $startedAt = microtime(true);
+        $result    = $this->httpPost($request, $totalBudgetSec, $perAttemptSec);
+        $latencyMs = (int)round((microtime(true) - $startedAt) * 1000);
 
         if (!$result['success']) {
             error_log('[TMS AI ' . $this->provider->name() . '] call failed: ' . ($result['error'] ?? 'unknown error'));
@@ -202,6 +194,13 @@ class AIClient {
      * Single-turn call with an image attached (AI Image Analyzer). Same
      * contract as before, plus the optional $feature telemetry tag.
      *
+     * Round 95 FIX: api/ai.php's image-classifier call site
+     * (`$ai->askWithImage(..., feature: 'image_classifier')`) passes $feature
+     * as a NAMED argument, but this method's signature had no $feature
+     * parameter at all -- every image-analyzer request was hitting a fatal
+     * "Unknown named parameter $feature" error, not just a graceful
+     * fallback. Added here, matching call()/ask()'s existing convention.
+     *
      * @param string $system      System prompt
      * @param string $userText    Accompanying text instruction
      * @param string $imageB64    Raw base64 image data (no data: prefix)
@@ -209,12 +208,13 @@ class AIClient {
      * @param string $userEmail   For rate limiting
      * @param string $feature     Optional telemetry tag, see call().
      */
-    public function askWithImage(string $system, string $userText, string $imageB64, string $mimeType, string $userEmail = 'guest'): array {
-        if (empty($this->apiKey) || $this->apiKey === 'YOUR_GEMINI_API_KEY_HERE') {
-            // FIX (Round 14): this exact string was rendered to visitors — the
-            // first thing anyone saw on Explore Mode was "Add your key to
-            // includes/config.php". The operator detail belongs in the log.
-            error_log('[TMS AI] No GEMINI_API_KEY configured — set it in .env (see .env.example).');
+    public function askWithImage(string $system, string $userText, string $imageB64, string $mimeType, string $userEmail = 'guest', string $feature = ''): array {
+        // Round 95 FIX: same root cause as call() above -- see that method's
+        // comment for the full story (undefined $this->apiKey/$this->model/
+        // self::GEMINI_BASE meant this always silently fell back, never
+        // actually reaching the real API).
+        if (!$this->provider->isConfigured()) {
+            error_log('[TMS AI] Provider "' . $this->provider->name() . '" is not configured -- set its API key in .env (see .env.example).');
             return $this->fallback('The AI assistant is not switched on for this site yet.');
         }
         if ($this->isRateLimited($userEmail)) {
@@ -226,30 +226,17 @@ class AIClient {
             return $this->fallback('Unsupported image type.');
         }
 
-        $payload = [
-            'system_instruction' => ['parts' => [['text' => $system]]],
-            'contents' => [[
-                'role'  => 'user',
-                'parts' => [
-                    ['text' => $this->sanitizePromptInput($userText)],
-                    ['inline_data' => ['mime_type' => $mimeType, 'data' => $imageB64]],
-                ],
-            ]],
-            'generationConfig' => [
-                'maxOutputTokens' => $this->maxTokens,
-                'temperature'     => 0.4, // lower than chat — this is classification, not creative writing
-                'topP'            => 0.9,
-            ],
-            'safetySettings' => [
-                ['category' => 'HARM_CATEGORY_HARASSMENT',        'threshold' => 'BLOCK_ONLY_HIGH'],
-                ['category' => 'HARM_CATEGORY_HATE_SPEECH',       'threshold' => 'BLOCK_ONLY_HIGH'],
-                ['category' => 'HARM_CATEGORY_SEXUALLY_EXPLICIT', 'threshold' => 'BLOCK_MEDIUM_AND_ABOVE'],
-                ['category' => 'HARM_CATEGORY_DANGEROUS_CONTENT', 'threshold' => 'BLOCK_ONLY_HIGH'],
-            ],
-        ];
+        try {
+            $request = $this->provider->buildImageRequest(
+                $system, $this->sanitizePromptInput($userText), $imageB64, $mimeType, ['maxTokens' => $this->maxTokens]
+            );
+        } catch (\RuntimeException $e) {
+            return $this->fallback($e->getMessage());
+        }
 
-        $url    = self::GEMINI_BASE . $this->model . ':generateContent';
-        $result = $this->httpPost($url, $payload);
+        $startedAt = microtime(true);
+        $result    = $this->httpPost($request);
+        $latencyMs = (int)round((microtime(true) - $startedAt) * 1000);
 
         if (!$result['success']) {
             error_log('[TMS AI Vision ' . $this->provider->name() . '] call failed: ' . ($result['error'] ?? 'unknown error'));
@@ -317,115 +304,67 @@ class AIClient {
      * etc.) keeps the original tight interactive timeout.
      *
      * @param array{url:string,headers:array<int,string>,body:string} $request
+     *
+     * Round 95 FIX: this used to build the Gemini payload AND parse the
+     * Gemini-shaped response directly inline (`self::GEMINI_BASE`,
+     * `$this->apiKey` -- neither ever existed on this class after the
+     * Round 34 provider-abstraction refactor, so this whole method was
+     * unreachable dead code; see call()'s comment for the full story). Now
+     * takes an already-built provider-agnostic request and hands the raw
+     * HTTP outcome to $this->provider->parseResponse() for interpretation,
+     * so this loop is genuinely vendor-agnostic and works for Gemini,
+     * OpenAI, or any future provider without changes here.
      */
-    private function httpPost(string $url, array $payload): array {
+    private function httpPost(array $request, int $totalBudgetSec = 22, int $perAttemptSec = 12): array {
         // FIX (Round 14): CURLOPT_TIMEOUT was 30s with no connect timeout, inside
         // a 3-attempt retry loop — a worst case of ~91 seconds for an
         // INTERACTIVE chat request. XAMPP's default max_execution_time is 30-60s,
         // so PHP killed the script mid-retry and the browser got an HTML fatal
         // instead of JSON. These values keep the whole operation inside a
         // sensible interactive budget.
-        $maxAttempts   = 3;
-        $backoffMs     = 400;
-        $perAttemptSec = 12;
-        $totalBudgetSec = 22;
-        $startedAt     = microtime(true);
+        $maxAttempts = 3;
+        $backoffMs   = 400;
+        $startedAt   = microtime(true);
 
-        // Encoding can fail on invalid UTF-8 (easy to send in a raw POST), which
-        // used to post an empty body and surface as a baffling "HTTP 400".
-        $body = json_encode($payload, JSON_INVALID_UTF8_SUBSTITUTE);
-        if ($body === false) {
-            return ['success' => false, 'error' => 'Could not encode the request (invalid characters in the message).'];
-        }
-
-        $response = false; $httpCode = 0; $curlErr = '';
+        $lastResult = ['success' => false, 'error' => 'The AI assistant could not be reached. Please try again in a moment.'];
 
         for ($attempt = 1; $attempt <= $maxAttempts; $attempt++) {
             $remaining = $totalBudgetSec - (int)(microtime(true) - $startedAt);
             if ($remaining < 3) break;
 
-            $ch = curl_init($url);
+            $ch = curl_init($request['url']);
             curl_setopt_array($ch, [
                 CURLOPT_RETURNTRANSFER => true,
                 CURLOPT_POST           => true,
-                CURLOPT_POSTFIELDS     => $body,
-                CURLOPT_HTTPHEADER     => [
-                    'Content-Type: application/json',
-                    'x-goog-api-key: ' . $this->apiKey,
-                ],
+                CURLOPT_POSTFIELDS     => $request['body'],
+                CURLOPT_HTTPHEADER     => $request['headers'],
                 CURLOPT_CONNECTTIMEOUT => 5,
-                CURLOPT_TIMEOUT        => min($perAttemptSec, $remaining),
+                CURLOPT_TIMEOUT        => min($perAttemptSec, max($remaining, 3)),
                 CURLOPT_SSL_VERIFYPEER => true,
             ]);
 
             $response = curl_exec($ch);
             $httpCode = (int)curl_getinfo($ch, CURLINFO_HTTP_CODE);
-            $curlErr  = curl_error($ch);
+            $curlErr  = curl_error($ch) ?: null;
             curl_close($ch);
 
-            $isTransientNetworkError = (bool)$curlErr;
-            $isTransientHttpError    = in_array($httpCode, [429, 500, 502, 503, 504], true);
+            $lastResult = $this->provider->parseResponse($httpCode, (string)$response, $curlErr);
 
-            // A 429 is either a per-minute burst (worth one short retry) or the
-            // daily free-tier quota being spent (retrying is pure waste and just
-            // hammers the API). Tell them apart from the response body.
-            if ($httpCode === 429 && is_string($response) && stripos($response, 'per day') !== false) {
-                return ['success' => false, 'error' => 'The AI assistant has reached today\'s usage limit. Please try again tomorrow.'];
-            }
-
-            if (!$isTransientNetworkError && !$isTransientHttpError) {
-                break; // clean success, or a definitive failure retrying won't fix
+            if ($lastResult['success'] || empty($lastResult['retriable'])) {
+                return $lastResult; // clean success, or a definitive failure retrying won't fix
             }
 
             if ($attempt < $maxAttempts) {
                 usleep($backoffMs * 1000);
                 $backoffMs *= 2;
-                continue;
             }
         }
 
-        if ($curlErr) {
-            error_log('[TMS AI] network error after ' . $maxAttempts . ' attempt(s): ' . $curlErr);
-            return ['success' => false, 'error' => 'The AI assistant could not be reached. Please try again in a moment.'];
+        if (!$lastResult['success']) {
+            error_log('[TMS AI ' . $this->provider->name() . '] call failed after ' . $maxAttempts . ' attempt(s): ' . ($lastResult['error'] ?? 'unknown error'));
         }
 
-        $data = json_decode((string)$response, true);
-
-        if ($httpCode !== 200) {
-            $detail = $data['error']['message'] ?? ('HTTP ' . $httpCode . ' — ' . substr((string)$response, 0, 200));
-            error_log('[TMS AI] Gemini returned HTTP ' . $httpCode . ': ' . $detail);
-            if ($httpCode === 401 || $httpCode === 403) {
-                return ['success' => false, 'error' => 'The AI assistant is not configured correctly on this site.'];
-            }
-            if ($httpCode === 429) {
-                return ['success' => false, 'error' => 'The AI assistant is busy right now. Please try again in a minute.'];
-            }
-            return ['success' => false, 'error' => 'The AI assistant had a problem answering that. Please try again.'];
-        }
-
-        // A prompt blocked BEFORE generation is reported at the top level, not on
-        // the candidate — that case used to fall through to the generic
-        // "Empty response from Gemini API."
-        $blockReason = $data['promptFeedback']['blockReason'] ?? '';
-        if ($blockReason !== '') {
-            return ['success' => false, 'error' => 'That message could not be processed. Please rephrase it and try again.'];
-        }
-
-        $content = $data['candidates'][0]['content']['parts'][0]['text'] ?? '';
-
-        if (empty($content)) {
-            $finishReason = $data['candidates'][0]['finishReason'] ?? '';
-            if ($finishReason === 'SAFETY') {
-                return ['success' => false, 'error' => 'The answer was blocked by a safety filter. Try rephrasing your question.'];
-            }
-            if ($finishReason === 'MAX_TOKENS') {
-                return ['success' => false, 'error' => 'That answer was too long to finish. Try asking something more specific.'];
-            }
-            error_log('[TMS AI] empty Gemini response (finishReason=' . $finishReason . ')');
-            return ['success' => false, 'error' => 'The AI assistant returned an empty answer. Please try again.'];
-        }
-
-        return ['success' => true, 'content' => $content];
+        return $lastResult;
     }
 
     private function isRateLimited(string $userEmail): bool {

@@ -220,3 +220,83 @@ function tms_dynamic_price(PDO $dbh, int $packageId, float $basePrice, ?string $
         'label'      => $label,
     ];
 }
+
+/**
+ * Price history (Rule 26: "Track historical prices where legitimate data
+ * is available"). Records one snapshot for $packageId on today's date,
+ * upserting so at most one row per package per calendar day ever exists --
+ * calling this more than once on the same day (e.g. a cron that runs every
+ * 30 minutes, see scripts/check_alerts.php) just keeps updating today's row
+ * rather than creating duplicates. Never throws: a failed snapshot is a
+ * missed data point, not a reason to break the caller (the same alert
+ * check / package page render that wants this recorded).
+ */
+function tms_record_price_snapshot(PDO $dbh, int $packageId, int $price): void
+{
+    if ($packageId <= 0 || $price <= 0) return;
+    try {
+        $dbh->prepare(
+            "INSERT INTO tbl_price_history (PackageId, Price, RecordedDate)
+             VALUES (:pid, :price, :today)
+             ON DUPLICATE KEY UPDATE Price = VALUES(Price), RecordedAt = CURRENT_TIMESTAMP"
+        )->execute([':pid' => $packageId, ':price' => $price, ':today' => date('Y-m-d')]);
+    } catch (Exception $e) {
+        error_log('[TMS Pricing] price_history snapshot failed: ' . $e->getMessage());
+    }
+}
+
+/**
+ * Snapshots today's canonical price (the same undated demand+seats price
+ * tms_check_and_fire_alerts() itself compares against -- no travel date, so
+ * this is one stable number per package per day, not one per possible
+ * departure date) for every active, priced package. Called from
+ * scripts/check_alerts.php's existing cron run rather than a new scheduled
+ * job (Rule 73 -- this project already runs that script every 30-60 min,
+ * which is exactly the cadence price history needs).
+ *
+ * @return int how many packages were snapshotted this run.
+ */
+function tms_snapshot_all_package_prices(PDO $dbh): int
+{
+    $count = 0;
+    try {
+        $pkgs = $dbh->query(
+            "SELECT PackageId, PackagePrice FROM tbltourpackages WHERE Status = 1 AND PackagePrice IS NOT NULL AND PackagePrice > 0"
+        )->fetchAll(PDO::FETCH_OBJ);
+        foreach ($pkgs as $p) {
+            $price = tms_dynamic_price($dbh, (int)$p->PackageId, (float)$p->PackagePrice)['final'];
+            tms_record_price_snapshot($dbh, (int)$p->PackageId, (int)$price);
+            $count++;
+        }
+    } catch (Exception $e) {
+        error_log('[TMS Pricing] snapshot_all_package_prices failed: ' . $e->getMessage());
+    }
+    return $count;
+}
+
+/**
+ * Recorded price history for one package, oldest first, for charting/display.
+ * Returns an empty array (never fabricated placeholder points, Rule 3) for
+ * a package with no snapshots yet -- callers must render an honest "not
+ * enough data yet" state rather than a fake flat line.
+ *
+ * @return array<int, array{date:string, price:int}>
+ */
+function tms_get_price_history(PDO $dbh, int $packageId, int $days = 90): array
+{
+    try {
+        $q = $dbh->prepare(
+            "SELECT RecordedDate, Price FROM tbl_price_history
+             WHERE PackageId = :pid AND RecordedDate >= (CURDATE() - INTERVAL :days DAY)
+             ORDER BY RecordedDate ASC"
+        );
+        $q->bindValue(':pid', $packageId, PDO::PARAM_INT);
+        $q->bindValue(':days', $days, PDO::PARAM_INT);
+        $q->execute();
+        $rows = $q->fetchAll(PDO::FETCH_ASSOC);
+        return array_map(fn($r) => ['date' => (string)$r['RecordedDate'], 'price' => (int)$r['Price']], $rows);
+    } catch (Exception $e) {
+        error_log('[TMS Pricing] get_price_history failed: ' . $e->getMessage());
+        return [];
+    }
+}

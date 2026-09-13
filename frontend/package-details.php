@@ -56,12 +56,32 @@ if (isset($_POST['submit2']) || isset($_POST['addcart'])) {
                 ? tms_dynamic_price($dbh, $pid, (float)$cartRawPrice, $from->format('Y-m-d'))['final']
                 : null;
 
-            $dbh->prepare("INSERT INTO tblcart(UserEmail,PackageId,FromDate,ToDate,Comment,NoOfPersons,DynamicPrice) VALUES(:e,:pid,:from,:to,:comment,:persons,:dprice)")
-                ->execute([
-                    ':e' => $email, ':pid' => $pid,
-                    ':from' => $from->format('Y-m-d'), ':to' => $to->format('Y-m-d'), ':comment' => $comment,
-                    ':persons' => $persons, ':dprice' => $cartDynamic,
-                ]);
+            $cartIns = $dbh->prepare("INSERT INTO tblcart(UserEmail,PackageId,FromDate,ToDate,Comment,NoOfPersons,DynamicPrice) VALUES(:e,:pid,:from,:to,:comment,:persons,:dprice)");
+            $cartIns->execute([
+                ':e' => $email, ':pid' => $pid,
+                ':from' => $from->format('Y-m-d'), ':to' => $to->format('Y-m-d'), ':comment' => $comment,
+                ':persons' => $persons, ':dprice' => $cartDynamic,
+            ]);
+            // Round 91 (items 10/81): add-ons selected on this form now carry
+            // through to the cart too, closing the scope gap Round 87
+            // deliberately left open ("Book Now" only). Re-validated against
+            // the DB exactly like the Book Now path below -- never trust a
+            // posted price -- and stored unsnapshotted in tblcartaddons since
+            // a cart is transient; the real snapshot happens at checkout.
+            $newCartId = $dbh->lastInsertId();
+            if ($newCartId) {
+                $cartAddonIds = array_map('intval', (array)($_POST['addons'] ?? []));
+                if (!empty($cartAddonIds)) {
+                    $placeholders = implode(',', array_fill(0, count($cartAddonIds), '?'));
+                    $caq = $dbh->prepare("SELECT AddOnId FROM tblpackageaddons WHERE PackageId = ? AND IsActive = 1 AND AddOnId IN ($placeholders)");
+                    $caq->execute(array_merge([$pid], $cartAddonIds));
+                    $caIns = $dbh->prepare("INSERT INTO tblcartaddons (CartId, AddOnId, Quantity) VALUES (:cid, :aid, :q)");
+                    foreach ($caq->fetchAll(PDO::FETCH_COLUMN) as $validAddOnId) {
+                        $qty = tms_int($_POST['addon_qty'][$validAddOnId] ?? 1, 1, 20);
+                        $caIns->execute([':cid' => $newCartId, ':aid' => (int)$validAddOnId, ':q' => $qty]);
+                    }
+                }
+            }
             $msg = 'Added to your cart! <a href="cart.php">View Cart →</a>';
         } else {
             // Price + coupon are resolved here, at creation time, in the same
@@ -123,7 +143,29 @@ if (isset($_POST['submit2']) || isset($_POST['addcart'])) {
                         $error = 'Note: coupon code was not valid or already used, so it was not applied.';
                     }
                 }
-                $total = max(0, $subtotal - $discountAmt);
+                // Round 87 (item 7): optional add-ons. Originally scoped to
+                // this direct "Book Now" path only; Round 91 (items 10/81)
+                // extended the same selection through Add to Cart / cart.php /
+                // checkout.php too (addcart's own handler above does its own
+                // equivalent re-validation and insert into tblcartaddons).
+                // Selected add-ons are re-validated against the DB here (never
+                // trust posted price/name), and never discounted by a coupon
+                // — that's still true, coupons remain Book-Now-only.
+                $selectedAddons = [];
+                $addonTotal = 0;
+                $postedAddonIds = array_map('intval', (array)($_POST['addons'] ?? []));
+                if (!empty($postedAddonIds)) {
+                    $placeholders = implode(',', array_fill(0, count($postedAddonIds), '?'));
+                    $aq = $dbh->prepare("SELECT * FROM tblpackageaddons WHERE PackageId = ? AND IsActive = 1 AND AddOnId IN ($placeholders)");
+                    $aq->execute(array_merge([$pid], $postedAddonIds));
+                    foreach ($aq->fetchAll(PDO::FETCH_OBJ) as $a) {
+                        $qty = tms_int($_POST['addon_qty'][$a->AddOnId] ?? 1, 1, 20);
+                        $selectedAddons[] = ['AddOnId' => (int)$a->AddOnId, 'Name' => $a->Name, 'Price' => (int)$a->Price, 'Quantity' => $qty];
+                        $addonTotal += (int)$a->Price * $qty;
+                    }
+                }
+
+                $total = max(0, $subtotal - $discountAmt) + $addonTotal;
                 $verificationCode = strtoupper(bin2hex(random_bytes(5)));
 
                 $sql = "INSERT INTO tblbooking(PackageId,UserEmail,FromDate,ToDate,Comment,status,NoOfPersons,MobileNumber,TotalCost,CouponCode,DiscountApplied,VerificationCode,BookingDate)
@@ -147,6 +189,20 @@ if (isset($_POST['submit2']) || isset($_POST['addcart'])) {
                 ]);
                 $newBkId = $dbh->lastInsertId();
                 if ($newBkId) {
+                    // Snapshot each selected add-on's Name/Price at booking time
+                    // (Round 87): a later catalog edit or delete in
+                    // admin/manage-package-addons.php must never rewrite this
+                    // booking's history, so AddOnId is kept only as an optional
+                    // back-reference, not the source of truth for the receipt.
+                    if (!empty($selectedAddons)) {
+                        $baIns = $dbh->prepare("INSERT INTO tblbookingaddons (BookingId, AddOnId, Name, Price, Quantity) VALUES (:bid,:aid,:n,:p,:q)");
+                        foreach ($selectedAddons as $sa) {
+                            $baIns->execute([
+                                ':bid' => $newBkId, ':aid' => $sa['AddOnId'],
+                                ':n' => $sa['Name'], ':p' => $sa['Price'], ':q' => $sa['Quantity'],
+                            ]);
+                        }
+                    }
                     // Award 100 loyalty points
                     $email2 = $_SESSION['login'];
                     $dbh->prepare("INSERT INTO tblloyalty(UserEmail,Points,TotalEarned) VALUES(:e,100,100)
@@ -177,6 +233,19 @@ if ($pkg) {
     tms_track_recently_viewed($dbh, (int)$pkg->PackageId);
 }
 
+// Round 87 (item 7): active add-ons available for selection below, on both
+// the "Book Now" and "Add to Cart" buttons in the same form (Round 91,
+// items 10/81, extended the cart/checkout path to carry these through too —
+// see the addcart and submit2 handlers above).
+$packageAddons = [];
+if ($pkg) {
+    try {
+        $paq = $dbh->prepare("SELECT * FROM tblpackageaddons WHERE PackageId=:pid AND IsActive=1 ORDER BY Price ASC");
+        $paq->execute([':pid' => $pkg->PackageId]);
+        $packageAddons = $paq->fetchAll(PDO::FETCH_OBJ);
+    } catch (Exception $e) { $packageAddons = []; }
+}
+
 // Translate this package's name/description for the active language (cached — see backend/i18n.php)
 $pkgNameT = $pkgDescT = null;
 if ($pkg && tms_active_language() !== 'en') {
@@ -203,6 +272,15 @@ $pkgPricing = null;
 if ($pkg && (float)$pkg->PackagePrice > 0) {
     $pkgPricing = tms_dynamic_price($dbh, (int)$pkg->PackageId, (float)$pkg->PackagePrice);
 }
+
+// Price history (Rule 26: "Track historical prices where legitimate data is
+// available"). tbl_price_history is populated going forward by
+// scripts/check_alerts.php's cron run (see tms_snapshot_all_package_prices())
+// -- never backfilled/fabricated (Rule 3), so this is empty for every
+// package until the cron has actually run at least twice. Rendered further
+// down only when at least 2 real points exist (a single point isn't a
+// "history"), never as a placeholder.
+$priceHistory = $pkg ? tms_get_price_history($dbh, (int)$pkg->PackageId, 90) : [];
 
 // ROOT-CAUSE FIX (Section 6 audit): this page has only ever shown a single
 // hero image per package — no gallery, no slider, despite both being
@@ -318,6 +396,11 @@ if ($pkg) {
         'type'        => 'product',
         'canonical'   => $scheme . '://' . $host . $path . '?pkgid=' . (int)$pkg->PackageId,
         'jsonld'      => $jsonld,
+        'breadcrumbs' => [
+            ['label' => 'Home', 'url' => 'index.php'],
+            ['label' => 'Tour Packages', 'url' => 'package-list.php'],
+            ['label' => ($pkgNameT ?? $pkg->PackageName)],
+        ],
     ]);
 }
 ?>
@@ -385,6 +468,11 @@ if ($pkg) {
         <?php endif; ?>
 
         <?php if ($pkg): ?>
+        <?php tms_render_breadcrumb_nav([
+            ['label' => 'Home', 'url' => 'index.php'],
+            ['label' => 'Tour Packages', 'url' => 'package-list.php'],
+            ['label' => ($pkgNameT ?? $pkg->PackageName)],
+        ]); ?>
         <div class="row">
             <div class="col-md-8">
                 <div class="pkg-card wow fadeInLeft">
@@ -449,6 +537,52 @@ if ($pkg) {
                         <p><strong>Features:</strong> <?php echo htmlspecialchars($pkg->PackageFetures ?? '',ENT_QUOTES,'UTF-8'); ?></p>
                         <h4 style="margin-top:20px;">Package Details</h4>
                         <p style="color:#555;line-height:1.7;"><?php echo nl2br(htmlspecialchars($pkgDescT ?? ($pkg->PackageDetails ?? ''),ENT_QUOTES,'UTF-8')); ?></p>
+
+                        <?php
+                        // Round 87 (item 7): Inclusions/Exclusions/Cancellation
+                        // Policy — plain newline-separated text set by the admin
+                        // in add-package.php/edit-package.php, rendered as lists.
+                        $splitLines = function($text) {
+                            $lines = preg_split('/\r\n|\r|\n/', (string)$text);
+                            return array_values(array_filter(array_map('trim', $lines), function($l) { return $l !== ''; }));
+                        };
+                        $inclusionLines = !empty($pkg->Inclusions) ? $splitLines($pkg->Inclusions) : [];
+                        $exclusionLines = !empty($pkg->Exclusions) ? $splitLines($pkg->Exclusions) : [];
+                        $cancellationLines = !empty($pkg->CancellationPolicy) ? $splitLines($pkg->CancellationPolicy) : [];
+                        ?>
+                        <?php if (!empty($inclusionLines) || !empty($exclusionLines)): ?>
+                        <div class="row" style="margin-top:20px;">
+                            <?php if (!empty($inclusionLines)): ?>
+                            <div class="col-sm-6">
+                                <h4><i class="fa fa-check-circle" style="color:#2e9e5b;"></i> What's Included</h4>
+                                <ul style="list-style:none;padding:0;font-size:13.5px;color:#555;line-height:2;">
+                                    <?php foreach ($inclusionLines as $line): ?>
+                                    <li><i class="fa fa-check" style="color:#2e9e5b;margin-right:6px;"></i><?php echo htmlspecialchars($line, ENT_QUOTES, 'UTF-8'); ?></li>
+                                    <?php endforeach; ?>
+                                </ul>
+                            </div>
+                            <?php endif; ?>
+                            <?php if (!empty($exclusionLines)): ?>
+                            <div class="col-sm-6">
+                                <h4><i class="fa fa-times-circle" style="color:#c0392b;"></i> What's Excluded</h4>
+                                <ul style="list-style:none;padding:0;font-size:13.5px;color:#555;line-height:2;">
+                                    <?php foreach ($exclusionLines as $line): ?>
+                                    <li><i class="fa fa-times" style="color:#c0392b;margin-right:6px;"></i><?php echo htmlspecialchars($line, ENT_QUOTES, 'UTF-8'); ?></li>
+                                    <?php endforeach; ?>
+                                </ul>
+                            </div>
+                            <?php endif; ?>
+                        </div>
+                        <?php endif; ?>
+
+                        <?php if (!empty($cancellationLines)): ?>
+                        <h4 style="margin-top:20px;"><i class="fa fa-info-circle" style="color:var(--secondary)"></i> Cancellation Policy</h4>
+                        <ul style="font-size:13.5px;color:#555;line-height:2;padding-left:20px;">
+                            <?php foreach ($cancellationLines as $line): ?>
+                            <li><?php echo htmlspecialchars($line, ENT_QUOTES, 'UTF-8'); ?></li>
+                            <?php endforeach; ?>
+                        </ul>
+                        <?php endif; ?>
 
                         <?php
                         $meta = null;
@@ -575,7 +709,7 @@ if ($pkg) {
                     <h4 style="font-weight:700;margin-bottom:16px;"><i class="fa fa-question-circle" style="color:var(--secondary)"></i> Frequently Asked Questions</h4>
                     <?php
                     $pkgFaqs = [
-                        ['q' => 'What does the package price include?', 'a' => 'The listed price covers the core package as described above. Add-ons like meals, hotel upgrades, or private transport can be arranged — mention them in "Special Requests" when booking, or ask via the chat assistant.'],
+                        ['q' => 'What does the package price include?', 'a' => 'The listed price covers the core package as described above — see the "What\'s Included" / "What\'s Excluded" lists on this page for the exact breakdown where the package operator has provided one. Optional extras such as meals, hotel upgrades, or private transport can be added directly in the booking form below when a package offers them, or mention a custom request in "Special Requests," or ask via the chat assistant.'],
                         ['q' => 'Can I change my travel dates after booking?', 'a' => 'Yes — contact support or raise a ticket from "My Tours" as soon as possible. Changes are easiest more than 7 days before departure.'],
                         ['q' => 'Is the coupon code stackable with other offers?', 'a' => 'One coupon code can be applied per booking. Loyalty points earned from a booking are separate and always added on top.'],
                         ['q' => 'What if the weather looks bad for my travel dates?', 'a' => 'Check the live forecast via the "Weather Here" button above. For serious weather disruption, contact support — options depend on how close it is to your departure date.'],
@@ -991,6 +1125,31 @@ html[data-theme="dark"] .meta-row { color: var(--text-muted) !important; }
                         <div id="tmsPriceBadge" style="margin-top:6px;font-size:11.5px;color:#94a3b8;"></div>
                         <?php endif; ?>
                         <div style="margin-top:4px;font-size:10.5px;color:#b0b7c3;">Dynamic pricing — updates once you pick travel dates below.</div>
+                        <?php if (count($priceHistory) >= 2):
+                            $histPrices = array_column($priceHistory, 'price');
+                            $histLow = min($histPrices);
+                            $histHigh = max($histPrices);
+                            $svgW = 220; $svgH = 36; $svgPad = 3;
+                            $n = count($priceHistory);
+                            $range = max(1, $histHigh - $histLow);
+                            $svgPts = [];
+                            foreach ($priceHistory as $i => $pt) {
+                                $x = $svgPad + ($n > 1 ? ($i / ($n - 1)) : 0) * ($svgW - 2 * $svgPad);
+                                $y = $svgH - $svgPad - (($pt['price'] - $histLow) / $range) * ($svgH - 2 * $svgPad);
+                                $svgPts[] = round($x, 1) . ',' . round($y, 1);
+                            }
+                        ?>
+                        <div style="margin-top:12px;padding-top:10px;border-top:1px dashed rgba(255,255,255,0.3);">
+                            <div style="font-size:11px;font-weight:700;color:rgba(255,255,255,0.85);margin-bottom:4px;"><i class="fa fa-line-chart"></i> Price history (<?php echo $n; ?> recorded day<?php echo $n === 1 ? '' : 's'; ?>)</div>
+                            <svg width="<?php echo $svgW; ?>" height="<?php echo $svgH; ?>" viewBox="0 0 <?php echo $svgW; ?> <?php echo $svgH; ?>" style="display:block;max-width:100%;" role="img" aria-label="Recorded price trend over the last 90 days">
+                                <polyline points="<?php echo htmlspecialchars(implode(' ', $svgPts), ENT_QUOTES, 'UTF-8'); ?>" fill="none" stroke="#ffffff" stroke-width="2"/>
+                            </svg>
+                            <div style="font-size:10.5px;color:rgba(255,255,255,0.7);margin-top:2px;">Low <?php echo tms_currency((float)$histLow); ?> · High <?php echo tms_currency((float)$histHigh); ?></div>
+                        </div>
+                        <?php endif; ?>
+                        <div style="margin-top:10px;">
+                            <a href="alerts.php?pkgid=<?php echo (int)$pkg->PackageId; ?>" style="font-size:12px;font-weight:700;color:#fff;background:rgba(255,255,255,0.18);padding:5px 12px;border-radius:20px;text-decoration:none;display:inline-block;"><i class="fa fa-bell"></i> Set a price alert</a>
+                        </div>
                     </div>
 
                     <div class="pkg-card" style="padding:24px;">
@@ -1040,6 +1199,24 @@ html[data-theme="dark"] .meta-row { color: var(--text-muted) !important; }
                                 <label style="font-weight:600;font-size:13px;">Mobile Number <small style="color:#aaa;">(optional)</small></label>
                                 <input type="tel" name="mobile" class="form-control" placeholder="e.g. 017XXXXXXXX" maxlength="20">
                             </div>
+                            <?php if (!empty($packageAddons)): ?>
+                            <div class="form-group">
+                                <label style="font-weight:600;font-size:13px;">Add-ons <small style="color:#aaa;">(optional — works with either button below)</small></label>
+                                <div style="border:1px solid #eee;border-radius:8px;padding:10px 12px;">
+                                    <?php foreach ($packageAddons as $ao): ?>
+                                    <div style="display:flex;align-items:center;gap:8px;padding:6px 0;<?php echo $ao !== end($packageAddons) ? 'border-bottom:1px solid #f2f2f2;' : ''; ?>">
+                                        <input type="checkbox" name="addons[]" value="<?php echo (int)$ao->AddOnId; ?>" id="addon-<?php echo (int)$ao->AddOnId; ?>">
+                                        <label for="addon-<?php echo (int)$ao->AddOnId; ?>" style="flex:1;margin:0;font-weight:400;font-size:13.5px;cursor:pointer;">
+                                            <?php echo htmlspecialchars($ao->Name, ENT_QUOTES, 'UTF-8'); ?>
+                                            <?php if (!empty($ao->Description)): ?><br><small style="color:#94a3b8;"><?php echo htmlspecialchars($ao->Description, ENT_QUOTES, 'UTF-8'); ?></small><?php endif; ?>
+                                        </label>
+                                        <span style="font-weight:600;font-size:13px;white-space:nowrap;"><?php echo tms_currency((float)$ao->Price); ?></span>
+                                        <input type="number" name="addon_qty[<?php echo (int)$ao->AddOnId; ?>]" value="1" min="1" max="20" class="form-control" style="width:60px;padding:4px 6px;">
+                                    </div>
+                                    <?php endforeach; ?>
+                                </div>
+                            </div>
+                            <?php endif; ?>
                             <div class="form-group">
                                 <label style="font-weight:600;font-size:13px;">Coupon Code <small style="color:#aaa;">(optional)</small></label>
                                 <div style="display:flex;gap:8px;">

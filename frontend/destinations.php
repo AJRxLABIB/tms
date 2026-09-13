@@ -106,6 +106,10 @@ tms_seo_meta([
     'description' => $totalRows > 0
         ? "Browse {$totalRows} tour packages across our destinations."
         : 'Browse tour packages across our destinations.',
+    'breadcrumbs' => [
+        ['label' => 'Home', 'url' => 'index.php'],
+        ['label' => 'Destinations'],
+    ],
 ]);
 ?>
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -182,6 +186,10 @@ html[data-theme="dark"] .no-results { color: var(--text-light) !important; }
 
 <div class="rooms">
     <div class="container">
+        <?php tms_render_breadcrumb_nav([
+            ['label' => 'Home', 'url' => 'index.php'],
+            ['label' => 'Destinations'],
+        ]); ?>
 
         <!-- ── Cascading destination picker ── -->
         <div class="dest-toolbar wow fadeInDown" data-wow-delay=".1s">

@@ -80,7 +80,23 @@
 <body>
 
 <?php $tms_landing_mode = true; ?>
-<?php include('includes/header.php'); ?>
+<?php
+// Round 85 fix (architecture consistency, items 71/81): this bare include
+// used to say 'includes/header.php' -- a leftover from before the Round 49
+// rename of includes/ to backend/ that was never updated in this one file.
+// Because this page is only ever reached through the root shim (index.php
+// -> frontend/index.php -> here), the working directory is the project
+// root, so that bare path was silently resolving to the OLD, stale
+// project-root includes/header.php instead of this file's own sibling,
+// backend/header.php -- and includes/header.php has been missing the
+// Round 61 RTL dir="rtl" flip script (see backend/header.php) this whole
+// time. Net effect, confirmed by direct code read: every signed-out
+// visitor to the homepage who selected Arabic got translated text but the
+// wrong (LTR) layout direction, while every other page on the site
+// (reached through backend/header.php) got it right. Fixed by pointing at
+// this file's real sibling instead.
+include('backend/header.php');
+?>
 
 <!-- ══════════════════════════════════════════════════════════════
      HERO — what this system is
@@ -307,7 +323,11 @@
     </div>
 </section>
 
-<?php include('includes/footer.php'); ?>
+<?php
+// Round 85: same fix as the header include above -- point at this file's
+// real sibling instead of the stale project-root includes/footer.php.
+include('backend/footer.php');
+?>
 
 <script>
 function tmsToggleFaq(q) {

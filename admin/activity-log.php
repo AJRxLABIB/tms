@@ -49,19 +49,39 @@ $logs = $q->fetchAll(PDO::FETCH_OBJ);
   </div>
   <div class="table-responsive">
   <table class="tms-table" style="font-size:13px;">
-    <thead><tr><th>#</th><th>Actor</th><th>Action</th><th>Details</th><th>IP</th><th>Time</th></tr></thead>
+    <thead><tr><th>#</th><th>Actor</th><th>Action</th><th>Object</th><th>Details</th><th>Change</th><th>IP</th><th>Time</th></tr></thead>
     <tbody>
     <?php $i=1; foreach ($logs as $l): ?>
-    <tr>
+    <?php
+        // Round 96 (item 47): ObjectType/ObjectId/OldValue/NewValue/
+        // RequestMethod/RequestUri/UserAgent are new, optional columns --
+        // older rows (and call sites this round didn't retrofit) simply
+        // have them NULL, so every cell here falls back to an em dash
+        // rather than assuming they're always populated.
+        $objectLabel = ($l->ObjectType ?? null)
+            ? htmlspecialchars($l->ObjectType) . ($l->ObjectId !== null ? ' #' . htmlspecialchars($l->ObjectId) : '')
+            : '—';
+        $hasChange = ($l->OldValue ?? null) !== null || ($l->NewValue ?? null) !== null;
+        $requestTitle = trim(($l->RequestMethod ?? '') . ' ' . ($l->RequestUri ?? ''));
+    ?>
+    <tr<?= $requestTitle !== '' ? ' title="' . htmlspecialchars($requestTitle) . '"' : '' ?>>
       <td><?= $i++ ?></td>
       <td><?= htmlspecialchars($l->Actor ?? '—') ?></td>
       <td><span class="label label-info"><?= htmlspecialchars($l->Action) ?></span></td>
+      <td><?= $objectLabel ?></td>
       <td><?= htmlspecialchars($l->Details ?? '') ?></td>
+      <td>
+        <?php if ($hasChange): ?>
+          <code style="font-size:11px;"><?= htmlspecialchars((string)($l->OldValue ?? '')) ?> → <?= htmlspecialchars((string)($l->NewValue ?? '')) ?></code>
+        <?php else: ?>
+          —
+        <?php endif; ?>
+      </td>
       <td><code><?= htmlspecialchars($l->IPAddress ?? '') ?></code></td>
       <td><?= date('d M Y H:i', strtotime($l->CreatedAt)) ?></td>
     </tr>
     <?php endforeach; ?>
-    <?php if (count($logs)===0): ?><tr><td colspan="6" class="text-center text-muted">No log entries yet.</td></tr><?php endif; ?>
+    <?php if (count($logs)===0): ?><tr><td colspan="8" class="text-center text-muted">No log entries yet.</td></tr><?php endif; ?>
     </tbody>
   </table>
   </div>

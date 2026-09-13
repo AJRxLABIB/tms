@@ -5,8 +5,10 @@ include('backend/config.php');
 require_once('backend/payments/PaymentProviderInterface.php');
 require_once('backend/payments/SandboxProvider.php');
 require_once('backend/payments/PaymentService.php');
+require_once('backend/repositories/BookingRepository.php');
 tms_require_user();
 $paymentService = new PaymentService($dbh);
+$bookingRepo    = new BookingRepository($dbh);
 
 $error = '';
 $msg   = '';
@@ -19,12 +21,7 @@ if (isset($_POST['cancel_booking'])) {
     $email = $_SESSION['login'];
 
     // Fetch the booking's from-date and verify it belongs to this user
-    $chk = $dbh->prepare("SELECT BookingId, FromDate, status FROM tblbooking
-                           WHERE BookingId=:bid AND UserEmail=:email AND status != 2 LIMIT 1");
-    $chk->bindParam(':bid',   $bid,   PDO::PARAM_INT);
-    $chk->bindParam(':email', $email, PDO::PARAM_STR);
-    $chk->execute();
-    $booking = $chk->fetch(PDO::FETCH_OBJ);
+    $booking = $bookingRepo->findActiveForUser($bid, $email);
 
     if ($booking) {
         $fromDate  = new DateTime($booking->FromDate);
@@ -95,10 +92,7 @@ if (isset($_POST['request_modification'])) {
     $to   = DateTime::createFromFormat('d-m-Y', $newTo)   ?: DateTime::createFromFormat('Y-m-d', $newTo);
     $now  = new DateTime();
 
-    $chk = $dbh->prepare("SELECT BookingId, FromDate, status, ModificationStatus FROM tblbooking
-                           WHERE BookingId=:bid AND UserEmail=:email AND status != 2 LIMIT 1");
-    $chk->execute([':bid' => $bid, ':email' => $email]);
-    $booking = $chk->fetch(PDO::FETCH_OBJ);
+    $booking = $bookingRepo->findActiveForUser($bid, $email);
 
     if (!$booking) {
         $error = 'Booking not found or already cancelled.';
@@ -124,46 +118,14 @@ if (isset($_POST['request_modification'])) {
     }
 }
 
-// Fetch all bookings for this user
-$uemail = $_SESSION['login'];
-// RESILIENCE (Rule 2 -- never let a page start crashing just because a new
-// migration hasn't been run yet): b.PaymentStatus was added by
-// database/migrations/003_booking_payment_columns.sql. If that migration
-// hasn't been applied on this database yet, selecting it would throw
-// (PDO is configured ERRMODE_EXCEPTION) and take this whole page down for
-// every visitor. Try the new column first; fall back to the pre-payment
-// column list (and default PaymentStatus to 'unpaid' below) if it's
-// missing, so this page works identically before and after the migration
-// is applied.
-$sqlWithPayment = "SELECT b.BookingId, b.PackageId, p.PackageName, b.FromDate, b.ToDate,
-               b.Comment, b.status, b.RegDate, b.CancelledBy, b.UpdationDate,
-               b.NoOfPersons, b.TotalCost, b.VerificationCode,
-               b.RequestedFromDate, b.RequestedToDate, b.ModificationStatus, b.ModificationNote,
-               b.RefundStatus, b.RefundNote, b.PaymentStatus
-        FROM tblbooking b
-        JOIN tbltourpackages p ON p.PackageId = b.PackageId
-        WHERE b.UserEmail=:uemail
-        ORDER BY b.BookingId DESC";
-$sqlWithoutPayment = "SELECT b.BookingId, b.PackageId, p.PackageName, b.FromDate, b.ToDate,
-               b.Comment, b.status, b.RegDate, b.CancelledBy, b.UpdationDate,
-               b.NoOfPersons, b.TotalCost, b.VerificationCode,
-               b.RequestedFromDate, b.RequestedToDate, b.ModificationStatus, b.ModificationNote,
-               b.RefundStatus, b.RefundNote
-        FROM tblbooking b
-        JOIN tbltourpackages p ON p.PackageId = b.PackageId
-        WHERE b.UserEmail=:uemail
-        ORDER BY b.BookingId DESC";
-try {
-    $q = $dbh->prepare($sqlWithPayment);
-    $q->bindParam(':uemail', $uemail, PDO::PARAM_STR);
-    $q->execute();
-} catch (PDOException $e) {
-    error_log('[TMS] tour-history.php: PaymentStatus column not available yet (run database/migrate.php) -- falling back: ' . $e->getMessage());
-    $q = $dbh->prepare($sqlWithoutPayment);
-    $q->bindParam(':uemail', $uemail, PDO::PARAM_STR);
-    $q->execute();
-}
-$bookings = $q->fetchAll(PDO::FETCH_OBJ);
+// Fetch all bookings for this user.
+// Round 90 (Rule 40/71 -- Repository layer): this used to be ~30 lines of
+// inline SQL with a migration-resilience fallback (see
+// BookingRepository::findByUserEmail() for that logic, carried over
+// verbatim). Behavior is unchanged -- same two queries, same fallback
+// trigger, same PDO::FETCH_OBJ shape -- only where the query lives moved.
+$uemail   = $_SESSION['login'];
+$bookings = $bookingRepo->findByUserEmail($uemail);
 
 $statusConfig = [
     0 => ['label' => 'Pending',   'class' => 'warning'],
