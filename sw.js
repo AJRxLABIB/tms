@@ -39,6 +39,33 @@ self.addEventListener('activate', e => {
 
 self.addEventListener('fetch', e => {
   if (e.request.method !== 'GET') return;
+  // BUG FIX (reported live: every package/destination thumbnail on
+  // package-list.php -- and any other cross-origin image -- showed the
+  // gray no-image placeholder, with the console logging "Fetch API cannot
+  // load https://images.unsplash.com/... Refused to connect because it
+  // violates the document's Content Security Policy" from this file).
+  // Root cause: this handler used to re-issue EVERY GET request (same- and
+  // cross-origin alike) through fetch() inside the service worker. A
+  // service worker has no document/DOM, so it has no img-src/script-src/
+  // style-src/font-src context to check a re-issued request against --
+  // fetch() calls made from a worker are always evaluated against
+  // connect-src, which .htaccess's Round-106 CSP intentionally left at
+  // 'self' (img-src's permissive "https:" catch-all was written assuming
+  // the browser loads images the normal way via <img>, not through this
+  // worker). The result: any cross-origin resource this service worker
+  // intercepted -- Unsplash package photos first and most visibly, but
+  // the same would eventually hit any other cross-origin asset once cache
+  // misses -- was silently blocked and fell back to caches.match(),
+  // which had never successfully cached it either, so onerror's
+  // placeholder image was all that was left to show.
+  // Fix: only intercept same-origin requests. Cross-origin resources fall
+  // through untouched and load the normal browser way, correctly governed
+  // by img-src/script-src/etc. as the Round-106 CSP intended -- no CSP
+  // header needs loosening, and every existing same-origin caching
+  // behavior below (generic CACHE, offline.html fallback, TRIPKIT_CACHE
+  // via the message handler) is unchanged, since none of it ever
+  // targeted cross-origin URLs in the first place.
+  if (new URL(e.request.url).origin !== self.location.origin) return;
   e.respondWith(
     fetch(e.request).then(res => {
       if (res && res.status === 200) {

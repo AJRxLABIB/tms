@@ -1837,3 +1837,74 @@ is live-verified (real network calls, real results, quoted above); the
 SQL-consolidation safety claim is verified by reading the actual code
 (`migrate.php`) rather than assumed; full database table/row completeness
 is explicitly NOT verified, for the reason above.
+
+## Round 112 — correction: the placeholder-image bug WAS a real code bug (service worker + CSP), not a network condition
+
+**This corrects the "root cause" conclusion in the Round 112 entry above.**
+That entry concluded the placeholder package images were caused by the
+machine having no internet access, based on live testing done through
+Claude's own sandboxed browser pane (which, it turns out, had no general
+internet route of its own — a real but *separate* condition, unrelated to
+the actual bug). The user then attached a screen recording of the bug
+reproducing in their real Chrome, DevTools console open, with YouTube and
+phpMyAdmin working fine in other tabs — i.e. real internet access, and the
+image failures happening anyway. Rule 4/77: that recording is what this
+correction is based on, not a second guess.
+
+**Actual root cause, read directly from the console in that recording:**
+every failure was `Fetch API cannot load https://images.unsplash.com/...
+Refused to connect because it violates the document's Content Security
+Policy`, attributed to `sw.js:43`. `sw.js`'s `fetch` event handler
+(installed Round 83, for offline support) re-issued **every** GET request
+the page made — same-origin and cross-origin alike — through `fetch()`
+inside the service worker, to decide what to cache. A service worker has
+no document/DOM, so a request it re-fetches has no img-src/script-src/
+style-src/font-src context to be checked against the way a normal
+`<img>`/`<script>`/`<link>` load would be — fetch() calls made from a
+worker are always evaluated against `connect-src`. Round 106's CSP left
+`connect-src 'self'` (deliberately: no page here does client-side fetch()
+to a third-party API — AI/Explore/weather calls all proxy through this
+app's own `api/*.php` endpoints), while `img-src` was given a permissive
+`https:` catch-all written assuming images load the normal browser way.
+The service worker's blanket re-fetch bypassed that assumption and hit
+`connect-src` instead, silently failing every cross-origin image (and,
+had cache misses lined up differently, would eventually have hit any
+other cross-origin asset the same way) and falling back to `onerror`'s
+placeholder — which is the gray icon the user saw, on data that was never
+touched by the database at all.
+
+**Fix — `sw.js`:** the `fetch` handler now returns immediately (does not
+call `respondWith`) for any request whose origin isn't `self.location
+.origin`, before doing anything else. Cross-origin requests fall through
+untouched and load the normal browser way, correctly governed by
+img-src/script-src/etc. as the Round 106 CSP intended — no CSP header
+needed loosening. Every existing same-origin behavior (the generic
+runtime `CACHE`, the `offline.html` fallback, `TRIPKIT_CACHE` via the
+message handler for `my-trip.php`'s "Save for Offline" button) is
+unchanged, since none of it ever targeted cross-origin URLs. Checked:
+no other client-side JS in this project (`js/explore.js` included) calls
+`fetch()` against a third-party origin directly — Explore Mode's
+weather/maps/nearby-places calls all go through this app's own
+`api/explore.php`, server-side — so this bug was scoped to the service
+worker's own blanket interception, not a wider CSP gap.
+
+**Implementation status:** complete — one file, `sw.js`, changed;
+delivered to `C:\xampp\htdocs\tms` and `D:\Project\tms`; syntax-checked
+(`node --check`); confirmed live on the served install by fetching
+`/tms/sw.js` fresh (cache-busted) and verifying the fix is present.
+
+**Testing status: partially blocked, disclosed rather than assumed.**
+The environment available for live re-testing here never had a service
+worker registered for this origin at all (a different, more sandboxed
+browser context than the user's real Chrome — `navigator.serviceWorker
+.getRegistrations()` returned empty), so the original bug could not be
+reproduced or re-verified end-to-end from here. What IS confirmed: the
+fixed file is syntactically valid and is what the server now serves.
+**What the user needs to do to see it take effect:** service workers
+only pick up a changed script on the next page load after the browser
+notices the byte diff, and since this one already calls `self.skipWaiting()`
++ `clients.claim()`, a single hard refresh (or closing and reopening the
+tab) on `package-list.php` should be enough — if the browser still shows
+the old behavior once, a second refresh will apply it. Real confirmation
+that the placeholder images are now real photos, from the user's own
+browser, is the next honest step, not assumed here.
