@@ -1341,6 +1341,68 @@ function _tms_run_core_migrations(PDO $dbh): void {
   PRIMARY KEY (`id`), KEY `idx_group` (`GroupId`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4",
 
+// Round 103 (master prompt item 24, "GROUP TRAVEL" -- comments): the spec
+// explicitly lists shared itinerary/voting/comments alongside expense
+// splitting; expense splitting + roles were built in Round 16, comments
+// had zero code anywhere (confirmed by grep) until now. Kept intentionally
+// simple -- a flat discussion thread per group, no reactions/replies/edit/
+// delete -- matching Rule 73 (don't overengineer) and this table's own
+// narrow purpose (group members discussing the trip, not a general forum).
+"CREATE TABLE IF NOT EXISTS `tblgroup_comments` (
+  `id` INT(11) NOT NULL AUTO_INCREMENT,
+  `GroupId` INT(11) NOT NULL, `UserEmail` VARCHAR(100) NOT NULL,
+  `Comment` VARCHAR(1000) NOT NULL,
+  `CreatedAt` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`), KEY `idx_group_created` (`GroupId`,`CreatedAt`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4",
+
+// Round 104 (master prompt item 24, "GROUP TRAVEL" -- voting): the last of
+// the three previously-missing sub-features (comments done Round 103;
+// shared itinerary is still not built, tracked separately). Any member can
+// start a poll (e.g. "which date works?" / "which activity?"); each member
+// gets exactly one vote per poll, enforced by the UNIQUE key below rather
+// than only in application code -- re-voting UPDATEs their existing row
+// instead of inserting a second one, so a poll can never be stuffed by
+// double-submitting.
+"CREATE TABLE IF NOT EXISTS `tblgroup_polls` (
+  `id` INT(11) NOT NULL AUTO_INCREMENT,
+  `GroupId` INT(11) NOT NULL, `Question` VARCHAR(300) NOT NULL,
+  `CreatedBy` VARCHAR(100) NOT NULL,
+  `CreatedAt` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`), KEY `idx_group` (`GroupId`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4",
+
+"CREATE TABLE IF NOT EXISTS `tblgroup_poll_options` (
+  `id` INT(11) NOT NULL AUTO_INCREMENT,
+  `PollId` INT(11) NOT NULL, `OptionText` VARCHAR(200) NOT NULL,
+  PRIMARY KEY (`id`), KEY `idx_poll` (`PollId`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4",
+
+"CREATE TABLE IF NOT EXISTS `tblgroup_poll_votes` (
+  `id` INT(11) NOT NULL AUTO_INCREMENT,
+  `PollId` INT(11) NOT NULL, `OptionId` INT(11) NOT NULL,
+  `UserEmail` VARCHAR(100) NOT NULL,
+  `CreatedAt` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`), UNIQUE KEY `uq_poll_voter` (`PollId`,`UserEmail`), KEY `idx_option` (`OptionId`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4",
+
+// Round 105 (master prompt item 24, "shared itinerary" -- the last of the
+// three original Group Travel gaps, after Round 103's comments and Round
+// 104's voting): a flat, chronological list of planned activities per
+// group trip. DayLabel is deliberately free text (e.g. "Day 1" or a typed
+// date), not a real DATE column -- a group trip may not have fixed dates
+// agreed yet, and forcing one would be exactly the kind of fabricated
+// structure Rule 3 warns against.
+"CREATE TABLE IF NOT EXISTS `tblgroup_itinerary_items` (
+  `id` INT(11) NOT NULL AUTO_INCREMENT,
+  `GroupId` INT(11) NOT NULL,
+  `DayLabel` VARCHAR(50) DEFAULT NULL,
+  `Activity` VARCHAR(300) NOT NULL,
+  `AddedBy` VARCHAR(100) NOT NULL,
+  `CreatedAt` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`), KEY `idx_group` (`GroupId`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4",
+
 // Round 64 (master prompt item 56, "MONITORING"): generic system-event log
 // for failure modes that had zero admin-visible tracking before -- see
 // backend/system-events.php's own docblock for why this is separate from

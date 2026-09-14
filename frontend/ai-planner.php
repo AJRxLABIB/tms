@@ -1,7 +1,10 @@
 <?php
 /**
  * ai-planner.php — AI Autonomous Trip Planner
- * Generates complete day-by-day travel itineraries via Claude AI.
+ * Generates complete day-by-day travel itineraries via Google Gemini
+ * (through backend/ai/ItineraryPlanner.php + AIClient.php). Docblock
+ * corrected Round 110: previously said "Claude AI", stale documentation
+ * left over from an earlier provider (Rule 75).
  */
 session_start();
 error_reporting(E_ALL); ini_set('display_errors', '0'); ini_set('log_errors', '1');
@@ -196,29 +199,47 @@ include('backend/config.php');
     <!-- Form -->
     <div class="planner-card">
         <h5 style="font-weight:800;color:#1a202c;margin-bottom:24px;"><i class="fa fa-magic" style="color:#667eea;"></i> Plan My Trip</h5>
+        <?php
+        // FIX (Round 110, live CRITICAL bug found during the AI-upgrade audit):
+        // this page has never rendered a CSRF token, and api/ai.php's
+        // handleItinerary() -- the only handler action=itinerary reaches --
+        // unconditionally calls tms_csrf_validate() (enforced, not just
+        // logged, since the Phase-1 CSRF hardening pass). Live-reproduced:
+        // every single "Generate My Itinerary" click on this real, public,
+        // sitemap-listed page has been getting HTTP 403 "Invalid or expired
+        // form submission" back from api/ai.php since that hardening pass --
+        // the JS never sent a csrf_token field because this page never had
+        // one to send, so the AI Trip Planner has not generated a single
+        // real itinerary for any visitor. Rendering the token here and
+        // sending it in generatePlan()'s FormData below (both the initial
+        // generate and Regenerate, since both hit the same handler) is the
+        // fix -- same fix already applied to custom-trip.php's own AI
+        // itinerary preview call in Round 20 (see that file's own comment).
+        tms_csrf_field();
+        ?>
         <div class="row g-3">
             <div class="col-md-6">
-                <label class="field-label" for="p_dest">Destination *</label>
+                <label class="field-label">Destination *</label>
                 <input type="text" id="p_dest" class="field-input" placeholder="e.g. Cox's Bazar, Bandarban, Thailand…">
             </div>
             <div class="col-md-3">
-                <label class="field-label" for="p_start">Start Date *</label>
+                <label class="field-label">Start Date *</label>
                 <input type="date" id="p_start" class="field-input">
             </div>
             <div class="col-md-3">
-                <label class="field-label" for="p_days">Duration (days)</label>
+                <label class="field-label">Duration (days)</label>
                 <input type="number" id="p_days" class="field-input" value="5" min="1" max="30">
             </div>
             <div class="col-md-3">
-                <label class="field-label" for="p_travelers">Travelers</label>
+                <label class="field-label">Travelers</label>
                 <input type="number" id="p_travelers" class="field-input" value="2" min="1" max="50">
             </div>
             <div class="col-md-3">
-                <label class="field-label" for="p_budget">Total Budget (BDT)</label>
+                <label class="field-label">Total Budget (BDT)</label>
                 <input type="number" id="p_budget" class="field-input" placeholder="e.g. 40000">
             </div>
             <div class="col-md-3">
-                <label class="field-label" for="p_style">Travel Style</label>
+                <label class="field-label">Travel Style</label>
                 <select id="p_style" class="field-select">
                     <option value="leisure">Leisure</option>
                     <option value="family">Family</option>
@@ -229,7 +250,7 @@ include('backend/config.php');
                 </select>
             </div>
             <div class="col-md-3">
-                <label class="field-label" for="p_climate">Climate</label>
+                <label class="field-label">Climate</label>
                 <select id="p_climate" class="field-select">
                     <option value="warm">Warm / Tropical</option>
                     <option value="cold">Cold / Cool</option>
@@ -239,11 +260,11 @@ include('backend/config.php');
                 </select>
             </div>
             <div class="col-md-6">
-                <label class="field-label" for="p_activities">Preferred Activities</label>
+                <label class="field-label">Preferred Activities</label>
                 <input type="text" id="p_activities" class="field-input" placeholder="sightseeing, beach, hiking, food…">
             </div>
             <div class="col-md-3">
-                <label class="field-label" for="p_accommodation">Accommodation</label>
+                <label class="field-label">Accommodation</label>
                 <select id="p_accommodation" class="field-select">
                     <option value="hotel">Hotel</option>
                     <option value="resort">Resort</option>
@@ -253,7 +274,7 @@ include('backend/config.php');
                 </select>
             </div>
             <div class="col-md-3">
-                <label class="field-label" for="p_transport">Transport</label>
+                <label class="field-label">Transport</label>
                 <select id="p_transport" class="field-select">
                     <option value="mixed">Mixed (optimal)</option>
                     <option value="private">Private car</option>
@@ -262,7 +283,7 @@ include('backend/config.php');
                 </select>
             </div>
             <div class="col-12">
-                <label class="field-label" for="p_special">Special Requests (optional)</label>
+                <label class="field-label">Special Requests (optional)</label>
                 <textarea id="p_special" class="field-textarea" placeholder="Dietary needs, accessibility, specific places to visit, things to avoid…"></textarea>
             </div>
             <div class="col-12">
@@ -286,7 +307,23 @@ include('backend/config.php');
         <div id="itinContent"></div>
         <div style="text-align:center;margin-top:20px;">
             <button class="btn-download" onclick="downloadItinerary()"><i class="fa fa-download"></i> Download Plan</button>
-            <button class="btn-regen" onclick="generatePlan()"><i class="fa fa-refresh"></i> Regenerate</button>
+            <button class="btn-regen" id="regenToggleBtn" onclick="toggleRegenBox()"><i class="fa fa-refresh"></i> Regenerate</button>
+        </div>
+        <!-- NEW (AI-trip-planning round): "Regenerate" used to just re-run the
+             exact same generation call with identical inputs -- since the
+             backend caches by trip details, that could silently hand back the
+             same itinerary. This box lets the traveler say what should change,
+             wired to ItineraryPlanner::regenerate() via the new
+             action=itinerary_regenerate endpoint (real, previously-dead code
+             on the backend, now reachable). Feedback is optional -- leaving it
+             blank still asks for a genuinely different alternative, it just
+             won't be steered toward anything specific. -->
+        <div id="regenBox" style="display:none;max-width:640px;margin:16px auto 0;text-align:left;">
+            <label class="field-label">What would you like changed? (optional)</label>
+            <textarea id="regenFeedback" class="field-textarea" placeholder="e.g. less walking on day 2, a cheaper hotel, add a beach day, more free time in the evenings…"></textarea>
+            <button class="btn-generate" style="margin-top:10px;width:100%;" id="regenGoBtn" onclick="regeneratePlan()">
+                <i class="fa fa-magic"></i> <span id="regenGoBtnText">Regenerate With This Feedback</span>
+            </button>
         </div>
     </div>
 </div>
@@ -306,23 +343,14 @@ const thinkMsgs = [
     'Finalizing your perfect itinerary…'
 ];
 
-async function generatePlan() {
-    const dest = document.getElementById('p_dest').value.trim();
-    if (!dest) { tmsToast('Please enter a destination.'); return; }
-
-    document.getElementById('itinWrap').style.display   = 'none';
-    document.getElementById('thinkingDiv').style.display = 'block';
-    document.getElementById('genBtn').disabled = true;
-    document.getElementById('genBtnText').textContent = 'Generating…';
-
-    let mi = 0;
-    const interval = setInterval(() => {
-        document.getElementById('thinkingMsg').textContent = thinkMsgs[mi++ % thinkMsgs.length];
-    }, 2000);
-
+// Shared by generatePlan() and regeneratePlan() (AI-trip-planning round) so
+// both build the exact same trip-details FormData instead of two copies that
+// can silently drift apart. `extra` adds/overrides fields for regeneration
+// (action=itinerary_regenerate, feedback=...).
+function buildPlanFormData(extra) {
     const fd = new FormData();
     fd.append('action', 'itinerary');
-    fd.append('destination',     dest);
+    fd.append('destination',     document.getElementById('p_dest').value.trim());
     fd.append('duration',        document.getElementById('p_days').value);
     fd.append('travelers',       document.getElementById('p_travelers').value);
     fd.append('budget',          document.getElementById('p_budget').value || 0);
@@ -333,27 +361,86 @@ async function generatePlan() {
     fd.append('accommodation',   document.getElementById('p_accommodation').value);
     fd.append('transport',       document.getElementById('p_transport').value);
     fd.append('special_requests',document.getElementById('p_special').value);
+    // FIX (Round 110): see the tms_csrf_field() comment above this page's
+    // <form> markup -- without this, api/ai.php rejects every request here
+    // with a 403 before it ever reaches the AI.
+    fd.append('csrf_token',      (document.querySelector('[name="csrf_token"]') || {}).value || '');
+    if (extra) { for (const k in extra) fd.set(k, extra[k]); }
+    return fd;
+}
+
+// Shared request/loading-state logic for both the initial generate and a
+// regenerate call -- `busyEls` lets each caller disable/relabel its own
+// trigger button while the request is in flight.
+async function runPlanRequest(fd, busyBtn, busyBtnText, busyLabel, idleLabel) {
+    document.getElementById('itinWrap').style.display   = 'none';
+    document.getElementById('thinkingDiv').style.display = 'block';
+    busyBtn.disabled = true;
+    busyBtnText.textContent = busyLabel;
+
+    let mi = 0;
+    const interval = setInterval(() => {
+        document.getElementById('thinkingMsg').textContent = thinkMsgs[mi++ % thinkMsgs.length];
+    }, 2000);
 
     try {
         const res  = await fetch('api/ai.php', { method: 'POST', body: fd });
         const json = await res.json();
         clearInterval(interval);
         document.getElementById('thinkingDiv').style.display = 'none';
-        document.getElementById('genBtn').disabled = false;
-        document.getElementById('genBtnText').textContent = 'Generate My Itinerary';
+        busyBtn.disabled = false;
+        busyBtnText.textContent = idleLabel;
 
         if (json.success && json.data.itinerary) {
             currentItinerary = json.data.itinerary;
             renderItinerary(currentItinerary);
-        } else {
-            tmsToast(json.error || 'Failed to generate itinerary. Please try again.');
+            return true;
         }
+        tmsToast(json.error || 'Failed to generate itinerary. Please try again.');
+        return false;
     } catch(e) {
         clearInterval(interval);
         document.getElementById('thinkingDiv').style.display = 'none';
-        document.getElementById('genBtn').disabled = false;
-        document.getElementById('genBtnText').textContent = 'Generate My Itinerary';
+        busyBtn.disabled = false;
+        busyBtnText.textContent = idleLabel;
         tmsToast('Network error. Please try again.');
+        return false;
+    }
+}
+
+async function generatePlan() {
+    const dest = document.getElementById('p_dest').value.trim();
+    if (!dest) { tmsToast('Please enter a destination.'); return; }
+
+    const genBtn = document.getElementById('genBtn');
+    const genBtnText = document.getElementById('genBtnText');
+    await runPlanRequest(buildPlanFormData(), genBtn, genBtnText, 'Generating…', 'Generate My Itinerary');
+}
+
+// NEW (AI-trip-planning round): see the #regenBox markup above -- wires the
+// "Regenerate" flow to ItineraryPlanner::regenerate() (via the new
+// action=itinerary_regenerate endpoint) instead of generatePlan() calling
+// itself with identical inputs, which the backend's own caching could return
+// unchanged.
+function toggleRegenBox() {
+    const box = document.getElementById('regenBox');
+    const show = box.style.display === 'none';
+    box.style.display = show ? 'block' : 'none';
+    if (show) document.getElementById('regenFeedback').focus();
+}
+
+async function regeneratePlan() {
+    if (!currentItinerary) { tmsToast('Generate an itinerary first.'); return; }
+    const feedback = document.getElementById('regenFeedback').value.trim();
+    const fd = buildPlanFormData({ action: 'itinerary_regenerate', feedback: feedback });
+
+    const goBtn = document.getElementById('regenGoBtn');
+    const goBtnText = document.getElementById('regenGoBtnText');
+    const ok = await runPlanRequest(fd, goBtn, goBtnText, 'Regenerating…', 'Regenerate With This Feedback');
+    if (ok) {
+        document.getElementById('regenFeedback').value = '';
+        // Left open (rather than hidden) so the traveler can immediately give
+        // another round of feedback if the new plan still isn't quite right.
     }
 }
 

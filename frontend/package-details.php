@@ -233,6 +233,37 @@ if ($pkg) {
     tms_track_recently_viewed($dbh, (int)$pkg->PackageId);
 }
 
+// Round 100 (items 23/31/66 -- recommendation transparency): a real,
+// deterministic personalized match score for THIS package, computed only
+// when the visitor actually stated preferences -- either typed straight
+// onto this page's URL, or carried through automatically from an AI
+// Travel Recommender "View & Book" click (see TravelRecommender.php's new
+// buildMatchQueryString()). A plain, un-personalized visit to this page
+// (no query params at all) shows no widget -- never a fabricated or
+// generic score. Uses TravelRecommender::getMatchScore(), which replaced
+// (this same round) that class's previous dead, AI-based scorer whose
+// failure path fabricated a flat 75/100 -- this one only ever returns a
+// number built from real platform data (price, live weather, seat
+// availability, rating, geocoded distance), and honestly omits any factor
+// it can't back with real data instead of guessing.
+$matchScore = null;
+if ($pkg && (isset($_GET['budget']) || isset($_GET['travelers']) || isset($_GET['travel_type']) || isset($_GET['start_date']) || isset($_GET['duration']))) {
+    $matchPrefs = [
+        'budget'      => isset($_GET['budget']) ? tms_int($_GET['budget'], 0) : 0,
+        'travelers'   => isset($_GET['travelers']) ? tms_int($_GET['travelers'], 1, 50) : 1,
+        'travel_type' => tms_clean($_GET['travel_type'] ?? ''),
+        'start_date'  => tms_clean($_GET['start_date'] ?? ''),
+        'duration'    => isset($_GET['duration']) ? tms_int($_GET['duration'], 1, 90) : 1,
+    ];
+    try {
+        require_once dirname(__DIR__) . '/backend/ai/TravelRecommender.php';
+        $recommenderForScore = new TravelRecommender($dbh);
+        $matchScore = $recommenderForScore->getMatchScore((int)$pkg->PackageId, $matchPrefs, $_SESSION['login'] ?? 'guest');
+    } catch (Exception $e) {
+        $matchScore = null;
+    }
+}
+
 // Round 87 (item 7): active add-ons available for selection below, on both
 // the "Book Now" and "Add to Cart" buttons in the same form (Round 91,
 // items 10/81, extended the cart/checkout path to carry these through too —
@@ -526,6 +557,27 @@ if ($pkg) {
                             <?php for ($i=1;$i<=5;$i++) echo $i<=round($pkg->AvgRating)?'★':'☆'; ?>
                             <span style="font-size:13px;color:#888;"><?php echo number_format($pkg->AvgRating,1); ?> / 5</span>
                         </div>
+                        <?php endif; ?>
+                        <?php if ($matchScore && $matchScore['overall_match'] !== null): ?>
+                        <div style="background:#f4f9ff;border:1px solid #d6e8fb;border-radius:8px;padding:12px 14px;margin-bottom:14px;">
+                            <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;">
+                                <span style="font-size:22px;font-weight:700;color:#1d6fd6;"><?php echo (int)$matchScore['overall_match']; ?>%</span>
+                                <span style="font-size:13px;color:#444;">match for your preferences</span>
+                            </div>
+                            <ul style="list-style:none;margin:0;padding:0;font-size:12.5px;color:#555;">
+                                <?php foreach ($matchScore['factors'] as $factor):
+                                    $good = $factor['score'] >= 60; ?>
+                                <li style="padding:2px 0;">
+                                    <span style="color:<?php echo $good ? '#2e9e4f' : '#c0392b'; ?>;"><?php echo $good ? '✓' : '✗'; ?></span>
+                                    <strong><?php echo htmlspecialchars($factor['label'],ENT_QUOTES,'UTF-8'); ?>:</strong>
+                                    <?php echo htmlspecialchars($factor['detail'],ENT_QUOTES,'UTF-8'); ?>
+                                </li>
+                                <?php endforeach; ?>
+                            </ul>
+                            <p style="font-size:11px;color:#94a3b8;margin:8px 0 0;">Computed from real platform data (price, live weather forecast, seat availability, ratings, distance) -- not an AI guess.</p>
+                        </div>
+                        <?php elseif ($matchScore && !empty($matchScore['note'])): ?>
+                        <div style="font-size:12px;color:#94a3b8;margin-bottom:12px;"><i class="fa fa-info-circle"></i> <?php echo htmlspecialchars($matchScore['note'],ENT_QUOTES,'UTF-8'); ?></div>
                         <?php endif; ?>
                         <div class="meta-row">
                             <span><i class="fa fa-tag"></i> <?php echo htmlspecialchars($pkg->PackageType,ENT_QUOTES,'UTF-8'); ?></span>

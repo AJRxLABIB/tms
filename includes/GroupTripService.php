@@ -66,6 +66,215 @@ function tms_add_group_expense(PDO $dbh, int $groupId, string $paidByEmail, stri
 }
 
 /**
+ * Round 103 (master prompt item 24 -- "comments" was one of three
+ * sub-features the spec lists with zero code anywhere before this round;
+ * shared itinerary and voting are separate, larger follow-ups, not done
+ * here). Callers must already have verified tms_group_is_member() before
+ * calling this -- same convention as tms_add_group_expense() above.
+ */
+function tms_add_group_comment(PDO $dbh, int $groupId, string $email, string $comment): bool
+{
+    $comment = trim($comment);
+    if ($comment === '' || mb_strlen($comment) > 1000) return false;
+    try {
+        $dbh->prepare(
+            "INSERT INTO tblgroup_comments(GroupId, UserEmail, Comment) VALUES(:g, :e, :c)"
+        )->execute([':g' => $groupId, ':e' => $email, ':c' => $comment]);
+        return true;
+    } catch (Exception $e) {
+        error_log('[TMS GroupTrip] add_comment failed: ' . $e->getMessage());
+        return false;
+    }
+}
+
+/** @return object[] rows with UserEmail, Comment, CreatedAt, oldest first */
+function tms_get_group_comments(PDO $dbh, int $groupId): array
+{
+    $stmt = $dbh->prepare("SELECT UserEmail, Comment, CreatedAt FROM tblgroup_comments WHERE GroupId=:g ORDER BY CreatedAt ASC, id ASC");
+    $stmt->execute([':g' => $groupId]);
+    return $stmt->fetchAll(PDO::FETCH_OBJ);
+}
+
+/**
+ * Round 104 (master prompt item 24 -- "voting", the last of the three
+ * previously-missing sub-features; comments were added in Round 103).
+ * Any member can start a poll -- same "not organizer-only" reasoning as
+ * comments, since deciding what to vote on is itself a group decision.
+ * $options is a plain array of option text strings; blank/duplicate-
+ * after-trim entries are dropped, and at least 2 real options are
+ * required (a 1-option or 0-option "poll" isn't a real vote).
+ *
+ * @param string[] $options
+ * @return int the new poll id, or 0 on failure (e.g. fewer than 2 real options)
+ */
+function tms_create_group_poll(PDO $dbh, int $groupId, string $question, array $options, string $createdBy): int
+{
+    $question = trim($question);
+    $cleanOptions = [];
+    foreach ($options as $opt) {
+        $opt = trim((string)$opt);
+        if ($opt !== '' && !in_array($opt, $cleanOptions, true)) {
+            $cleanOptions[] = $opt;
+        }
+    }
+    if ($question === '' || count($cleanOptions) < 2) return 0;
+
+    $dbh->beginTransaction();
+    try {
+        $dbh->prepare("INSERT INTO tblgroup_polls(GroupId, Question, CreatedBy) VALUES(:g, :q, :c)")
+            ->execute([':g' => $groupId, ':q' => $question, ':c' => $createdBy]);
+        $pollId = (int)$dbh->lastInsertId();
+
+        $optIns = $dbh->prepare("INSERT INTO tblgroup_poll_options(PollId, OptionText) VALUES(:p, :o)");
+        foreach ($cleanOptions as $opt) {
+            $optIns->execute([':p' => $pollId, ':o' => $opt]);
+        }
+        $dbh->commit();
+        return $pollId;
+    } catch (Exception $e) {
+        $dbh->rollBack();
+        error_log('[TMS GroupTrip] create_poll failed: ' . $e->getMessage());
+        return 0;
+    }
+}
+
+/**
+ * Casts (or changes) one member's vote on a poll. $optionId is validated
+ * to actually belong to $pollId, and $pollId to actually belong to
+ * $groupId, so a member of one group can't vote on -- or even reach --
+ * another group's poll by guessing an id (Rule 44). One vote per member
+ * per poll, enforced at the database level (see the UNIQUE key on
+ * tblgroup_poll_votes) -- resubmitting just moves that same vote to a
+ * different option rather than casting a second one.
+ */
+function tms_cast_group_vote(PDO $dbh, int $groupId, int $pollId, int $optionId, string $email): bool
+{
+    $check = $dbh->prepare(
+        "SELECT 1 FROM tblgroup_poll_options o
+         JOIN tblgroup_polls p ON p.id = o.PollId
+         WHERE o.id = :oid AND o.PollId = :pid AND p.GroupId = :g"
+    );
+    $check->execute([':oid' => $optionId, ':pid' => $pollId, ':g' => $groupId]);
+    if (!$check->fetchColumn()) return false;
+
+    try {
+        $dbh->prepare(
+            "INSERT INTO tblgroup_poll_votes(PollId, OptionId, UserEmail) VALUES(:p, :o, :e)
+             ON DUPLICATE KEY UPDATE OptionId = VALUES(OptionId), CreatedAt = CURRENT_TIMESTAMP"
+        )->execute([':p' => $pollId, ':o' => $optionId, ':e' => $email]);
+        return true;
+    } catch (Exception $e) {
+        error_log('[TMS GroupTrip] cast_vote failed: ' . $e->getMessage());
+        return false;
+    }
+}
+
+/**
+ * @return array<int, array{
+ *   id:int, question:string, created_by:string, created_at:string,
+ *   total_votes:int, my_option_id:?int,
+ *   options: array<int, array{id:int, text:string, votes:int, pct:float}>
+ * }> polls for this group, newest first
+ */
+function tms_get_group_polls(PDO $dbh, int $groupId, string $email): array
+{
+    $polls = $dbh->prepare("SELECT id, Question, CreatedBy, CreatedAt FROM tblgroup_polls WHERE GroupId=:g ORDER BY CreatedAt DESC, id DESC");
+    $polls->execute([':g' => $groupId]);
+    $polls = $polls->fetchAll(PDO::FETCH_OBJ);
+    if (!$polls) return [];
+
+    $result = [];
+    foreach ($polls as $poll) {
+        $options = $dbh->prepare(
+            "SELECT o.id, o.OptionText,
+                    (SELECT COUNT(*) FROM tblgroup_poll_votes v WHERE v.OptionId = o.id) AS VoteCount
+             FROM tblgroup_poll_options o WHERE o.PollId = :p ORDER BY o.id ASC"
+        );
+        $options->execute([':p' => $poll->id]);
+        $options = $options->fetchAll(PDO::FETCH_OBJ);
+
+        $totalVotes = array_sum(array_map(fn($o) => (int)$o->VoteCount, $options));
+
+        $myVote = $dbh->prepare("SELECT OptionId FROM tblgroup_poll_votes WHERE PollId=:p AND UserEmail=:e");
+        $myVote->execute([':p' => $poll->id, ':e' => $email]);
+        $myOptionId = $myVote->fetchColumn();
+
+        $result[] = [
+            'id' => (int)$poll->id,
+            'question' => $poll->Question,
+            'created_by' => $poll->CreatedBy,
+            'created_at' => $poll->CreatedAt,
+            'total_votes' => $totalVotes,
+            'my_option_id' => $myOptionId !== false ? (int)$myOptionId : null,
+            'options' => array_map(function ($o) use ($totalVotes) {
+                $votes = (int)$o->VoteCount;
+                return [
+                    'id' => (int)$o->id,
+                    'text' => $o->OptionText,
+                    'votes' => $votes,
+                    'pct' => $totalVotes > 0 ? round(($votes / $totalVotes) * 100, 1) : 0.0,
+                ];
+            }, $options),
+        ];
+    }
+    return $result;
+}
+
+/**
+ * Adds one plan-of-record item to a group's shared itinerary. Any member
+ * may add (same reasoning as comments and polls: planning what to do is a
+ * group decision, not an organizer-only privilege). $dayLabel is free
+ * text the group typed themselves -- e.g. "Day 1" or a date -- and is
+ * optional (Round 105, master prompt item 24 -- "shared itinerary").
+ */
+function tms_add_itinerary_item(PDO $dbh, int $groupId, string $email, string $dayLabel, string $activity): bool
+{
+    $dayLabel = trim($dayLabel);
+    $activity = trim($activity);
+    if ($activity === '') return false;
+
+    try {
+        $dbh->prepare(
+            "INSERT INTO tblgroup_itinerary_items(GroupId, DayLabel, Activity, AddedBy) VALUES(:g, :d, :a, :e)"
+        )->execute([
+            ':g' => $groupId,
+            ':d' => $dayLabel !== '' ? $dayLabel : null,
+            ':a' => $activity,
+            ':e' => $email,
+        ]);
+        return true;
+    } catch (Exception $e) {
+        error_log('[TMS GroupTrip] add_itinerary_item failed: ' . $e->getMessage());
+        return false;
+    }
+}
+
+/**
+ * @return array<int, array{id:int, day_label:?string, activity:string, added_by:string, created_at:string}>
+ *   in the order items were added (Round 105 keeps this deliberately flat
+ *   and chronological -- no drag-to-reorder, no per-day grouping UI yet --
+ *   matching the same "simple first" discipline Round 103 used for comments).
+ */
+function tms_get_group_itinerary(PDO $dbh, int $groupId): array
+{
+    $stmt = $dbh->prepare(
+        "SELECT id, DayLabel, Activity, AddedBy, CreatedAt FROM tblgroup_itinerary_items WHERE GroupId=:g ORDER BY id ASC"
+    );
+    $stmt->execute([':g' => $groupId]);
+    $rows = $stmt->fetchAll(PDO::FETCH_OBJ);
+
+    return array_map(function ($r) {
+        return [
+            'id' => (int)$r->id,
+            'day_label' => $r->DayLabel,
+            'activity' => $r->Activity,
+            'added_by' => $r->AddedBy,
+            'created_at' => $r->CreatedAt,
+        ];
+    }, $rows);
+}
+
+/**
  * Even split across all members, integer-exact (any leftover minor units
  * from the division go to the first N members in email order, so the sum
  * of shares always equals the total to the last unit -- never "lost" to

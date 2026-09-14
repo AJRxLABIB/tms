@@ -92,6 +92,18 @@ switch ($action) {
         $dbh->prepare(
             "INSERT INTO tblchat_messages (UserEmail, SenderRole, SenderName, Message) VALUES (:e, :r, :n, :m)"
         )->execute([':e' => $thread, ':r' => $senderRole, ':n' => $senderName, ':m' => $message]);
+        // Round 102 fix: lastInsertId() must be captured HERE, immediately
+        // after this message INSERT -- it used to be read only once, after
+        // the tblchat_threads upsert below, which meant the 'id' this
+        // endpoint returned was always from tblchat_threads (a different
+        // table entirely), never the actual message's own id. Same bug
+        // class as the Round 96 coupon fix. Confirmed via grep that no
+        // caller (admin/live-chat.php, backend/chat-widget.php,
+        // includes/chat-widget.php) actually reads this response field
+        // today, so this was latent, not yet user-visible -- but a real
+        // landmine for any future feature (e.g. "jump to this message")
+        // that trusts it.
+        $newMessageId = (int)$dbh->lastInsertId();
 
         // Ensure a thread row exists (for typing/read-receipt tracking).
         $dbh->prepare(
@@ -103,9 +115,25 @@ switch ($action) {
         // ticket reply feature.
         if ($isAdmin) {
             tms_notify($dbh, $thread, "💬 You have a new message from Support.", 'index.php');
+            // Round 101 (audit log retrofit): live chat was one of the few
+            // remaining admin-facing surfaces with a real mutation and zero
+            // accountability trail -- an admin could message any customer
+            // with nothing recorded in tblactivity_log. Logs who replied to
+            // which customer thread and when; stores only a short preview
+            // of the message (not the full text) since the full message
+            // already lives in tblchat_messages -- this is an accountability
+            // record ("Actor X replied to Customer Y"), not a second copy of
+            // the conversation. Customer-sent messages are intentionally
+            // NOT logged here -- this project's audit log tracks admin/staff
+            // actions, not customer activity.
+            tms_log_activity(
+                $dbh, $_SESSION['alogin'], 'Live Chat Reply Sent',
+                'To: ' . $thread . ' — "' . mb_substr($message, 0, 100) . (mb_strlen($message) > 100 ? '...' : '') . '"',
+                'chat_thread', $thread
+            );
         }
 
-        chatSuccess(['id' => (int)$dbh->lastInsertId()]);
+        chatSuccess(['id' => $newMessageId]);
     }
 
     case 'typing': {

@@ -295,6 +295,15 @@ html[data-theme="dark"] .ai-tip-list { color: var(--text-muted) !important; }
             <button type="button" class="btn-custom" id="genAiBtn" onclick="generateAiItinerary()" style="background:linear-gradient(135deg,#667eea,#764ba2);">
                 <i class="fa fa-magic"></i> Generate AI Itinerary Preview
             </button>
+            <!-- NEW (AI-trip-planning round): this button used to relabel
+                 itself "Regenerate Itinerary" but call the exact same
+                 function with identical inputs -- the backend caches by trip
+                 details, so a click could silently return the same plan.
+                 Revealed after the first successful generation; wired to
+                 ItineraryPlanner::regenerate() via action=itinerary_regenerate. -->
+            <div id="aiRegenBox" style="display:none;margin-top:12px;">
+                <textarea id="aiRegenFeedback" class="form-control" placeholder="What should change? (optional) e.g. cheaper hotels, less walking, add free time…" style="width:100%;min-height:60px;border-radius:8px;border:1px solid #ddd;padding:10px;font-size:13px;"></textarea>
+            </div>
             <div id="aiItineraryResult" style="margin-top:20px;"></div>
             <input type="hidden" name="ai_itinerary_json" id="aiItineraryJson" value="">
         </div>
@@ -392,10 +401,17 @@ function toggleAiDay(el) {
     el.nextElementSibling.classList.toggle('open');
 }
 
+// NEW (AI-trip-planning round): tracks whether a plan already exists, so a
+// second click switches to action=itinerary_regenerate (real feedback +
+// forced cache-bust, see ItineraryPlanner::regenerate()) instead of repeating
+// the exact same action=itinerary call the backend could cache-hit unchanged.
+var aiHasGenerated = false;
+
 function generateAiItinerary() {
     var resultBox = document.getElementById('aiItineraryResult');
     var btn = document.getElementById('genAiBtn');
     var destination = document.querySelector('[name="destination"]').value.trim();
+    var isRegenerate = aiHasGenerated;
 
     if (!destination) {
         resultBox.innerHTML = '<div class="ai-error-box"><i class="fa fa-exclamation-triangle"></i> Please enter a destination in Step 1 first.</div>';
@@ -403,7 +419,7 @@ function generateAiItinerary() {
     }
 
     btn.disabled = true;
-    btn.innerHTML = '<i class="fa fa-spinner fa-spin"></i> Generating…';
+    btn.innerHTML = '<i class="fa fa-spinner fa-spin"></i> ' + (isRegenerate ? 'Regenerating…' : 'Generating…');
     resultBox.innerHTML =
         '<div class="ai-skeleton"><div class="ai-skel-line" style="width:60%"></div><div class="ai-skel-line" style="width:90%"></div><div class="ai-skel-line" style="width:40%"></div></div>' +
         '<div class="ai-skeleton"><div class="ai-skel-line" style="width:50%"></div><div class="ai-skel-line" style="width:80%"></div></div>';
@@ -434,7 +450,14 @@ function generateAiItinerary() {
         csrf_token: (document.querySelector('[name="csrf_token"]') || {}).value || ''
     });
 
-    fetch('api/ai.php?action=itinerary', { method: 'POST', body: body })
+    var action = 'itinerary';
+    if (isRegenerate) {
+        action = 'itinerary_regenerate';
+        var fb = (document.getElementById('aiRegenFeedback') || {}).value || '';
+        body.set('feedback', fb.trim());
+    }
+
+    fetch('api/ai.php?action=' + action, { method: 'POST', body: body })
         .then(function(r) { return r.json(); })
         .then(function(res) {
             btn.disabled = false;
@@ -445,6 +468,8 @@ function generateAiItinerary() {
             }
             renderItinerary(res.data.itinerary);
             document.getElementById('aiItineraryJson').value = JSON.stringify(res.data.itinerary);
+            aiHasGenerated = true;
+            document.getElementById('aiRegenBox').style.display = 'block';
         })
         .catch(function() {
             btn.disabled = false;

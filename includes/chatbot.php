@@ -420,7 +420,13 @@ function askAI(text) {
     }).then(function(res) {
         var data = res.data;
         if (data && data.success && data.data && data.data.reply) {
-            return { ok: true, text: data.data.reply };
+            // UPGRADE (AI-conversation round): the assistant now returns real,
+            // context-derived quick replies alongside its answer (see
+            // SiteAssistant::parseStructuredReply()) instead of nothing, so
+            // respondTo() below can offer THOSE instead of the same fixed 4
+            // buttons after every message. An empty/missing array here is
+            // normal (no natural follow-up) and falls back to the defaults.
+            return { ok: true, text: data.data.reply, suggestions: Array.isArray(data.data.suggestions) ? data.data.suggestions : [] };
         }
         // Keep the reason. It used to be discarded, so "the AI is switched off",
         // "you've hit the rate limit" and "the network is down" were all
@@ -447,7 +453,12 @@ function respondTo(text, appendUserTurn) {
         hideTyping();
         setChatBusy(false);
         if (result.ok) {
-            addMessage('bot', result.text, ['Show Packages','AI Recommender','Budget Planner','Contact Us']);
+            // Real, context-derived suggestions when the assistant offered any;
+            // otherwise fall back to the same fixed set as before this upgrade
+            // (a page-navigation quick-reply row is still better than none).
+            var qr = (result.suggestions && result.suggestions.length) ? result.suggestions
+                   : ['Show Packages','AI Recommender','Budget Planner','Contact Us'];
+            addMessage('bot', result.text, qr);
             speakChatReply(result.text);
             return;
         }

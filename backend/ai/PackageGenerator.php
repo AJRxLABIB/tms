@@ -1,7 +1,12 @@
 <?php
 /**
  * PackageGenerator.php — AI Dynamic Package Generator
- * Creates fully personalized travel packages on demand using Claude AI.
+ * Creates fully personalized travel packages on demand using Google Gemini
+ * (via the provider-agnostic AIClient — see backend/ai/AIClient.php and
+ * backend/ai/providers/). Docblock corrected Round 108: this previously said
+ * "Claude AI", left over from an earlier provider, which was stale/inaccurate
+ * documentation (Rule 75) — the live provider has been Gemini since the
+ * AIClient abstraction was introduced.
  * Replaces the fixed-package model with intelligent, custom package creation.
  */
 
@@ -198,6 +203,15 @@ MSG;
         $travelers = $prefs['travelers'] ?? 2;
         $days      = $prefs['duration'] ?? 5;
 
+        // FIX (Round 108, AI-upgrade audit): this hardcoded placeholder used to
+        // claim 'is_ai_generated' => true — the exact same flag the REAL
+        // Gemini-generated package sets on success (see generate() above,
+        // line ~140). That's a Rule 3/7 honesty bug: a static template with
+        // three generic bullet points was being labeled as AI output. No
+        // frontend page currently reads this field (grepped the full
+        // codebase — zero call sites), so flipping it to false changes no
+        // visible behavior today, but it makes the field trustworthy the
+        // moment a UI does start showing an "AI Generated" badge from it.
         return [
             'package_name'           => 'Custom Travel Package',
             'tagline'                => 'A personalized journey just for you',
@@ -214,7 +228,7 @@ MSG;
             'best_for'   => 'All travelers',
             'ai_reasoning' => 'AI package generation temporarily unavailable. This is a placeholder package.',
             'eco_score'  => 70,
-            'is_ai_generated' => true,
+            'is_ai_generated' => false,
             'ai_package_id'   => 0,
         ];
     }

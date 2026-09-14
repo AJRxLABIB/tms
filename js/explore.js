@@ -313,17 +313,59 @@ function goToDestination(name, lat, lng, country) {
         L.marker([DEST.lat, DEST.lng], { icon: destIcon() }).addTo(state.map)
             .bindPopup('<strong>' + escapeHtml(DEST.name) + '</strong><br>Your destination').openPopup();
 
-        // Also drop pins for nearby attractions (live OSM data) for spatial context
-        exploreGet('places', { lat: DEST.lat, lng: DEST.lng, category: 'attraction', radius: 5000 }).then(function (res) {
-            if (!res.success) return;
-            (res.data.places || []).slice(0, 15).forEach(function (p) {
+        // Default view: nearby attractions, same as before this round.
+        exploreLoadMapCategory('attraction');
+    }
+
+    // NEW (AI-map round): the map used to ALWAYS show attraction pins only —
+    // switching to "Hotels" or "Restaurants" in the separate Nearby Places tab
+    // never put a single pin on the map, even though the same real, already-
+    // fetched place data (with real lat/lng) was sitting right there. This
+    // lets the map tab plot any category's real nearby places at once,
+    // reusing loadPlaces()'s cached result when it's the same category that's
+    // already loaded (state.currentPlaces) instead of fetching it twice.
+    var MAP_CATEGORY_ICONS = {
+        hotel: ['#0F4C81', 'fa-bed'], restaurant: ['#e67e22', 'fa-utensils'],
+        hospital: ['#c0392b', 'fa-hospital'], pharmacy: ['#8e44ad', 'fa-prescription-bottle-alt'],
+        police: ['#2c3e50', 'fa-shield-alt'], atm: ['#27ae60', 'fa-money-bill-wave'],
+        gas_station: ['#d35400', 'fa-gas-pump'], shopping_mall: ['#16a085', 'fa-shopping-bag'],
+        tourist_info: ['#2980b9', 'fa-info-circle'], attraction: ['#00A8A8', 'fa-camera']
+    };
+    function mapCategoryIcon(category) {
+        var conf = MAP_CATEGORY_ICONS[category] || MAP_CATEGORY_ICONS.attraction;
+        return L.divIcon({ className: '', html: '<div style="background:' + conf[0] + ';width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(0,0,0,.3);"><i class="fa ' + conf[1] + '" style="color:#fff;font-size:10px;"></i></div>', iconSize:[24,24], iconAnchor:[12,12] });
+    }
+
+    window.exploreLoadMapCategory = function (category) {
+        if (!state.map) return;
+        state.mapCategory = category;
+        document.querySelectorAll('.map-cat-btn').forEach(function (b) { b.classList.toggle('active', b.dataset.cat === category); });
+
+        // Clear the previous category's pins only -- destination/user/route
+        // markers are never pushed into state.markers, so this can't remove them.
+        state.markers.forEach(function (m) { state.map.removeLayer(m); });
+        state.markers = [];
+
+        function plot(places) {
+            (places || []).slice(0, 20).forEach(function (p) {
                 if (!p.lat || !p.lng) return;
-                var m = L.marker([p.lat, p.lng], { icon: attractionIcon() }).addTo(state.map)
-                    .bindPopup('<strong>' + escapeHtml(p.name) + '</strong>' + (p.address ? '<br>' + escapeHtml(p.address) : ''));
+                var m = L.marker([p.lat, p.lng], { icon: mapCategoryIcon(category) }).addTo(state.map)
+                    .bindPopup('<strong>' + escapeHtml(p.name) + '</strong>' + (p.address ? '<br>' + escapeHtml(p.address) : '') +
+                        '<br><a href="#" onclick="exploreNavigateToPlace(' + p.lat + ',' + p.lng + ',\'' + escapeHtml(p.name).replace(/'/g, "\\'") + '\');return false;"><i class="fa fa-directions"></i> Get Directions</a>');
                 state.markers.push(m);
             });
+        }
+
+        // Reuse the Nearby Places tab's already-fetched list when it's the
+        // same category -- avoids firing the same live query twice.
+        if (state.currentCategory === category && state.currentPlaces && state.currentPlaces.length) {
+            plot(state.currentPlaces);
+            return;
+        }
+        exploreGet('places', { lat: DEST.lat, lng: DEST.lng, category: category, radius: 5000 }).then(function (res) {
+            if (res.success) plot(res.data.places);
         }).catch(function () {});
-    }
+    };
 
     function destIcon() {
         return L.divIcon({ className: '', html: '<div style="background:var(--primary,#0F4C81);width:34px;height:34px;border-radius:50% 50% 50% 0;transform:rotate(-45deg);display:flex;align-items:center;justify-content:center;box-shadow:0 3px 8px rgba(0,0,0,.3);"><i class="fa fa-flag" style="transform:rotate(45deg);color:#fff;font-size:14px;"></i></div>', iconSize:[34,34], iconAnchor:[17,34] });

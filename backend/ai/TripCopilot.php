@@ -65,12 +65,25 @@ class TripCopilot {
 
         $reply = $result['content'];
 
-        // Save both sides of conversation
-        $this->saveMessage($bookingId, $email, 'user', $userMsg);
-        $this->saveMessage($bookingId, $email, 'assistant', $reply);
-
         // Parse structured response if AI returned JSON action
         $parsed = $this->parseStructuredReply($reply);
+
+        // FIX (Round 109, caught live during this round's own QA): save the
+        // PARSED, human-readable reply text -- not the raw $reply, which as
+        // of this round's system-prompt change is normally a JSON envelope
+        // like {"reply":"...","suggestions":[...],"action":"none"}. Saving
+        // the raw envelope here was live-tested and found to leak straight
+        // into two places: (1) getHistory()/copilot_history's replay on page
+        // reload, which hands m.message straight to addMsg() with no JSON
+        // parsing on the frontend -- a returning user would see a raw JSON
+        // blob instead of the reply they actually read; and (2) this same
+        // history is fed back as this class's own conversation context on
+        // the NEXT chat() call (see $messages above), so the AI would start
+        // being shown its own past raw JSON scaffolding as "what I said
+        // before" instead of the clean reply -- degrading response quality
+        // over a longer conversation instead of improving it.
+        $this->saveMessage($bookingId, $email, 'user', $userMsg);
+        $this->saveMessage($bookingId, $email, 'assistant', $parsed['reply']);
 
         return $parsed;
     }
@@ -197,6 +210,23 @@ Rules:
   it's a real, fresh fetch. The separate "Weather outlook at trip-planning time"
   line, if also present, is only what the forecast looked like when the itinerary
   was first generated and can be outdated by now — don't treat it as current.
+
+OUTPUT FORMAT (Round 109): respond with ONLY a single JSON object, no markdown
+fences, no extra text before or after it, in exactly this shape:
+{"reply": "<your conversational answer, following all rules above>", "suggestions": ["<quick reply 1>", "<quick reply 2>", "<quick reply 3>"], "action": "none"}
+
+Rules for "suggestions":
+- 0 to 3 short quick-reply options the traveler could tap to continue the
+  conversation — each under ~6 words, phrased as something THEY would say
+  (e.g. "What about tomorrow?", not "Ask about tomorrow's weather").
+- They must be genuinely relevant follow-ups to what YOU just said in "reply"
+  — never generic filler, never repeats of the user's own last message.
+- If your reply already fully resolves the topic and no natural follow-up
+  exists, return an empty array — do not invent suggestions just to fill 3 slots.
+- Never suggest something you cannot actually help with.
+
+"action" stays the literal string "none" — reserved for future use, not
+consumed by the UI today; do not put anything else there.
 SYSTEM;
     }
 
@@ -333,19 +363,42 @@ SYSTEM;
     }
 
     private function parseStructuredReply(string $reply): array {
-        // Check if AI returned a JSON action block
-        if (str_starts_with(trim($reply), '{')) {
-            $data = json_decode(trim($reply), true);
-            if ($data && isset($data['reply'])) {
-                return [
-                    'reply'       => $data['reply'],
-                    'suggestions' => $data['suggestions'] ?? [],
-                    'action'      => $data['action'] ?? 'none',
-                ];
-            }
+        // FIX (Round 109): buildSystemPrompt() now asks the AI to always
+        // return the {"reply","suggestions","action"} JSON envelope (real,
+        // context-derived quick replies, replacing the old approach of only
+        // ever getting plain text and guessing suggestions from keywords
+        // after the fact). The parse here was upgraded alongside that prompt
+        // change to use AIClient::parseJson() -- which strips ```json
+        // markdown fences -- instead of a raw json_decode() that required
+        // the response to start with a literal "{". Gemini frequently wraps
+        // JSON output in a code fence even when explicitly told "no markdown
+        // fences", so the old strict check would have silently rejected
+        // well-formed compliant responses and always fallen through to the
+        // keyword-stub path below -- exactly the kind of failure that would
+        // have made this whole upgrade a no-op without anyone noticing.
+        $data = $this->ai->parseJson($reply);
+        if (is_array($data) && isset($data['reply']) && is_string($data['reply']) && $data['reply'] !== '') {
+            $suggestions = is_array($data['suggestions'] ?? null) ? $data['suggestions'] : [];
+            // Defense in depth: keep only non-empty strings, cap at 3 -- the
+            // system prompt already asks for this shape, but a UI-facing
+            // array should never trust an LLM's shape compliance blindly.
+            $suggestions = array_values(array_filter(array_map(
+                fn($s) => is_string($s) ? trim($s) : '',
+                $suggestions
+            ), fn($s) => $s !== ''));
+            $suggestions = array_slice($suggestions, 0, 3);
+
+            return [
+                'reply'       => $data['reply'],
+                'suggestions' => $suggestions,
+                'action'      => 'none', // reserved for future use; not consumed by the UI today (see api handler / ai-copilot.php)
+            ];
         }
 
-        // Otherwise plain text response
+        // Fail-soft fallback: the AI didn't return the requested JSON shape
+        // (rare, but not impossible) -- same behavior as before this round,
+        // so a non-compliant response still degrades to a usable reply with
+        // best-effort keyword-based suggestions rather than breaking the chat.
         return [
             'reply'       => $reply,
             'suggestions' => $this->extractSuggestions($reply),

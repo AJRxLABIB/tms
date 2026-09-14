@@ -49,7 +49,7 @@ $userEmail = $_SESSION['login'] ?? 'guest';
 // ones, so a long-lived session grew without bound, and (c) counted unknown
 // actions and 400s against the visitor's allowance because it ran before
 // dispatch. One rolling entry, and only real AI actions are counted.
-const TMS_AI_GUEST_ACTIONS = ['chatbot', 'recommend', 'itinerary', 'budget', 'packing_list',
+const TMS_AI_GUEST_ACTIONS = ['chatbot', 'recommend', 'itinerary', 'itinerary_regenerate', 'budget', 'packing_list',
                               'answer', 'memory', 'package', 'prediction', 'footprint', 'image_analyze',
                               // virtual_guide (used by virtual-guide.php, now a public page) had no
                               // rate limit at all for guests before this -- unlimited free Gemini
@@ -74,6 +74,7 @@ try {
     match ($action) {
         'recommend'       => handleRecommend($dbh, $userEmail),
         'itinerary'       => handleItinerary($dbh, $userEmail),
+        'itinerary_regenerate' => handleItineraryRegenerate($dbh, $userEmail),
         'copilot_chat'    => handleCopilotChat($dbh, $userEmail),
         'copilot_history' => handleCopilotHistory($dbh, $userEmail),
         'budget'          => handleBudget($dbh, $userEmail),
@@ -124,6 +125,43 @@ function handleRecommend(PDO $dbh, string $email): void {
     apiSuccess(['recommendations' => $recommendations, 'count' => count($recommendations)]);
 }
 
+/**
+ * Shared by handleItinerary() and handleItineraryRegenerate() (Round
+ * AI-trip-planning) so both build $tripData and resolve $bookingId
+ * identically instead of two copies drifting apart over time.
+ */
+function buildTripDataFromPost(): array {
+    return [
+        'destination'     => tms_clean($_POST['destination'] ?? ''),
+        'duration'        => max(1, min(30, (int)($_POST['duration'] ?? 3))),
+        'travelers'       => max(1, (int)($_POST['travelers'] ?? 2)),
+        'budget'          => (int)($_POST['budget'] ?? 0),
+        'start_date'      => tms_clean($_POST['start_date'] ?? date('Y-m-d', strtotime('+7 days'))),
+        'travel_type'     => tms_clean($_POST['travel_type'] ?? 'leisure'),
+        'climate'         => tms_clean($_POST['climate'] ?? 'warm'),
+        'accommodation'   => tms_clean($_POST['accommodation'] ?? 'hotel'),
+        'transport'       => tms_clean($_POST['transport'] ?? 'mixed'),
+        'activities'      => array_map('trim', explode(',', tms_clean($_POST['activities'] ?? 'sightseeing'))),
+        'special_requests'=> tms_clean($_POST['special_requests'] ?? ''),
+    ];
+}
+
+/**
+ * IDOR guard: only the booking's own owner may attach an itinerary to it,
+ * same principle as payment.php/pay-now.php's ownership checks.
+ */
+function resolveOwnedBookingId(PDO $dbh, string $email): int {
+    $bookingId = (int)($_POST['booking_id'] ?? 0);
+    if ($bookingId > 0) {
+        $owns = $dbh->prepare("SELECT 1 FROM tblbooking WHERE BookingId = :bid AND UserEmail = :email LIMIT 1");
+        $owns->execute([':bid' => $bookingId, ':email' => $email]);
+        if (!$owns->fetchColumn()) {
+            $bookingId = 0; // not this user's booking -- silently don't link, don't error the whole request
+        }
+    }
+    return $bookingId;
+}
+
 function handleItinerary(PDO $dbh, string $email): void {
     // FIX (live testing, round 19): a full itinerary can legitimately take up to
     // ~30-50s (see AIClient's longer budget for this call); PHP's own default
@@ -140,20 +178,7 @@ function handleItinerary(PDO $dbh, string $email): void {
     // updated to also send that same token on this AJAX call.
     tms_csrf_validate();
 
-    $tripData = [
-        'destination'     => tms_clean($_POST['destination'] ?? ''),
-        'duration'        => max(1, min(30, (int)($_POST['duration'] ?? 3))),
-        'travelers'       => max(1, (int)($_POST['travelers'] ?? 2)),
-        'budget'          => (int)($_POST['budget'] ?? 0),
-        'start_date'      => tms_clean($_POST['start_date'] ?? date('Y-m-d', strtotime('+7 days'))),
-        'travel_type'     => tms_clean($_POST['travel_type'] ?? 'leisure'),
-        'climate'         => tms_clean($_POST['climate'] ?? 'warm'),
-        'accommodation'   => tms_clean($_POST['accommodation'] ?? 'hotel'),
-        'transport'       => tms_clean($_POST['transport'] ?? 'mixed'),
-        'activities'      => array_map('trim', explode(',', tms_clean($_POST['activities'] ?? 'sightseeing'))),
-        'special_requests'=> tms_clean($_POST['special_requests'] ?? ''),
-    ];
-
+    $tripData = buildTripDataFromPost();
     if (empty($tripData['destination'])) {
         apiError(400, 'Destination is required.');
     }
@@ -161,19 +186,43 @@ function handleItinerary(PDO $dbh, string $email): void {
     // Optional: link this generated itinerary to a real booking (my-trip.php)
     // so it shows up there via ItineraryPlanner::getByBookingId() instead of
     // only ever being retrievable through this same session's AI response.
-    // IDOR guard: only the booking's own owner may attach an itinerary to it,
-    // same principle as payment.php/pay-now.php's ownership checks.
-    $bookingId = (int)($_POST['booking_id'] ?? 0);
-    if ($bookingId > 0) {
-        $owns = $dbh->prepare("SELECT 1 FROM tblbooking WHERE BookingId = :bid AND UserEmail = :email LIMIT 1");
-        $owns->execute([':bid' => $bookingId, ':email' => $email]);
-        if (!$owns->fetchColumn()) {
-            $bookingId = 0; // not this user's booking -- silently don't link, don't error the whole request
-        }
-    }
+    $bookingId = resolveOwnedBookingId($dbh, $email);
 
     $planner   = new ItineraryPlanner($dbh);
     $itinerary = $planner->generate($tripData, $email, $bookingId > 0 ? $bookingId : null);
+
+    apiSuccess(['itinerary' => $itinerary]);
+}
+
+/**
+ * NEW (AI-trip-planning round): "Regenerate" on ai-planner.php and
+ * custom-trip.php used to just call handleItinerary() again with identical
+ * inputs -- which, since generate()'s cache key is a hash of $tripData, could
+ * silently hand back the exact same cached itinerary. This calls
+ * ItineraryPlanner::regenerate() instead (real but previously dead code —
+ * see that method's own docblock), which force-busts the cache and folds in
+ * whatever the traveler said they want changed.
+ */
+function handleItineraryRegenerate(PDO $dbh, string $email): void {
+    if (function_exists('set_time_limit')) { @set_time_limit(120); }
+    tms_csrf_validate(); // same reasoning as handleItinerary() above
+
+    $tripData = buildTripDataFromPost();
+    if (empty($tripData['destination'])) {
+        apiError(400, 'Destination is required.');
+    }
+
+    // Optional and free-text -- a traveler can regenerate without typing
+    // anything ("just give me a different plan"), in which case
+    // ItineraryPlanner::regenerate() asks for a genuinely different
+    // alternative rather than repeating the same one. Capped generously;
+    // this is prompt content, not a security boundary.
+    $feedback = trim(mb_substr((string)($_POST['feedback'] ?? ''), 0, 500));
+
+    $bookingId = resolveOwnedBookingId($dbh, $email);
+
+    $planner   = new ItineraryPlanner($dbh);
+    $itinerary = $planner->regenerate($tripData, $feedback !== '' ? [$feedback] : [], $email, $bookingId > 0 ? $bookingId : null);
 
     apiSuccess(['itinerary' => $itinerary]);
 }
@@ -226,7 +275,13 @@ function handleChatbot(PDO $dbh, string $email): void {
     }
     if (function_exists('tms_prune_ai_logs')) { tms_prune_ai_logs($dbh); }
 
-    apiSuccess(['reply' => $result['reply']]);
+    // UPGRADE (AI-conversation round): SiteAssistant now returns real,
+    // context-derived quick replies (see its buildSystemPrompt()/
+    // parseStructuredReply()) instead of nothing -- pass them through so the
+    // widget can offer them instead of always showing the same 4 static
+    // buttons. Empty array is a completely normal result (nothing sensible
+    // followed on) and the widget already falls back to its own defaults.
+    apiSuccess(['reply' => $result['reply'], 'suggestions' => $result['suggestions'] ?? []]);
 }
 
 function handleTrackQuickReply(PDO $dbh): void {

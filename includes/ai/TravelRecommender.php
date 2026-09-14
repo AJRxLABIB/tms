@@ -2,20 +2,33 @@
 /**
  * TravelRecommender.php — AI-powered destination recommendation engine
  * 
- * Replaces the manual scoring loop in ai-recommend.php with Claude AI.
+ * Replaces the manual scoring loop in ai-recommend.php with an AI-assisted
+ * scoring pipeline (provider-agnostic AIClient, live provider: Google
+ * Gemini — see backend/ai/AIClient.php). Docblock corrected Round 108: this
+ * previously said "Claude AI", stale documentation left over from an
+ * earlier provider (Rule 75).
  * Returns destinations with match scores, reasoning, and structured breakdown.
  */
 
 require_once __DIR__ . '/AIClient.php';
+require_once __DIR__ . '/../PricingEngine.php';
+require_once __DIR__ . '/../SustainabilityCalculator.php';
+require_once __DIR__ . '/../ExploreService.php';
 
 class TravelRecommender {
 
     private AIClient $ai;
     private PDO      $db;
+    private SustainabilityCalculator $sustainability;
+    private ExploreService $explore;
 
     public function __construct(PDO $db) {
         $this->db = $db;
         $this->ai = new AIClient($db);
+        // Round 100: used only by the new deterministic getMatchScore()
+        // below -- never by the AI-driven recommend() path above it.
+        $this->sustainability = new SustainabilityCalculator($db);
+        $this->explore        = new ExploreService($db);
     }
 
     /**
@@ -116,31 +129,251 @@ MSG;
             return $this->fallbackRuleBasedRecommend($prefs, $packages);
         }
 
+        // NEW (AI-trip-planning round): the system prompt above only ever
+        // told the AI to "consider weather suitability" from its own general
+        // knowledge -- unlike getMatchScore() below, which grounds the same
+        // dimension in a real Open-Meteo forecast via realAvgRainChance().
+        // For a trip starting within the ~7-day forecast horizon, this
+        // replaces the AI's guessed weather_suitability score with the real
+        // one instead, and only for these ~5 recommended packages (not the
+        // full 50-package inventory) so it stays cheap. See groundWeatherScores().
+        $this->groundWeatherScores($recommendations, $prefs);
+
         // Enrich with package images from database
-        return $this->enrichWithPackageData($recommendations, $packages);
+        return $this->enrichWithPackageData($recommendations, $packages, $prefs);
     }
 
     /**
-     * Get AI match score for a single package against user preferences.
-     * Used on package-details.php to show personalized match %.
+     * Overwrites each recommendation's guessed weather_suitability score with
+     * a real one when a genuine forecast is available for the stated travel
+     * dates -- reuses realAvgRainChance(), the exact same Open-Meteo call
+     * getMatchScore() already trusts for this (Round 100), so this doesn't
+     * duplicate that integration. Silently leaves the AI's own score in place
+     * for anything outside the ~7-day forecast horizon or where geocoding
+     * fails — same fail-soft posture as every other real-data hook in this
+     * class (Rule 3: never fabricate, but an honest "we don't know, so we
+     * left the estimate as-is" is not a fabrication).
+     */
+    private function groundWeatherScores(array &$recommendations, array $prefs): void {
+        $startDate = (string)($prefs['start_date'] ?? '');
+        if ($startDate === '') return;
+        $duration = max(1, (int)($prefs['duration'] ?? 1));
+
+        foreach ($recommendations as &$rec) {
+            $destination = (string)($rec['destination'] ?? '');
+            if ($destination === '') continue;
+            $avgPop = $this->realAvgRainChance($destination, $startDate, $duration);
+            if ($avgPop === null) continue; // no real forecast available -- leave the AI's own estimate untouched
+
+            $realScore = (int)round(max(0, 100 - $avgPop));
+            if (!isset($rec['scores']) || !is_array($rec['scores'])) $rec['scores'] = [];
+            $rec['scores']['weather_suitability'] = $realScore;
+            $rec['weather_grounded'] = true;
+            $rec['warnings'] = array_values(array_filter((array)($rec['warnings'] ?? [])));
+            $rec['warnings'][] = "Weather score updated from a live forecast: {$avgPop}% average rain chance for your travel dates.";
+        }
+        unset($rec);
+    }
+
+    /**
+     * Round 100 rewrite (item 31 -- Recommendation Engine's exact 7-factor
+     * weighted breakdown: Budget 25%, Weather 20%, Preference 20%,
+     * Availability 15%, Rating 10%, Distance 5%, Sustainability 5%). Used
+     * on package-details.php to show a personalized match % for a single
+     * package.
+     *
+     * This REPLACES the previous AI-based implementation entirely. That
+     * version was dead code -- confirmed by a project-wide grep, it was
+     * never actually called from package-details.php or anywhere else,
+     * despite its own docblock claiming it was -- and its AI-failure
+     * fallback silently returned a FABRICATED score of 75 ("Good match for
+     * your profile") with zero real data behind it whenever the AI call
+     * didn't return valid JSON. This rewrite can't fail into a fabricated
+     * number because it never calls an AI at all: every one of the 7
+     * factors below is real, already-existing platform data, computed
+     * deterministically -- the same philosophy SustainabilityCalculator's
+     * own docblock states ("arithmetic, not a judgment call... an AI has
+     * no business inventing or estimating a number here"). A factor whose
+     * real input isn't available this call (no stated budget, no travel
+     * dates for weather, etc.) is honestly EXCLUDED from the result and
+     * its weight is redistributed proportionally across whichever factors
+     * DO have real data -- so a call made with less input information
+     * gets an honest score computed from what's actually known, never a
+     * padded or guessed one.
+     *
+     * @param array $userPrefs Optional keys: budget, travelers, travel_type,
+     *                         start_date (Y-m-d), duration (days).
+     * @return array{overall_match: ?int, factors: array<string,array>, method: string}
      */
     public function getMatchScore(int $packageId, array $userPrefs, string $email = 'guest'): array {
-        $packages = $this->getActivePackages();
         $pkg = null;
-        foreach ($packages as $p) {
+        foreach ($this->getActivePackages() as $p) {
             if ((int)$p->PackageId === $packageId) { $pkg = $p; break; }
         }
-        if (!$pkg) return ['score' => 0, 'reason' => 'Package not found'];
+        if (!$pkg) {
+            // getActivePackages() caps at the top 50 by AvgRating -- fall
+            // back to a direct lookup so a real, active, just-lower-rated
+            // package still gets scored instead of a blanket "not found".
+            try {
+                $stmt = $this->db->prepare("SELECT * FROM tbltourpackages WHERE PackageId = ? AND Status = 1");
+                $stmt->execute([$packageId]);
+                $pkg = $stmt->fetch(PDO::FETCH_OBJ) ?: null;
+            } catch (Exception $e) { $pkg = null; }
+        }
+        if (!$pkg) {
+            return ['overall_match' => null, 'factors' => [], 'method' => 'deterministic', 'note' => 'Package not found or inactive.'];
+        }
 
-        $system = "You are a travel match scoring engine. Return only a JSON object with score (0-100) and reason (1 sentence). No other text.";
+        $travelers = max(1, (int)($userPrefs['travelers'] ?? 1));
+        $factors = [];
 
-        $userMsg = "Package: {$pkg->PackageName}, Location: {$pkg->PackageLocation}, Price: {$pkg->PackagePrice} BDT, Type: {$pkg->PackageType}.
-User: Budget {$userPrefs['budget']} BDT, {$userPrefs['travelers']} travelers, style {$userPrefs['travel_type']}, climate {$userPrefs['climate']}.
-Return: {\"score\": <int>, \"reason\": \"<string>\"}";
+        // 1) Budget fit (25%) -- only when a real budget was stated.
+        $budget = (float)($userPrefs['budget'] ?? 0);
+        if ($budget > 0) {
+            $totalCost = (float)$pkg->PackagePrice * $travelers;
+            $score = ($totalCost <= $budget) ? 100 : max(0, 100 - (($totalCost - $budget) / $budget) * 150);
+            $factors['budget_match'] = [
+                'weight' => 25, 'score' => (int)round($score), 'label' => 'Budget fit',
+                'detail' => "Est. {$totalCost} BDT for {$travelers} traveler(s) vs your {$budget} BDT budget",
+            ];
+        }
 
-        $result = $this->ai->ask($system, $userMsg, 'match_' . $packageId . '_' . md5(json_encode($userPrefs)), $email, feature: 'recommender');
-        $data   = $result['success'] ? ($this->ai->parseJson($result['content']) ?? []) : [];
-        return ['score' => $data['score'] ?? 75, 'reason' => $data['reason'] ?? 'Good match for your profile'];
+        // 2) Weather suitability (20%) -- only with real stated travel dates,
+        // reusing the exact same ExploreService Open-Meteo integration
+        // ItineraryPlanner/TripCopilot already use -- no second weather call.
+        $startDate = (string)($userPrefs['start_date'] ?? '');
+        if ($startDate !== '' && !empty($pkg->PackageLocation)) {
+            $avgPop = $this->realAvgRainChance($pkg->PackageLocation, $startDate, max(1, (int)($userPrefs['duration'] ?? 1)));
+            if ($avgPop !== null) {
+                $factors['weather_suitability'] = [
+                    'weight' => 20, 'score' => (int)round(max(0, 100 - $avgPop)), 'label' => 'Weather suitability',
+                    'detail' => "Average rain chance {$avgPop}% for your dates (real forecast)",
+                ];
+            }
+        }
+
+        // 3) Preference/style match (20%) -- only when a real style was stated,
+        // compared against the package's own real PackageType (the only
+        // structured "style" field on both sides -- no fabricated attribute).
+        //
+        // Round 107 fix: a live audit of every PackageType value actually in
+        // this catalog (413 packages) found real values like Nature, Beach,
+        // Adventure, Heritage, City, Mountain, Wildlife, Island, Religious --
+        // destination/theme categories -- plus a small legacy set of literal
+        // traveler-composition labels (Family Package, Couple Package, Group
+        // Package, Family, Group). ai-recommend.php's "travel style" dropdown
+        // offers seven values: family, couple, group, solo, business,
+        // accessible, adventure. Four of those ("adventure" via the real
+        // Adventure category; "family"/"couple"/"group" via the legacy
+        // labels) have a genuine corresponding PackageType somewhere in the
+        // catalog. The other three -- "solo", "business", "accessible" --
+        // have ZERO matching PackageType anywhere in the data, so comparing
+        // against PackageType for those three would read "differs" for
+        // literally every package in the catalog: not a real evaluation,
+        // just a guaranteed-wrong signal dressed up as one. Rather than
+        // fabricate a verdict with nothing real behind it, this factor is
+        // honestly omitted for those three styles -- the same "excluded,
+        // never guessed, when the real input isn't available" principle
+        // already used for every other factor here (Rule 3). Omitting a
+        // factor doesn't penalize the package: $availableWeight below only
+        // sums the weights of factors actually present, so its 20% is
+        // fairly redistributed across whichever real factors did compute.
+        $travelType = trim((string)($userPrefs['travel_type'] ?? ''));
+        $stylesWithRealCatalogSignal = ['family', 'couple', 'group', 'adventure'];
+        if ($travelType !== '' && in_array(strtolower($travelType), $stylesWithRealCatalogSignal, true)) {
+            $isMatch = stripos((string)$pkg->PackageType, $travelType) !== false || stripos($travelType, (string)$pkg->PackageType) !== false;
+            $factors['preference_match'] = [
+                'weight' => 20, 'score' => $isMatch ? 100 : 40, 'label' => 'Preference match',
+                'detail' => $isMatch ? "Matches your \"{$travelType}\" style" : "Package type \"{$pkg->PackageType}\" differs from your \"{$travelType}\" preference",
+            ];
+        }
+
+        // 4) Availability (15%) -- real remaining-seats calculation, same
+        // helper used by checkout/operations-dashboard (never a new query).
+        $remaining = tms_remaining_seats($this->db, $packageId);
+        if ($remaining !== null) {
+            $score = $remaining >= $travelers ? 100 : ($remaining > 0 ? ($remaining / $travelers) * 100 : 0);
+            $factors['availability'] = [
+                'weight' => 15, 'score' => (int)round($score), 'label' => 'Availability',
+                'detail' => $remaining > 0 ? "{$remaining} seat(s) left for {$travelers} traveler(s)" : 'No seats currently available',
+            ];
+        }
+
+        // 5) Rating (10%) -- real AvgRating column.
+        if (!empty($pkg->AvgRating) && $pkg->AvgRating > 0) {
+            $factors['rating'] = [
+                'weight' => 10, 'score' => (int)round(((float)$pkg->AvgRating / 5) * 100), 'label' => 'Rating',
+                'detail' => number_format((float)$pkg->AvgRating, 1) . ' / 5 average rating',
+            ];
+        }
+
+        // 6) Distance (5%) and 7) Sustainability (5%) -- both derived from
+        // SustainabilityCalculator's real geocoded round-trip distance (one
+        // real lookup serves both factors, not two separate calls).
+        try {
+            $footprint = $this->sustainability->estimateFootprint((string)$pkg->PackageLocation, $travelers);
+            if (!empty($footprint['has_data'])) {
+                $km = (float)$footprint['one_way_km'];
+                $factors['distance'] = [
+                    'weight' => 5, 'score' => (int)round(max(0, 100 - $km / 30)), 'label' => 'Distance',
+                    'detail' => round($km) . ' km one-way from Dhaka',
+                ];
+                $gradeScore = ['A' => 100, 'B' => 80, 'C' => 60, 'D' => 40, 'E' => 20][$footprint['score']['grade'] ?? ''] ?? null;
+                if ($gradeScore !== null) {
+                    $factors['sustainability'] = [
+                        'weight' => 5, 'score' => $gradeScore, 'label' => 'Sustainability',
+                        'detail' => $footprint['score']['label'] . ' (grade ' . $footprint['score']['grade'] . ')',
+                    ];
+                }
+            }
+        } catch (Exception $e) {
+            // No real distance data available this call -- both factors
+            // excluded, not faked (same fail-soft philosophy as the class
+            // they come from).
+        }
+
+        $availableWeight = array_sum(array_column($factors, 'weight'));
+        if ($availableWeight === 0) {
+            return ['overall_match' => null, 'factors' => $factors, 'method' => 'deterministic', 'note' => 'Not enough real preference data was given to compute a match score.'];
+        }
+        $weightedSum = 0;
+        foreach ($factors as $f) { $weightedSum += $f['score'] * $f['weight']; }
+
+        return [
+            'overall_match' => (int)round($weightedSum / $availableWeight),
+            'factors'       => $factors,
+            'method'        => 'deterministic',
+        ];
+    }
+
+    /**
+     * Real average rain-chance percentage across a trip's date window, from
+     * the same live Open-Meteo forecast ExploreService already wraps. Returns
+     * null (not 0) when there's no real forecast to check (geocoding miss,
+     * dates outside the ~7-day horizon, API failure) -- null means "unknown",
+     * never a fabricated "0% chance of rain".
+     */
+    private function realAvgRainChance(string $destination, string $startDate, int $duration): ?float {
+        try {
+            $geo = $this->explore->searchDestinations($destination, 1);
+            if (empty($geo['success']) || empty($geo['results'][0])) return null;
+            $wx = $this->explore->getWeather((float)$geo['results'][0]['lat'], (float)$geo['results'][0]['lng']);
+            if (empty($wx['success']) || empty($wx['data']['daily'])) return null;
+
+            $tripStart = strtotime($startDate);
+            if ($tripStart === false) return null;
+            $tripEnd = $tripStart + ($duration * 86400);
+
+            $relevant = array_values(array_filter($wx['data']['daily'], function ($d) use ($tripStart, $tripEnd) {
+                $t = strtotime($d['date']);
+                return $t !== false && $t >= $tripStart && $t < $tripEnd;
+            }));
+            if (!$relevant) return null;
+
+            return round(array_sum(array_column($relevant, 'pop')) / count($relevant), 1);
+        } catch (Exception $e) {
+            return null;
+        }
     }
 
     /**
@@ -286,7 +519,7 @@ Return: {\"score\": <int>, \"reason\": \"<string>\"}";
         }
     }
 
-    private function enrichWithPackageData(array $recommendations, array $packages): array {
+    private function enrichWithPackageData(array $recommendations, array $packages, array $prefs = []): array {
         $pkgMap = [];
         foreach ($packages as $p) {
             $pkgMap[(int)$p->PackageId] = $p;
@@ -307,10 +540,45 @@ Return: {\"score\": <int>, \"reason\": \"<string>\"}";
                 // regardless of which package was actually recommended --
                 // confirmed live, not a hypothetical (see SESSION_SUMMARY_
                 // INDEX-1.md Round 99).
-                $rec['package_url']   = "package-details.php?pkgid={$id}";
+                // Round 100: carry the visitor's own stated preferences
+                // through in the query string so package-details.php's new
+                // deterministic getMatchScore() widget (item 31) is
+                // personalized to what they actually typed on this form,
+                // instead of asking them to re-enter budget/dates/style a
+                // second time on the destination page.
+                $rec['package_url']   = "package-details.php?pkgid={$id}" . self::buildMatchQueryString($prefs);
             }
         }
         return $recommendations;
+    }
+
+    /**
+     * Turns real, stated recommender preferences into a query string
+     * package-details.php can feed straight into getMatchScore(). Only
+     * includes a param when the value is real -- e.g. this form's
+     * "start_date" is often the literal placeholder string "Flexible / not
+     * yet chosen" (see ai-recommend.php), which is honestly omitted here
+     * rather than passed through as a fake date.
+     */
+    private static function buildMatchQueryString(array $prefs): string {
+        $params = [];
+        if (!empty($prefs['budget']) && (float)$prefs['budget'] > 0) {
+            $params['budget'] = (int)$prefs['budget'];
+        }
+        if (!empty($prefs['travelers']) && (int)$prefs['travelers'] > 0) {
+            $params['travelers'] = (int)$prefs['travelers'];
+        }
+        if (!empty($prefs['travel_type']) && is_string($prefs['travel_type'])) {
+            $params['travel_type'] = $prefs['travel_type'];
+        }
+        $startDate = (string)($prefs['start_date'] ?? '');
+        if ($startDate !== '' && strtotime($startDate) !== false) {
+            $params['start_date'] = $startDate;
+        }
+        if (!empty($prefs['duration']) && (int)$prefs['duration'] > 0) {
+            $params['duration'] = (int)$prefs['duration'];
+        }
+        return $params ? ('&' . http_build_query($params)) : '';
     }
 
     private function fallbackRuleBasedRecommend(array $prefs, array $packages): array {
@@ -351,7 +619,9 @@ Return: {\"score\": <int>, \"reason\": \"<string>\"}";
                 // above -- this is the deterministic fallback used when the
                 // AI call is unavailable, so it had the identical broken
                 // link too.
-                'package_url'       => "package-details.php?pkgid={$pkg->PackageId}",
+                // Round 100: same personalized-query-string carry-through as
+                // the AI path in enrichWithPackageData() above.
+                'package_url'       => "package-details.php?pkgid={$pkg->PackageId}" . self::buildMatchQueryString($prefs),
             ];
         }
         usort($results, fn($a,$b) => $b['overall_match'] <=> $a['overall_match']);

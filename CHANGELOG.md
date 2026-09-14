@@ -1055,3 +1055,672 @@ verified live that recommendation links now carry distinct, correct
 package ids and land on the right page. `getMatchScore()`'s separate
 dead-code/fabricated-fallback issue and item 31's literal 7-factor
 weighted scoring are noted as good next candidates, not yet built.
+
+## Round 100 — TripCopilot live-weather grounding + a real deterministic match-score engine (items 19/20/23/31/66)
+
+Two AI-side improvements this round. First, `TripCopilot` used to reason
+about weather only from the itinerary's baked-in outlook from
+generation time — stale for "what should I do tomorrow" questions asked
+days later. Added a fresh live-forecast fetch (reusing the existing
+`ExploreService`/Open-Meteo integration, cheap due to its own ~20-minute
+cache) prepended to every chat turn, with the system prompt updated to
+trust the fresh line over the older one for current/near-term questions.
+
+Second, `TravelRecommender::getMatchScore()` — confirmed dead code with
+a fabricated `score: 75` fallback — was rewritten into a real,
+deterministic 7-factor weighted scorer matching item 31's exact spec
+(Budget 25%/Weather 20%/Preference 20%/Availability 15%/Rating
+10%/Distance 5%/Sustainability 5%), each factor built from real existing
+platform data (price, live weather, real remaining-seat counts, ratings,
+geocoded distance) and honestly excluded — never guessed — when its real
+input isn't available. Wired it into `frontend/package-details.php` (a
+new match-score widget, shown only when real preferences are given) and
+into `TravelRecommender.php`'s own recommendation links (so a "View &
+Book" click from `ai-recommend.php` carries real stated preferences
+through automatically).
+
+**Testing status: verified live.** After the user's MySQL turned out to
+have a corrupted internal accounts schema (fixed by restoring XAMPP's
+own backup copy of `mysql\data\mysql` — the `tms` database itself was
+never touched and confirmed intact), both parts were confirmed working
+end-to-end: TripCopilot's QA harness returned a real, fresh forecast
+("Partly cloudy, humidity 75%, rain chance 59%/80% today/tomorrow"); the
+match-score widget on a real package showed "75% match" with the
+weighted math independently hand-verified against the rendered factors;
+and clicking through a real AI-Recommender submission confirmed the
+personalized query string (`budget`/`travelers`/`travel_type`) now rides
+along on every "View & Book" link. One real, non-blocking limitation was
+found along the way: the recommender's "travel mode" vocabulary
+(couple/family/solo/etc.) rarely matches a package's `PackageType`
+column, so the preference-match factor shows "differs" on most
+AI-Recommender-originated visits — honest, not fabricated, but low-signal
+for that entry point; flagged as a good next candidate rather than
+patched under time pressure. All QA/diagnostic helpers disabled to 404
+stubs and confirmed dead.
+
+## Round 101 — Closed the last real admin audit-log gap: Live Chat replies
+
+Re-audited every admin-facing page and API endpoint for real mutations
+with no `tms_log_activity()` call. Every read-only admin dashboard/report
+page checked out fine (nothing to log) — the one real, previously-unlogged
+mutation was an admin replying to a customer via the live chat feature
+(`api/chat.php?action=send`), which had zero accountability trail. Added
+a `tms_log_activity()` call (admin replies only, never customer messages)
+that records who replied to which customer and a short message preview.
+
+**Verified live**: simulated an admin session the standard way (no
+password typed — verified the existing seed account, set the session
+directly), sent a real message to a real registered test account, and
+confirmed the exact expected row appeared in `admin/activity-log.php`
+with correct actor, target, preview, IP, and timestamp. Cleaned up the
+synthetic chat message and its notification afterward, left the
+resulting audit-log row in place as evidence (matching Round 96's
+convention), and disabled all QA helpers to 404 stubs.
+
+Found, but deliberately did not fix, a separate real bug in the same
+file: `api/chat.php`'s `send` handler reads `lastInsertId()` only once,
+after two sequential inserts, so the `id` it returns is always from the
+second table, never the actual message — the same bug class Round 96
+fixed for coupons. Flagged as a good next candidate rather than folded
+into this round's fix.
+
+## Round 102 — Fixed the `api/chat.php` id bug Round 101 flagged
+
+Confirmed no current caller actually reads the affected response field,
+then fixed it the same way Round 96 fixed the equivalent coupon bug:
+capture `lastInsertId()` right after the message INSERT, before the
+follow-up `tblchat_threads` upsert overwrites it. Verified live — sent a
+real test message and confirmed the endpoint's returned id now exactly
+matches the message's real database row id. Cleaned up the test message
+and disabled the QA helpers to 404 stubs.
+
+## Round 103 — Group Travel: added the missing "comments" sub-feature
+
+Audited item 24 (Group Travel) against what actually exists: expense
+splitting, roles, and permissions were already real and working, but
+shared itinerary, voting, and comments had zero code anywhere. Built
+comments — the smallest, most self-contained of the three — as a new
+`tblgroup_comments` table plus service functions plus a "Discussion" box
+on the group trip page, reusing the page's existing membership gate so
+comments stay private to group members. Shared itinerary and voting are
+separate, larger features, each deserving their own round.
+
+**Verified live**: created a real group trip, posted a real comment
+through the actual form, confirmed it rendered correctly, then confirmed
+a second real user who isn't in that group gets redirected away with no
+comment content ever reaching them. One real snag along the way: the
+schema auto-creation is gated once-per-session, and this session had
+already run it before the new table existed — worked around by calling
+the migration function directly rather than clearing session state.
+Cleaned up test data and disabled all QA helpers to 404 stubs.
+
+## Round 104 — Group Travel: added the missing "voting" sub-feature
+
+Second of the two remaining item-24 gaps (after Round 103's comments).
+Added three tables (`tblgroup_polls`, `tblgroup_poll_options`,
+`tblgroup_poll_votes`), three service functions in `GroupTripService.php`
+(`tms_create_group_poll()`, `tms_cast_group_vote()`,
+`tms_get_group_polls()`), and a "Polls" box on the group trip page above
+the existing Discussion box: any member can start a poll (2–5 options),
+see live vote counts/percentages per option, and cast or change their
+vote. One vote per member per poll is enforced at the database level via
+a unique key on `(PollId, UserEmail)` — resubmitting with a different
+option moves the existing vote (`ON DUPLICATE KEY UPDATE`) rather than
+creating a second one, and a small integer-safe percentage calculation
+avoids floating-point drift. `tms_cast_group_vote()` re-validates that
+the given option actually belongs to the given poll and the given poll
+actually belongs to the given group before writing anything, so a
+guessed id from another group's poll can't be voted on (Rule 44); page
+-level access is still gated by the same `tms_group_is_member()` check
+every other group-trip action already uses, so a non-member can't reach
+the poll UI at all.
+
+**Verified live**: created a real disposable test group with two real
+member accounts. As the organizer, created a real poll ("Which city
+should we visit first?" / Cox's Bazar vs. Sylhet) through the actual
+form and confirmed it rendered with 0 votes on both options. Voted for
+Cox's Bazar and confirmed "1 vote (100%)" with the chosen option visibly
+highlighted; re-voted for Sylhet and confirmed the vote moved rather
+than duplicating (back to 1 total vote, now on the other option). Logged
+in as the second real member and voted for Cox's Bazar, confirming a
+correct 50%/50% split across two independent voters with proper
+singular/plural vote-count grammar. Logged in as a real account that is
+not a member of the group and confirmed the existing page-level
+membership gate redirects it away to the group-trips list before any
+poll content (or even the group's existence) is exposed. Hit the same
+once-per-session schema-migration gotcha Round 103 found — this
+session's `$_SESSION['tms_db_init']` gate had already run before the
+three new poll tables existed — and worked around it the same way, by
+calling `_tms_run_core_migrations()` directly. Cleaned up all synthetic
+poll/vote/member/group test data afterward and disabled all eight QA
+helpers to 404 stubs, confirmed dead via live fetch.
+
+Item 24's last remaining gap is shared itinerary — the biggest of the
+three sub-features originally found missing — a natural candidate for a
+future round, not started here.
+
+## Round 105 — Group Travel: added the missing "shared itinerary" sub-feature (closes item 24)
+
+Last of the three original item-24 gaps (after Round 103's comments and
+Round 104's voting). Added `tblgroup_itinerary_items` (`GroupId`, an
+optional free-text `DayLabel` — e.g. "Day 1" or a typed date, deliberately
+not a real `DATE` column since a group trip may not have fixed dates
+agreed yet — `Activity`, `AddedBy`), `tms_add_itinerary_item()` and
+`tms_get_group_itinerary()` in `GroupTripService.php`, and a new
+"Itinerary" box on the group trip page, placed right after Members and
+before Shared expenses (plan first, then money, then decisions, then
+chat). Any member can add an item — same "planning is a group decision,
+not an organizer privilege" reasoning as comments and polls. Kept
+deliberately flat and chronological, no drag-to-reorder or per-day
+grouping UI, matching the same "simple first" discipline used for
+comments. Updated the Discussion box's copy, which had said "shared
+itinerary is not built yet" since Round 103 — now reads as general
+discussion separate from the itinerary and polls above it.
+
+**Verified live**: created a real disposable group trip with two real
+members, added a real itinerary item as the organizer ("Day 1" / "Arrive
+in Cox's Bazar, check into hotel") through the actual form and confirmed
+it rendered with the day label, activity text, and correct attribution.
+Switched to the second real member and added a second item with no day
+label, confirming it appended chronologically after the first (not
+sorted or grouped) and that the optional label correctly doesn't render
+when absent. Confirmed a third real account that isn't a member of the
+group gets redirected away before the itinerary — or the group's
+existence — is exposed, via the same unmodified `tms_group_is_member()`
+gate already protecting every other feature on this page. Hit the same
+once-per-session schema gotcha as Rounds 103/104 and resolved it the same
+way (direct `_tms_run_core_migrations()` call). Cleaned up all synthetic
+data and disabled all six QA helpers to 404 stubs, confirmed dead live.
+
+This closes out master prompt item 24 (Group Travel) end to end: shared
+trip, shared itinerary, voting, comments, shared expenses, expense
+splitting, roles, and permissions are all real and working. What item 24
+does *not* yet have — invite is really direct-add with no accept flow,
+no member removal/role-change/group-deletion, and a dead `PackageId`
+column never wired to any caller — remain on record as smaller follow-up
+candidates, not full sub-features, so folding any of them into a future
+round is optional polish rather than closing a spec gap.
+
+## Round 106 — Added the real Content-Security-Policy header deferred earlier
+
+An earlier security-headers pass added `X-Content-Type-Options`,
+`X-Frame-Options`, `Referrer-Policy`, `Permissions-Policy`, and
+`Strict-Transport-Security`, but deliberately skipped `Content-Security-Policy`:
+~60 pages use inline `<script>`/`<style>` and load from several CDNs, and
+the local database was unstable at the time, making it unsafe to click
+through the app and confirm nothing broke. Neither blocker applies now.
+
+Ran a full grep-based audit of every external origin this codebase
+actually references (script/link/img tags, iframes, form actions,
+client-side fetch calls) rather than guessing, and built a policy from
+what was actually found: `script-src`/`style-src` allow `'unsafe-inline'`
+(the real, working inline code isn't something to break for a marginally
+stricter policy) plus the exact CDNs in use (jsdelivr, cdnjs,
+code.jquery.com, unpkg, stackpath.bootstrapcdn.com, fonts.googleapis.com);
+`font-src` allows fonts.gstatic.com/cdnjs; `img-src` allows `https:`
+broadly (package/destination photos, weather icons, and OpenStreetMap
+tiles come from many different hosts, none of which can execute script,
+so this is the one deliberately loose directive); `frame-src` allows only
+`https://www.google.com` (the Street View embed, the app's one and only
+iframe); `connect-src` is `'self'` (every third-party API call — Gemini,
+OpenWeatherMap, Google Maps, exchange rates — turned out to already be
+proxied server-side, never called directly from browser JS); and
+`object-src 'none'`, `base-uri 'self'`, `form-action 'self'`,
+`frame-ancestors 'self'` lock down what the audit found nothing
+legitimate using.
+
+**Verified live** across a representative sample covering every distinct
+external-resource category the audit found (not literally all ~70 files,
+which would be its own disproportionate sweep): the home page, a Leaflet
+map page (tiles rendered, confirmed via `.leaflet-tile-loaded` count),
+the Google Street View embed page (real iframe didn't render due to an
+unrelated pre-existing API-key health check, so used a direct positive/
+negative-control test instead — injected a `google.com` iframe, which
+loaded, and an `example.com` iframe, which the browser's own
+`securitypolicyviolation` event confirmed was blocked by `frame-src` —
+proving the policy is both permissive where intended and genuinely
+enforced elsewhere), the weather page (a live OpenWeatherMap icon loaded
+with real pixel data), the login page (Bootstrap 4 CDN), the admin
+dashboard (Chart.js from jsdelivr executed and drew a real chart), and
+the Swagger API docs page (fully rendered, interactive). Zero CSP
+violations anywhere in this sample. Disabled both QA helpers to 404
+stubs and confirmed dead live.
+
+## Round 107 — Fixed the `preference_match` vocabulary mismatch flagged in Round 100
+
+Round 100 built a real 7-factor match-score engine for
+`TravelRecommender::getMatchScore()`, but flagged one known, non-blocking
+gap: the "preference match" factor compares the user's stated travel
+style (family/couple/group/solo/business/accessible/adventure, from
+`ai-recommend.php`'s dropdown) against a package's `PackageType` column
+by substring, and the two vocabularies rarely lined up.
+
+A live audit of every `PackageType` value across all 413 real packages
+found why: `PackageType` is almost entirely destination/theme categories
+(Nature, Beach, Adventure, Heritage, City, Mountain, Wildlife, Island,
+Religious, etc.), not traveler composition — with a handful of legacy
+exceptions (`Family Package`, `Couple Package`, `Group Package`, `Family`,
+`Group`, 8 packages total). Of the seven travel-style options, four have
+a real corresponding category somewhere in the catalog ("adventure" via
+the real `Adventure` type; "family"/"couple"/"group" via the legacy
+labels) — but "solo", "business", and "accessible" have **zero** matching
+`PackageType` anywhere in the data, so the old code was scoring every
+single package "40/100, differs" for those three styles, unconditionally
+— a guaranteed-wrong result dressed up as a real evaluation.
+
+Fixed by restricting the preference-match factor to only compute for the
+four styles with a genuine corresponding catalog category, and honestly
+omitting the factor entirely for the other three — the same "excluded,
+never guessed, when the real input isn't available" principle Round 100
+already used for every other factor. Confirmed `getMatchScore()`'s
+overall-score aggregation already re-normalizes by only summing the
+weights of factors actually present, so omitting this factor doesn't
+unfairly penalize a package — its 20% weight is fairly redistributed
+across whatever other real factors did compute.
+
+**Verified live**: "solo" and "business" on a real Beach-type package
+both correctly omitted the "Preference match" line entirely (identical
+41% score either way, computed from the four other real factors);
+"adventure" on that same Beach package correctly showed "Package type
+'Beach' differs from your 'adventure' preference"; "adventure" on a real
+Adventure-type package (Manali) correctly showed "Matches your
+'adventure' style"; and "family" on a real Family-Package-type package
+(Bhutan Holidays) correctly showed the same match. All three throwaway
+QA helpers (read-only `SELECT`s, no synthetic data to clean up) disabled
+to 404 stubs and confirmed dead live.
+
+Along the way, found — but deliberately did not fix, to keep this round
+scoped to the one flagged issue — a separate, more serious problem in
+the same file's `fallbackRuleBasedRecommend()` (the rule-based fallback
+used when the AI recommender's LLM path is unavailable): it fabricates
+its `overall_match` score with `rand(0, 15)` random noise and returns a
+hardcoded, package-independent `highlights` list ("Beautiful scenery,
+Local culture, Great food") for every package regardless of what it
+actually offers — a real Rule 3 violation, unlike the deterministic
+`getMatchScore()` this round fixed. Flagged as a good candidate for a
+future round.
+
+## Round 108 — AI-upgrade priority pivot: honesty & correctness pass across 3 AI feature files
+
+The user asked to prioritize upgrading the AI-related features (chatbot,
+AI trip planning, "all ai related function") ahead of the general
+backlog. Before adding any new AI capability, dispatched a read-only
+research pass across the entire `backend/ai/` + `includes/ai/` codebase
+to build a grounded inventory: a single router (`api/ai.php`) dispatches
+to ~10 feature classes, all funneling through `AIClient.php` and a
+two-provider abstraction (Gemini live/primary, OpenAI never
+live-tested). That audit surfaced three small, concrete, safe honesty/
+correctness bugs — fixed here as the first round of the new priority,
+clearing the ground before bigger capability work (real AI-generated
+chatbot quick-replies, OpenAI provider verification, etc.) in future
+rounds.
+
+**Fix 1 — dead model fallback in `ItineraryPlanner.php:353`.** The
+`ai_version` column write for every saved itinerary fell back to the
+literal `'gemini-1.5-flash'` if `GEMINI_MODEL` weren't defined —
+but `config.php:34` itself documents that model as shut down as of
+mid-2026. `GEMINI_MODEL` is always defined before this class can load
+(confirmed via the require chain), so the branch is unreachable today —
+but a latent branch that would silently record a dead model name is
+still a Rule 3 risk waiting for someone to reorder a `require`. Fallback
+literal corrected to `'gemini-2.5-flash'`, matching `AIClient.php:82`'s
+own fallback.
+
+**Fix 2 — mislabeled placeholder in `PackageGenerator.php`'s
+`fallbackPackage()`.** When the real Gemini call fails, this hardcoded,
+generic 3-bullet placeholder package was being returned with
+`'is_ai_generated' => true` — the exact same flag the REAL AI-generated
+package sets on success. A static template claiming to be AI output is
+a straightforward Rule 3/7 violation, same family as Round 107's
+`fallbackRuleBasedRecommend()` finding. Grepped the full codebase first:
+zero frontend call sites currently read this field, so the fix changes
+no visible behavior today but makes the field trustworthy the moment a
+UI does add an "AI Generated" badge. Flipped to `false`.
+
+**Fix 3 — stale "Claude AI" docblocks.** `PackageGenerator.php` and
+`TravelRecommender.php` both had top-of-file docblocks describing
+themselves as using "Claude AI" — leftover documentation from an
+earlier provider, inaccurate since the `AIClient` abstraction moved the
+live provider to Google Gemini. Corrected both to describe the actual
+provider-agnostic `AIClient` + Gemini setup (Rule 75).
+
+All three fixes applied identically to both `backend/ai/` and
+`includes/ai/` mirrors (6 files total); `php -l` clean on all six;
+diff-confirmed byte-identical mirrors before and after editing.
+
+**Testing status:** Fix 2 verified live — invoked the real, shipped
+`PackageGenerator::fallbackPackage()` directly via PHP Reflection
+(the method takes no DB/network dependency, so this exercises the
+actual shipped code path without needing a live API failure to
+trigger it) and confirmed it now returns `is_ai_generated: false`.
+Fix 1 is a dead-branch correctness fix with no live-testable behavior
+change — confirmed via code/require-chain review that `GEMINI_MODEL` is
+always defined before this code path runs, so the corrected fallback
+literal cannot currently be exercised; documented as such rather than
+claiming a live test that wouldn't be meaningful. Fix 3 is a
+documentation-only change, verified by diff review.
+
+**What this round deliberately did NOT do:** did not yet touch
+`TripCopilot::extractSuggestions()`'s hardcoded keyword-matching stub
+(chatbot quick-replies), did not add real live-testing of
+`OpenAIProvider.php` (would require a real OpenAI API key the user
+would need to supply — cannot fabricate that test per Rule 3/4), and
+did not add any new AI capability (streaming, function-calling,
+multi-turn memory improvements). This round was intentionally scoped
+to clearing known honesty/correctness debt first; net-new AI
+capability upgrades are the subject of the next round(s) under this
+same priority.
+
+## Round 109 — Trip Copilot chatbot: real AI-generated quick replies (replacing the keyword stub)
+
+Continuing the AI-upgrade priority with the first real capability upgrade
+(Round 108 was honesty/correctness fixes only). Target: `TripCopilot.php`,
+the 24/7 AI chat companion backing `frontend/ai-copilot.php`. The
+frontend has always fully supported rendering a `suggestions` array as
+tappable quick-reply chips (confirmed via grep — `ai-copilot.php`'s
+`addMsg()` and `.sug-chip` CSS were already built for this), but the
+chatbot itself never actually asked the AI for them: `buildSystemPrompt()`
+had no instruction to return structured output, so every reply was plain
+text, and `extractSuggestions()` — a hardcoded keyword-matching stub
+("weather" → 2 canned questions, "restaurant"/"food" → 2 others,
+"hotel" → 2 more) — was silently doing 100% of the work, regardless of
+what the AI's reply actually said.
+
+**What was built:** `buildSystemPrompt()` now instructs the AI to
+respond with a single JSON envelope —
+`{"reply": "...", "suggestions": ["...","...","..."], "action": "none"}`
+— with explicit rules that suggestions must be short, phrased as
+something the traveler would say, genuinely relevant to that specific
+reply (never generic filler), and can be an empty array when no natural
+follow-up exists. `parseStructuredReply()` was upgraded alongside it to
+parse via `AIClient::parseJson()` (which strips markdown code fences)
+instead of a raw `json_decode()` gated on the response starting with a
+literal `{` — Gemini often wraps JSON in a ```json fence even when told
+not to, so the old strict check would have silently rejected compliant
+responses and made this whole upgrade a no-op. The old keyword-stub
+`extractSuggestions()` was deliberately left in place (Rule 2) as the
+fail-soft fallback for the rare case the AI doesn't return valid JSON.
+
+**A regression caught by this round's own live testing, fixed before
+shipping as done:** the first live test revealed that `chat()` was
+still saving the RAW AI response (now a JSON envelope) to
+`tbl_copilot_sessions`, not the parsed, human-readable reply. That leaks
+into two places: `copilot_history`'s page-reload replay hands the saved
+`message` straight to the frontend with no JSON parsing, so a returning
+user would see a raw JSON blob instead of the reply they actually read;
+and that same saved history is fed back as conversation context on the
+next chat turn, teaching the AI to imitate its own raw JSON scaffolding
+as "what I said before" instead of natural conversation. Fixed by
+saving `$parsed['reply']` (the clean text) instead of the raw AI
+response, and re-verified live end-to-end after the fix.
+
+**Files touched:** `backend/ai/TripCopilot.php`, `includes/ai/TripCopilot.php`.
+`php -l` clean on both; diff-confirmed byte-identical mirrors.
+
+**Testing status: verified live**, real Gemini calls throughout, no
+typed passwords (session simulated for a pre-existing QA test account
+via direct `$_SESSION['login']` assignment after a real-row SELECT) —
+(1) first turn ("what's the weather... what should I pack") returned a
+real reply grounded in live Cox's Bazar weather data plus 3 genuinely
+contextual suggestions ("What if it rains on my trip?", "What are the
+main attractions?", "Can you help plan my itinerary?") — confirmed at
+the raw API level via network inspection, not just the rendered UI;
+(2) clicking a suggestion chip continued the conversation naturally
+with 3 new, differently-contextual suggestions; (3) after the
+history-save fix, reloaded the page and confirmed the replayed
+assistant turn showed clean text, not JSON; (4) a follow-up message
+("what did I just ask you about?") on a fresh turn got a correct answer
+referencing the actual prior topic, confirming the AI's own
+conversation-history context is now clean text end-to-end. All
+synthetic chat rows this testing added to the QA account's real booking
+were deleted afterward (verified via the same read path that found
+them); all 3 disposable QA helper scripts (real-booking lookup, session
+simulation, cleanup) disabled to 404 stubs and confirmed dead via live
+fetch.
+
+**What this round deliberately did NOT do:** did not touch
+`generateProactiveAlert()`'s separate, already-JSON prompt/parse path
+(different code path, not affected by this change, not in scope). Did
+not add streaming responses or function-calling/tool-use — this round
+was scoped to making the existing suggestion feature real, not adding
+new interaction modes. Did not change the `action` field's behavior —
+it's still `"none"` always, since the frontend doesn't consume it yet;
+inventing real actions with no UI to drive would be exactly the kind of
+fake/placeholder feature Rule 7 warns against.
+
+## Round 110 — CRITICAL fix: the AI Trip Planner page has been completely broken for every visitor
+
+Continuing the AI-upgrade priority. While preparing a planned enhancement
+to `ItineraryPlanner::regenerate()` (a feedback-driven regeneration
+method that exists in the backend but is never called from anywhere in
+the live app), first checked how `frontend/ai-planner.php` — one of the
+two real customer-facing "AI trip planning" pages the user asked to
+prioritize — actually talks to `api/ai.php`. That check turned up something
+much more serious than the planned enhancement: this page has never
+rendered a CSRF token, and `api/ai.php`'s `handleItinerary()` (the only
+handler `action=itinerary` reaches) unconditionally calls
+`tms_csrf_validate()`, which is strictly enforced (not just logged)
+since the Phase-1 CSRF hardening pass. Live-reproduced with a direct
+`fetch()` call carrying the exact same fields the page's own JS sends:
+HTTP 403, "Invalid or expired form submission." The page's own `.catch()`
+handler then shows a generic "Network error" toast — so every visitor
+who has ever clicked "Generate My Itinerary" on this real, public,
+sitemap-listed page has seen that error and never once received a real
+AI-generated itinerary.
+
+**Fix:** rendered `tms_csrf_field()` into the form (this page had zero
+prior CSRF wiring — confirmed via a full grep for "csrf" in the file
+returning no matches) and added the token to `generatePlan()`'s
+`FormData`, so both the initial "Generate" and the "Regenerate" button
+(same JS function) now authenticate correctly — the same fix already
+applied to `custom-trip.php`'s equivalent AI-itinerary call back in
+Round 20, which this page had evidently never received. Also corrected
+this file's docblock, which still said "via Claude AI" (stale, Rule 75 —
+same class of fix as Round 108's docblock corrections).
+
+**Files touched:** `frontend/ai-planner.php` (single-copy page, no
+`includes/` mirror for frontend pages). `php -l` clean.
+
+**Testing status: verified live end-to-end.** Before the fix: a direct
+`fetch()` reproducing the page's real request reliably got HTTP 403.
+After shipping: used the real page's own `generatePlan()` function
+(triggered via the real form) to generate a genuine 3-day Sundarbans
+itinerary — full day-by-day schedule, real place names (Mongla,
+Harbaria Eco-Tourism Center, Khulna), a budget breakdown honoring the
+৳30,000 input, hidden gems, packing list, and emergency contacts — a
+real, working AI response, not a fallback template. Also clicked the
+page's real "Regenerate" button and got a second, genuinely different
+itinerary (confirmed both live network calls succeeded). Both synthetic
+test itineraries (saved under a pre-existing QA test account with no
+booking attached) were deleted afterward; the one-time cleanup helper
+used for that was disabled to a 404 stub and confirmed dead live.
+
+**What this round observed but deliberately did NOT pursue as a
+confirmed bug:** while testing, the "Regenerate" click took the same
+~15-30s as a fresh AI call and returned genuinely different content
+rather than an instantly-returned identical cached result — which is
+what would happen if `ItineraryPlanner::generate()`'s cache key (built
+from the trip data, which "Regenerate" resubmits unchanged) collided
+with the AI response cache's ~1 hour TTL. Since it did NOT reproduce
+that way in this live test, no caching bug is being claimed here — an
+earlier hypothesis along these lines was not confirmed, and per Rule
+3/4 it's being recorded as an open question, not a bug, until it can
+be reproduced. Separately (and still true regardless of the caching
+question): `ItineraryPlanner::regenerate($tripData, $feedback, $email)`
+— a method that lets a traveler say what they'd like changed instead of
+blindly re-rolling the same request — is fully implemented but never
+called from anywhere in the live app (`grep`-confirmed); a good
+candidate for a future round if the user wants the "Regenerate" button
+to actually take feedback.
+
+## Round 111 — AI-upgrade priority, continued: trip planning, chatbot conversation, nearby places, map
+
+User redirected the AI-upgrade priority ("i want to work and improve ai
+related function... upgrade these first") back to this work after a
+separate, unrelated MySQL/MariaDB troubleshooting detour (Aria engine
+checkpoint failure — see that thread; unresolved as of this round, see
+Testing status below). Explicit ask this round: "focus on improving and
+upgrading only ai related functions like better trip planing, better ai
+chatbot reply and conversation, better nearby place suggestion, better
+map working related functions." Surveyed every AI-adjacent file first
+(`ExploreService.php`, `PlaceDetailsService.php`, `TravelRecommender.php`,
+`CrowdPredictor.php`, `SiteAssistant.php`, `chatbot.php`, `tour-map.php`,
+`explore-view.php`, `js/explore.js`) before changing anything, per Rule 1 —
+this app has already been through 14+ hardening rounds specifically to
+stop features from fabricating data, so the goal here was genuine,
+verifiable capability upgrades that don't reopen that class of bug.
+
+**1) Trip planning — "Regenerate" now actually regenerates.**
+`ItineraryPlanner::regenerate($tripData, $feedback, $email, $bookingId)`
+was fully implemented (Round 99-era code) but never reachable — a
+project-wide grep confirmed both `ai-planner.php`'s and
+`custom-trip.php`'s "Regenerate" buttons called the exact same
+initial-generation function a second time with identical inputs. Since
+`generate()`'s cache key is a hash of `$tripData` plus the weather cache
+bucket, an unchanged form could silently hand back the exact same cached
+itinerary — worse than doing nothing, from the traveler's point of view.
+Fixed by:
+- Adding a real `action=itinerary_regenerate` endpoint in `api/ai.php`
+  (`handleItineraryRegenerate()`), sharing trip-data assembly and the
+  booking-ownership check with `handleItinerary()` via two new small
+  helpers (`buildTripDataFromPost()`, `resolveOwnedBookingId()`) instead
+  of a second hand-copied version that could drift.
+- Fixing `regenerate()`'s missing `$bookingId` passthrough — it dropped
+  straight to `generate($tripData, $email)` with no third argument, which
+  would have silently unlinked a regenerated plan from the real booking
+  it belonged to.
+- `ai-planner.php`: "Regenerate" now opens a small optional feedback box
+  ("What would you like changed?") instead of just re-running the form.
+  Refactored the duplicated FormData-building/loading-state code in
+  `generatePlan()` into shared `buildPlanFormData()`/`runPlanRequest()`
+  helpers used by both the original and new `regeneratePlan()`.
+- `custom-trip.php`: the existing single button (which already relabeled
+  itself "Regenerate Itinerary" after first use, but called the same
+  function) now switches to `action=itinerary_regenerate` and reveals an
+  optional feedback textarea on regeneration.
+- Feedback is optional in both places — leaving it blank still asks the
+  planner for "a genuinely different alternative," so a plain "try again"
+  click still produces different output instead of the exact same plan.
+
+**2) Trip planning — hotel/restaurant picks grounded in real nearby-place
+data.** `hotel_recommendations`/`restaurant_recommendations` in a
+generated itinerary came entirely from the model's own general
+knowledge, with nothing to check the names against — the same category
+of risk `PlaceDetailsService.php`'s Round 14 rewrite exists to eliminate
+elsewhere in this app. Added `ItineraryPlanner::buildNearbyPlacesContext()`,
+which reuses the exact same `ExploreService::getNearbyPlaces()` call
+Explore Mode already uses (Google Places if configured, else
+OpenStreetMap/Overpass — no new integration, no new key) to fetch real
+nearby hotels/restaurants around the geocoded destination (the same
+geocode `buildWeatherContext()` already performs — extended to return
+`lat`/`lng` so this doesn't geocode twice) and tells the model to prefer
+those real, verified names. Rather than trust the model's own compliance,
+`markVerified()` deterministically checks each AI-suggested name against
+the real list (case-insensitive substring match) and tags the result
+`verified: true/false` + `source: live_map_data|ai_suggestion` — the same
+"never trust the AI's self-report of factuality" posture already used
+elsewhere in this codebase. Fully fail-soft: no coordinates or an
+Overpass/Google outage both degrade to the exact prior behavior.
+
+**3) Trip planning — AI Recommender's weather score is no longer a
+guess for near-term trips.** `TravelRecommender::recommend()`'s system
+prompt only ever told the model to "consider weather suitability" from
+general knowledge — unlike `getMatchScore()` (Round 100) two methods
+below it in the same file, which grounds the identical dimension in a
+real Open-Meteo forecast via `realAvgRainChance()`. Added
+`groundWeatherScores()`, called after a successful AI response: for each
+of the ~5 recommended packages (not the full 50-package inventory, so
+this stays cheap — one call per recommendation, not per catalog item),
+when the stated travel dates fall inside the ~7-day forecast horizon,
+it overwrites that one recommendation's `weather_suitability` sub-score
+with the real one and appends an honest note ("Weather score updated
+from a live forecast: N% average rain chance for your dates") to
+`warnings`, which `ai-recommend.php` already renders. Outside the
+forecast horizon or on a geocoding miss, the AI's own estimate is left
+untouched — an honest "we don't know" is not the same as fabricating a
+number, consistent with Rule 3 everywhere else in this file.
+
+**4) AI chatbot — real, context-derived quick replies (site-wide
+widget).** The main "TMS Travel Assistant" widget (`backend/chatbot.php`,
+backed by `SiteAssistant.php`) showed the identical 4 quick-reply buttons
+(`Show Packages / AI Recommender / Budget Planner / Contact Us`) after
+every single AI reply, whatever was actually asked — the exact stale
+pattern `TripCopilot.php` had before Round 109's fix. Applied the same
+proven fix here: `SiteAssistant::buildSystemPrompt()` now asks for a
+`{"reply","suggestions"}` JSON envelope; `parseStructuredReply()` (mirrors
+`TripCopilot::parseStructuredReply()`) parses it via `AIClient::parseJson()`
+with the same defense-in-depth filtering (non-empty strings only, capped
+at 4) and a keyword-based fallback (`extractSuggestions()`) for the rare
+non-compliant response. `api/ai.php`'s `handleChatbot()` passes
+`suggestions` through; `chatbot.php`'s `askAI()`/`respondTo()` use them
+when present and fall back to the original fixed 4 when the model offered
+none (a completely normal case, not an error).
+
+**5) Nearby places + map — the embedded map can now show any category's
+real pins, not just attractions.** In Explore Mode
+(`explore-view.php`/`js/explore.js`), the "Map & Navigation" tab
+hardcoded `category: 'attraction'` for its pins — switching to "Hotels"
+or "Restaurants" in the separate "Nearby Places" tab never put a single
+pin on the map, even though the same real, already-fetched place data
+(with real lat/lng, from the same live `ExploreService::getNearbyPlaces()`
+call) was one function call away. Added a category pill row to the map
+panel (`exploreLoadMapCategory()`) that plots any of the 10 real
+categories as colored pins with "Get Directions" popups, reusing the
+Nearby Places tab's already-fetched result when it's the same category
+(no duplicate live query) and falling back to a fresh fetch otherwise.
+Caught and fixed one bug before shipping: the new pills initially reused
+`.place-cat-btn`'s CSS class for styling, but `loadPlaces()` also
+queries that exact class to toggle `.active` — clicking a category in
+one tab would have silently re-highlighted (without reloading) a pill in
+the other tab. Fixed by giving the map's pills their own `.map-cat-btn`
+class (own CSS rules mirroring `.place-cat-btn`'s look, but no selector
+collision) before it ever shipped.
+
+**Files touched (all `php -l` clean; all inline `<script>` blocks
+`node --check` clean):** `backend/ai/ItineraryPlanner.php` +
+`includes/ai/ItineraryPlanner.php`, `backend/ai/TravelRecommender.php` +
+`includes/ai/TravelRecommender.php`, `backend/ai/SiteAssistant.php` +
+`includes/ai/SiteAssistant.php`, `backend/chatbot.php` +
+`includes/chatbot.php`, `api/ai.php`, `frontend/ai-planner.php`,
+`frontend/custom-trip.php`, `frontend/explore-view.php`, `js/explore.js`,
+`css/explore.css` (single-copy files/assets — no `includes/` mirror).
+
+**Implementation status: complete for all 5 items above** — every backend
+method described was written and lint-verified; every frontend flow
+described was wired end-to-end in the actual page code, not left as a
+partial stub.
+
+**Testing status: blocked — could not live-test.** MySQL/MariaDB on this
+machine is still down from the "Aria engine: checkpoint failed" crash
+reported earlier this session (separate, unresolved thread — see the
+Event Viewer diagnosis given at the time; XAMPP's MySQL service needs to
+actually be restarted and confirmed stable before this or anything else
+in this app can be exercised live). Confirmed directly this round: Apache
+serves static files instantly (`robots.txt` loaded normally), but every
+DB-backed page (`health.php`, and by extension every AI endpoint above,
+all of which open a DB connection in `config.php`) hangs indefinitely
+rather than returning — consistent with the PDO connection attempt
+itself hanging against a MySQL that isn't listening, not with anything
+in this round's code. Nothing here has been exercised against a live
+database, a live Gemini call, or the real page UI, and per Rule 77 that
+is explicitly NOT being claimed as "working," only as "implemented and
+lint-clean." Once MySQL is back up, this round needs the same live
+verification standard as every prior round: real generate + real
+regenerate-with-feedback on `ai-planner.php`, real regenerate on
+`custom-trip.php`, a real AI Recommender run with near-term travel dates
+to confirm a `weather_grounded` result actually appears, a real chatbot
+conversation to confirm contextual suggestions render as clickable
+chips, and real category-switching on Explore Mode's map tab.
+
+**What this round deliberately did NOT do:** did not touch `tour-map.php`
+(the package-browsing map) — it has no AI component and was already
+reviewed as solid; did not attempt to fix the MySQL/Aria issue itself
+(out of scope for "ai related function" work, and already a separate
+open thread); did not apply weather-grounding to
+`fallbackRuleBasedRecommend()`'s fixed `weather_suitability: 70` (only
+used when the AI call itself is unavailable — a real fix there is a
+reasonable future item but wasn't bundled in here); did not add a
+`verified`-aware UI treatment on `ai-planner.php`/`custom-trip.php` for
+the new hotel/restaurant flags (the data is there — `verified`/`source`
+per recommendation — but rendering it is a frontend design decision
+better left for the user to weigh in on rather than guessed at here).

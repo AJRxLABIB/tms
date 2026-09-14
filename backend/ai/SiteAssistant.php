@@ -36,7 +36,7 @@ class SiteAssistant {
      *                         [['role'=>'user'|'assistant','content'=>'...'], ...]
      *                         Capped to the last few turns by the caller.
      * @param string $email    Signed-in user's email, or 'guest'.
-     * @return array           ['success'=>bool, 'reply'=>string, 'error'=>string]
+     * @return array           ['success'=>bool, 'reply'=>string, 'suggestions'=>string[], 'error'=>string]
      */
     public function reply(string $message, array $history, string $email = 'guest', string $pageContext = ''): array {
         $system = $this->buildSystemPrompt($email);
@@ -63,10 +63,66 @@ class SiteAssistant {
         $result = $this->ai->call($system, $messages, '', $email, feature: 'site_assistant');
 
         if (!$result['success']) {
-            return ['success' => false, 'reply' => '', 'error' => $result['error'] ?? 'AI unavailable'];
+            return ['success' => false, 'reply' => '', 'suggestions' => [], 'error' => $result['error'] ?? 'AI unavailable'];
         }
 
-        return ['success' => true, 'reply' => trim($result['content']), 'error' => ''];
+        // UPGRADE (AI-conversation round): this used to return $result['content']
+        // as plain text, and the widget then always showed the same 4 hardcoded
+        // quick-reply buttons after every single reply, whatever was actually
+        // asked ("what's your cancellation policy" and "recommend a beach trip"
+        // both ended with the identical ['Show Packages','AI Recommender',
+        // 'Budget Planner','Contact Us'] row). buildSystemPrompt() now asks the
+        // model for a {"reply","suggestions"} JSON envelope -- the same pattern
+        // already proven live for the Trip Copilot (see TripCopilot.php's
+        // parseStructuredReply(), Round 109) -- so the quick replies are real,
+        // context-derived next steps instead of a static footer.
+        $parsed = $this->parseStructuredReply(trim($result['content']));
+
+        return ['success' => true, 'reply' => $parsed['reply'], 'suggestions' => $parsed['suggestions'], 'error' => ''];
+    }
+
+    /**
+     * Parses the {"reply","suggestions"} JSON envelope buildSystemPrompt() now
+     * asks for. Mirrors TripCopilot::parseStructuredReply() (Round 109):
+     * AIClient::parseJson() (strips ```json fences models often add despite
+     * being told not to) rather than a strict json_decode(), and never trusts
+     * the model's shape compliance blindly for something that reaches the UI.
+     * Fail-soft: a non-compliant response still becomes a usable plain reply
+     * with a small set of keyword-based suggestions, instead of breaking chat.
+     */
+    private function parseStructuredReply(string $reply): array {
+        $data = $this->ai->parseJson($reply);
+        if (is_array($data) && isset($data['reply']) && is_string($data['reply']) && $data['reply'] !== '') {
+            $suggestions = is_array($data['suggestions'] ?? null) ? $data['suggestions'] : [];
+            $suggestions = array_values(array_filter(array_map(
+                fn($s) => is_string($s) ? trim($s) : '',
+                $suggestions
+            ), fn($s) => $s !== ''));
+            $suggestions = array_slice($suggestions, 0, 4);
+
+            return ['reply' => $data['reply'], 'suggestions' => $suggestions];
+        }
+
+        return ['reply' => $reply, 'suggestions' => $this->extractSuggestions($reply)];
+    }
+
+    /** Best-effort keyword-based quick replies for the rare non-compliant
+     *  response (same defense-in-depth role as TripCopilot's own version). */
+    private function extractSuggestions(string $reply): array {
+        $suggestions = [];
+        if (stripos($reply, 'budget') !== false || stripos($reply, 'price') !== false || stripos($reply, 'cost') !== false) {
+            $suggestions[] = 'Budget Planner';
+        }
+        if (stripos($reply, 'weather') !== false || stripos($reply, 'season') !== false) {
+            $suggestions[] = 'Check Weather';
+        }
+        if (stripos($reply, 'map') !== false || stripos($reply, 'destination') !== false) {
+            $suggestions[] = 'View Map';
+        }
+        if (stripos($reply, 'package') !== false || stripos($reply, 'tour') !== false) {
+            $suggestions[] = 'Show Packages';
+        }
+        return array_slice(array_unique($suggestions), 0, 4);
     }
 
     private function buildSystemPrompt(string $email): string {
@@ -131,6 +187,18 @@ HOW TO RESPOND:
   of guessing a number.
 - Never discuss unrelated topics, other companies, or anything outside travel
   planning for TMS — politely redirect back to how you can help with their trip.
+
+OUTPUT FORMAT — respond with ONLY a single valid JSON object, no markdown
+fences, no commentary outside it:
+{"reply": "<your reply, following every rule above — raw HTML anchors are fine, markdown is not>", "suggestions": ["<quick reply 1>", "<quick reply 2>", "<quick reply 3>"]}
+
+Rules for "suggestions":
+- 0 to 4 short quick-reply labels (2-6 words) the visitor could tap next —
+  either a natural follow-up question, or the exact name of one of the site
+  pages listed above (e.g. "Show Packages", "Check Weather").
+- They must be genuinely relevant to what YOU just said in "reply" — never
+  generic filler, never a restatement of the visitor's own message.
+- If nothing sensible follows on, return an empty array rather than padding it.
 SYSTEM;
     }
 

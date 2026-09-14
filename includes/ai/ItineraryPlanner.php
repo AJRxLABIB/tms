@@ -40,6 +40,12 @@ class ItineraryPlanner {
 
         $weatherContext = $this->buildWeatherContext($dest, $startDate, $duration);
         $crowdContext   = $this->buildCrowdContext($dest);
+        // NEW (AI-trip-planning round): real, verified nearby hotels/restaurants
+        // from the same live map data Explore Mode and PlaceDetailsService
+        // already use -- see buildNearbyPlacesContext() below for why this
+        // exists (hotel_recommendations/restaurant_recommendations were pure
+        // AI invention with nothing to check them against).
+        $nearbyContext  = $this->buildNearbyPlacesContext($weatherContext['lat'] ?? null, $weatherContext['lng'] ?? null, $dest);
 
         $system = <<<SYSTEM
 You are an expert travel planner at TMS with deep knowledge of Bangladesh, South Asia, and international destinations.
@@ -58,6 +64,11 @@ Guidelines:
   Use it concretely: if rain or extreme heat is forecast on a specific day, move outdoor
   activities to a better day or add an indoor alternative, and say so explicitly in that
   day's weather_note and pro_tip — don't just restate the forecast, actually replan around it.
+- You may also be given a list of REAL, verified nearby hotels/restaurants (from live map
+  data). When it's provided, strongly prefer those exact names for hotel_recommendations
+  and restaurant_recommendations over ones from your own general knowledge — they are
+  confirmed to actually exist at this location. Only suggest a place NOT on that list if
+  none of the listed ones genuinely fit the requested tier, cuisine, or budget.
 - Return ONLY valid JSON
 SYSTEM;
 
@@ -81,6 +92,7 @@ TRIP DETAILS:
 
 {$weatherContext['prompt_block']}
 {$crowdContext}
+{$nearbyContext['prompt_block']}
 
 Return this exact JSON structure:
 {
@@ -193,6 +205,21 @@ MSG;
         // alert is never solely dependent on the LLM remembering to mention it.
         $itinerary['live_weather_alerts'] = $weatherContext['risk_alerts'];
 
+        // NEW (AI-trip-planning round): don't just trust the system prompt's
+        // "prefer the real list" instruction -- verify it deterministically.
+        // Rule 3 applies here the same way it already does elsewhere in this
+        // codebase (e.g. TravelRecommender's inventory-attribute rule): never
+        // let the UI present the AI's own self-report of factuality as fact.
+        // A place actually present in the live nearby-places data gets marked
+        // verified; anything else is honestly marked not verified rather than
+        // silently implied to be equally real.
+        $itinerary['hotel_recommendations'] = $this->markVerified(
+            $itinerary['hotel_recommendations'] ?? [], $nearbyContext['real_hotel_names']
+        );
+        $itinerary['restaurant_recommendations'] = $this->markVerified(
+            $itinerary['restaurant_recommendations'] ?? [], $nearbyContext['real_restaurant_names']
+        );
+
         // Save to database for future reference
         $this->saveItinerary($itinerary, $tripData, $email, $bookingId);
 
@@ -202,12 +229,28 @@ MSG;
     /**
      * Regenerate itinerary with changed requirements.
      * Includes previous itinerary as context for refinement.
+     *
+     * FIX (AI-trip-planning round): this was fully implemented but never
+     * actually reachable -- a project-wide grep confirmed the "Regenerate"
+     * buttons on ai-planner.php and custom-trip.php both just called the
+     * same initial-generation function a second time with identical inputs.
+     * Since generate()'s cache key is a hash of $tripData plus the weather
+     * cache bucket, an unchanged form meant a click on "Regenerate" could
+     * silently hand back the exact same cached itinerary -- worse, from the
+     * visitor's point of view, than doing nothing. Wiring this in (see
+     * api/ai.php's new 'itinerary_regenerate' action) also fixed the missing
+     * $bookingId passthrough below, which would have silently unlinked a
+     * regenerated plan from the real booking it belonged to.
      */
-    public function regenerate(array $tripData, array $feedback, string $email = 'guest'): array {
-        $tripData['special_requests'] = ($tripData['special_requests'] ?? '') . ' Regeneration feedback: ' . implode('; ', $feedback);
-        // Clear cache for fresh generation
+    public function regenerate(array $tripData, array $feedback, string $email = 'guest', ?int $bookingId = null): array {
+        $feedback = array_values(array_filter(array_map('trim', $feedback), fn($f) => $f !== ''));
+        $tripData['special_requests'] = trim(($tripData['special_requests'] ?? '') . ' Regeneration feedback -- the traveler asked for changes: '
+            . ($feedback ? implode('; ', $feedback) : 'please provide a meaningfully different alternative (different pacing/options), even without specific feedback.'));
+        // Clear cache for fresh generation -- without this, an otherwise
+        // identical $tripData hits the exact same cache key as the original
+        // generate() call and returns the very same cached itinerary.
         $tripData['_regen'] = time();
-        return $this->generate($tripData, $email);
+        return $this->generate($tripData, $email, $bookingId);
     }
 
     /**
@@ -239,10 +282,10 @@ MSG;
      * system prompt already tells the AI to fall back to general seasonal
      * knowledge when no live data is given.
      *
-     * @return array{prompt_block: string, risk_alerts: array, cache_bucket: string}
+     * @return array{prompt_block: string, risk_alerts: array, cache_bucket: string, lat: ?float, lng: ?float}
      */
     private function buildWeatherContext(string $destination, string $startDate, int $duration): array {
-        $empty = ['prompt_block' => '', 'risk_alerts' => [], 'cache_bucket' => 'no-weather'];
+        $empty = ['prompt_block' => '', 'risk_alerts' => [], 'cache_bucket' => 'no-weather', 'lat' => null, 'lng' => null];
         if (!$destination || $destination === 'Unknown') return $empty;
 
         try {
@@ -251,6 +294,12 @@ MSG;
             $lat = (float)$geo['results'][0]['lat'];
             $lng = (float)$geo['results'][0]['lng'];
             if (!$lat && !$lng) return $empty;
+            // NEW (AI-trip-planning round): buildNearbyPlacesContext() below
+            // needs these coordinates too -- geocoding is the slow/rate-limited
+            // step (Nominatim), so this reuses the one lookup instead of a
+            // second one, even if the weather call itself fails below.
+            $empty['lat'] = $lat;
+            $empty['lng'] = $lng;
 
             $wx = $this->explore->getWeather($lat, $lng);
             if (empty($wx['success']) || empty($wx['data'])) return $empty;
@@ -303,11 +352,99 @@ MSG;
                 'prompt_block' => implode("\n", $lines),
                 'risk_alerts'  => $riskAlerts,
                 'cache_bucket' => $bucket,
+                'lat'          => $lat,
+                'lng'          => $lng,
             ];
         } catch (Exception $e) {
             error_log('[TMS AI] Weather context build failed (non-fatal): ' . $e->getMessage());
             return $empty;
         }
+    }
+
+    /**
+     * NEW (AI-trip-planning round): real, verified nearby hotels/restaurants
+     * from the exact same ExploreService::getNearbyPlaces() integration
+     * Explore Mode already uses (Google Places if a key is configured, else
+     * OpenStreetMap/Overpass) — no new integration, no new API key.
+     *
+     * Before this, hotel_recommendations/restaurant_recommendations came
+     * entirely from the model's own general knowledge with nothing to check
+     * them against — the same category of risk PlaceDetailsService's Round 14
+     * rewrite was built to eliminate elsewhere in this app (a named place
+     * that may not actually exist, or exist somewhere else entirely). This
+     * doesn't ban the AI from suggesting a place outside this list (a real,
+     * well-known local institution the nearby-places radius simply missed is
+     * still worth suggesting) — it grounds the common case in verified data
+     * and lets generate() mark the result deterministically either way (see
+     * markVerified() below), rather than trusting the model's own say-so.
+     *
+     * Fully fail-soft: no coordinates (geocoding failed/skipped) or an
+     * Overpass/Google outage both degrade to an empty prompt block and empty
+     * name lists — exactly the behavior this app had before this method
+     * existed, never a hard failure of itinerary generation.
+     *
+     * @return array{prompt_block: string, real_hotel_names: string[], real_restaurant_names: string[]}
+     */
+    private function buildNearbyPlacesContext(?float $lat, ?float $lng, string $destination): array {
+        $empty = ['prompt_block' => '', 'real_hotel_names' => [], 'real_restaurant_names' => []];
+        if ($lat === null || $lng === null || (!$lat && !$lng)) return $empty;
+
+        try {
+            $hotels      = $this->explore->getNearbyPlaces($lat, $lng, 'hotel', 6000);
+            $restaurants = $this->explore->getNearbyPlaces($lat, $lng, 'restaurant', 6000);
+
+            $hotelNames      = !empty($hotels['success']) ? array_column(array_slice($hotels['results'], 0, 8), 'name') : [];
+            $restaurantNames = !empty($restaurants['success']) ? array_column(array_slice($restaurants['results'], 0, 8), 'name') : [];
+            $hotelNames      = array_values(array_unique(array_filter($hotelNames)));
+            $restaurantNames = array_values(array_unique(array_filter($restaurantNames)));
+
+            if (!$hotelNames && !$restaurantNames) return $empty;
+
+            $lines = ["REAL NEARBY PLACES for {$destination} (source: live map data, verified to actually exist here):"];
+            if ($hotelNames) {
+                $lines[] = 'Real hotels/guesthouses nearby: ' . implode(', ', $hotelNames) . '.';
+            }
+            if ($restaurantNames) {
+                $lines[] = 'Real restaurants nearby: ' . implode(', ', $restaurantNames) . '.';
+            }
+
+            return [
+                'prompt_block'           => implode("\n", $lines),
+                'real_hotel_names'       => $hotelNames,
+                'real_restaurant_names'  => $restaurantNames,
+            ];
+        } catch (Exception $e) {
+            error_log('[TMS AI] Nearby-places context build failed (non-fatal): ' . $e->getMessage());
+            return $empty;
+        }
+    }
+
+    /**
+     * Deterministically flags whether each AI-suggested hotel/restaurant name
+     * matches one of the real, verified names fetched above — see the Rule 3
+     * reasoning in buildNearbyPlacesContext()'s docblock. Case-insensitive
+     * substring match in both directions so "The Cox's Bazar Grand Hotel"
+     * still matches a real listing named just "Cox's Bazar Grand", and vice
+     * versa. Never removes or reorders a recommendation — only labels it.
+     */
+    private function markVerified(array $recommendations, array $realNames): array {
+        foreach ($recommendations as &$rec) {
+            $name = trim((string)($rec['name'] ?? ''));
+            $isVerified = false;
+            if ($name !== '') {
+                foreach ($realNames as $real) {
+                    if ($real === '') continue;
+                    if (stripos($name, $real) !== false || stripos($real, $name) !== false) {
+                        $isVerified = true;
+                        break;
+                    }
+                }
+            }
+            $rec['verified'] = $isVerified;
+            $rec['source']   = $isVerified ? 'live_map_data' : 'ai_suggestion';
+        }
+        unset($rec);
+        return $recommendations;
     }
 
     /**
@@ -350,7 +487,16 @@ MSG;
                 "INSERT INTO tbl_ai_itineraries (booking_id, user_email, itinerary_json, ai_version, created_at)
                  VALUES (?, ?, ?, ?, NOW())"
             );
-            $stmt->execute([$bookingId, $email, json_encode($itinerary), defined('GEMINI_MODEL') ? GEMINI_MODEL : 'gemini-1.5-flash']);
+            // FIX (Round 108, AI-upgrade audit): the fallback literal here used
+            // to be 'gemini-1.5-flash', a model config.php:34 explicitly notes
+            // is shut down as of mid-2026. GEMINI_MODEL is always defined by
+            // config.php before this class can load (AIClient.php requires it
+            // transitively), so this branch is unreachable in normal operation --
+            // but an unreachable branch that records a dead model name into
+            // tbl_ai_itineraries.ai_version is still a latent honesty bug (Rule 3)
+            // waiting to trigger the moment someone changes the require order.
+            // Fallback now matches AIClient.php:82's own fallback literal.
+            $stmt->execute([$bookingId, $email, json_encode($itinerary), defined('GEMINI_MODEL') ? GEMINI_MODEL : 'gemini-2.5-flash']);
         } catch (Exception $e) {
             error_log('[TMS AI] Failed to save itinerary: ' . $e->getMessage());
         }

@@ -100,10 +100,23 @@ if ($destName === '' || $lat === null || $lng === null) {
                     <button class="map-mode-btn" data-mode="transit" onclick="exploreDrawRoute('transit')"><i class="fa fa-bus"></i> Public Transport</button>
                     <?php endif; ?>
                 </div>
+                <!-- NEW (AI-map round): the map used to hardcode attraction
+                     pins only -- switching category here now plots that
+                     category's real nearby places (same live data the
+                     Nearby Places tab uses) instead of requiring one-at-a-time
+                     "Get Directions" clicks to see anything else on the map. -->
+                <div class="place-cat-tabs" id="mapCatTabs" style="margin-bottom:12px;">
+                    <button class="map-cat-btn active" data-cat="attraction" onclick="exploreLoadMapCategory('attraction')"><i class="fa fa-landmark"></i> Attractions</button>
+                    <button class="map-cat-btn" data-cat="hotel" onclick="exploreLoadMapCategory('hotel')"><i class="fa fa-bed"></i> Hotels</button>
+                    <button class="map-cat-btn" data-cat="restaurant" onclick="exploreLoadMapCategory('restaurant')"><i class="fa fa-utensils"></i> Restaurants</button>
+                    <button class="map-cat-btn" data-cat="hospital" onclick="exploreLoadMapCategory('hospital')"><i class="fa fa-hospital"></i> Hospitals</button>
+                    <button class="map-cat-btn" data-cat="pharmacy" onclick="exploreLoadMapCategory('pharmacy')"><i class="fa fa-prescription-bottle-alt"></i> Pharmacies</button>
+                    <button class="map-cat-btn" data-cat="atm" onclick="exploreLoadMapCategory('atm')"><i class="fa fa-money-bill-wave"></i> ATMs</button>
+                </div>
                 <div id="exploreMap"></div>
                 <div class="route-summary" id="routeSummary"></div>
                 <p style="font-size:12px;color:var(--text-muted);margin-top:10px;">
-                    <i class="fa fa-camera"></i> Teal pins show real nearby tourist attractions from OpenStreetMap. Click "Locate Me" for distance &amp; ETA to <?php echo htmlspecialchars($destName); ?>.
+                    <i class="fa fa-map-pin"></i> Colored pins show real nearby places for the category selected above, from live map data. Click "Locate Me" for distance &amp; ETA to <?php echo htmlspecialchars($destName); ?>.
                 </p>
             </div>
         </div>

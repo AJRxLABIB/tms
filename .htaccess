@@ -29,15 +29,6 @@ Options -Indexes
 
 
 # 4. Baseline security response headers (production hardening pass).
-#    Deliberately NOT including a Content-Security-Policy here: ~60 pages in
-#    this project use inline <script>/<style> blocks and load Bootstrap 3 /
-#    Font Awesome / Google Fonts from CDNs, so a CSP strict enough to matter
-#    would need `unsafe-inline` almost everywhere to avoid silently breaking
-#    real, working pages (Rule 2) -- and with the local database currently
-#    unstable, this isn't a safe moment to click through every page and
-#    verify a new CSP doesn't break something. The headers below are safe
-#    regardless of that: they only change how browsers treat responses this
-#    site was already going to send, not what the site is allowed to load.
 <IfModule mod_headers.c>
     # Stop browsers guessing a different MIME type than the one the server sent
     # (e.g. treating an uploaded travel-document as executable HTML/JS).
@@ -56,4 +47,29 @@ Options -Indexes
     # only honor this over HTTPS, so it's inert here and simply already in
     # place for whenever this is deployed behind TLS.
     Header always set Strict-Transport-Security "max-age=31536000; includeSubDomains"
+
+    # Round 106 (master prompt item 56/"MONITORING"-adjacent hardening pass):
+    # a real Content-Security-Policy, deferred at the earlier pass because
+    # ~60 pages here use inline <script>/<style> and load from several CDNs,
+    # and the local database was unstable at the time -- neither blocker
+    # applies now. Built from a full grep-based audit of every external
+    # origin actually referenced anywhere in this codebase (not a guess):
+    # jsdelivr/cdnjs/code.jquery.com/unpkg for scripts, those plus
+    # fonts.googleapis.com/stackpath.bootstrapcdn.com for styles,
+    # fonts.gstatic.com/cdnjs for font files, and a permissive https: for
+    # images (package/destination photos, weather icons, and OpenStreetMap
+    # map tiles come from many different https hosts, none of which can
+    # execute script, so this is the one directive deliberately left loose).
+    # 'unsafe-inline' on script-src/style-src is still required -- the
+    # inline <script>/<style> blocks and onerror="..." attributes across
+    # this codebase are real, working, load-bearing code, not something to
+    # silently break for a marginally stricter policy (Rule 2). Every
+    # distinct external-resource category this audit found was
+    # spot-checked live in a representative page of each kind (home page,
+    # a Leaflet map page, the Google Street View embed on package details,
+    # weather icons, admin Chart.js dashboard, Bootstrap-4 login/register,
+    # the Swagger API docs page) with the browser console watched for
+    # violations before shipping -- not literally every one of the ~70
+    # files this touches, which would be its own disproportionate sweep.
+    Header always set Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://code.jquery.com https://unpkg.com; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://fonts.googleapis.com https://stackpath.bootstrapcdn.com https://unpkg.com; font-src 'self' data: https://fonts.gstatic.com https://cdnjs.cloudflare.com; img-src 'self' data: https:; connect-src 'self'; frame-src https://www.google.com; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'self'"
 </IfModule>
