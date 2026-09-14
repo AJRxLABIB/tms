@@ -246,9 +246,9 @@
           <li>Click <strong>Create</strong></li>
           <li>Click on the new <strong>tms</strong> database in left sidebar</li>
           <li>Click the <strong>Import</strong> tab at the top</li>
-          <li>Click <strong>Choose File</strong> → navigate to your tms folder → select <strong>tms.sql</strong></li>
+          <li>Click <strong>Choose File</strong> → navigate to your tms folder → <strong>database/legacy-sql/</strong> → select <strong>tms.sql</strong></li>
           <li>Scroll down, click <strong>Go</strong> — wait for green success message</li>
-          <li>Click <strong>Import</strong> again → select <strong>v6_migration.sql</strong> → click <strong>Go</strong></li>
+          <li>Click <strong>Import</strong> again → <strong>database/legacy-sql/</strong> → select <strong>v6_migration.sql</strong> → click <strong>Go</strong></li>
         </ol>
         <div class="tip">✅ After importing both SQL files, click on the <strong>tms</strong> database — you should see 15+ tables like <code>tblusers</code>, <code>tblbooking</code>, <code>tbltourpackages</code>, etc.</div>
       </div>
@@ -310,7 +310,7 @@ mkdir -p admin/blogimages &amp;&amp; chmod 777 admin/blogimages/
         <h3>Log In to Admin Panel</h3>
         <p>Go to <code>http://localhost/tms/admin/</code> and sign in.</p>
         <div class="code">
-<span class="cm">Default credentials (from tms.sql):</span><br>
+<span class="cm">Default credentials (from database/legacy-sql/tms.sql):</span><br>
 <span class="ck">Username:</span> <span class="cv">admin</span><br>
 <span class="ck">Password:</span> <span class="cv">Test@12345</span>
         </div>
@@ -453,7 +453,7 @@ mkdir -p admin/blogimages &amp;&amp; chmod 777 admin/blogimages/
       <div class="step-num">3</div>
       <div class="step-body">
         <h3>Create Database on Hosting</h3>
-        <p>In cPanel → MySQL Databases → create a new database and user. Import <code>tms.sql</code> then <code>v6_migration.sql</code> via phpMyAdmin in cPanel.</p>
+        <p>In cPanel → MySQL Databases → create a new database and user. Import <code>database/legacy-sql/tms.sql</code> then <code>database/legacy-sql/v6_migration.sql</code> via phpMyAdmin in cPanel.</p>
       </div>
     </div>
     <div class="step">
@@ -475,8 +475,8 @@ mkdir -p admin/blogimages &amp;&amp; chmod 777 admin/blogimages/
       <ul class="checklist">
         <li><div class="ck-icon">✓</div><span>XAMPP installed — Apache and MySQL both showing green</span></li>
         <li><div class="ck-icon">✓</div><span><code>tms</code> folder placed inside <code>htdocs/</code></span></li>
-        <li><div class="ck-icon">✓</div><span><code>tms.sql</code> imported into a database named <code>tms</code></span></li>
-        <li><div class="ck-icon">✓</div><span><code>v6_migration.sql</code> also imported into the same database</span></li>
+        <li><div class="ck-icon">✓</div><span><code>database/legacy-sql/tms.sql</code> imported into a database named <code>tms</code></span></li>
+        <li><div class="ck-icon">✓</div><span><code>database/legacy-sql/v6_migration.sql</code> also imported into the same database</span></li>
         <li><div class="ck-icon">✓</div><span><code>includes/config.php</code> has correct DB_HOST, DB_USER, DB_PASS, DB_NAME</span></li>
         <li><div class="ck-icon">✓</div><span>Upload folders are writable (Linux/Mac only)</span></li>
         <li><div class="ck-icon">✓</div><span><code>http://localhost/tms/</code> loads the homepage</span></li>

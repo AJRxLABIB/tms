@@ -7,7 +7,7 @@
 ## Quick Start
 1. Install XAMPP → start Apache + MySQL
 2. Copy `tms/` folder to `htdocs/`
-3. Import `tms.sql` then `v6_migration.sql` into phpMyAdmin (database name: `tms`)
+3. Import `database/legacy-sql/tms.sql` then `database/legacy-sql/v6_migration.sql` into phpMyAdmin (database name: `tms`)
 4. Edit `backend/config.php` with your DB credentials
 5. Open `http://localhost/tms/`
 6. Admin: `http://localhost/tms/admin/` — user: `admin` / pass: `Test@12345`
@@ -28,7 +28,9 @@ tms/
 ├── admin/        The admin panel (its own header/footer/config live in
 │                 admin/includes/ — a separate, admin-only wrapper, not
 │                 to be confused with backend/).
-├── database/     Schema migrations (migrate.php + database/migrations/).
+├── database/     Schema migrations (migrate.php + database/migrations/) and
+│                 the original pre-migration-system baseline SQL files, kept
+│                 for reference (database/legacy-sql/).
 ├── api/          JSON API endpoints (ai.php, chat.php, explore.php, ...).
 ├── tests/        Automated test runner (run.php) plus tests/manual/ —
 │                 one-off QA/session-simulation helper scripts used while
@@ -55,12 +57,13 @@ tms/
 
 ## Default seed accounts (local development only)
 
-This project's `tms.sql` seeds one demo admin and one demo user account so
-you can log in immediately after a fresh install. **If this site is public
-or hosted anywhere outside your own machine, change both passwords
-immediately** (admin: Admin > Change Password once logged in, or
-`admin/manage-admins.php` as a superadmin; user: Profile > Change Password)
-— the credentials that used to be printed here were real, working
-passwords for a publicly-documented file, which is a real credential
-exposure once this repo or its docs are shared (Rule 5). Check `tms.sql`
-directly if you need the exact seeded username/email for your local copy.
+This project's `database/legacy-sql/tms.sql` seeds one demo admin and one
+demo user account so you can log in immediately after a fresh install.
+**If this site is public or hosted anywhere outside your own machine,
+change both passwords immediately** (admin: Admin > Change Password once
+logged in, or `admin/manage-admins.php` as a superadmin; user: Profile >
+Change Password) — the credentials that used to be printed here were real,
+working passwords for a publicly-documented file, which is a real
+credential exposure once this repo or its docs are shared (Rule 5). Check
+`database/legacy-sql/tms.sql` directly if you need the exact seeded
+username/email for your local copy.

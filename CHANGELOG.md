@@ -1724,3 +1724,116 @@ reasonable future item but wasn't bundled in here); did not add a
 the new hotel/restaurant flags (the data is there — `verified`/`source`
 per recommendation — but rendering it is a frontend design decision
 better left for the user to weigh in on rather than guessed at here).
+
+## Round 112 — Post-XAMPP-reinstall diagnosis: image "database problem" root-caused, SQL files consolidated, install location confirmed
+
+**Why this round:** the user reinstalled XAMPP and transferred the project
+to a new location, then reported: "there is a problem with this project. I
+think it's database problem" — every package thumbnail on
+`package-list.php` was showing the generic gray placeholder icon instead of
+a real photo, with real data (names/prices/ratings) rendering fine. The
+user also asked for all `.sql` files to be consolidated into one folder,
+and for a check for anything missing after the transfer.
+
+**What was found (Rule 4 — verified live, not guessed):**
+
+1. **The image issue is not a database problem and not a code bug.**
+   Live testing (fetch() against `images.unsplash.com`, `google.com`,
+   `api.open-meteo.com`, and `nominatim.openstreetmap.org` from a browser
+   on the same machine) showed every external host failing with
+   "Failed to fetch," while every `localhost`-served asset (CSS, JS, local
+   images, the PHP pages themselves, `health.php`) loaded normally. This
+   machine currently has no working route to the public internet — only
+   local/`localhost` traffic works. `package-list.php`'s package images are
+   intentionally lazy-loaded (`loading="lazy"`) and hosted externally on
+   Unsplash with a working `onerror="this.src='images/no-image-placeholder.jpg'"`
+   fallback — exactly the gray icon the user saw is that fallback doing its
+   job when the external image genuinely can't be reached. `health.php`
+   independently confirmed the database itself is up (`latency_ms` in the
+   teens/twenties). Nothing in this project's code needs to change for
+   this; it resolves itself once this machine's internet connection is
+   back. (This also means Explore Mode's live weather/maps/nearby-places
+   features, and the Gemini-backed AI features, cannot be meaningfully
+   live-tested right now for the same reason — not a regression, just
+   blocked on the same network condition.)
+
+2. **Confirmed the served install location.** `D:\xampp\htdocs\tms` (the
+   old install) no longer exists on disk at all — the XAMPP reinstall
+   replaced it entirely. `C:\xampp\htdocs\tms` is now the sole XAMPP
+   install and what Apache/MySQL actually serve; its `.git` folder is
+   present and structurally intact (`HEAD`, `config`, `index`, `hooks`,
+   recent `COMMIT_EDITMSG`/`FETCH_HEAD`), so git tracking survived the
+   transfer. `D:\Project\tms` (the separate, non-XAMPP plain-file mirror)
+   is unaffected and still exists. Going forward, file deliveries in this
+   engagement target `C:\xampp\htdocs\tms` (served) and `D:\Project\tms`
+   (mirror) — `D:\xampp\htdocs\tms` is retired since it no longer exists.
+
+3. **A small, low-priority gap:** comparing a pre-reinstall directory
+   snapshot of the old `D:\xampp\htdocs\tms` against the new
+   `C:\xampp\htdocs\tms` turned up 27 missing files — all of them ad-hoc
+   `test-*-session-helper.php` / `seed-qa-admin.php` / `check-qa-admin.php`
+   diagnostic scripts created during earlier rounds for manual QA (never
+   linked from the live app, no real feature behind them). Not recreated —
+   they're throwaway developer scaffolding, not user-facing functionality
+   (Rule 2 doesn't apply to these), and equivalent helper scripts for more
+   recent rounds are already present. No other file gaps were found.
+
+**What was built — SQL consolidation (the user's explicit ask):**
+
+- New `database/legacy-sql/` folder holding copies of the 5 pre-migration
+  baseline files: `tms.sql`, `v6_migration.sql`, `AI_MIGRATION.sql`,
+  `explore_migration.sql`, `schema_repair_migration.sql`, plus a new
+  `database/legacy-sql/README.md` explaining what they are and confirming
+  the move is safe (see below). Every `.sql` file in this project now
+  lives under `database/` — either here or in the existing, untouched
+  `database/migrations/`.
+- **Verified safe before moving anything:** read `database/migrate.php` in
+  full. The `'000_baseline_tms.sql'`-style strings it inserts into
+  `tblmigrations` are pure bookkeeping labels recorded in the database —
+  the script never opens these 5 files by path, so moving them cannot
+  break the migration runner. `scripts/backup_database.php` and
+  `scripts/restore_database.php` don't reference these filenames at all.
+  The only real references were documentation, updated in this same round:
+  `README.md` (Quick Start step 3, the seed-account note, the project
+  structure diagram), `DATABASE.md` (schema history section), and
+  `INSTALL.html` (the phpMyAdmin import steps, the shared-hosting step,
+  the admin-login default-credentials note, and the final checklist).
+- **Known limitation, disclosed rather than hidden (Rule 77):** this
+  session currently has no shell access on the user's machine (a
+  Windows-update-related issue blocking Claude's local workspace there, in
+  effect since before this round). That means files can be written to new
+  locations but the original 5 loose `.sql` files at the project root
+  could not be deleted — only copied. They're harmless where they sit
+  (nothing reads them there, per the point above) but are now duplicated;
+  the user can delete the root-level copies of `tms.sql`,
+  `v6_migration.sql`, `AI_MIGRATION.sql`, `explore_migration.sql`, and
+  `schema_repair_migration.sql` themselves once they've confirmed
+  `database/legacy-sql/` looks right, or leave them — either is safe.
+- **Bonus, unplanned benefit:** `database/` already has an `.htaccess`
+  denying all direct web access (confirmed live: requesting
+  `database/legacy-sql/tms.sql` over HTTP returns 403). The old root-level
+  copies were never protected that way, so this move also closes a minor,
+  pre-existing exposure of the seed-admin-credentials file to direct URL
+  requests.
+
+**What was explicitly tried and abandoned (Rule 77 — reporting the
+attempt, not just the result):** to check the database's table/row
+completeness (not just connectivity) beyond what `health.php` reports,
+this round wrote a temporary, token-gated, read-only diagnostic script
+(`SHOW TABLES` + row counts only) to run once via the browser, since shell
+access is unavailable. Auto-mode's safety classifier blocked navigating to
+it ("Create RCE Surface") before it could be used, which is a reasonable
+call — a web-reachable script that can run arbitrary-ish DB queries is a
+real attack surface even when token-gated and temporary. The script's
+content was immediately overwritten with an inert stub rather than left
+live. **Testing status for full DB completeness: not verified** — only
+connectivity (`health.php`) is confirmed up; a genuine table/row audit
+would need either shell access on the user's machine (once the Windows
+workspace issue is fixed) or the user checking phpMyAdmin themselves.
+
+**Implementation status:** complete for the SQL consolidation and the
+image/location diagnosis. **Testing status:** the image root-cause finding
+is live-verified (real network calls, real results, quoted above); the
+SQL-consolidation safety claim is verified by reading the actual code
+(`migrate.php`) rather than assumed; full database table/row completeness
+is explicitly NOT verified, for the reason above.

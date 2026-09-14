@@ -5,19 +5,24 @@ since a charset migration touches every table and is its own risky project).
 
 ## Schema history (how it got here)
 
-Applied in this order, historically by hand in phpMyAdmin:
-1. `tms.sql` — base schema + seed data (`admin`, `tblbooking`, `tblenquiry`,
-   `tblissues`, `tblpages`, `tbltourpackages`, `tblusers`)
-2. `v6_migration.sql` — `tblactivity_log`, `tblblog`, `tblcoupons`,
-   `tblloyalty`, `tblloyalty_log`, `tblwishlist`
-3. `AI_MIGRATION.sql` — `tbl_ai_*`, `tbl_copilot_sessions`,
-   `tbl_review_sentiment`, `tbl_safety_alerts`, `tbl_travel_memories`,
-   `tbl_user_profile`
-4. `explore_migration.sql` — `tbl_explore_*`
-5. `schema_repair_migration.sql` — assorted column additions/fixes to
-   already-shipped tables (e.g. `tblbooking.NoOfPersons/TotalCost/
-   VerificationCode/BookingDate`, added incrementally as features needed
-   them but not tracked anywhere until now)
+Applied in this order, historically by hand in phpMyAdmin. All 5 files now
+live in `database/legacy-sql/` (moved out of the project root so every
+`.sql` file in this project is under `database/` — see that folder's own
+README for why the move is safe):
+1. `database/legacy-sql/tms.sql` — base schema + seed data (`admin`,
+   `tblbooking`, `tblenquiry`, `tblissues`, `tblpages`, `tbltourpackages`,
+   `tblusers`)
+2. `database/legacy-sql/v6_migration.sql` — `tblactivity_log`, `tblblog`,
+   `tblcoupons`, `tblloyalty`, `tblloyalty_log`, `tblwishlist`
+3. `database/legacy-sql/AI_MIGRATION.sql` — `tbl_ai_*`,
+   `tbl_copilot_sessions`, `tbl_review_sentiment`, `tbl_safety_alerts`,
+   `tbl_travel_memories`, `tbl_user_profile`
+4. `database/legacy-sql/explore_migration.sql` — `tbl_explore_*`
+5. `database/legacy-sql/schema_repair_migration.sql` — assorted column
+   additions/fixes to already-shipped tables (e.g.
+   `tblbooking.NoOfPersons/TotalCost/VerificationCode/BookingDate`, added
+   incrementally as features needed them but not tracked anywhere until
+   now)
 
 **As of this round**, schema changes go through `database/migrations/`
 instead — see `database/migrate.php` and its own docblock. The 5 files
