@@ -39,7 +39,11 @@ class SiteAssistant {
      * @return array           ['success'=>bool, 'reply'=>string, 'suggestions'=>string[], 'error'=>string]
      */
     public function reply(string $message, array $history, string $email = 'guest', string $pageContext = ''): array {
-        $system = $this->buildSystemPrompt($email);
+        // FIX (Round 113, F15 -- AI-upgrade priority): $history being empty
+        // is this call's only signal that this is turn 1 of a fresh
+        // conversation -- see buildSystemPrompt()'s new $firstTurn param for
+        // why that matters for token cost.
+        $system = $this->buildSystemPrompt($email, empty($history));
         if ($pageContext !== '') {
             // Where the visitor actually is. Supplied by the widget, so it is
             // reference data, never an instruction — the prompt says as much.
@@ -125,8 +129,27 @@ class SiteAssistant {
         return array_slice(array_unique($suggestions), 0, 4);
     }
 
-    private function buildSystemPrompt(string $email): string {
-        $packageBlurb = $this->getPackageBlurb();
+    private function buildSystemPrompt(string $email, bool $firstTurn = true): string {
+        // FIX (Round 113, F15 -- AI-upgrade priority): buildSystemPrompt()
+        // is rebuilt from scratch and resent as INPUT TOKENS on every single
+        // chat turn (see reply() above -- there's no server-side "system
+        // prompt already seen" concept with this call pattern). Before this
+        // fix, that meant the full ~40-package catalogue listing (the
+        // biggest chunk of this prompt by far) was retransmitted to Gemini
+        // on turn 2, 3, 4... of the same conversation even though nothing
+        // in the catalogue changed and the model already saw it on turn 1.
+        // Same token-waste shape TripCopilot::buildSystemPrompt() already
+        // solved for booking data (its "Phase 2b — context compression"
+        // comment) -- here the fix is simpler: only send the full 40-item
+        // listing on the conversation's first turn, and fall back to a
+        // short summary (total count, price range, categories) plus a
+        // pointer back to what was already shared for every turn after
+        // that. The visitor's own follow-up questions about a specific
+        // package they were just told about still work fine, since that
+        // package's details are already sitting in $history from turn 1's
+        // reply.
+        $fullBlurb = $this->getPackageBlurb();
+        $packageBlurb = $firstTurn ? $fullBlurb : $this->condensePackageBlurb($fullBlurb);
         // Round 14: this used to put the visitor's raw email address in the
         // prompt and nothing else. The bot now gets what it can actually use —
         // their bookings — and not the email itself.
@@ -200,6 +223,26 @@ Rules for "suggestions":
   generic filler, never a restatement of the visitor's own message.
 - If nothing sensible follows on, return an empty array rather than padding it.
 SYSTEM;
+    }
+
+    /**
+     * Strips getPackageBlurb()'s "MOST POPULAR PACKAGES" per-package listing
+     * (the large, mostly-static chunk of the prompt) down to just the
+     * headline summary + category list, for turns after the first — see the
+     * F15 fix note in buildSystemPrompt() above. Falls back to returning the
+     * blurb unchanged if the listing section isn't present (e.g. the
+     * "no packages published yet" / catalogue-unavailable short-circuits in
+     * getPackageBlurb() already return a one-liner with nothing to strip).
+     */
+    private function condensePackageBlurb(string $fullBlurb): string {
+        $marker = "\n\nMOST POPULAR PACKAGES";
+        $pos = strpos($fullBlurb, $marker);
+        if ($pos === false) return $fullBlurb;
+
+        return rtrim(substr($fullBlurb, 0, $pos))
+            . "\n(The full list of individual packages was already shared earlier in this "
+            . "conversation — refer back to what was discussed, or point the visitor to "
+            . "package-list.php for anything not already covered.)";
     }
 
     /**

@@ -78,7 +78,14 @@ class AIClient {
             error_log("[TMS AI] AI_PROVIDER='{$wanted}' is not recognized (expected 'gemini' or 'openai') -- using Gemini.");
         }
 
-        $apiKey = defined('GEMINI_API_KEY') ? GEMINI_API_KEY : (defined('ANTHROPIC_API_KEY') ? ANTHROPIC_API_KEY : '');
+        // Round 113: dropped a fallback to ANTHROPIC_API_KEY that lived here --
+        // this branch only ever constructs a GeminiProvider (the 'openai'
+        // branch above is the only other option), and an Anthropic-shaped key
+        // was never going to work as a Gemini key. Vestigial from the
+        // pre-Round-34 Anthropic-based AIClient this file's own header
+        // docblock already says was replaced; harmless but misleading, since
+        // no other file in this codebase reads ANTHROPIC_API_KEY at all.
+        $apiKey = defined('GEMINI_API_KEY') ? GEMINI_API_KEY : '';
         $model  = defined('GEMINI_MODEL')   ? GEMINI_MODEL   : 'gemini-2.5-flash';
         return new GeminiProvider($apiKey, $model);
     }
@@ -104,7 +111,8 @@ class AIClient {
         string $userEmail = 'guest',
         int    $totalBudgetSec = 22,
         int    $perAttemptSec  = 12,
-        string $feature = ''
+        string $feature = '',
+        ?int   $cacheTtlSeconds = null
     ): array {
 
         // Round 95 FIX (severity: critical, live, previously undetected):
@@ -176,8 +184,13 @@ class AIClient {
         $content = $result['content'] ?? '';
 
         // ── Cache result ──────────────────────────────────────────────────────
+        // Round 113 (AI-upgrade priority, speed pass): callers can now ask for
+        // a TTL other than the one-size-fits-all AI_CACHE_TTL. Nothing here
+        // changes for a caller that doesn't pass one -- $cacheTtlSeconds
+        // defaults to null, which setCached() below treats as "use the
+        // existing global default", exactly the prior behavior.
         if ($cacheKey && $content) {
-            $this->setCached($cacheKey, $content);
+            $this->setCached($cacheKey, $content, $cacheTtlSeconds);
         }
 
         // ── Log usage (rate limiting) + telemetry ───────────────────────────────
@@ -256,8 +269,8 @@ class AIClient {
      * Convenience: single-turn user message.
      * Same signature as original AIClient::ask(), plus optional $feature.
      */
-    public function ask(string $system, string $userMessage, string $cacheKey = '', string $userEmail = 'guest', int $totalBudgetSec = 22, int $perAttemptSec = 12, string $feature = ''): array {
-        return $this->call($system, [['role' => 'user', 'content' => $userMessage]], $cacheKey, $userEmail, $totalBudgetSec, $perAttemptSec, $feature);
+    public function ask(string $system, string $userMessage, string $cacheKey = '', string $userEmail = 'guest', int $totalBudgetSec = 22, int $perAttemptSec = 12, string $feature = '', ?int $cacheTtlSeconds = null): array {
+        return $this->call($system, [['role' => 'user', 'content' => $userMessage]], $cacheKey, $userEmail, $totalBudgetSec, $perAttemptSec, $feature, $cacheTtlSeconds);
     }
 
     /**
@@ -446,8 +459,8 @@ class AIClient {
         return is_string($val) ? $val : null;
     }
 
-    private function setCached(string $key, string $value): void {
-        $this->cache->set('ai_' . $key, $value, $this->cacheTtl);
+    private function setCached(string $key, string $value, ?int $ttlSeconds = null): void {
+        $this->cache->set('ai_' . $key, $value, $ttlSeconds ?? $this->cacheTtl);
     }
 
     /**

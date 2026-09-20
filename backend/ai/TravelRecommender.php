@@ -57,6 +57,26 @@ class TravelRecommender {
             ? "\n\nTRAVEL MODE GUIDANCE (apply this on top of the rules below):\n{$modeGuidance}"
             : '';
 
+        // FIX (Round 113, AI-upgrade priority): every one of these was
+        // interpolated directly from $prefs below with no ?? fallback --
+        // unlike $modeGuidance/$modeSection just above, which are already
+        // built defensively. With APP_DEBUG=true (this project's local-dev
+        // default) a caller that omits any one of these optional preference
+        // fields gets a PHP warning embedded straight into this JSON-building
+        // request. AIEvaluator's own recommender fixture already omits
+        // start_date/end_date/accommodation/food_preference and hits this
+        // exact gap on every eval run.
+        $budget         = $prefs['budget'] ?? 0;
+        $travelers      = $prefs['travelers'] ?? 1;
+        $startDate      = $prefs['start_date'] ?? 'Flexible';
+        $endDate        = $prefs['end_date'] ?? 'Flexible';
+        $duration       = $prefs['duration'] ?? '';
+        $travelType     = $prefs['travel_type'] ?? 'No preference';
+        $climate        = $prefs['climate'] ?? 'No preference';
+        $activities     = $prefs['activities'] ?? 'General sightseeing';
+        $accommodation  = $prefs['accommodation'] ?? 'No preference';
+        $foodPreference = $prefs['food_preference'] ?? 'No preference';
+
         $system = <<<SYSTEM
 You are an expert senior travel consultant at TMS, a premium travel platform specializing in destinations across Bangladesh, South Asia, and international locations.
 
@@ -76,13 +96,13 @@ SYSTEM;
 
         $userMessage = <<<MSG
 TRAVELER PROFILE:
-- Budget: {$prefs['budget']} BDT total for {$prefs['travelers']} travelers
-- Travel dates: {$prefs['start_date']} to {$prefs['end_date']} ({$prefs['duration']} days)
-- Travel style: {$prefs['travel_type']}
-- Climate preference: {$prefs['climate']}
-- Activities wanted: {$prefs['activities']}
-- Accommodation preference: {$prefs['accommodation']}
-- Dietary/food preference: {$prefs['food_preference']}
+- Budget: {$budget} BDT total for {$travelers} travelers
+- Travel dates: {$startDate} to {$endDate} ({$duration} days)
+- Travel style: {$travelType}
+- Climate preference: {$climate}
+- Activities wanted: {$activities}
+- Accommodation preference: {$accommodation}
+- Dietary/food preference: {$foodPreference}
 - Previous trips: {$profileContext}
 
 AVAILABLE PACKAGES IN OUR INVENTORY:
@@ -159,10 +179,24 @@ MSG;
         if ($startDate === '') return;
         $duration = max(1, (int)($prefs['duration'] ?? 1));
 
+        // FIX (Round 113, F1 -- AI-upgrade priority): recommend() always asks
+        // for exactly 5 packages, and it's common for several of them to
+        // share the same destination string (e.g. two packages both in
+        // "Cox's Bazar"). Before this fix, every recommendation triggered
+        // its own geocode+forecast pair via realAvgRainChance(), so 5
+        // recommendations for 2 distinct destinations meant 5 sequential
+        // network round-trips instead of 2. This caches the result per
+        // unique destination string within this single call, so repeats
+        // are free.
+        $avgPopByDestination = [];
+
         foreach ($recommendations as &$rec) {
             $destination = (string)($rec['destination'] ?? '');
             if ($destination === '') continue;
-            $avgPop = $this->realAvgRainChance($destination, $startDate, $duration);
+            if (!array_key_exists($destination, $avgPopByDestination)) {
+                $avgPopByDestination[$destination] = $this->realAvgRainChance($destination, $startDate, $duration);
+            }
+            $avgPop = $avgPopByDestination[$destination];
             if ($avgPop === null) continue; // no real forecast available -- leave the AI's own estimate untouched
 
             $realScore = (int)round(max(0, 100 - $avgPop));
@@ -584,10 +618,19 @@ MSG;
     private function fallbackRuleBasedRecommend(array $prefs, array $packages): array {
         // Simplified rule fallback if AI is unavailable
         $travelMode = (string)($prefs['travel_type'] ?? '');
+        // FIX (Round 113, F9 -- same undefined-array-key bug class fixed in
+        // recommend() above): this fallback path runs precisely when
+        // something already went wrong upstream (AI unavailable), so it's
+        // the worst possible place to also throw PHP warnings on an
+        // incomplete $prefs array. 'travelers' defaults to 1 (never 0 --
+        // would divide/multiply nonsensically below) and 'budget' to 0
+        // (no budget filter applied, same as the AI path's "No preference").
+        $travelers = max(1, (int)($prefs['travelers'] ?? 1));
+        $budget    = (float)($prefs['budget'] ?? 0);
         $results = [];
         foreach ($packages as $pkg) {
             $score = 50;
-            if ($pkg->PackagePrice * $prefs['travelers'] <= $prefs['budget']) $score += 30;
+            if ($budget > 0 && $pkg->PackagePrice * $travelers <= $budget) $score += 30;
             $scores = ['budget_match'=>$score,'weather_suitability'=>70,'style_match'=>65,'safety'=>80,'experience'=>75];
             $warnings = [];
 
@@ -602,11 +645,22 @@ MSG;
                 'package_id'        => $pkg->PackageId,
                 'destination'       => $pkg->PackageLocation,
                 'package_name'      => $pkg->PackageName,
-                'overall_match'     => min(95, $score + rand(0, 15)),
+                // FIX (Round 113, F14): this used to be
+                // `min(95, $score + rand(0, 15))` -- a random 0-15 point
+                // boost added to every fallback match score for no reason
+                // tied to real data. TravelRecommender's own getMatchScore()
+                // docblock states the project's philosophy explicitly: "an
+                // AI has no business inventing or estimating a number here"
+                // -- the same applies to this deterministic rule-based
+                // fallback fabricating one with rand(). $score is already a
+                // real, explainable number (50 base + 30 for a real budget
+                // fit + travel-mode adjustments); reporting it as-is is
+                // honest, reporting score+random is not.
+                'overall_match'     => min(95, $score),
                 'scores'            => $scores,
                 'why_recommended'   => 'This package fits your budget and travel style.',
-                'best_for'          => $prefs['travel_type'],
-                'estimated_total_cost' => $pkg->PackagePrice * $prefs['travelers'],
+                'best_for'          => $prefs['travel_type'] ?? 'No preference',
+                'estimated_total_cost' => $pkg->PackagePrice * $travelers,
                 'cost_savings_tip'  => 'Book at least 2 weeks in advance for best rates.',
                 'warnings'          => $warnings,
                 'highlights'        => ['Beautiful scenery', 'Local culture', 'Great food'],

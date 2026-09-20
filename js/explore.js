@@ -140,7 +140,7 @@ function goToDestination(name, lat, lng, country) {
         country: root.dataset.country || ''
     };
 
-    var state = { info: null, weather: null, userLoc: null, map: null, markers: [], routeLayer: null, navTarget: null, navMarker: null, currentPlaces: [], currentCategory: 'hotel' };
+    var state = { info: null, weather: null, userLoc: null, map: null, markers: [], routeLayer: null, navTarget: null, navMarker: null, currentPlaces: [], currentCategory: 'hotel', mapPlaces: [], mapCategory: 'attraction' };
 
     // ── Tabs ──────────────────────────────────────────────────
     window.exploreSwitchTab = function (tab) {
@@ -313,6 +313,19 @@ function goToDestination(name, lat, lng, country) {
         L.marker([DEST.lat, DEST.lng], { icon: destIcon() }).addTo(state.map)
             .bindPopup('<strong>' + escapeHtml(DEST.name) + '</strong><br>Your destination').openPopup();
 
+        // Delegated from the map container, same pattern tour-map.php uses for
+        // its own popup buttons -- Leaflet creates/destroys popup DOM nodes on
+        // demand, so a listener bound once here (registered exactly once, since
+        // initMap() itself only ever runs once) catches every pin's "View
+        // Details" click regardless of when that pin's popup was built.
+        document.getElementById('exploreMap').addEventListener('click', function (e) {
+            var link = e.target.closest ? e.target.closest('.map-pin-details-link') : null;
+            if (!link) return;
+            e.preventDefault();
+            var p = state.mapPlaces[parseInt(link.getAttribute('data-idx'), 10)];
+            if (p) openPlaceDetails(p, state.mapCategory);
+        });
+
         // Default view: nearby attractions, same as before this round.
         exploreLoadMapCategory('attraction');
     }
@@ -346,12 +359,26 @@ function goToDestination(name, lat, lng, country) {
         state.markers.forEach(function (m) { state.map.removeLayer(m); });
         state.markers = [];
 
+        // FIX (Round 114, package/places/map upgrade -- finding #11): a pin's
+        // popup only ever offered "Get Directions" -- clicking a place's card
+        // on the Nearby Places tab shows a full details view (renderPlaceCard
+        // gives "View Details" + "Get Directions"), but clicking the exact
+        // same place's pin on the Map tab could never open that same modal.
+        // state.mapPlaces holds the currently-plotted list so the delegated
+        // click handler below (registered once, in initMap()) can look a pin
+        // back up by index -- the same data-idx delegation pattern
+        // loadPlaces()/renderPlaceCard() already use for cards, chosen here
+        // over embedding the place name/data directly in an onclick attribute
+        // (which breaks on quotes in a name, same class of bug tour-map.php's
+        // own tmEsc() helper exists to avoid).
         function plot(places) {
-            (places || []).slice(0, 20).forEach(function (p) {
+            state.mapPlaces = places || [];
+            state.mapPlaces.slice(0, 20).forEach(function (p, idx) {
                 if (!p.lat || !p.lng) return;
                 var m = L.marker([p.lat, p.lng], { icon: mapCategoryIcon(category) }).addTo(state.map)
                     .bindPopup('<strong>' + escapeHtml(p.name) + '</strong>' + (p.address ? '<br>' + escapeHtml(p.address) : '') +
-                        '<br><a href="#" onclick="exploreNavigateToPlace(' + p.lat + ',' + p.lng + ',\'' + escapeHtml(p.name).replace(/'/g, "\\'") + '\');return false;"><i class="fa fa-directions"></i> Get Directions</a>');
+                        '<br><a href="#" class="map-pin-details-link" data-idx="' + idx + '"><i class="fa fa-circle-info"></i> View Details</a>' +
+                        ' &middot; <a href="#" onclick="exploreNavigateToPlace(' + p.lat + ',' + p.lng + ',\'' + escapeHtml(p.name).replace(/'/g, "\\'") + '\');return false;"><i class="fa fa-directions"></i> Get Directions</a>');
                 state.markers.push(m);
             });
         }
@@ -545,6 +572,17 @@ function goToDestination(name, lat, lng, country) {
             '<h6>' + escapeHtml(p.name) + '</h6>' +
             '</a>' +
             (p.rating ? '<div class="rating"><i class="fa fa-star"></i> ' + p.rating + ' / 5</div>' : '') +
+            // FIX (Round 114, package/places/map upgrade -- finding #12):
+            // PlaceDetailsService has always computed a real is_open_now for
+            // the detail modal (from OSM opening_hours, or Google's live
+            // open_now flag -- see ExploreService::parseOverpassPlaces()/
+            // parseGooglePlaces(), which now attach it to the LIST results
+            // too), but it was only ever shown after opening a place's full
+            // detail modal. A visitor scanning a grid of a dozen hotels had no
+            // way to tell which were open right now without clicking into
+            // each one individually, even though the platform already knew.
+            (p.is_open_now === true ? '<div class="pd-badge pd-open" style="margin-bottom:6px;display:inline-flex;"><i class="fa fa-clock"></i> Open now</div>' :
+                p.is_open_now === false ? '<div class="pd-badge pd-closed" style="margin-bottom:6px;display:inline-flex;"><i class="fa fa-clock"></i> Closed now</div>' : '') +
             (p.address ? '<div class="meta"><i class="fa fa-map-marker"></i> ' + escapeHtml(p.address) + '</div>' : '') +
             (p.phone ? '<div class="meta"><i class="fa fa-phone"></i> ' + escapeHtml(p.phone) + '</div>' : '') +
             (p.opening_hours ? '<div class="meta"><i class="fa fa-clock"></i> ' + escapeHtml(p.opening_hours) + '</div>' : '') +
@@ -557,8 +595,18 @@ function goToDestination(name, lat, lng, country) {
     }
 
     // ── Place details modal ────────────────────────────────────
-    var SECTION_ICONS = { info_grid: 'fa-info-circle', list: 'fa-list', rooms: 'fa-bed', menu: 'fa-book-open',
-        doctors: 'fa-user-md', text: 'fa-align-left', reviews: 'fa-star', gallery: 'fa-images' };
+    // FIX (Round 114, package/places/map upgrade -- finding #13, dead code):
+    // this used to list icons for 'rooms', 'menu', 'doctors', 'reviews' and
+    // 'gallery' too. Those were section types from the pre-Round-14
+    // PlaceDetailsService that fabricated room rates, a restaurant menu,
+    // named doctors and reviews from a hash of the place's name --
+    // PlaceDetailsService::sectionsFor() has only ever emitted 'info_grid',
+    // 'list' and 'text' since that rewrite (see backend/PlaceDetailsService.php),
+    // so those keys (and the matching branches in renderSection()/the
+    // gallery+hero_image handling in renderPlaceDetail() below) were
+    // permanently unreachable -- removed rather than left as a trap for a
+    // future reader to assume still works.
+    var SECTION_ICONS = { info_grid: 'fa-info-circle', list: 'fa-list', text: 'fa-align-left' };
 
     function openPlaceDetails(p, category) {
         var modal = document.getElementById('placeDetailModal');
@@ -579,7 +627,15 @@ function goToDestination(name, lat, lng, country) {
             opening_hours: p.opening_hours || '',
             website: p.website || '',
             rating: p.rating || '',
-            distance_m: p.distance_m || ''
+            distance_m: p.distance_m || '',
+            // FIX (Round 114): pass through the real is_open_now the list
+            // already computed (Overpass hours or Google's live open_now
+            // flag) instead of letting PlaceDetailsService re-derive it from
+            // opening_hours alone -- for a Google-sourced place, opening_hours
+            // here is already the display string "Open now"/"Closed now" (see
+            // ExploreService::parseGooglePlaces()), and re-parsing that as if
+            // it were OSM hours syntax never actually resolves to true/false.
+            is_open_now: (p.is_open_now === true || p.is_open_now === false) ? p.is_open_now : ''
         }).then(function (res) {
             if (!res.success) {
                 body.innerHTML = '<div class="explore-error"><i class="fa fa-exclamation-triangle"></i> ' + escapeHtml(res.error) + '</div>';
@@ -613,12 +669,6 @@ function goToDestination(name, lat, lng, country) {
         // contain, so this renders "not listed" instead of a plausible lie, and
         // omits links entirely rather than pointing at a domain the business
         // does not own.
-        var gallery = (pl.images && pl.images.length)
-            ? '<div class="pd-gallery">' + pl.images.map(function (src) {
-                  return '<img src="' + escapeHtml(src) + '" alt="' + escapeHtml(pl.name) + '" loading="lazy">';
-              }).join('') + '</div>'
-            : '';
-
         var badges = '<div class="pd-badges">' +
             '<span class="pd-badge"><i class="fa fa-tag"></i> ' + escapeHtml(pl.category_label) + '</span>' +
             (pl.rating ? '<span class="pd-badge pd-rating"><i class="fa fa-star"></i> ' + pl.rating +
@@ -663,14 +713,11 @@ function goToDestination(name, lat, lng, country) {
 
         var sections = (pl.sections || []).map(renderSection).join('');
 
-        // No hero image is better than a random stock photo of somewhere else.
-        var hero = pl.hero_image
-            ? '<div class="pd-hero" style="background-image:url(\'' + escapeHtml(pl.hero_image) + '\')"></div>'
-            : '';
-
-        return hero +
-            '<div class="pd-header"><h2>' + escapeHtml(pl.name) + '</h2>' + badges + '</div>' +
-            gallery +
+        // No hero image, no gallery: PlaceDetailsService::build() always sets
+        // hero_image => null and images => [] by explicit design (no stock
+        // photography presented as photos of a specific place -- see its own
+        // docblock), so there is nothing here to ever render for either.
+        return '<div class="pd-header"><h2>' + escapeHtml(pl.name) + '</h2>' + badges + '</div>' +
             '<div class="explore-card"><h4><i class="fa fa-address-card"></i> Contact &amp; Location</h4>' + contact + map + '</div>' +
             sections;
     }
@@ -691,33 +738,6 @@ function goToDestination(name, lat, lng, country) {
             return '<div class="explore-card">' + head + '<div class="pd-info-grid">' + s.items.map(function (i) {
                 return '<div class="pd-info-item"><i class="fa ' + (i.icon || 'fa-circle') + '"></i><div><div class="lbl">' + escapeHtml(i.label) + '</div><div class="val">' + escapeHtml(i.value) + '</div></div></div>';
             }).join('') + '</div></div>';
-        }
-        if (s.type === 'rooms') {
-            return '<div class="explore-card">' + head + '<div class="pd-room-grid">' + s.items.map(function (r) {
-                return '<div class="pd-room-card"><h6>' + escapeHtml(r.name) + '</h6><div class="pd-room-price">' + escapeHtml(r.price) + '</div><div class="pd-room-desc">' + escapeHtml(r.desc) + '</div></div>';
-            }).join('') + '</div></div>';
-        }
-        if (s.type === 'menu') {
-            return '<div class="explore-card">' + head + (s.categories || []).map(function (c) {
-                return '<div class="pd-menu-cat"><h6>' + escapeHtml(c.name) + '</h6>' + c.items.map(function (it) {
-                    return '<div class="pd-menu-item"><span class="pd-menu-name">' + escapeHtml(it.name) +
-                        (it.popular ? ' <span class="pd-tag pd-popular">Popular</span>' : '') +
-                        (it.vegetarian ? ' <span class="pd-tag pd-veg">Veg</span>' : ' <span class="pd-tag pd-nonveg">Non-Veg</span>') +
-                        '</span><span class="pd-menu-price">' + escapeHtml(it.price) + '</span></div>';
-                }).join('') + '</div>';
-            }).join('') + '</div>';
-        }
-        if (s.type === 'doctors') {
-            return '<div class="explore-card">' + head + '<div class="pd-doctor-grid">' + s.items.map(function (d) {
-                return '<div class="pd-doctor-card"><i class="fa fa-user-md"></i><div><div class="pd-doctor-name">' + escapeHtml(d.name) + '</div><div class="pd-doctor-spec">' + escapeHtml(d.specialty) + '</div></div></div>';
-            }).join('') + '</div></div>';
-        }
-        if (s.type === 'reviews') {
-            return '<div class="explore-card">' + head + (s.items || []).map(function (r) {
-                var stars = '';
-                for (var i = 0; i < 5; i++) stars += '<i class="fa fa-star' + (i < r.rating ? '' : '-o') + '"></i>';
-                return '<div class="pd-review"><div class="pd-review-head"><strong>' + escapeHtml(r.name) + '</strong><span class="pd-review-stars">' + stars + '</span><span class="pd-review-date">' + escapeHtml(r.date) + '</span></div><p>' + escapeHtml(r.comment) + '</p></div>';
-            }).join('') + '</div>';
         }
         return '';
     }

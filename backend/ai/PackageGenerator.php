@@ -52,8 +52,14 @@ SYSTEM;
         $climate   = $prefs['climate'] ?? 'warm';
         $activities = is_array($prefs['activities']) ? implode(', ', $prefs['activities']) : ($prefs['activities'] ?? 'sightseeing');
         $accommodation = $prefs['accommodation'] ?? 'hotel';
+        // FIX (Round 113, F9 -- same undefined-array-key bug class fixed in
+        // ItineraryPlanner/BudgetOptimizer/TravelRecommender this round):
+        // 'special_requests' is an optional field on every caller of
+        // generate() -- unlike every other $prefs key just above, it was
+        // interpolated directly into the heredoc below with no fallback.
+        $specialRequests = $prefs['special_requests'] ?? 'None';
 
-        $perPerson = intdiv($budget, $travelers);
+        $perPerson = intdiv($budget, max(1, (int)$travelers));
 
         $userMsg = <<<MSG
 Design a personalized travel package for:
@@ -63,7 +69,7 @@ Design a personalized travel package for:
 - Climate preference: {$climate}
 - Activities: {$activities}
 - Accommodation: {$accommodation}
-- Special notes: {$prefs['special_requests']}
+- Special notes: {$specialRequests}
 
 Return this EXACT JSON structure:
 {
@@ -135,7 +141,19 @@ MSG;
         }
 
         $package = $this->ai->parseJson($result['content']);
-        if (!$package) {
+        // FIX (Round 113, F12): previously any truthy parsed JSON was
+        // accepted as-is, even if the model returned valid-but-wrong-shaped
+        // JSON (e.g. an error object, or a package missing its name/price).
+        // savePackage() and every known caller of generate() assume
+        // 'package_name' and a numeric 'pricing.total' exist -- require both
+        // before trusting the AI's output, same "validate before use"
+        // pattern already added to BudgetOptimizer::optimizeBudget() this
+        // round (F11).
+        if (!$package
+            || empty($package['package_name'])
+            || !isset($package['pricing']['total'])
+            || !is_numeric($package['pricing']['total'])
+        ) {
             return $this->fallbackPackage($prefs);
         }
 
@@ -200,7 +218,7 @@ MSG;
 
     private function fallbackPackage(array $prefs): array {
         $budget    = $prefs['budget'] ?? 30000;
-        $travelers = $prefs['travelers'] ?? 2;
+        $travelers = max(1, (int)($prefs['travelers'] ?? 2));
         $days      = $prefs['duration'] ?? 5;
 
         // FIX (Round 108, AI-upgrade audit): this hardcoded placeholder used to

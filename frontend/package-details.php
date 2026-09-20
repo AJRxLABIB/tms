@@ -981,6 +981,32 @@ html[data-theme="dark"] .meta-row { color: var(--text-muted) !important; }
                 .pd-source-note{font-size:10.5px;color:#c2c9d1;margin-top:14px;text-align:center;}
                 html[data-theme="dark"] #placeDetailsModal{background:#1b222c;}
                 html[data-theme="dark"] .pd-row .pd-val{color:var(--text);}
+                /* FIX (Round 114, package/places/map upgrade): this modal used to
+                   hand-build a thin 6-field view (address/distance/rating/phone/
+                   hours/website) from data already sitting in the Nearby Places
+                   card, instead of calling the same api/explore.php?action=
+                   place_details endpoint (PlaceDetailsService) Explore Mode uses --
+                   so the same live place looked materially more complete on
+                   explore-view.php than it did right here, on the page a paying
+                   customer is actually deciding on. These rules extend the modal
+                   above with the same categories of information Explore Mode's
+                   modal shows (open/closed + rating badges, category tips,
+                   emergency guidance for hospitals/police, provenance note),
+                   styled to match this page's own pd-* classes rather than
+                   pulling in Explore Mode's separate stylesheet. */
+                .pd-badges{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px;}
+                .pd-badge{font-size:11.5px;font-weight:700;padding:4px 10px;border-radius:14px;background:var(--bg);color:var(--text);display:inline-flex;align-items:center;gap:5px;}
+                .pd-badge-rating{background:#fff4dd;color:#a9750c;}
+                .pd-badge-open{background:#e8f8ee;color:#1f8a4c;}
+                .pd-badge-closed{background:#fdecec;color:#c0392b;}
+                .pd-section{margin-top:16px;padding-top:14px;border-top:1px solid #f0f0f0;}
+                .pd-section-title{font-size:12.5px;font-weight:700;color:var(--text);margin-bottom:8px;display:flex;align-items:center;gap:6px;}
+                .pd-section-title i{color:var(--secondary);}
+                .pd-section-text{font-size:12.5px;color:#64748b;line-height:1.5;margin:0;}
+                .pd-list-item{font-size:12.5px;color:var(--text);padding:4px 0;display:flex;gap:8px;align-items:flex-start;}
+                .pd-list-item i{color:#27ae60;margin-top:3px;flex-shrink:0;}
+                html[data-theme="dark"] .pd-section{border-top-color:#2a3441;}
+                html[data-theme="dark"] .pd-badge{background:#232b37;color:#eef2f7;}
                 </style>
                 <div id="placeDetailsOverlay">
                     <div id="placeDetailsModal">
@@ -1000,7 +1026,17 @@ html[data-theme="dark"] .meta-row { color: var(--text-muted) !important; }
                         attribution: '&copy; OpenStreetMap contributors', maxZoom: 18
                     }).addTo(map);
                     var destIcon = L.divIcon({className:'', html:'<div style="width:16px;height:16px;background:var(--accent);border:3px solid #fff;border-radius:50%;box-shadow:0 2px 6px rgba(0,0,0,.3);"></div>', iconSize:[16,16]});
-                    L.marker([lat, lng], {icon: destIcon}).addTo(map).bindPopup('<?php echo htmlspecialchars(addslashes($pkg->PackageName), ENT_QUOTES, "UTF-8"); ?>');
+                    // FIX (Round 114, package/places/map upgrade): this used to be
+                    // htmlspecialchars(addslashes(...)) -- HTML-entity-encoding a
+                    // string that's embedded in a <script> block, not HTML. A
+                    // package name containing an apostrophe or an ampersand (e.g.
+                    // "O'Reilly Tour", "Bed & Breakfast Retreat") rendered literally
+                    // as "O&#039;Reilly Tour" in the Leaflet popup, because the
+                    // browser only decodes HTML entities when parsing markup, never
+                    // inside a JS string literal. json_encode() produces a properly
+                    // escaped JS string literal instead -- the same tool this file's
+                    // own `packages` array (tour-map.php) already relies on.
+                    L.marker([lat, lng], {icon: destIcon}).addTo(map).bindPopup(<?php echo json_encode((string)$pkg->PackageName, JSON_UNESCAPED_UNICODE); ?>);
                     var markers = [];
                     function clearMarkers(){ markers.forEach(function(m){ map.removeLayer(m); }); markers = []; }
                     function escHtml(s){ var d = document.createElement('div'); d.textContent = s || ''; return d.innerHTML; }
@@ -1016,24 +1052,120 @@ html[data-theme="dark"] .meta-row { color: var(--text-muted) !important; }
                         document.getElementById('placeDetailsOverlay').classList.remove('open');
                     };
 
-                    function openPlaceDetails(p) {
+                    // FIX (Round 114, package/places/map upgrade -- was finding #8
+                    // in this round's audit): this used to build the whole modal
+                    // from the 6 fields already sitting on the Nearby Places card
+                    // (address/distance/rating/phone/hours/website), computed
+                    // entirely client-side. Explore Mode's identical modal
+                    // (js/explore.js's openPlaceDetails()) instead calls
+                    // api/explore.php?action=place_details, backed by
+                    // PlaceDetailsService -- which adds a "Verified details" grid,
+                    // real emergency guidance for hospitals/police, honest
+                    // non-specific category tips, and a data-provenance note, none
+                    // of which this page showed for the exact same live place. This
+                    // now calls that same endpoint and renders the same categories
+                    // of information PlaceDetailsService actually returns (sections
+                    // are always one of 'info_grid' | 'list' | 'text' -- see
+                    // renderPdSection() below), styled with this page's own pd-*
+                    // classes rather than pulling in Explore Mode's separate
+                    // stylesheet.
+                    function openPlaceDetails(p, category) {
                         document.getElementById('pdName').textContent = p.name || 'Place';
-                        var distKm = p.distance_m ? (p.distance_m / 1000).toFixed(1) + ' km away' : null;
-                        var ratingText = (p.rating !== null && p.rating !== undefined) ? (p.rating + ' / 5') : null;
-                        var html = '';
-                        html += pdField('fa-map-marker', 'Address', p.address);
-                        html += pdField('fa-road', 'Distance', distKm);
-                        html += pdField('fa-star', 'Rating', ratingText);
-                        html += pdField('fa-phone', 'Phone', p.phone);
-                        html += pdField('fa-clock-o', 'Hours', p.opening_hours);
-                        html += pdField('fa-globe', 'Website', p.website);
-                        html += '<div class="pd-actions">' +
-                            '<a class="pd-map-link" href="https://www.google.com/maps?q=' + p.lat + ',' + p.lng + '" target="_blank" rel="noopener"><i class="fa fa-map"></i> View on Map</a>' +
-                            '<a class="pd-directions-link" href="https://www.google.com/maps/dir/?api=1&destination=' + p.lat + ',' + p.lng + '" target="_blank" rel="noopener"><i class="fa fa-location-arrow"></i> Directions</a>' +
-                            '</div>';
-                        html += '<div class="pd-source-note">Live data from ' + (window.tmsLastPlaceSource === 'google_places' ? 'Google Places' : 'OpenStreetMap') + ' — fields left blank were not available from that source, not omitted by us.</div>';
-                        document.getElementById('pdBody').innerHTML = html;
+                        document.getElementById('pdBody').innerHTML = '<div style="text-align:center;padding:20px;color:#aaa;"><i class="fa fa-spinner fa-spin"></i> Loading details…</div>';
                         document.getElementById('placeDetailsOverlay').classList.add('open');
+
+                        var qs = new URLSearchParams({
+                            action: 'place_details',
+                            category: category || 'hotel',
+                            name: p.name || '',
+                            lat: p.lat || '',
+                            lng: p.lng || '',
+                            address: p.address || '',
+                            phone: p.phone || '',
+                            opening_hours: p.opening_hours || '',
+                            website: p.website || '',
+                            rating: (p.rating !== null && p.rating !== undefined) ? p.rating : '',
+                            distance_m: (p.distance_m !== null && p.distance_m !== undefined) ? p.distance_m : '',
+                            // FIX (Round 114, F12-adjacent): p.is_open_now is now a
+                            // real boolean when the nearby-places list already knew
+                            // it (Overpass opening_hours, or Google's live open_now
+                            // flag -- see ExploreService::parseOverpassPlaces()/
+                            // parseGooglePlaces()). Passing it through here lets
+                            // PlaceDetailsService use that real value directly
+                            // instead of re-parsing the display string a second
+                            // time (and for a Google-sourced place, re-parsing
+                            // "Open now"/"Closed now" as an OSM-style hours string
+                            // never actually worked -- it always fell back to null).
+                            is_open_now: (p.is_open_now === true || p.is_open_now === false) ? p.is_open_now : ''
+                        });
+
+                        fetch('api/explore.php?' + qs.toString())
+                            .then(function(r){ return r.json(); })
+                            .then(function(res){
+                                if (!res || !res.success) {
+                                    document.getElementById('pdBody').innerHTML = '<div style="text-align:center;padding:16px;color:#e11d48;">' +
+                                        escHtml((res && res.error) || 'Could not load details right now.') + '</div>';
+                                    return;
+                                }
+                                document.getElementById('pdBody').innerHTML = renderPlaceDetailBody(res.data.place);
+                            })
+                            .catch(function(){
+                                document.getElementById('pdBody').innerHTML = '<div style="text-align:center;padding:16px;color:#e11d48;">Could not load details right now.</div>';
+                            });
+                    }
+
+                    function renderPlaceDetailBody(pl) {
+                        var badges = '<span class="pd-badge"><i class="fa fa-tag"></i> ' + escHtml(pl.category_label) + '</span>';
+                        if (pl.rating) badges += '<span class="pd-badge pd-badge-rating"><i class="fa fa-star"></i> ' + pl.rating + ' / 5</span>';
+                        if (pl.is_open_now === true) badges += '<span class="pd-badge pd-badge-open"><i class="fa fa-clock-o"></i> Open now</span>';
+                        else if (pl.is_open_now === false) badges += '<span class="pd-badge pd-badge-closed"><i class="fa fa-clock-o"></i> Closed now</span>';
+                        if (pl.distance_km !== null && pl.distance_km !== undefined) badges += '<span class="pd-badge"><i class="fa fa-road"></i> ' + pl.distance_km + ' km away</span>';
+
+                        var html = '<div class="pd-badges">' + badges + '</div>';
+                        html += pdField('fa-map-marker', 'Address', pl.address);
+                        html += pdField('fa-phone', 'Phone', pl.phone);
+                        html += pdField('fa-clock-o', 'Hours', pl.opening_hours);
+                        // Website is now a real link (this used to render the URL as
+                        // inert text -- a visitor could see a place had a website
+                        // but couldn't click through to it).
+                        html += pl.website
+                            ? '<div class="pd-row"><i class="fa fa-globe"></i><div><strong>Website:</strong> <span class="pd-val"><a href="' + escHtml(pl.website) + '" target="_blank" rel="noopener nofollow">' + escHtml(pl.website) + '</a></span></div></div>'
+                            : pdField('fa-globe', 'Website', null);
+
+                        (pl.sections || []).forEach(function(s){ html += renderPdSection(s); });
+
+                        html += '<div class="pd-actions">' +
+                            '<a class="pd-map-link" href="' + escHtml(pl.map_url) + '" target="_blank" rel="noopener"><i class="fa fa-map"></i> View on Map</a>' +
+                            '<a class="pd-directions-link" href="https://www.google.com/maps/dir/?api=1&destination=' + pl.lat + ',' + pl.lng + '" target="_blank" rel="noopener"><i class="fa fa-location-arrow"></i> Directions</a>' +
+                            '</div>';
+                        return html;
+                    }
+
+                    // PlaceDetailsService::sectionsFor() only ever emits these three
+                    // types -- see backend/PlaceDetailsService.php. Unlike Explore
+                    // Mode's older renderer (js/explore.js), this was never carrying
+                    // dead branches for section types the backend can't produce
+                    // (rooms/menu/doctors/reviews/gallery, from a pre-Round-14
+                    // version that fabricated them) in the first place, since this
+                    // is a fresh port -- see this round's CHANGELOG for the note
+                    // about those dead branches in js/explore.js itself.
+                    function renderPdSection(s) {
+                        var icon = s.icon || 'fa-info-circle';
+                        var head = '<div class="pd-section-title"><i class="fa ' + icon + '"></i> ' + escHtml(s.title) + '</div>';
+                        if (s.type === 'text') {
+                            return '<div class="pd-section">' + head + '<p class="pd-section-text">' + escHtml(s.content) + '</p></div>';
+                        }
+                        if (s.type === 'list') {
+                            return '<div class="pd-section">' + head + (s.items || []).map(function(i){
+                                return '<div class="pd-list-item"><i class="fa fa-check"></i> ' + escHtml(i) + '</div>';
+                            }).join('') + '</div>';
+                        }
+                        if (s.type === 'info_grid') {
+                            return '<div class="pd-section">' + head + (s.items || []).map(function(i){
+                                return '<div class="pd-row"><i class="fa ' + (i.icon || 'fa-circle') + '"></i><div><strong>' + escHtml(i.label) + ':</strong> <span class="pd-val">' + escHtml(i.value) + '</span></div></div>';
+                            }).join('') + '</div>';
+                        }
+                        return '';
                     }
                     document.getElementById('placeDetailsOverlay').addEventListener('click', function(e){
                         if (e.target === this) tmsClosePlaceDetails();
@@ -1061,7 +1193,6 @@ html[data-theme="dark"] .meta-row { color: var(--text-muted) !important; }
                                     return;
                                 }
                                 var results = (res.data && res.data.places) ? res.data.places : [];
-                                window.tmsLastPlaceSource = (res.data && res.data.source) || 'openstreetmap';
                                 if (!results.length) {
                                     document.getElementById('nearbyList').innerHTML = '<div style="text-align:center;padding:16px;color:#aaa;">No ' + label + ' found within a few kilometres of this destination.</div>';
                                     return;
@@ -1078,12 +1209,24 @@ html[data-theme="dark"] .meta-row { color: var(--text-muted) !important; }
                                     // same guard openPlaceDetails() already
                                     // uses a few lines above for this exact field.
                                     var distKm = (p.distance_m || p.distance_m === 0) ? (p.distance_m / 1000).toFixed(1) + ' km' : 'Distance unknown';
+                                    // FIX (Round 114, package/places/map upgrade):
+                                    // ExploreService now attaches a real is_open_now
+                                    // to each place in the list (Overpass opening_hours
+                                    // parsed, or Google's live open_now flag) -- surface
+                                    // it right on the compact list row too, not only
+                                    // after opening the full detail modal, so a visitor
+                                    // scanning "Hotels" or "Restaurants" nearby doesn't
+                                    // have to open each one individually to see which
+                                    // are actually open right now.
+                                    var openBadge = p.is_open_now === true
+                                        ? '<span class="pd-badge pd-badge-open" style="margin-top:3px;"><i class="fa fa-clock-o"></i> Open</span>'
+                                        : (p.is_open_now === false ? '<span class="pd-badge pd-badge-closed" style="margin-top:3px;"><i class="fa fa-clock-o"></i> Closed</span>' : '');
                                     var row = document.createElement('div');
                                     row.className = 'nearby-item';
                                     row.innerHTML = '<div><div class="name">' + escHtml(p.name) + '</div>' +
-                                        (p.address ? '<div class="addr">' + escHtml(p.address) + '</div>' : '') + '</div>' +
+                                        (p.address ? '<div class="addr">' + escHtml(p.address) + '</div>' : '') + openBadge + '</div>' +
                                         '<div class="dist">' + distKm + '</div>';
-                                    row.addEventListener('click', function(){ openPlaceDetails(p); });
+                                    row.addEventListener('click', function(){ openPlaceDetails(p, cat); });
                                     listEl.appendChild(row);
                                     // Round 14: L.marker() with a null lat/lng throws
                                     // "Invalid LatLng object", which aborted the rest of
@@ -1091,7 +1234,7 @@ html[data-theme="dark"] .meta-row { color: var(--text-muted) !important; }
                                     // arrive without coordinates.
                                     if (typeof p.lat === 'number' && typeof p.lng === 'number') {
                                         var m = L.marker([p.lat, p.lng]).addTo(map).bindPopup(escHtml(p.name));
-                                        m.on('click', function(){ openPlaceDetails(p); });
+                                        m.on('click', function(){ openPlaceDetails(p, cat); });
                                         markers.push(m);
                                     }
                                 });

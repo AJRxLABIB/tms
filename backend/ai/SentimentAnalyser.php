@@ -122,21 +122,110 @@ Return: {
                  LIMIT " . (int)$limit
             );
             $stmt->execute();
-            $reviews = $stmt->fetchAll(PDO::FETCH_OBJ);
+            $reviews = array_values(array_filter(
+                $stmt->fetchAll(PDO::FETCH_OBJ),
+                fn($r) => !empty($r->ReviewText)
+            ));
+            if (!$reviews) return 0;
 
+            // FIX (Round 113, F2 -- AI-upgrade priority): this used to call
+            // analyse() once PER review (one full Gemini round-trip each)
+            // plus a hardcoded usleep(500000) between every call -- 10
+            // reviews meant 10 sequential AI requests and 4.5s of pure
+            // sleeping on top of that, just to run a cron/admin job. Reviews
+            // are short, independent texts sharing one identical prompt
+            // shape, so they batch cleanly: analyseBatch() below sends up to
+            // 5 reviews in a single Gemini call and asks for a JSON array
+            // back in the same order, cutting the AI-call count ~5x with no
+            // change to what gets analysed or saved. The sleep is dropped
+            // entirely -- AIClient already owns real rate limiting/backoff
+            // centrally (see its docblock), so a call-site sleep here was
+            // redundant defense against nothing, not a real safety measure.
             $count = 0;
-            foreach ($reviews as $r) {
-                if (!empty($r->ReviewText)) {
-                    $this->analyse($r->id, $r->ReviewText, (int)$r->Rating);
-                    $count++;
-                    usleep(500000); // 0.5s delay between AI calls
-                }
+            foreach (array_chunk($reviews, 5) as $chunk) {
+                $count += $this->analyseBatch($chunk);
             }
             return $count;
         } catch (Exception $e) {
             error_log('[TMS Sentiment] Batch error: ' . $e->getMessage());
             return 0;
         }
+    }
+
+    /**
+     * Analyses up to a handful of reviews in a single Gemini call (see F2
+     * fix in batchAnalyse() above). Falls back to the same deterministic
+     * rule-based sentiment used by analyse()'s own AI-failure path for any
+     * review whose slot the model dropped, reordered, or returned malformed
+     * -- one bad entry in the batch never blocks the rest from being saved.
+     *
+     * @param object[] $reviews Rows with ->id, ->ReviewText, ->Rating.
+     * @return int Number of reviews analysed and saved (always count($reviews)).
+     */
+    private function analyseBatch(array $reviews): int {
+        if (!$reviews) return 0;
+
+        // Deterministic suspicious-pattern detection stays per-review (no AI
+        // call involved, just a cheap DB lookup) -- only the AI sentiment
+        // call itself is what gets batched here.
+        $suspicious = [];
+        foreach ($reviews as $i => $r) {
+            $suspicious[$i] = $this->detectSuspiciousPatterns((int)$r->id, $r->ReviewText, (int)$r->Rating);
+        }
+
+        $system = "You are a sentiment analysis engine for a travel platform. "
+            . "Analyse MULTIPLE reviews in a single pass and return ONLY a JSON array "
+            . "with exactly one object per review, in the SAME ORDER they were given. No other text.";
+
+        $lines = [];
+        foreach ($reviews as $i => $r) {
+            $text = str_replace(["\r", "\n"], ' ', $r->ReviewText);
+            $lines[] = ($i + 1) . ". (rating: {$r->Rating}/5) \"{$text}\"";
+        }
+
+        $userMsg = "Reviews:\n" . implode("\n", $lines) . "\n\n"
+            . "Return a JSON array with exactly " . count($reviews) . " objects, one per review above in order, each shaped:\n"
+            . "{\n"
+            . "  \"sentiment\": \"positive|neutral|negative\",\n"
+            . "  \"score\": <0.000-1.000 confidence>,\n"
+            . "  \"keywords\": [\"<key word/phrase>\"],\n"
+            . "  \"summary\": \"<1 sentence neutral summary of the review>\",\n"
+            . "  \"issues\": [\"<specific complaint if any>\"],\n"
+            . "  \"highlights\": [\"<specific praise if any>\"]\n"
+            . "}";
+
+        $result = $this->ai->ask($system, $userMsg, '', 'system', feature: 'sentiment_batch');
+        $parsed = $result['success'] ? $this->ai->parseJson($result['content']) : null;
+        $validArray = is_array($parsed) && count($parsed) === count($reviews);
+
+        foreach ($reviews as $i => $r) {
+            [$isSuspicious, $suspiciousReason] = $suspicious[$i];
+            $data = $validArray ? ($parsed[$i] ?? null) : null;
+
+            if (is_array($data) && !empty($data['sentiment'])) {
+                $this->saveSentiment(
+                    (int)$r->id,
+                    $data['sentiment'] ?? 'neutral',
+                    (float)($data['score'] ?? 0.5),
+                    $data['keywords'] ?? [],
+                    $data['summary'] ?? '',
+                    $data['issues'] ?? [],
+                    $data['highlights'] ?? [],
+                    $isSuspicious,
+                    $suspiciousReason
+                );
+            } else {
+                // Same rule-based fallback analyse() uses when the AI call
+                // fails or returns unparsable JSON.
+                $sentiment = $r->Rating >= 4 ? 'positive' : ($r->Rating <= 2 ? 'negative' : 'neutral');
+                $this->saveSentiment(
+                    (int)$r->id, $sentiment, $r->Rating / 5, [],
+                    "Rating {$r->Rating}/5 review.", [], [], $isSuspicious, $suspiciousReason
+                );
+            }
+        }
+
+        return count($reviews);
     }
 
     /**

@@ -112,6 +112,20 @@ if ($destName === '' || $lat === null || $lng === null) {
                     <button class="map-cat-btn" data-cat="hospital" onclick="exploreLoadMapCategory('hospital')"><i class="fa fa-hospital"></i> Hospitals</button>
                     <button class="map-cat-btn" data-cat="pharmacy" onclick="exploreLoadMapCategory('pharmacy')"><i class="fa fa-prescription-bottle-alt"></i> Pharmacies</button>
                     <button class="map-cat-btn" data-cat="atm" onclick="exploreLoadMapCategory('atm')"><i class="fa fa-money-bill-wave"></i> ATMs</button>
+                    <!-- FIX (Round 114, package/places/map upgrade): the Nearby
+                         Places tab below has always offered all 10 real categories
+                         ExploreService/PlaceDetailsService support, but this Map tab
+                         only ever had pills for 6 of them -- police, gas stations,
+                         shopping malls and tourist info had full backend + JS
+                         support (exploreLoadMapCategory/MAP_CATEGORY_ICONS already
+                         handle all 10) with no button here to ever trigger it. Same
+                         class of gap the "hotels/restaurants on the map" fix closed
+                         for those two categories previously -- closing it for the
+                         remaining four. -->
+                    <button class="map-cat-btn" data-cat="police" onclick="exploreLoadMapCategory('police')"><i class="fa fa-shield-alt"></i> Police</button>
+                    <button class="map-cat-btn" data-cat="gas_station" onclick="exploreLoadMapCategory('gas_station')"><i class="fa fa-gas-pump"></i> Gas Stations</button>
+                    <button class="map-cat-btn" data-cat="shopping_mall" onclick="exploreLoadMapCategory('shopping_mall')"><i class="fa fa-shopping-bag"></i> Malls</button>
+                    <button class="map-cat-btn" data-cat="tourist_info" onclick="exploreLoadMapCategory('tourist_info')"><i class="fa fa-info-circle"></i> Tourist Info</button>
                 </div>
                 <div id="exploreMap"></div>
                 <div class="route-summary" id="routeSummary"></div>

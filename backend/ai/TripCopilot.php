@@ -115,7 +115,25 @@ class TripCopilot {
         if (!$result['success']) return null;
 
         $alert = $this->ai->parseJson($result['content']);
-        if ($alert) $this->cache->set($cacheKey, $alert, 600);
+        // FIX (Round 113, F10): previously any truthy parsed JSON was cached
+        // and returned as-is. The prompt above promises a fixed shape
+        // (type/title/message/urgency) and the frontend renders those
+        // fields directly -- an incomplete or differently-shaped object
+        // from the model would get cached for 10 minutes and shown broken
+        // (e.g. a blank alert title) to every page load in that window.
+        // Validate all four keys are present and non-empty before trusting
+        // or caching it; an invalid shape degrades to "no alert" (null),
+        // same as the existing !$result['success'] path above, rather than
+        // showing something malformed.
+        if (!$alert
+            || empty($alert['type'])
+            || empty($alert['title'])
+            || empty($alert['message'])
+            || empty($alert['urgency'])
+        ) {
+            return null;
+        }
+        $this->cache->set($cacheKey, $alert, 600);
         return $alert;
     }
 

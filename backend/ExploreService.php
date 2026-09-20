@@ -18,6 +18,12 @@
  */
 
 require_once __DIR__ . '/CacheService.php';
+// FIX (Round 114, package/places/map upgrade): needed for
+// PlaceDetailsService::openNowFromOsm(), reused (not reimplemented) by
+// parseOverpassPlaces() below so a Nearby Places LIST can show a real
+// "Open now"/"Closed now" badge per place, not only inside the single-place
+// detail modal PlaceDetailsService was originally built for.
+require_once __DIR__ . '/PlaceDetailsService.php';
 
 class ExploreService {
 
@@ -107,18 +113,30 @@ class ExploreService {
             'timezone'        => 'auto',
         ]);
 
-        $weatherRes = $this->httpGetJson($weatherUrl);
-        if (!$weatherRes['success']) return $weatherRes;
-        $w = $weatherRes['data'];
-
-        // Air quality is a separate Open-Meteo endpoint
+        // Air quality is a separate Open-Meteo endpoint, and doesn't depend on
+        // the forecast response in any way -- Round 113 (AI-upgrade priority,
+        // speed pass) fires both concurrently via httpRequestMulti() instead
+        // of waiting for the forecast call to fully finish before starting
+        // the air-quality one. Roughly halves this method's network time
+        // (both endpoints are typically similar latency), which matters here
+        // more than most call sites since getWeather() sits directly in the
+        // critical path of every weather-grounded AI feature (ItineraryPlanner,
+        // TravelRecommender, TripCopilot) as well as the Explore Mode Weather tab.
         $aqUrl = 'https://air-quality-api.open-meteo.com/v1/air-quality?' . http_build_query([
             'latitude'  => $lat,
             'longitude' => $lng,
             'current'   => 'us_aqi,pm2_5,pm10',
             'timezone'  => 'auto',
         ]);
-        $aqRes = $this->httpGetJson($aqUrl);
+        $both = $this->httpRequestMulti([
+            'forecast'     => ['url' => $weatherUrl],
+            'air_quality'  => ['url' => $aqUrl],
+        ]);
+        $weatherRes = $both['forecast'];
+        if (!$weatherRes['success']) return $weatherRes;
+        $w = $weatherRes['data'];
+
+        $aqRes = $both['air_quality'];
         $aq    = $aqRes['success'] ? ($aqRes['data']['current'] ?? null) : null;
 
         // FIX (Round 14): this took the FIRST 24 hourly entries. Open-Meteo's
@@ -294,17 +312,20 @@ class ExploreService {
         return $result;
     }
 
-    private function placesFromOverpass(float $lat, float $lng, string $category, int $radius): array {
+    private function overpassQl(string $category, float $lat, float $lng, int $radius): string {
         $filter = self::CATEGORY_MAP[$category]['osm'];
-        $ql = "[out:json][timeout:20];(node$filter(around:$radius,$lat,$lng);way$filter(around:$radius,$lat,$lng););out center 25;";
+        return "[out:json][timeout:20];(node$filter(around:$radius,$lat,$lng);way$filter(around:$radius,$lat,$lng););out center 25;";
+    }
 
-        $res = $this->httpPostJson('https://overpass-api.de/api/interpreter', 'data=' . urlencode($ql), true);
-        if (!$res['success']) {
-            return ['success' => false, 'error' => 'Nearby places service is temporarily unavailable. Please try again shortly.'];
-        }
-
+    /**
+     * Round 113: extracted from placesFromOverpass() (single-category path)
+     * unchanged, so getNearbyPlacesMulti() below can share the exact same
+     * parsing for the concurrent (multi-category) path instead of a second,
+     * separately-maintained copy that could quietly drift from this one.
+     */
+    private function parseOverpassPlaces(array $elements, float $lat, float $lng): array {
         $places = [];
-        foreach (($res['data']['elements'] ?? []) as $el) {
+        foreach ($elements as $el) {
             $tags = $el['tags'] ?? [];
             $plat = $el['lat'] ?? $el['center']['lat'] ?? null;
             $plng = $el['lon'] ?? $el['center']['lon'] ?? null;
@@ -315,41 +336,63 @@ class ExploreService {
                 $tags['addr:city'] ?? '', $tags['addr:postcode'] ?? '',
             ]);
 
+            $openingHours = $tags['opening_hours'] ?? null;
             $places[] = [
                 'name'          => $tags['name'],
                 'lat'           => (float)$plat,
                 'lng'           => (float)$plng,
                 'address'       => $addrParts ? implode(', ', $addrParts) : null,
                 'phone'         => $tags['phone'] ?? $tags['contact:phone'] ?? null,
-                'opening_hours' => $tags['opening_hours'] ?? null,
+                'opening_hours' => $openingHours,
                 'website'       => $tags['website'] ?? $tags['contact:website'] ?? null,
                 'rating'        => null,
                 'photo'         => null,
                 'photo_attribution' => null,
                 'distance_m'    => (int)$this->haversine($lat, $lng, (float)$plat, (float)$plng),
+                // FIX (Round 114, package/places/map upgrade -- finding #12):
+                // this list previously carried the raw opening_hours string
+                // but nothing derived from it, so every place card had to be
+                // opened individually (triggering a place_details call) just
+                // to learn whether it was open right now, even though the
+                // real OSM hours were already sitting right here. Reuses
+                // PlaceDetailsService's own OSM-hours parser rather than a
+                // second copy of that logic.
+                'is_open_now'   => PlaceDetailsService::openNowFromOsm($openingHours),
             ];
         }
-
         usort($places, fn($a, $b) => $a['distance_m'] <=> $b['distance_m']);
-        return ['success' => true, 'results' => array_slice($places, 0, 20), 'source' => 'openstreetmap'];
+        return array_slice($places, 0, 20);
     }
 
-    private function placesFromGoogle(float $lat, float $lng, string $category, int $radius): array {
+    private function placesFromOverpass(float $lat, float $lng, string $category, int $radius): array {
+        $ql  = $this->overpassQl($category, $lat, $lng, $radius);
+        $res = $this->httpPostJson('https://overpass-api.de/api/interpreter', 'data=' . urlencode($ql), true);
+        if (!$res['success']) {
+            return ['success' => false, 'error' => 'Nearby places service is temporarily unavailable. Please try again shortly.'];
+        }
+
+        $places = $this->parseOverpassPlaces($res['data']['elements'] ?? [], $lat, $lng);
+        return ['success' => true, 'results' => $places, 'source' => 'openstreetmap'];
+    }
+
+    private function googlePlacesUrl(string $category, float $lat, float $lng, int $radius): string {
         $type = self::CATEGORY_MAP[$category]['google'];
-        $url  = 'https://maps.googleapis.com/maps/api/place/nearbysearch/json?' . http_build_query([
+        return 'https://maps.googleapis.com/maps/api/place/nearbysearch/json?' . http_build_query([
             'location' => "$lat,$lng",
             'radius'   => $radius,
             'type'     => $type,
             'key'      => GOOGLE_PLACES_API_KEY,
         ]);
+    }
 
-        $res = $this->httpGetJson($url);
-        if (!$res['success'] || ($res['data']['status'] ?? '') !== 'OK') {
-            return $this->placesFromOverpass($lat, $lng, $category, $radius);
-        }
-
+    /**
+     * Round 113: extracted from placesFromGoogle() unchanged (same photo-proxy
+     * security fix, same attribution handling), so the concurrent multi-category
+     * path shares this exact parsing instead of a second copy.
+     */
+    private function parseGooglePlaces(array $results, float $lat, float $lng): array {
         $places = [];
-        foreach (($res['data']['results'] ?? []) as $p) {
+        foreach ($results as $p) {
             $photo = null;
             $photoAttribution = null;
             if (!empty($p['photos'][0]['photo_reference'])) {
@@ -383,10 +426,92 @@ class ExploreService {
                 'photo'         => $photo,
                 'photo_attribution' => $photoAttribution,
                 'distance_m'    => ($plat && $plng) ? (int)$this->haversine($lat, $lng, $plat, $plng) : null,
+                // FIX (Round 114, package/places/map upgrade -- finding #12):
+                // Google's real open_now boolean was already being received
+                // above, just to be flattened into the 'opening_hours' display
+                // string one line up -- that string then could never be
+                // reliably turned back into a boolean by anything downstream
+                // (PlaceDetailsService::openNowFromOsm() parses OSM hours
+                // syntax, not "Open now"/"Closed now"). Attach the real
+                // boolean directly instead of discarding it.
+                'is_open_now'   => isset($p['opening_hours']['open_now']) ? (bool)$p['opening_hours']['open_now'] : null,
             ];
         }
         usort($places, fn($a, $b) => ($a['distance_m'] ?? 999999) <=> ($b['distance_m'] ?? 999999));
-        return ['success' => true, 'results' => array_slice($places, 0, 20), 'source' => 'google_places'];
+        return array_slice($places, 0, 20);
+    }
+
+    private function placesFromGoogle(float $lat, float $lng, string $category, int $radius): array {
+        $res = $this->httpGetJson($this->googlePlacesUrl($category, $lat, $lng, $radius));
+        if (!$res['success'] || ($res['data']['status'] ?? '') !== 'OK') {
+            return $this->placesFromOverpass($lat, $lng, $category, $radius);
+        }
+
+        $places = $this->parseGooglePlaces($res['data']['results'] ?? [], $lat, $lng);
+        return ['success' => true, 'results' => $places, 'source' => 'google_places'];
+    }
+
+    /**
+     * Round 113 (AI-upgrade priority, speed pass): fetch several place
+     * categories at once (e.g. hotels + restaurants for ItineraryPlanner's
+     * nearby-places grounding) with one concurrent batch of network calls
+     * instead of one getNearbyPlaces() call per category run sequentially.
+     * Cache is still checked/written per-category exactly as
+     * getNearbyPlaces() already does, so a category that's already cached
+     * costs nothing extra and only genuine cache misses go out over the
+     * network -- and those go out together instead of one after another.
+     *
+     * @param string[] $categories e.g. ['hotel', 'restaurant']
+     * @return array<string,array> category => same shape getNearbyPlaces() returns
+     */
+    public function getNearbyPlacesMulti(float $lat, float $lng, array $categories, int $radius = 4000): array {
+        $categories = array_values(array_unique(array_filter($categories, fn($c) => isset(self::CATEGORY_MAP[$c]))));
+        $final   = [];
+        $pending = []; // category => request spec for httpRequestMulti
+
+        foreach ($categories as $cat) {
+            $cacheKey = "places_{$cat}_" . round($lat, 3) . '_' . round($lng, 3) . "_$radius";
+            $cached   = $this->cacheGet($cacheKey);
+            if ($cached !== null) {
+                $final[$cat] = ['success' => true, 'results' => $cached, 'cached' => true];
+                continue;
+            }
+
+            $useGoogle = defined('GOOGLE_PLACES_API_KEY') && GOOGLE_PLACES_API_KEY !== '';
+            $pending[$cat] = $useGoogle
+                ? ['url' => $this->googlePlacesUrl($cat, $lat, $lng, $radius), 'method' => 'GET']
+                : ['url' => 'https://overpass-api.de/api/interpreter', 'method' => 'POST', 'body' => 'data=' . urlencode($this->overpassQl($cat, $lat, $lng, $radius)), 'formEncoded' => true];
+        }
+
+        if ($pending) {
+            $responses = $this->httpRequestMulti($pending);
+            foreach ($pending as $cat => $req) {
+                $res = $responses[$cat];
+                $usedGoogle = $req['method'] === 'GET';
+
+                if ($usedGoogle && (!$res['success'] || ($res['data']['status'] ?? '') !== 'OK')) {
+                    // Same graceful degrade placesFromGoogle() already does on a
+                    // Google failure -- fall back to Overpass for just this
+                    // category, sequentially (a single fallback request, not
+                    // worth another concurrent round for one category).
+                    $final[$cat] = $this->placesFromOverpass($lat, $lng, $cat, $radius);
+                } elseif (!$res['success']) {
+                    $final[$cat] = ['success' => false, 'error' => 'Nearby places service is temporarily unavailable. Please try again shortly.'];
+                } else {
+                    $places = $usedGoogle
+                        ? $this->parseGooglePlaces($res['data']['results'] ?? [], $lat, $lng)
+                        : $this->parseOverpassPlaces($res['data']['elements'] ?? [], $lat, $lng);
+                    $final[$cat] = ['success' => true, 'results' => $places, 'source' => $usedGoogle ? 'google_places' : 'openstreetmap'];
+                }
+
+                if ($final[$cat]['success']) {
+                    $cacheKey = "places_{$cat}_" . round($lat, 3) . '_' . round($lng, 3) . "_$radius";
+                    $this->cacheSet($cacheKey, $final[$cat]['results'], EXPLORE_CACHE_TTL_PLACES);
+                }
+            }
+        }
+
+        return $final;
     }
 
     // ════════════════════════════════════════════════════════════════════
@@ -728,6 +853,105 @@ class ExploreService {
 
     private function httpPostJson(string $url, string $body, bool $formEncoded = false): array {
         return $this->httpRequest($url, 'POST', $body, $formEncoded);
+    }
+
+    /**
+     * Round 113 (AI-upgrade priority, speed pass): concurrent version of
+     * httpRequest() for the common case of 2+ independent upstream calls that
+     * don't depend on each other's result — e.g. getWeather()'s forecast +
+     * air-quality calls, or fetching several nearby-place categories at once.
+     * Before this, every multi-call path in this class ran each request one
+     * after another, paying the full round-trip latency of each in sequence;
+     * this fires them all at once with curl_multi and returns once the
+     * slowest one finishes, instead of waiting for the sum of all of them.
+     *
+     * Same per-request behavior as httpRequest() (headers, timeouts, JSON
+     * decoding, per-host system-event logging) — this is not a different
+     * code path with different failure modes, just the same one run in
+     * parallel. A single slow/failed request never blocks or fails the
+     * others; each key in the returned array gets its own independent
+     * ['success'=>bool, 'data'=>..] or ['success'=>false,'error'=>..] result,
+     * exactly like calling httpRequest() for each individually would.
+     *
+     * @param array<string,array{url:string,method?:string,body?:?string,formEncoded?:bool}> $requests
+     *   Keyed by caller-chosen key (e.g. 'forecast','air_quality') so results
+     *   can be matched back up without relying on array order.
+     * @return array<string,array{success:bool,data?:mixed,error?:string}>
+     */
+    private function httpRequestMulti(array $requests): array {
+        if (count($requests) === 1) {
+            // No concurrency to gain for exactly one request — skip the
+            // curl_multi machinery entirely and reuse the plain path.
+            $key = array_key_first($requests);
+            $r   = $requests[$key];
+            return [$key => $this->httpRequest($r['url'], $r['method'] ?? 'GET', $r['body'] ?? null, $r['formEncoded'] ?? false)];
+        }
+
+        $mh      = curl_multi_init();
+        $handles = [];
+
+        foreach ($requests as $key => $r) {
+            $method      = $r['method'] ?? 'GET';
+            $body        = $r['body'] ?? null;
+            $formEncoded = $r['formEncoded'] ?? false;
+
+            $ch = curl_init($r['url']);
+            $headers = ['User-Agent: ' . $this->ua, 'Accept: application/json'];
+            if ($body !== null && !$formEncoded) $headers[] = 'Content-Type: application/json';
+
+            curl_setopt_array($ch, [
+                CURLOPT_RETURNTRANSFER => true,
+                CURLOPT_TIMEOUT        => 25,
+                CURLOPT_CONNECTTIMEOUT => 8,
+                CURLOPT_HTTPHEADER     => $headers,
+                CURLOPT_SSL_VERIFYPEER => true,
+                CURLOPT_ENCODING       => '',
+            ]);
+            if ($method === 'POST') {
+                curl_setopt($ch, CURLOPT_POST, true);
+                curl_setopt($ch, CURLOPT_POSTFIELDS, $body);
+            }
+
+            curl_multi_add_handle($mh, $ch);
+            $handles[$key] = $ch;
+        }
+
+        $running = null;
+        do {
+            $status = curl_multi_exec($mh, $running);
+            if ($running) curl_multi_select($mh, 5);
+        } while ($running && $status === CURLM_OK);
+
+        $results = [];
+        foreach ($handles as $key => $ch) {
+            $response = curl_multi_getcontent($ch);
+            $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+            $err      = curl_error($ch);
+            $host     = parse_url($requests[$key]['url'], PHP_URL_HOST) ?: 'unknown';
+
+            if ($err) {
+                tms_log_system_event($this->db, 'maps', $host, false, 'curl error: ' . $err);
+                $results[$key] = ['success' => false, 'error' => 'Network error while contacting live data service.'];
+            } elseif ($httpCode < 200 || $httpCode >= 300) {
+                tms_log_system_event($this->db, 'maps', $host, false, "HTTP $httpCode");
+                $results[$key] = ['success' => false, 'error' => "Live data service returned an error (HTTP $httpCode)."];
+            } else {
+                $data = json_decode((string)$response, true);
+                if ($data === null && $response !== 'null') {
+                    tms_log_system_event($this->db, 'maps', $host, false, 'invalid JSON response');
+                    $results[$key] = ['success' => false, 'error' => 'Received an invalid response from live data service.'];
+                } else {
+                    tms_log_system_event($this->db, 'maps', $host, true);
+                    $results[$key] = ['success' => true, 'data' => $data];
+                }
+            }
+
+            curl_multi_remove_handle($mh, $ch);
+            curl_close($ch);
+        }
+        curl_multi_close($mh);
+
+        return $results;
     }
 
     private function httpRequest(string $url, string $method, ?string $body, bool $formEncoded = false): array {

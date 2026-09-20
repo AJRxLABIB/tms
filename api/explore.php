@@ -168,6 +168,20 @@ function handlePlaceDetails(): void {
         'website'       => tms_clean($_GET['website'] ?? '') ?: null,
         'rating'        => isset($_GET['rating']) && $_GET['rating'] !== '' ? (float)$_GET['rating'] : null,
         'distance_m'    => isset($_GET['distance_m']) && $_GET['distance_m'] !== '' ? (float)$_GET['distance_m'] : null,
+        // FIX (Round 114, package/places/map upgrade): the Nearby Places list
+        // now knows a real is_open_now per place (see ExploreService's
+        // parseOverpassPlaces()/parseGooglePlaces()); the card the visitor
+        // clicked passes its own value through here so PlaceDetailsService
+        // can use it directly instead of re-deriving it from opening_hours
+        // alone -- see PlaceDetailsService::build()'s own note on why that
+        // re-derivation never actually worked for a Google-sourced place.
+        // filter_var(..., FILTER_NULL_ON_FAILURE) rather than a plain cast:
+        // this is user-supplied query data, so an unexpected value (or the
+        // param simply being absent) must fall through to "unknown" (null),
+        // never silently become a wrong true/false.
+        'is_open_now'   => isset($_GET['is_open_now']) && $_GET['is_open_now'] !== ''
+            ? filter_var($_GET['is_open_now'], FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE)
+            : null,
     ];
 
     $detailsService = new PlaceDetailsService();

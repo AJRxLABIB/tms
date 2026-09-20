@@ -465,7 +465,20 @@ function handleVirtualGuide(PDO $dbh, string $email): void {
     $ai     = new AIClient($dbh);
     $system = "You are a local expert guide for {$destination}. Answer travel questions with specific, accurate, helpful information. Keep answers concise but complete (3-5 sentences). Focus on practical traveler needs.";
 
-    $result  = $ai->ask($system, $question, '', $email);
+    // FIX (Round 113, F8 -- AI-upgrade priority): this call previously
+    // passed '' as the cache key, which AIClient/CacheService treats as
+    // "don't cache" -- so the exact same {destination, question} pair (a
+    // very likely repeat: "best time to visit", "is it safe", "what to
+    // pack" are asked about the same popular destinations constantly)
+    // triggered a brand-new Gemini call every single time, from every
+    // visitor. The answer here isn't personalized to $email or any
+    // booking -- the system prompt above only ever references
+    // $destination -- so it's safe to share across all visitors asking
+    // the same normalized question about the same destination. 6-hour TTL
+    // matches this file's existing crowd-prediction cache (line ~419) for
+    // similarly-generic, non-realtime travel content.
+    $cacheKey = 'virtual_guide_' . md5(strtolower(trim($destination)) . '|' . strtolower(trim($question)));
+    $result  = $ai->ask($system, $question, $cacheKey, $email, feature: 'virtual_guide', cacheTtlSeconds: 21600);
     $answer  = $result['success'] ? $result['content'] : 'Sorry, the virtual guide is temporarily unavailable.';
 
     apiSuccess(['answer' => $answer, 'destination' => $destination]);

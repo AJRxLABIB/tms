@@ -216,7 +216,16 @@ MSG;
             $userMsg = "Package" . ($ownName ? " '{$ownName}'" : '') . " priced at " . ($ownPrice ?: 'TBD')
                      . " BDT. Comparable packages (" . $result['comparable_count'] . " matched by {$matchBasis}): "
                      . "min {$min}, median {$median}, avg {$avg}, max {$max} BDT. One sentence of pricing advice:";
-            $aiResult = $this->ai->ask($system, $userMsg, '', $email, feature: 'budget_pricing');
+            // FIX (Round 113, AI-upgrade priority, speed pass): this one-sentence
+            // verdict is a pure function of the stats just computed above (min/
+            // median/avg/max + the package's own name/price) -- those barely
+            // change intra-day, yet every view of an admin pricing panel paid
+            // for a fresh Gemini call for the same sentence. Cached for 6 hours
+            // (AIClient's new optional TTL param, Round 113) rather than the
+            // 1-hour AI_CACHE_TTL default -- this content is genuinely more
+            // stable than a typical chat reply.
+            $cacheKey = md5('pricing_verdict_' . $ownName . '_' . $ownPrice . '_' . $min . '_' . $median . '_' . $avg . '_' . $max);
+            $aiResult = $this->ai->ask($system, $userMsg, $cacheKey, $email, feature: 'budget_pricing', cacheTtlSeconds: 21600);
             if ($aiResult['success']) {
                 $result['ai_verdict'] = trim($aiResult['content']);
             }
@@ -237,10 +246,26 @@ MSG;
         $userMsg = "Budget for {$destination}: " . json_encode($userBudget) . " Total: {$totalBudget} BDT.
 Analyze this allocation and return: {\"overall_assessment\":\"<good/tight/generous>\",\"overspent_categories\":[\"<cat>\"],\"underspent_categories\":[\"<cat>\"],\"recommendations\":[{\"category\":\"<cat>\",\"current\":<amt>,\"suggested\":<amt>,\"reason\":\"<why>\"}],\"potential_savings\":<BDT>,\"savings_percentage\":<pct>}";
 
-        $result = $this->ai->ask($system, $userMsg, '', $email, feature: 'budget_optimize');
-        if (!$result['success']) return ['overall_assessment' => 'Looks reasonable', 'recommendations' => []];
+        // FIX (Round 113, AI-upgrade priority, speed pass): this prompt is a
+        // pure function of $userBudget + $destination (generateBudgetPlan()
+        // above already caches on exactly this kind of input) -- two users,
+        // or the same user retrying, with an identical allocation used to
+        // pay for a fresh Gemini call every single time.
+        $cacheKey = md5('budget_optimize_' . $destination . '_' . json_encode($userBudget));
+        $result   = $this->ai->ask($system, $userMsg, $cacheKey, $email, feature: 'budget_optimize');
+        $fallback = ['overall_assessment' => 'Looks reasonable', 'recommendations' => []];
+        if (!$result['success']) return $fallback;
 
-        return $this->ai->parseJson($result['content']) ?? ['overall_assessment' => 'Looks reasonable', 'recommendations' => []];
+        // FIX (Round 113): a syntactically-valid JSON object missing both keys
+        // the caller actually needs used to pass straight through untouched --
+        // the old `?? $fallback` only ever caught a hard parse failure, never
+        // a wrong shape. Matches the key-presence check ItineraryPlanner::
+        // generate() already does on its own parsed JSON a few files over.
+        $parsed = $this->ai->parseJson($result['content']);
+        if (!$parsed || !array_key_exists('overall_assessment', $parsed) || !array_key_exists('recommendations', $parsed)) {
+            return $fallback;
+        }
+        return $parsed;
     }
 
     /**
@@ -251,8 +276,16 @@ Analyze this allocation and return: {\"overall_assessment\":\"<good/tight/genero
 
         $dest = $tripParams['destination'] ?? 'Unknown';
         $days = $tripParams['duration'] ?? 3;
+        // FIX (Round 113, AI-upgrade priority): same undefined-array-key gap
+        // as ItineraryPlanner/TravelRecommender/PackageGenerator -- these two
+        // were interpolated directly with no fallback, unlike $dest/$days
+        // just above. With APP_DEBUG=true a caller that omits either (e.g. a
+        // quick packing-list request with no travel_type/climate collected)
+        // gets a PHP warning embedded in this JSON-building request.
+        $travelType = $tripParams['travel_type'] ?? 'general';
+        $climate    = $tripParams['climate'] ?? 'typical for the season';
 
-        $userMsg = "Generate a packing list for {$days} days in {$dest}, {$tripParams['travel_type']} trip, weather: {$tripParams['climate']}.
+        $userMsg = "Generate a packing list for {$days} days in {$dest}, {$travelType} trip, weather: {$climate}.
 Return: {\"essentials\":[{\"item\":\"<item>\",\"quantity\":\"<qty>\",\"priority\":\"must|should|nice\"}],\"clothing\":[...],\"toiletries\":[...],\"electronics\":[...],\"documents\":[...],\"medicines\":[...],\"destination_specific\":[{\"item\":\"<item>\",\"reason\":\"<why needed here>\"}],\"packing_tips\":[\"<tip>\"]}";
 
         $cacheKey = md5('packing_' . json_encode($tripParams));
@@ -273,7 +306,16 @@ Return: {\"essentials\":[{\"item\":\"<item>\",\"quantity\":\"<qty>\",\"priority\
 
     // ── Private ───────────────────────────────────────────────────────────────
 
-    private function fetchComparablePackages(?string $location, ?string $type, ?int $excludeId, string $basis): array {
+    /**
+     * Round 113 (AI-upgrade priority, quality pass): widened from private to
+     * public so ItineraryPlanner can reuse this exact same real-catalog-price
+     * lookup (see its buildMarketPriceContext()) instead of the AI inventing
+     * estimated_cost/daily_budget numbers with nothing to check them against
+     * — the same grounding this method already gives generateBudgetPlan()
+     * and predictPackagePrice() right here. No behavior change for either of
+     * those two existing callers.
+     */
+    public function fetchComparablePackages(?string $location, ?string $type, ?int $excludeId, string $basis): array {
         if ($basis === 'location' && $location) {
             $sql = "SELECT PackagePrice FROM tbltourpackages WHERE Status = 1 AND PackagePrice > 0 AND PackageLocation LIKE ?" . ($excludeId ? " AND PackageId != ?" : '');
             $params = ['%' . $location . '%'];

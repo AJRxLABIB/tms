@@ -183,6 +183,22 @@ html[data-theme="dark"] .map-search-result span { color: var(--text-muted) !impo
         <?php foreach ($tmsMapTypeColors as $tName => $tInfo): ?>
         <span class="filter-pill" onclick="filterMap('<?php echo strtolower(htmlentities($tName)); ?>',this)"><?php echo htmlentities($tName); ?> (<?php echo $tInfo['count']; ?>)</span>
         <?php endforeach; ?>
+        <?php
+        // FIX (Round 114, package/places/map upgrade): the legend has always
+        // shown an "Other" swatch for every PackageType outside the top 6
+        // (line ~178), but there was no matching filter pill -- a visitor
+        // could see the legend promise an "Other" category exists yet had no
+        // way to actually isolate it. $tmsOtherCount mirrors getColor()'s own
+        // fallback logic: any package whose type isn't one of the named top-6
+        // (including a blank/NULL PackageType) falls into "Other".
+        $tmsOtherCount = 0;
+        foreach ($allPackages as $p) {
+            if (!isset($tmsMapTypeColors[$p->PackageType ?? ''])) $tmsOtherCount++;
+        }
+        ?>
+        <?php if ($tmsOtherCount > 0): ?>
+        <span class="filter-pill" onclick="filterMap('other',this)">Other (<?php echo $tmsOtherCount; ?>)</span>
+        <?php endif; ?>
     </div>
 
     <div class="row">
@@ -293,9 +309,24 @@ var packages = <?php echo json_encode(array_map(function($p) {
 // count) than the number the page loaded with. This full id+type list lets
 // filtering and counting cover every sidebar row, matching what the visitor
 // actually sees.
+// FIX (Round 114, package/places/map upgrade): originally id+type only,
+// added name/location/price_display/lat/lng/hasCoords here too, so the
+// destination search box below can search (and show) every sidebar row --
+// see the note on the search box itself for why that used to disagree with
+// the sidebar.
 var allDestMeta = <?php echo json_encode(array_map(function($p) {
-    return ['id' => (int)$p->PackageId, 'type' => (string)($p->PackageType ?? '')];
-}, $allPackages)); ?>;
+    $hasCoords = !empty($p->MapLat) && !empty($p->MapLng);
+    return [
+        'id' => (int)$p->PackageId,
+        'type' => (string)($p->PackageType ?? ''),
+        'name' => (string)$p->PackageName,
+        'location' => (string)($p->PackageLocation ?? ''),
+        'price_display' => tms_currency((float)$p->PackagePrice),
+        'lat' => $hasCoords ? floatval($p->MapLat) : null,
+        'lng' => $hasCoords ? floatval($p->MapLng) : null,
+        'hasCoords' => $hasCoords,
+    ];
+}, $allPackages), JSON_UNESCAPED_UNICODE); ?>;
 
 // Escape anything that goes into innerHTML. Package names come from the admin
 // form, which only strip_tags()es them — so a name containing a quote used to
@@ -308,8 +339,23 @@ function tmEsc(v) {
     return d.innerHTML;
 }
 
+// FIX (Round 114, package/places/map upgrade): a coordinate of exactly 0
+// (the equator, or the prime meridian) is a legitimate real-world latitude
+// or longitude -- but `!pkg.lat`/`!lat` treats the JS number 0 as falsy,
+// same as null/undefined/NaN. Every "does this package have a usable
+// coordinate" check in this file used that pattern, so a destination whose
+// admin-entered MapLat or MapLng happened to be exactly 0 would silently get
+// no marker at all and be unfocusable, indistinguishable from having no
+// coordinates set -- with no error, exactly the kind of silent failure this
+// page's other BUG FIX comments already went after. No real TMS destination
+// is currently at 0,0, so this is a correctness fix for a case that hasn't
+// bitten yet, not a live bug being reported.
+function tmHasCoord(v) {
+    return typeof v === 'number' && !isNaN(v);
+}
+
 packages.forEach(function(pkg) {
-    if(!pkg.lat || !pkg.lng) return;
+    if(!tmHasCoord(pkg.lat) || !tmHasCoord(pkg.lng)) return;
     var color = getColor(pkg.type);
     var popupId = 'popup-' + pkg.id;
     var marker = L.marker([pkg.lat, pkg.lng], {icon: createMarkerIcon(color)})
@@ -339,7 +385,7 @@ document.getElementById('tourMap').addEventListener('click', function(e) {
 });
 
 function focusDestination(id, lat, lng) {
-    if(markers[id] && lat && lng) {
+    if(markers[id] && tmHasCoord(lat) && tmHasCoord(lng)) {
         map.setView([lat, lng], 7);
         markers[id].marker.openPopup();
         document.querySelectorAll('.dest-item').forEach(function(el){ el.classList.remove('active'); });
@@ -352,15 +398,29 @@ function focusDestination(id, lat, lng) {
     }
 }
 
+// FIX (Round 114): 'other' isn't a real PackageType -- it's the legend/pill
+// name for "not one of the top-6 named types" (mirrors getColor()'s own
+// fallback to tmsOtherColor). Before this fix, filterMap('other', ...) fell
+// into the same substring-match branch as every real type, so clicking the
+// new "Other" pill only matched a type whose name literally contained the
+// substring "other" -- i.e. matched nothing in this catalogue. This checks
+// membership in the real named-type set instead, the same test getColor()
+// implicitly makes.
+var tmsNamedTypesLower = Object.keys(tmsTypeColors).map(function(t){ return t.toLowerCase(); });
+function tmsTypeMatches(itemType, filterType) {
+    var t = String(itemType || '').toLowerCase();
+    if (filterType === 'all') return true;
+    if (filterType === 'other') return tmsNamedTypesLower.indexOf(t) === -1;
+    return t.indexOf(filterType) !== -1;
+}
+
 function filterMap(type, el) {
     document.querySelectorAll('.filter-pill').forEach(function(p){ p.classList.remove('active'); });
     el.classList.add('active');
 
     var visible = 0;
     allMarkerData.forEach(function(item){
-        // String() guard: PackageType is nullable, and .toLowerCase() on null
-        // threw mid-loop, leaving the map partly filtered with no error shown.
-        var match = (type === 'all') || String(item.type || '').toLowerCase().indexOf(type) !== -1;
+        var match = tmsTypeMatches(item.type, type);
         if (match) { item.marker.addTo(map); visible++; }
         else { map.removeLayer(item.marker); }
     });
@@ -373,7 +433,7 @@ function filterMap(type, el) {
     allDestMeta.forEach(function(pkg) {
         var row = document.getElementById('dest-' + pkg.id);
         if (!row) return;
-        var match = (type === 'all') || String(pkg.type || '').toLowerCase().indexOf(type) !== -1;
+        var match = tmsTypeMatches(pkg.type, type);
         row.style.display = match ? '' : 'none';
         if (match) sidebarVisible++;
     });
@@ -396,15 +456,25 @@ function filterMap(type, el) {
 
 /* ══════════════════════ DESTINATION SEARCH (live autocomplete) ══════════════════════
    Searches package name + location text (which already contains district/division/
-   country, e.g. "Gazipur, Bangladesh" or "Sylhet, Bangladesh") client-side against
-   the same `packages` array used to build the markers — no extra request needed. */
+   country, e.g. "Gazipur, Bangladesh" or "Sylhet, Bangladesh") client-side.
+   FIX (Round 114, package/places/map upgrade): this used to search `packages`
+   -- the ~404 destinations WITH map coordinates only -- while the sidebar
+   right next to it lists all ~413 destinations, showing the ~9 unmapped ones
+   greyed out with a "Not mapped" badge instead of hiding them. A visitor
+   typing the name of one of those ~9 into search got "No matching
+   destinations", flatly contradicting what the sidebar showed one scroll
+   away. Now searches `allDestMeta` (every destination, mapped or not, same
+   list the sidebar itself renders from) and marks unmapped results the same
+   way the sidebar does; selecting one shows the same "not mapped yet" toast
+   selectSearchResult()/focusDestination() already give the sidebar, instead
+   of silently doing nothing or crashing on a null lat/lng. */
 var searchInput = document.getElementById('destSearch');
 var searchResults = document.getElementById('destSearchResults');
 
 searchInput.addEventListener('input', function() {
     var q = this.value.trim().toLowerCase();
     if (q.length < 2) { searchResults.style.display = 'none'; return; }
-    var matches = packages.filter(function(pkg) {
+    var matches = allDestMeta.filter(function(pkg) {
         return (pkg.name + ' ' + pkg.location + ' ' + pkg.type).toLowerCase().indexOf(q) !== -1;
     }).slice(0, 12);
     if (!matches.length) {
@@ -413,8 +483,8 @@ searchInput.addEventListener('input', function() {
         return;
     }
     searchResults.innerHTML = matches.map(function(pkg) {
-        return '<div class="map-search-result" onclick="selectSearchResult('+pkg.id+','+pkg.lat+','+pkg.lng+')">' +
-               '<strong>'+tmEsc(pkg.name)+'</strong><span><i class="fa fa-map-marker"></i> '+
+        return '<div class="map-search-result'+(pkg.hasCoords ? '' : ' dest-item-nomap')+'" onclick="selectSearchResult('+pkg.id+','+(pkg.hasCoords ? pkg.lat : 'null')+','+(pkg.hasCoords ? pkg.lng : 'null')+')">' +
+               '<strong>'+tmEsc(pkg.name)+(pkg.hasCoords ? '' : ' <span class="dest-nomap-badge">Not mapped</span>')+'</strong><span><i class="fa fa-map-marker"></i> '+
                tmEsc(pkg.location)+' · '+tmEsc(pkg.price_display)+'</span></div>';
     }).join('');
     searchResults.style.display = 'block';

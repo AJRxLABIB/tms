@@ -77,7 +77,17 @@ final class PlaceDetailsService
             'social'         => null,
 
             'map_url'        => "https://www.google.com/maps/search/?api=1&query={$lat},{$lng}",
-            'map_embed_url'  => "https://maps.google.com/maps?q={$lat},{$lng}&z=15&output=embed",
+            // LIVE BUG FIX (Round 114, found via live browser testing): this used
+            // to point at maps.google.com (no "www") -- Google accepts that host
+            // for a top-level page, but this project's own CSP `frame-src` only
+            // allows `https://www.google.com` (see .htaccess), and this URL is
+            // rendered inside an <iframe> by js/explore.js's renderPlaceDetail().
+            // The browser silently blocked the frame on every single place detail
+            // view in Explore Mode -- the embedded mini-map never rendered, with
+            // only a console CSP violation to show for it, nothing visible to a
+            // user who wasn't watching devtools. www.google.com/maps?...&output=
+            // embed is the same embed endpoint, just the CSP-compliant host.
+            'map_embed_url'  => "https://www.google.com/maps?q={$lat},{$lng}&z=15&output=embed",
             'osm_url'        => "https://www.openstreetmap.org/?mlat={$lat}&mlon={$lng}#map=17/{$lat}/{$lng}",
             'lat'            => $lat,
             'lng'            => $lng,
@@ -91,7 +101,24 @@ final class PlaceDetailsService
 
             // null (not false) means "we can't tell" — the badge is hidden
             // rather than asserting Open/Closed. See openNowFromOsm().
-            'is_open_now'    => $this->openNowFromOsm($openingHours),
+            //
+            // FIX (Round 114, package/places/map upgrade): $place can now
+            // carry a real, pre-computed is_open_now (see ExploreService::
+            // parseOverpassPlaces()/parseGooglePlaces(), which attach one to
+            // every place in the Nearby Places LIST, and api/explore.php's
+            // handlePlaceDetails(), which passes the card's value through).
+            // For a Google-sourced place, $openingHours here is already the
+            // display string "Open now"/"Closed now" -- openNowFromOsm() is
+            // written to parse OSM's hours syntax, not that string, and
+            // re-parsing it never actually resolved to true/false (it fell
+            // through to null every time, as an "unrecognised day token").
+            // Prefer the real, already-known value when the caller has one;
+            // fall back to parsing $openingHours only when it doesn't (the
+            // original behaviour, still exactly right for OSM-sourced places
+            // reached some other way).
+            'is_open_now'    => array_key_exists('is_open_now', $place) && $place['is_open_now'] !== null
+                ? (bool)$place['is_open_now']
+                : self::openNowFromOsm($openingHours),
 
             // No stock photography. picsum.photos images seeded on the place's
             // name were being presented as photos OF that place.
@@ -335,8 +362,17 @@ final class PlaceDetailsService
      * "Mo-Sa 10:00-20:00; Su off", and comma/semicolon-separated combinations.
      * Deliberately does NOT try to handle public holidays, seasonal ranges or
      * "sunset" style values — those return null.
+     *
+     * FIX (Round 114, package/places/map upgrade): widened from private to
+     * public static so ExploreService can reuse this exact same parser to
+     * attach is_open_now to every place in a Nearby Places LIST (not just
+     * the single-place detail modal this class was originally written for),
+     * instead of a second, separately-maintained copy of this parsing logic
+     * living in ExploreService. It never referenced $this, so making it
+     * static changes no behaviour for the one call site above (self:: now,
+     * was $this->).
      */
-    private function openNowFromOsm(?string $hours): ?bool
+    public static function openNowFromOsm(?string $hours): ?bool
     {
         if ($hours === null) return null;
         $h = strtolower(trim($hours));

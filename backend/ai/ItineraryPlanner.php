@@ -9,6 +9,7 @@
 require_once __DIR__ . '/AIClient.php';
 require_once __DIR__ . '/../ExploreService.php';
 require_once __DIR__ . '/CrowdPredictor.php';
+require_once __DIR__ . '/BudgetOptimizer.php';
 
 class ItineraryPlanner {
 
@@ -16,6 +17,7 @@ class ItineraryPlanner {
     private PDO      $db;
     private ExploreService $explore;
     private CrowdPredictor $crowd;
+    private BudgetOptimizer $budget;
 
     public function __construct(PDO $db) {
         $this->db      = $db;
@@ -24,6 +26,10 @@ class ItineraryPlanner {
         // already uses — no second geocoding or weather implementation.
         $this->explore = new ExploreService($db);
         $this->crowd   = new CrowdPredictor($db);
+        // Round 113 (AI-upgrade priority, quality pass): reuses
+        // BudgetOptimizer::fetchComparablePackages() for real market-price
+        // grounding — see buildMarketPriceContext() below.
+        $this->budget  = new BudgetOptimizer($db);
     }
 
     /**
@@ -40,6 +46,7 @@ class ItineraryPlanner {
 
         $weatherContext = $this->buildWeatherContext($dest, $startDate, $duration);
         $crowdContext   = $this->buildCrowdContext($dest);
+        $marketContext  = $this->buildMarketPriceContext($dest);
         // NEW (AI-trip-planning round): real, verified nearby hotels/restaurants
         // from the same live map data Explore Mode and PlaceDetailsService
         // already use -- see buildNearbyPlacesContext() below for why this
@@ -69,6 +76,10 @@ Guidelines:
   and restaurant_recommendations over ones from your own general knowledge — they are
   confirmed to actually exist at this location. Only suggest a place NOT on that list if
   none of the listed ones genuinely fit the requested tier, cuisine, or budget.
+- You may also be given REAL PLATFORM PRICING DATA (actual prices of packages this
+  platform already sells for this destination). When given, ground estimated_cost and
+  daily_budget in that real range instead of inventing numbers with no anchor to it —
+  don't wildly contradict it without a stated reason (e.g. a much longer/shorter trip).
 - Return ONLY valid JSON
 SYSTEM;
 
@@ -76,6 +87,18 @@ SYSTEM;
         $travelers = $tripData['travelers'] ?? 2;
         $style     = $tripData['travel_type'] ?? 'leisure';
         $activities = implode(', ', (array)($tripData['activities'] ?? ['sightseeing']));
+        // FIX (Round 113, AI-upgrade priority): these three were interpolated
+        // directly from $tripData below with no ?? fallback, unlike every
+        // other field on this same trip-details block. With APP_DEBUG=true
+        // (this project's local-dev default -- see .env's own comment) a
+        // missing key here is a PHP warning that gets embedded straight into
+        // this JSON-building request, corrupting the itinerary API response
+        // for any caller that omits one of these three optional fields (e.g.
+        // custom-trip.php's ad-hoc planner, which doesn't collect all three).
+        // AIEvaluator's own fixtures already exercise exactly this gap.
+        $accommodation   = $tripData['accommodation'] ?? 'No preference';
+        $transport       = $tripData['transport'] ?? 'No preference';
+        $specialRequests = $tripData['special_requests'] ?? 'None';
 
         $userMessage = <<<MSG
 Create a complete {$duration}-day travel itinerary for the following trip:
@@ -86,12 +109,13 @@ TRIP DETAILS:
 - Travelers: {$travelers} people ({$style} trip)
 - Total budget: {$budget} BDT
 - Preferred activities: {$activities}
-- Accommodation: {$tripData['accommodation']}
-- Transport preference: {$tripData['transport']}
-- Special requests: {$tripData['special_requests']}
+- Accommodation: {$accommodation}
+- Transport preference: {$transport}
+- Special requests: {$specialRequests}
 
 {$weatherContext['prompt_block']}
 {$crowdContext}
+{$marketContext}
 {$nearbyContext['prompt_block']}
 
 Return this exact JSON structure:
@@ -390,8 +414,15 @@ MSG;
         if ($lat === null || $lng === null || (!$lat && !$lng)) return $empty;
 
         try {
-            $hotels      = $this->explore->getNearbyPlaces($lat, $lng, 'hotel', 6000);
-            $restaurants = $this->explore->getNearbyPlaces($lat, $lng, 'restaurant', 6000);
+            // Round 113 (AI-upgrade priority, speed pass): these two calls
+            // (hotels, restaurants) are mutually independent -- neither needs
+            // the other's result -- so they now fire concurrently via
+            // ExploreService::getNearbyPlacesMulti() instead of one after
+            // the other. On a cache miss for both, this roughly halves the
+            // network time this method adds to every itinerary generation.
+            $places      = $this->explore->getNearbyPlacesMulti($lat, $lng, ['hotel', 'restaurant'], 6000);
+            $hotels      = $places['hotel']      ?? ['success' => false];
+            $restaurants = $places['restaurant'] ?? ['success' => false];
 
             $hotelNames      = !empty($hotels['success']) ? array_column(array_slice($hotels['results'], 0, 8), 'name') : [];
             $restaurantNames = !empty($restaurants['success']) ? array_column(array_slice($restaurants['results'], 0, 8), 'name') : [];
@@ -470,6 +501,40 @@ MSG;
             return "REAL BOOKING DATA for {$destination}: based on {$total} actual past bookings on this platform, "
                  . implode('/', $busiest) . " are the busiest months and " . implode('/', $quietest) . " the quietest. "
                  . "Factor this into your best_visiting_time field alongside general climate/festival knowledge.";
+        } catch (Exception $e) {
+            return '';
+        }
+    }
+
+    /**
+     * Round 113 (AI-upgrade priority, quality pass): grounds estimated_cost/
+     * daily_budget in this platform's real catalog prices for the same
+     * destination, the same way BudgetOptimizer::generateBudgetPlan() and
+     * predictPackagePrice() already ground THEIR numbers — reuses that exact
+     * method (fetchComparablePackages(), widened to public for this) rather
+     * than a second, separately-maintained price query. Before this,
+     * ItineraryPlanner was the one AI feature in this file's own neighborhood
+     * that still let cost numbers float entirely on the model's general
+     * knowledge despite the platform already having real prices to check
+     * them against — same Rule 3 gap BudgetOptimizer already closed for
+     * itself two files over. Fully fail-soft: fewer than 2 comparable
+     * packages (not enough for a meaningful range) degrades to an empty
+     * string, exactly like the prior behavior with no market context at all.
+     */
+    private function buildMarketPriceContext(string $destination): string {
+        if (!$destination || $destination === 'Unknown') return '';
+        try {
+            $comparables = $this->budget->fetchComparablePackages($destination, null, null, 'location');
+            if (count($comparables) < 2) return '';
+
+            $prices = array_map(fn($p) => (int)$p->PackagePrice, $comparables);
+            $min = min($prices);
+            $max = max($prices);
+            $avg = (int)round(array_sum($prices) / count($prices));
+
+            return "REAL PLATFORM PRICING DATA: " . count($prices) . " existing packages this platform "
+                 . "already sells for {$destination} range from {$min} to {$max} BDT total (avg {$avg} BDT). "
+                 . "This is the total package price, not per-day — use it to sanity-check estimated_cost/daily_budget.";
         } catch (Exception $e) {
             return '';
         }
