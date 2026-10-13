@@ -101,12 +101,12 @@ $qrUrl  = $otpUri ? tms_totp_qr_url($otpUri) : '';
 <link href="<?php echo tms_asset_ver('css/admin-v6.css'); ?>" rel="stylesheet">
 <style>
 .page-title-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;flex-wrap:wrap;gap:12px;}
-.page-title-row h2{font-family:'Inter',sans-serif;font-size:22px;font-weight:800;color:#0f172a;margin:0;}
+.page-title-row h2{font-family:'Inter',sans-serif;font-size:22px;font-weight:800;color:#17231E;margin:0;}
 .alert-msg{padding:12px 16px;border-radius:10px;font-size:13.5px;margin-bottom:18px;display:flex;align-items:center;gap:8px;}
 .alert-success{background:#d1fae5;color:#065f46;border:1px solid #a7f3d0;}
 .alert-error{background:#fee2e2;color:#991b1b;border:1px solid #fca5a5;}
 .card{background:#fff;border:1px solid #e2e8f0;border-radius:14px;padding:24px;margin-bottom:20px;max-width:520px;}
-.card h4{font-size:15px;font-weight:700;margin:0 0 14px;color:#0f172a;}
+.card h4{font-size:15px;font-weight:700;margin:0 0 14px;color:#17231E;}
 .status-pill{display:inline-flex;align-items:center;gap:6px;padding:4px 12px;border-radius:20px;font-size:12.5px;font-weight:700;}
 .status-on{background:#d1fae5;color:#065f46;}
 .status-off{background:#fef3c7;color:#92400e;}
@@ -116,9 +116,9 @@ $qrUrl  = $otpUri ? tms_totp_qr_url($otpUri) : '';
 .form-row{margin-bottom:13px;}
 .form-row label{display:block;font-size:11.5px;font-weight:700;color:#4a5568;text-transform:uppercase;letter-spacing:.4px;margin-bottom:5px;}
 .form-row input{width:100%;padding:9px 12px;border:2px solid #e2e8f0;border-radius:8px;font-size:13.5px;outline:none;max-width:240px;}
-.form-row input:focus{border-color:#1d4ed8;}
-.btn-primary-sm{background:#1d4ed8;color:#fff;border:none;padding:9px 18px;border-radius:8px;font-size:13.5px;font-weight:600;cursor:pointer;}
-.btn-primary-sm:hover{background:#1e40af;}
+.form-row input:focus{border-color:#176B50;}
+.btn-primary-sm{background:#176B50;color:#fff;border:none;padding:9px 18px;border-radius:8px;font-size:13.5px;font-weight:600;cursor:pointer;}
+.btn-primary-sm:hover{background:#104B3A;}
 .btn-danger-sm{background:#dc2626;color:#fff;border:none;padding:9px 18px;border-radius:8px;font-size:13.5px;font-weight:600;cursor:pointer;}
 .btn-danger-sm:hover{background:#b91c1c;}
 .btn-ghost-sm{background:transparent;color:#475569;border:1px solid #cbd5e1;padding:8px 16px;border-radius:8px;font-size:13px;cursor:pointer;}
@@ -131,7 +131,7 @@ $qrUrl  = $otpUri ? tms_totp_qr_url($otpUri) : '';
 <?php include('includes/header.php'); ?>
 <div class="tms-content">
 <div class="page-title-row">
-  <h2><i class="fa fa-shield" style="color:#1d4ed8;margin-right:10px;"></i>Two-Factor Authentication</h2>
+  <h2><i class="fa fa-shield" style="color:#176B50;margin-right:10px;"></i>Two-Factor Authentication</h2>
   <span class="status-pill <?= $me->TwoFAEnabled ? 'status-on' : 'status-off' ?>">
     <i class="fa fa-<?= $me->TwoFAEnabled ? 'check-circle' : 'exclamation-triangle' ?>"></i>
     <?= $me->TwoFAEnabled ? 'Enabled' : 'Not enabled' ?>

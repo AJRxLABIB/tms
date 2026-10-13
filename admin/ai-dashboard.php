@@ -603,7 +603,7 @@ html[data-theme="dark"] [style*="background:#fff"], html[data-theme="dark"] [sty
         <div style="display:flex;gap:24px;flex-wrap:wrap;margin-bottom:20px;padding-bottom:16px;border-bottom:1px solid #eef1f5;">
           <div>
             <div style="font-size:11px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.4px;">This Month So Far</div>
-            <div style="font-size:20px;font-weight:800;color:#0f172a;">৳<?= number_format($revenueForecast['so_far_this_month']) ?></div>
+            <div style="font-size:20px;font-weight:800;color:#17231E;">৳<?= number_format($revenueForecast['so_far_this_month']) ?></div>
           </div>
           <div>
             <div style="font-size:11px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.4px;">Projected Month Total</div>
@@ -913,7 +913,7 @@ html[data-theme="dark"] [style*="background:#fff"], html[data-theme="dark"] [sty
         <button class="btn-admin primary" style="font-size:11px;padding:5px 10px;" onclick="addAlert()">+ Add Alert</button>
       </div>
       <?php if ($alertFlashMsg): ?>
-      <div style="padding:10px 16px;background:#eff6ff;color:#1e40af;font-size:12.5px;border-bottom:1px solid #dbeafe;"><i class="fa fa-info-circle"></i> <?= $alertFlashMsg ?></div>
+      <div style="padding:10px 16px;background:#EEF7F1;color:#104B3A;font-size:12.5px;border-bottom:1px solid #DCF1E5;"><i class="fa fa-info-circle"></i> <?= $alertFlashMsg ?></div>
       <?php endif; ?>
       <div class="panel-body" style="padding:0;">
         <div class="table-responsive"><table class="ai-table">

@@ -18,28 +18,28 @@ tms_admin_require_role($dbh, ['support', 'manager']); // Round 20 RBAC (item 46)
 <link href="<?php echo tms_asset_ver('css/admin-v6.css'); ?>" rel="stylesheet">
 <style>
 .page-title-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;flex-wrap:wrap;gap:12px;}
-.page-title-row h2{font-family:'Inter',sans-serif;font-size:22px;font-weight:800;color:#0f172a;margin:0;}
+.page-title-row h2{font-family:'Inter',sans-serif;font-size:22px;font-weight:800;color:#17231E;margin:0;}
 .lc-wrap{display:flex;gap:0;background:#fff;border:1px solid #e2e8f0;border-radius:12px;overflow:hidden;height:640px;}
 .lc-threads{width:300px;border-right:1px solid #eef1f5;overflow-y:auto;flex-shrink:0;}
 .lc-thread{padding:14px 16px;border-bottom:1px solid #f8fafc;cursor:pointer;transition:.15s;position:relative;}
 .lc-thread:hover{background:#f8fafc;}
-.lc-thread.active{background:#eff6ff;border-left:3px solid #1d4ed8;}
-.lc-thread .email{font-size:13px;font-weight:700;color:#0f172a;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.lc-thread.active{background:#EEF7F1;border-left:3px solid #176B50;}
+.lc-thread .email{font-size:13px;font-weight:700;color:#17231E;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .lc-thread .preview{font-size:11.5px;color:#94a3b8;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .lc-thread .unread{position:absolute;top:14px;right:14px;background:#e11d48;color:#fff;font-size:10px;font-weight:700;border-radius:20px;min-width:18px;height:18px;display:flex;align-items:center;justify-content:center;padding:0 5px;}
 .lc-empty-threads{padding:40px 20px;text-align:center;color:#94a3b8;font-size:13px;}
 .lc-conv{flex:1;display:flex;flex-direction:column;}
-.lc-conv-head{padding:14px 18px;border-bottom:1px solid #eef1f5;font-weight:700;font-size:14px;color:#0f172a;}
+.lc-conv-head{padding:14px 18px;border-bottom:1px solid #eef1f5;font-weight:700;font-size:14px;color:#17231E;}
 .lc-conv-body{flex:1;overflow-y:auto;padding:16px;background:#f8fafc;display:flex;flex-direction:column;gap:8px;}
 .lc-msg{max-width:70%;padding:8px 12px;border-radius:14px;font-size:13px;line-height:1.4;}
 .lc-msg.customer{align-self:flex-start;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.08);border-bottom-left-radius:4px;}
-.lc-msg.admin{align-self:flex-end;background:#1d4ed8;color:#fff;border-bottom-right-radius:4px;}
+.lc-msg.admin{align-self:flex-end;background:#176B50;color:#fff;border-bottom-right-radius:4px;}
 .lc-msg .t{font-size:9.5px;opacity:.6;margin-top:3px;}
 .lc-typing{font-size:11px;color:#94a3b8;padding:0 18px 6px;display:none;}
 .lc-form{display:flex;gap:8px;padding:12px;border-top:1px solid #eef1f5;}
 .lc-form input{flex:1;border:1.5px solid #e2e8f0;border-radius:20px;padding:9px 14px;font-size:13px;outline:none;}
-.lc-form input:focus{border-color:#1d4ed8;}
-.lc-form button{background:#1d4ed8;color:#fff;border:none;width:38px;height:38px;border-radius:50%;cursor:pointer;}
+.lc-form input:focus{border-color:#176B50;}
+.lc-form button{background:#176B50;color:#fff;border:none;width:38px;height:38px;border-radius:50%;cursor:pointer;}
 .lc-none-selected{flex:1;display:flex;align-items:center;justify-content:center;color:#94a3b8;font-size:13px;flex-direction:column;gap:10px;}
 html[data-theme="dark"] .page-title-row h2,
 html[data-theme="dark"] .lc-thread .email,
@@ -62,7 +62,7 @@ html[data-theme="dark"] .lc-form input { background:#232b37 !important; color:#e
 <?php include('includes/header.php'); ?>
 <div class="tms-content">
 <div class="page-title-row">
-  <h2><i class="fa fa-comments" style="color:#1d4ed8;margin-right:10px;"></i>Live Chat</h2>
+  <h2><i class="fa fa-comments" style="color:#176B50;margin-right:10px;"></i>Live Chat</h2>
 </div>
 
 <div class="lc-wrap">
@@ -70,7 +70,7 @@ html[data-theme="dark"] .lc-form input { background:#232b37 !important; color:#e
     <div class="lc-empty-threads"><i class="fa fa-spinner fa-spin"></i> Loading conversations…</div>
   </div>
   <div class="lc-conv" id="lcConv">
-    <div class="lc-none-selected"><i class="fa fa-comments" style="font-size:34px;color:#dbeafe;"></i>Select a conversation to start replying.</div>
+    <div class="lc-none-selected"><i class="fa fa-comments" style="font-size:34px;color:#DCF1E5;"></i>Select a conversation to start replying.</div>
   </div>
 </div>
 

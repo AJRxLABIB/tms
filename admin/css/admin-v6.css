@@ -97,7 +97,7 @@ html, body {
   color: #fff; white-space: nowrap;
   letter-spacing: -0.3px;
 }
-.sidebar-logo .logo-text span { color: #60a5fa; }
+.sidebar-logo .logo-text span { color: #7FD6AE; }
 
 /* Nav */
 .sidebar-nav {
@@ -114,7 +114,7 @@ html, body {
 
 .nav-section-label {
   font-size: 10px; font-weight: 600;
-  color: #475569; letter-spacing: 1px;
+  color: #8FB5A3; letter-spacing: 1px;
   text-transform: uppercase;
   padding: 14px 20px 6px;
   white-space: nowrap;
@@ -375,7 +375,7 @@ html, body {
   transition: var(--transition); text-decoration: none;
 }
 .btn-v6.primary { background: var(--primary); color: #fff; }
-.btn-v6.primary:hover { background: #1e40af; color: #fff; }
+.btn-v6.primary:hover { background: #104B3A; color: #fff; }
 .btn-v6.success { background: var(--success); color: #fff; }
 .btn-v6.success:hover { background: #047857; color: #fff; }
 .btn-v6.danger { background: var(--danger); color: #fff; }

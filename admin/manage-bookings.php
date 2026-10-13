@@ -41,11 +41,11 @@ $paymentService = new PaymentService($dbh);
 .status-confirmed{ background:#d1fae5; color:#065f46; }
 .status-cancelled{ background:#fee2e2; color:#991b1b; }
 .filter-bar { display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin-bottom:20px; }
-.filter-bar select, .filter-bar input { padding:8px 12px; border:1.5px solid #e2e8f0; border-radius:8px; font-size:13px; font-family:inherit; color:#0f172a; outline:none; background:#f8fafc; }
-.filter-bar select:focus, .filter-bar input:focus { border-color:#1d4ed8; }
+.filter-bar select, .filter-bar input { padding:8px 12px; border:1.5px solid #e2e8f0; border-radius:8px; font-size:13px; font-family:inherit; color:#17231E; outline:none; background:#f8fafc; }
+.filter-bar select:focus, .filter-bar input:focus { border-color:#176B50; }
 .stat-strip { display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:14px; margin-bottom:24px; }
 .mini-stat { background:#fff; border:1px solid #e2e8f0; border-radius:12px; padding:16px 20px; }
-.mini-stat .val { font-size:24px; font-weight:700; color:#0f172a; }
+.mini-stat .val { font-size:24px; font-weight:700; color:#17231E; }
 .mini-stat .lbl { font-size:12px; color:#64748b; margin-top:2px; }
 .action-btn { display:inline-flex; align-items:center; gap:5px; padding:5px 10px; border-radius:6px; font-size:12px; font-weight:500; border:none; cursor:pointer; text-decoration:none; transition:all .15s; }
 .btn-confirm  { background:#d1fae5; color:#065f46; }
@@ -55,7 +55,7 @@ $paymentService = new PaymentService($dbh);
 .btn-delete   { background:#f1f5f9; color:#64748b; }
 .btn-delete:hover   { background:#e2e8f0; }
 .page-title-row { display:flex; align-items:center; justify-content:space-between; margin-bottom:24px; flex-wrap:wrap; gap:12px; }
-.page-title-row h2 { font-family:'Inter',sans-serif; font-size:22px; font-weight:800; color:#0f172a; margin:0; }
+.page-title-row h2 { font-family:'Inter',sans-serif; font-size:22px; font-weight:800; color:#17231E; margin:0; }
 .alert-msg { padding:12px 16px; border-radius:10px; font-size:13.5px; margin-bottom:18px; display:flex; align-items:center; gap:8px; }
 .alert-success { background:#d1fae5; color:#065f46; border:1px solid #a7f3d0; }
 .alert-error   { background:#fee2e2; color:#991b1b; border:1px solid #fca5a5; }
@@ -353,7 +353,7 @@ $statusIcon  = [0=>'fa-clock-o', 1=>'fa-check-circle', 2=>'fa-times-circle'];
 ?>
 
 <div class="page-title-row">
-  <h2><i class="fa fa-calendar-check-o" style="color:#1d4ed8;margin-right:10px;"></i>Manage Bookings</h2>
+  <h2><i class="fa fa-calendar-check-o" style="color:#176B50;margin-right:10px;"></i>Manage Bookings</h2>
   <span style="font-size:13px;color:#64748b;"><?= count($bookings) ?> booking(s) found</span>
 </div>
 
@@ -430,7 +430,7 @@ $statusIcon  = [0=>'fa-clock-o', 1=>'fa-check-circle', 2=>'fa-times-circle'];
     ?>
     <tr>
       <td><?= $i++ ?></td>
-      <td><strong style="color:#1d4ed8;"><?= $bcode ?></strong></td>
+      <td><strong style="color:#176B50;"><?= $bcode ?></strong></td>
       <td><?= htmlspecialchars($b->UserEmail ?? '—') ?></td>
       <td><?= htmlspecialchars($b->PackageName ?? '—') ?></td>
       <td><?= $b->PackagePrice ? tms_currency($b->PackagePrice) : '—' ?></td>
@@ -443,7 +443,7 @@ $statusIcon  = [0=>'fa-clock-o', 1=>'fa-check-circle', 2=>'fa-times-circle'];
       </td>
       <td>
         <?php if ($b->ModificationStatus === 'pending'): ?>
-          <div style="font-size:11.5px;color:#1e40af;margin-bottom:4px;">
+          <div style="font-size:11.5px;color:#104B3A;margin-bottom:4px;">
             <i class="fa fa-exchange"></i> &rarr; <?= htmlspecialchars($b->RequestedFromDate) ?> / <?= htmlspecialchars($b->RequestedToDate) ?>
           </div>
           <div style="display:flex;gap:4px;">
@@ -507,7 +507,7 @@ $statusIcon  = [0=>'fa-clock-o', 1=>'fa-check-circle', 2=>'fa-times-circle'];
     <?php for ($pn = 1; $pn <= $bookingTotalPages; $pn++):
         $qs = http_build_query(array_merge($_GET, ['p' => $pn])); ?>
     <a href="?<?php echo $qs; ?>" style="padding:6px 12px;border-radius:6px;font-size:13px;text-decoration:none;
-        <?php echo $pn === $bookingPage ? 'background:#1d4ed8;color:#fff;' : 'background:#f1f5f9;color:#334155;'; ?>"><?php echo $pn; ?></a>
+        <?php echo $pn === $bookingPage ? 'background:#176B50;color:#fff;' : 'background:#f1f5f9;color:#334155;'; ?>"><?php echo $pn; ?></a>
     <?php endfor; ?>
 </div>
 <?php endif; ?>

@@ -52,15 +52,15 @@ $todayDay = $isCurrentViewMonth ? (int)(new DateTime())->format('j') : 0;
 <link href="<?php echo tms_asset_ver('css/admin-v6.css'); ?>" rel="stylesheet">
 <style>
 .page-title-row { display:flex; align-items:center; justify-content:space-between; margin-bottom:22px; flex-wrap:wrap; gap:12px; }
-.page-title-row h2 { font-family:'Inter',sans-serif; font-size:22px; font-weight:800; color:#0f172a; margin:0; }
+.page-title-row h2 { font-family:'Inter',sans-serif; font-size:22px; font-weight:800; color:#17231E; margin:0; }
 .month-nav { display:flex; align-items:center; gap:14px; background:#fff; border:1px solid #e2e8f0; border-radius:10px; padding:8px 14px; }
-.month-nav a { color:#1d4ed8; text-decoration:none; font-size:14px; }
-.month-nav .cur { font-weight:700; font-size:14.5px; color:#0f172a; min-width:150px; text-align:center; }
+.month-nav a { color:#176B50; text-decoration:none; font-size:14px; }
+.month-nav .cur { font-weight:700; font-size:14.5px; color:#17231E; min-width:150px; text-align:center; }
 .cal-grid { display:grid; grid-template-columns:repeat(7,1fr); gap:8px; }
 .cal-dow { text-align:center; font-size:11.5px; font-weight:700; color:#94a3b8; text-transform:uppercase; letter-spacing:.5px; padding-bottom:6px; }
 .cal-cell { background:#fff; border:1px solid #e2e8f0; border-radius:10px; min-height:110px; padding:8px; }
 .cal-cell.empty { background:transparent; border:none; }
-.cal-cell.today { border-color:#1d4ed8; border-width:2px; }
+.cal-cell.today { border-color:#176B50; border-width:2px; }
 .cal-daynum { font-size:12.5px; font-weight:700; color:#334155; margin-bottom:6px; }
 .cal-booking { display:block; font-size:10.5px; padding:3px 6px; border-radius:5px; margin-bottom:3px; text-decoration:none; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .cal-more { font-size:10px; color:#94a3b8; padding-left:4px; }
@@ -85,7 +85,7 @@ html[data-theme="dark"] .cal-more { color:#94a3b8 !important; }
 <div class="tms-content">
 
 <div class="page-title-row">
-  <h2><i class="fa fa-calendar-check-o" style="color:#1d4ed8;margin-right:8px;"></i>Booking Calendar</h2>
+  <h2><i class="fa fa-calendar-check-o" style="color:#176B50;margin-right:8px;"></i>Booking Calendar</h2>
   <div class="month-nav">
     <a href="?month=<?php echo $prevMonth; ?>"><i class="fa fa-chevron-left"></i> Prev</a>
     <span class="cur"><?php echo $monthStart->format('F Y'); ?></span>

@@ -82,13 +82,13 @@ try {
 <link href="<?php echo tms_asset_ver('css/admin-v6.css'); ?>" rel="stylesheet">
 <style>
 .page-title-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;flex-wrap:wrap;gap:12px;}
-.page-title-row h2{font-family:'Inter',sans-serif;font-size:22px;font-weight:800;color:#0f172a;margin:0;}
+.page-title-row h2{font-family:'Inter',sans-serif;font-size:22px;font-weight:800;color:#17231E;margin:0;}
 .page-title-row h2 small{display:block;font-size:13px;font-weight:500;color:#64748b;margin-top:4px;}
 .alert-msg{padding:12px 16px;border-radius:10px;font-size:13.5px;margin-bottom:18px;display:flex;align-items:center;gap:8px;}
 .alert-success{background:#d1fae5;color:#065f46;border:1px solid #a7f3d0;}
 .alert-error{background:#fee2e2;color:#991b1b;border:1px solid #fca5a5;}
 .action-btn{display:inline-flex;align-items:center;gap:5px;padding:5px 10px;border-radius:6px;font-size:12px;font-weight:500;border:none;cursor:pointer;text-decoration:none;transition:all .15s;}
-.btn-edit{background:#dbeafe;color:#1e40af;}.btn-edit:hover{background:#bfdbfe;}
+.btn-edit{background:#DCF1E5;color:#104B3A;}.btn-edit:hover{background:#B8E4C9;}
 .btn-delete{background:#fee2e2;color:#991b1b;}.btn-delete:hover{background:#fecaca;}
 </style>
 </head>
@@ -99,7 +99,7 @@ try {
 <?php include('includes/header.php'); ?>
 <div class="tms-content">
 <div class="page-title-row">
-  <h2><i class="fa fa-plus-square" style="color:#1d4ed8;margin-right:10px;"></i>Manage Add-ons
+  <h2><i class="fa fa-plus-square" style="color:#176B50;margin-right:10px;"></i>Manage Add-ons
     <small>Package: <?php echo htmlspecialchars($pkg->PackageName, ENT_QUOTES, 'UTF-8'); ?> (#<?php echo (int)$pkg->PackageId; ?>)</small>
   </h2>
   <a href="edit-package.php?pid=<?php echo (int)$pkgid; ?>" class="btn-v6 ghost"><i class="fa fa-arrow-left"></i> Back to Package</a>

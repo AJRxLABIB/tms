@@ -183,10 +183,10 @@ $showingTwoFactorPrompt = !empty($_SESSION['a2fa_pending']);
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;}
-body{font-family:'Inter',sans-serif;min-height:100vh;display:flex;background:#0f172a;overflow:hidden;}
+body{font-family:'Inter',sans-serif;min-height:100vh;display:flex;background:#17231E;overflow:hidden;}
 .login-left{
   flex:1;display:flex;flex-direction:column;justify-content:center;align-items:center;padding:60px 40px;
-  background:linear-gradient(135deg,#0f172a 0%,#1e3a5f 50%,#1e293b 100%);
+  background:linear-gradient(135deg,#17231E 0%,#1e3a5f 50%,#1e293b 100%);
   position:relative;overflow:hidden;
 }
 .login-left::before{
@@ -202,7 +202,7 @@ body{font-family:'Inter',sans-serif;min-height:100vh;display:flex;background:#0f
 .login-brand{position:relative;z-index:1;text-align:center;margin-bottom:48px;}
 .brand-icon{
   width:72px;height:72px;border-radius:20px;margin:0 auto 20px;
-  background:linear-gradient(135deg,#1d4ed8,#1F8A66);
+  background:linear-gradient(135deg,#176B50,#1F8A66);
   display:flex;align-items:center;justify-content:center;font-size:32px;color:#fff;
 }
 .brand-title{font-family:'Inter',sans-serif;font-size:28px;font-weight:800;color:#fff;margin-bottom:8px;}
@@ -217,21 +217,21 @@ body{font-family:'Inter',sans-serif;min-height:100vh;display:flex;background:#0f
   background:#fff;padding:60px 48px;
 }
 .login-form{width:100%;max-width:360px;}
-.form-title{font-family:'Inter',sans-serif;font-size:26px;font-weight:800;color:#0f172a;margin-bottom:6px;}
+.form-title{font-family:'Inter',sans-serif;font-size:26px;font-weight:800;color:#17231E;margin-bottom:6px;}
 .form-sub{font-size:14px;color:#64748b;margin-bottom:36px;}
 .form-label{display:block;font-size:13px;font-weight:500;color:#475569;margin-bottom:7px;}
 .form-input{
   width:100%;padding:11px 16px;
   border:1.5px solid #e2e8f0;border-radius:10px;
   font-size:14px;font-family:'Inter',sans-serif;
-  color:#0f172a;outline:none;transition:all 0.2s;
+  color:#17231E;outline:none;transition:all 0.2s;
   background:#f8fafc;
 }
-.form-input:focus{border-color:#1d4ed8;background:#fff;box-shadow:0 0 0 3px rgba(29,78,216,0.1);}
+.form-input:focus{border-color:#176B50;background:#fff;box-shadow:0 0 0 3px rgba(29,78,216,0.1);}
 .field-group{margin-bottom:18px;}
 .btn-login{
   width:100%;padding:13px;border:none;border-radius:10px;
-  background:linear-gradient(135deg,#1d4ed8,#1F8A66);color:#fff;
+  background:linear-gradient(135deg,#176B50,#1F8A66);color:#fff;
   font-size:15px;font-weight:600;font-family:'Inter',sans-serif;
   cursor:pointer;transition:all 0.2s;margin-top:6px;
   box-shadow:0 4px 14px rgba(29,78,216,0.35);
@@ -240,7 +240,7 @@ body{font-family:'Inter',sans-serif;min-height:100vh;display:flex;background:#0f
 .btn-login:active{transform:translateY(0);}
 .error-box{background:#fee2e2;border:1px solid #fca5a5;border-radius:10px;padding:12px 16px;margin-bottom:20px;font-size:13.5px;color:#991b1b;display:flex;align-items:center;gap:8px;}
 .back-link{display:block;text-align:center;margin-top:24px;font-size:13px;color:#64748b;text-decoration:none;transition:color 0.2s;}
-.back-link:hover{color:#1d4ed8;}
+.back-link:hover{color:#176B50;}
 @media(max-width:768px){
   body{flex-direction:column;}
   .login-left{display:none;}
@@ -259,7 +259,7 @@ body{font-family:'Inter',sans-serif;min-height:100vh;display:flex;background:#0f
   </div>
   <div class="login-features">
     <div class="feat-item">
-      <div class="feat-icon" style="background:rgba(29,78,216,0.2);color:#60a5fa;">&#128200;</div>
+      <div class="feat-icon" style="background:rgba(29,78,216,0.2);color:#7FD6AE;">&#128200;</div>
       <div class="feat-text"><p>Revenue Analytics</p><span>Real-time charts and reports</span></div>
     </div>
     <div class="feat-item">

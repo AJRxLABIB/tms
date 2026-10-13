@@ -149,7 +149,7 @@ $pageTitle = 'Dashboard';
     <!-- Recent Bookings Table -->
     <div class="card">
       <div class="card-header">
-        <h3><i class="fa fa-clock-o" style="color:#1d4ed8;margin-right:8px;"></i> Recent Bookings</h3>
+        <h3><i class="fa fa-clock-o" style="color:#176B50;margin-right:8px;"></i> Recent Bookings</h3>
         <a href="manage-bookings.php" class="btn-v6 ghost sm">View all</a>
       </div>
       <div style="overflow-x:auto;">
@@ -169,7 +169,7 @@ $pageTitle = 'Dashboard';
           <?php else: ?>
           <?php foreach($recent as $b): ?>
           <tr>
-            <td><span style="font-weight:600;color:#1d4ed8;">#BK<?= str_pad($b->BookingId,3,'0',STR_PAD_LEFT) ?></span></td>
+            <td><span style="font-weight:600;color:#176B50;">#BK<?= str_pad($b->BookingId,3,'0',STR_PAD_LEFT) ?></span></td>
             <td style="max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"><?= htmlentities($b->UserEmail) ?></td>
             <td style="max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"><?= htmlentities($b->PackageName) ?></td>
             <td style="color:#64748b;"><?= date('d M Y', strtotime($b->RegDate)) ?></td>

@@ -17,7 +17,7 @@ tms_admin_require_role($dbh, ['superadmin', 'operations', 'finance']);
 <link href="<?php echo tms_asset_ver('css/admin-v6.css'); ?>" rel="stylesheet">
 <style>
 .page-title-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;flex-wrap:wrap;gap:12px;}
-.page-title-row h2{font-family:'Inter',sans-serif;font-size:22px;font-weight:800;color:#0f172a;margin:0;}
+.page-title-row h2{font-family:'Inter',sans-serif;font-size:22px;font-weight:800;color:#17231E;margin:0;}
 </style>
 </head>
 <body>
@@ -27,7 +27,7 @@ tms_admin_require_role($dbh, ['superadmin', 'operations', 'finance']);
 <?php include('includes/header.php'); ?>
 <div class="tms-content">
 <div class="page-title-row">
-  <h2><i class="fa fa-users" style="color:#1d4ed8;margin-right:10px;"></i>User Analytics</h2>
+  <h2><i class="fa fa-users" style="color:#176B50;margin-right:10px;"></i>User Analytics</h2>
 </div>
 
 <?php
@@ -68,7 +68,7 @@ $mostActive = safe_q($dbh, "SELECT b.UserEmail, COALESCE(u.FullName, b.UserEmail
 
 <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:16px;margin-bottom:28px;">
   <div style="background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:20px;">
-    <div style="font-size:26px;font-weight:800;color:#1d4ed8;"><?=$totalUsers?></div>
+    <div style="font-size:26px;font-weight:800;color:#176B50;"><?=$totalUsers?></div>
     <div style="font-size:12px;color:#64748b;margin-top:4px;">Total Users</div>
   </div>
   <div style="background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:20px;">
@@ -76,7 +76,7 @@ $mostActive = safe_q($dbh, "SELECT b.UserEmail, COALESCE(u.FullName, b.UserEmail
     <div style="font-size:12px;color:#64748b;margin-top:4px;">New This Month</div>
   </div>
   <div style="background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:20px;">
-    <div style="font-size:26px;font-weight:800;color:#0f172a;"><?=$activeUsers?></div>
+    <div style="font-size:26px;font-weight:800;color:#17231E;"><?=$activeUsers?></div>
     <div style="font-size:12px;color:#64748b;margin-top:4px;">Users w/ ≥1 Booking</div>
   </div>
   <div style="background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:20px;">
@@ -86,7 +86,7 @@ $mostActive = safe_q($dbh, "SELECT b.UserEmail, COALESCE(u.FullName, b.UserEmail
 </div>
 
 <div style="background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:20px;margin-bottom:20px;">
-  <h3 style="font-size:15px;font-weight:700;margin-bottom:20px;"><i class="fa fa-line-chart" style="color:#1d4ed8;margin-right:8px;"></i>User Growth (Signups by Month)</h3>
+  <h3 style="font-size:15px;font-weight:700;margin-bottom:20px;"><i class="fa fa-line-chart" style="color:#176B50;margin-right:8px;"></i>User Growth (Signups by Month)</h3>
   <?php if (empty($signupsByMonth)): ?>
   <div style="text-align:center;color:#94a3b8;padding:20px;">No signup data yet.</div>
   <?php else: ?>
@@ -124,7 +124,7 @@ $mostActive = safe_q($dbh, "SELECT b.UserEmail, COALESCE(u.FullName, b.UserEmail
     </table></div>
   </div>
   <div style="background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:20px;">
-    <h3 style="font-size:15px;font-weight:700;margin-bottom:16px;"><i class="fa fa-star" style="color:#1d4ed8;margin-right:8px;"></i>Most Active Users</h3>
+    <h3 style="font-size:15px;font-weight:700;margin-bottom:16px;"><i class="fa fa-star" style="color:#176B50;margin-right:8px;"></i>Most Active Users</h3>
     <div class="table-responsive"><table class="tms-table" style="font-size:12px;">
       <thead><tr><th>#</th><th>User</th><th>Bookings (all)</th></tr></thead>
       <tbody>

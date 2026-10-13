@@ -105,12 +105,12 @@ if (isset($TMS_TRANSLATIONS) && is_array($TMS_TRANSLATIONS)) {
 <link href="<?php echo tms_asset_ver('css/admin-v6.css'); ?>" rel="stylesheet">
 <style>
 .page-title-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;flex-wrap:wrap;gap:12px;}
-.page-title-row h2{font-family:'Inter',sans-serif;font-size:22px;font-weight:800;color:#0f172a;margin:0;}
+.page-title-row h2{font-family:'Inter',sans-serif;font-size:22px;font-weight:800;color:#17231E;margin:0;}
 .alert-msg{padding:12px 16px;border-radius:10px;font-size:13.5px;margin-bottom:18px;display:flex;align-items:center;gap:8px;}
 .alert-success{background:#d1fae5;color:#065f46;border:1px solid #a7f3d0;}
 .alert-error{background:#fee2e2;color:#991b1b;border:1px solid #fca5a5;}
 .action-btn{display:inline-flex;align-items:center;gap:5px;padding:5px 10px;border-radius:6px;font-size:12px;font-weight:500;border:none;cursor:pointer;text-decoration:none;transition:all .15s;}
-.btn-edit{background:#dbeafe;color:#1e40af;}.btn-edit:hover{background:#bfdbfe;}
+.btn-edit{background:#DCF1E5;color:#104B3A;}.btn-edit:hover{background:#B8E4C9;}
 .btn-delete{background:#fee2e2;color:#991b1b;}.btn-delete:hover{background:#fecaca;}
 .lang-chip{display:inline-block;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:700;background:#eef2ff;color:#4338ca;text-transform:uppercase;}
 .cov-card{background:#fff;border:1px solid #e2e8f0;border-radius:10px;padding:14px 16px;min-width:140px;}
@@ -217,7 +217,7 @@ html[data-theme="dark"] .cov-bar { background:#2b3542 !important; }
     <?php for ($pn = 1; $pn <= $totalPages; $pn++):
         $qs = http_build_query(array_merge($_GET, ['p' => $pn])); ?>
     <a href="?<?= $qs ?>" style="padding:6px 12px;border-radius:6px;font-size:13px;text-decoration:none;
-        <?= $pn === $page ? 'background:#1d4ed8;color:#fff;' : 'background:#f1f5f9;color:#334155;' ?>"><?= $pn ?></a>
+        <?= $pn === $page ? 'background:#176B50;color:#fff;' : 'background:#f1f5f9;color:#334155;' ?>"><?= $pn ?></a>
     <?php endfor; ?>
 </div>
 <?php endif; ?>

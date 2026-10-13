@@ -18,7 +18,7 @@ tms_admin_require_role($dbh, ['superadmin', 'package_manager']);
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 <style>
 .page-title-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;flex-wrap:wrap;gap:12px;}
-.page-title-row h2{font-family:'Inter',sans-serif;font-size:22px;font-weight:800;color:#0f172a;margin:0;}
+.page-title-row h2{font-family:'Inter',sans-serif;font-size:22px;font-weight:800;color:#17231E;margin:0;}
 </style>
 </head>
 <body>
@@ -28,7 +28,7 @@ tms_admin_require_role($dbh, ['superadmin', 'package_manager']);
 <?php include('includes/header.php'); ?>
 <div class="tms-content">
 <div class="page-title-row">
-  <h2><i class="fa fa-map-marker" style="color:#1d4ed8;margin-right:10px;"></i>Popular Destinations</h2>
+  <h2><i class="fa fa-map-marker" style="color:#176B50;margin-right:10px;"></i>Popular Destinations</h2>
 </div>
 <p style="color:#64748b;font-size:13px;margin-top:-12px;margin-bottom:22px;">
   Three different signals of "popular," each from real usage data — not just one blended guess.

@@ -164,7 +164,7 @@ if (isset($_POST['submit'])) {
                                 <i class="fa fa-magic"></i> Suggest
                             </button>
                         </div>
-                        <div id="priceSuggestionBox" style="display:none;margin-top:8px;padding:10px 12px;background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;font-size:12.5px;color:#1e40af;"></div>
+                        <div id="priceSuggestionBox" style="display:none;margin-top:8px;padding:10px 12px;background:#EEF7F1;border:1px solid #B8E4C9;border-radius:8px;font-size:12.5px;color:#104B3A;"></div>
                     </div>
                 </div>
                 <div class="col-md-12">
