@@ -81,7 +81,7 @@ $leaderboard = $achievementEngine->getLeaderboard(10);
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <script src="js/jquery-1.12.0.min.js" defer></script>
 <style>
-.page-title{background:linear-gradient(135deg,#f5c518,#e8a000);color:#fff;padding:40px 0;margin-bottom:30px;}
+.page-title{background:linear-gradient(135deg,#104B3A,#176B50);color:#fff;padding:40px 0;margin-bottom:30px;}
 .points-card{background:linear-gradient(135deg,<?= $tierColors[$tier] ?>,<?= $tierColors[$tier] ?>aa);color:#fff;border-radius:16px;padding:30px;text-align:center;margin-bottom:24px;}
 .points-card h1{font-size:64px;font-weight:900;margin:10px 0;}
 .tier-badge{display:inline-block;background:rgba(255,255,255,0.3);padding:6px 18px;border-radius:20px;font-size:16px;font-weight:700;margin-bottom:10px;}
@@ -165,7 +165,7 @@ $leaderboard = $achievementEngine->getLeaderboard(10);
       <?php if (count($history) === 0): ?>
         <p style="color:var(--text-muted);text-align:center;padding:20px;">No points activity yet. Book a tour to start earning!</p>
       <?php else: ?>
-      <div class="table-responsive"><table class="table table-striped" style="margin-top:10px;">
+      <div class="table-responsive" tabindex="0" role="region" aria-label="Table, scrollable"><table class="table table-striped" style="margin-top:10px;">
         <thead><tr><th>Date</th><th>Description</th><th>Points</th></tr></thead>
         <tbody>
         <?php foreach ($history as $h): ?>
@@ -205,7 +205,7 @@ $leaderboard = $achievementEngine->getLeaderboard(10);
 <?php if (!empty($leaderboard)): ?>
 <div class="info-card" style="margin-top:20px;">
   <h5><i class="fa fa-list-ol"></i> Top Achievers</h5>
-  <div class="table-responsive"><table class="table table-striped" style="margin-top:10px;">
+  <div class="table-responsive" tabindex="0" role="region" aria-label="Table, scrollable"><table class="table table-striped" style="margin-top:10px;">
     <thead><tr><th>#</th><th>Traveler</th><th>Achievements</th></tr></thead>
     <tbody>
     <?php foreach ($leaderboard as $i => $l): ?>

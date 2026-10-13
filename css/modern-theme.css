@@ -1879,3 +1879,6 @@ html[data-theme="dark"] .hd-body h1, html[data-theme="dark"] .hd-body h2, html[d
 html[data-theme="dark"] .hd-body h1, html[data-theme="dark"] .hd-body h2, html[data-theme="dark"] .hd-body h3, html[data-theme="dark"] .hd-body > h3 { color: var(--text) !important; }
 /* dark: translucent "glass" cards relied on the old photo background; make them solid */
 html[data-theme="dark"] .recover-box, html[data-theme="dark"] .pwd-card, html[data-theme="dark"] .ticket-panel, html[data-theme="dark"] .tfa-card { background: var(--white) !important; backdrop-filter: none; -webkit-backdrop-filter: none; border-color: var(--border); }
+.label-primary { background-color: #176B50; color: #fff; }
+/* admin-edited page content (pasted from Word) carries hard-coded black/grey inline colours */
+html[data-theme="dark"] .privacy span[style*="color"], html[data-theme="dark"] .privacy p[style*="color"] { color: var(--text) !important; }

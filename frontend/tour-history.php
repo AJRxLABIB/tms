@@ -189,6 +189,10 @@ html[data-theme="dark"] .history-body .detail-row { color: var(--text-muted) !im
 .history-body .detail-row i{color:var(--secondary);width:16px;flex-shrink:0;margin-top:2px;}
 .cancel-btn{background:var(--white);color:#C23B3B;border:1.5px solid #C23B3B;border-radius:6px;padding:7px 18px;font-size:13px;font-weight:600;cursor:pointer;transition:.2s;}
 .cancel-btn:hover{background:#C23B3B;color:#fff;}
+@media(max-width:600px){.history-header{flex-direction:column;align-items:flex-start;} .history-header > *{min-width:0;max-width:100%;}}
+.history-body a:not(.ticket-btn):not(.cancel-btn):not(.modify-btn){color:var(--secondary);text-decoration:underline;}
+.tb-primary{background:#176B50 !important;color:#fff !important;border-color:#176B50 !important;}
+.history-header{background:var(--bg-dark) !important;}
 .ticket-btn{background:var(--white);color:var(--secondary);border:1.5px solid var(--secondary);border-radius:6px;padding:7px 18px;font-size:13px;font-weight:600;cursor:pointer;transition:.2s;text-decoration:none;display:inline-flex;align-items:center;gap:6px;}
 .ticket-btn:hover{background:var(--secondary);color:#fff;}
 .empty-state{text-align:center;padding:70px 20px;color:var(--text-muted);}
@@ -260,7 +264,7 @@ html[data-theme="dark"] .history-body .detail-row { color: var(--text-muted) !im
             <div class="succWrap"><strong><?php echo tms_t('label_success_colon','SUCCESS:'); ?></strong> <?php echo htmlspecialchars($msg, ENT_QUOTES,'UTF-8'); ?></div>
         <?php endif; ?>
 
-        <h3 class="wow fadeInDown animated" data-wow-delay=".1s" style="margin-bottom:24px;">
+        <h3 class="wow fadeInDown animated" data-wow-delay=".1s" style="margin-bottom:24px;color:var(--text);">
             <i class="fa fa-history" style="color:var(--secondary)"></i>
             <?php echo tms_t('heading_your_bookings','Your Bookings'); ?>
             <span style="font-size:14px;font-weight:400;color:var(--text-muted);margin-left:8px;">(<?php echo count($bookings); ?> <?php echo tms_t('label_total_word','total'); ?>)</span>
@@ -284,7 +288,7 @@ html[data-theme="dark"] .history-body .detail-row { color: var(--text-muted) !im
                     <span class="booking-id">
                         <i class="fa fa-ticket"></i> #BK<?php echo (int)$b->BookingId; ?>
                     </span>
-                    <div style="display:flex;gap:10px;align-items:center;">
+                    <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
                         <span class="label label-<?php echo $sc['class']; ?>" style="font-size:12px;padding:5px 10px;">
                             <?php echo $sc['label'];
                                   if ($b->status == 2) {
@@ -412,7 +416,7 @@ html[data-theme="dark"] .history-body .detail-row { color: var(--text-muted) !im
                         <?php endif; ?>
 
                         <div style="display:flex;align-items:flex-end;gap:8px;flex-wrap:wrap;">
-                            <a href="my-trip.php?id=<?php echo (int)$b->BookingId; ?>" class="ticket-btn" style="background:#0f2027;color:#fff;border-color:#0f2027;">
+                            <a href="my-trip.php?id=<?php echo (int)$b->BookingId; ?>" class="ticket-btn tb-primary">
                                 <i class="fa fa-compass"></i> <?php echo tms_t('link_my_trip','My Trip'); ?>
                             </a>
                             <?php if ($b->status == 1): ?>
@@ -420,10 +424,10 @@ html[data-theme="dark"] .history-body .detail-row { color: var(--text-muted) !im
                                 <i class="fa fa-download"></i> <?php echo tms_t('link_ticket_word','Ticket'); ?>
                             </a>
                             <?php endif; ?>
-                            <a href="expense-tracker.php?booking=<?php echo (int)$b->BookingId; ?>" class="ticket-btn" style="background:#eff6ff;color:#1e40af;border-color:#bfdbfe;">
+                            <a href="expense-tracker.php?booking=<?php echo (int)$b->BookingId; ?>" class="ticket-btn">
                                 <i class="fa fa-money"></i> <?php echo tms_t('link_expenses','Expenses'); ?>
                             </a>
-                            <a href="wallet.php" class="ticket-btn" style="background:#f0fdf4;color:#166534;border-color:#bbf7d0;">
+                            <a href="wallet.php" class="ticket-btn">
                                 <i class="fa fa-briefcase"></i> <?php echo tms_t('link_wallet','Wallet'); ?>
                             </a>
                             <!-- Round 115 continuation (master prompt item 10 -- Booking Engine
@@ -431,7 +435,7 @@ html[data-theme="dark"] .history-body .detail-row { color: var(--text-muted) !im
                                  existed anywhere before this; links to the existing public
                                  enquiry.php with the subject pre-filled so the agent sees which
                                  booking it's about without the customer having to type it. -->
-                            <a href="enquiry.php?subject=<?php echo urlencode('Booking #BK'.(int)$b->BookingId); ?>" class="ticket-btn" style="background:#fefce8;color:#854d0e;border-color:#fde68a;">
+                            <a href="enquiry.php?subject=<?php echo urlencode('Booking #BK'.(int)$b->BookingId); ?>" class="ticket-btn">
                                 <i class="fa fa-life-ring"></i> <?php echo tms_t('link_support','Support'); ?>
                             </a>
                             <?php if ($canModify): ?>
