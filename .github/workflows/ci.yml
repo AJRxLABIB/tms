@@ -80,6 +80,8 @@ jobs:
         run: |
           php tests/ai/run_eval.php
           php tests/ai/rerank_test.php
+          php tests/ai/resilience_test.php
+          php tests/ai/engine_test.php
           php tests/payments/run.php
           php tests/suppliers/run.php
           php tests/notices/run.php
@@ -100,3 +102,4 @@ jobs:
         run: |
           php tests/security/run.php http://127.0.0.1:8000
           php tests/autopilot/http.php http://127.0.0.1:8000
+          php tests/ai/memory_http.php http://127.0.0.1:8000

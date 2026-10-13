@@ -52,6 +52,10 @@ define('OLLAMA_MODEL',    tms_env('OLLAMA_MODEL', 'qwen2.5:3b-instruct'));
 // Optional semantic re-ranking of assistant search results (see backend/ai/rag/EmbeddingReranker.php).
 // Empty = off (BM25 only). Example: AI_EMBED_MODEL=nomic-embed-text after `ollama pull nomic-embed-text`.
 define('AI_EMBED_MODEL',  trim((string) tms_env('AI_EMBED_MODEL', '')));
+// Provider failover (off by default). Comma list tried in order when AI_PROVIDER fails, e.g. AI_FALLBACK_PROVIDERS=ollama
+// (local, no data leaves the machine). Another CLOUD vendor is used only if AI_FALLBACK_ALLOW_EXTERNAL=1 (privacy opt-in).
+define('AI_FALLBACK_PROVIDERS', trim((string) tms_env('AI_FALLBACK_PROVIDERS', '')));
+define('AI_FALLBACK_ALLOW_EXTERNAL', in_array(strtolower(trim((string) tms_env('AI_FALLBACK_ALLOW_EXTERNAL', '0'))), ['1', 'true', 'yes'], true));
 
 define('AI_MAX_TOKENS',   (int) tms_env('AI_MAX_TOKENS', 32768));
 define('AI_CACHE_TTL',    (int) tms_env('AI_CACHE_TTL', 3600));   // Cache AI responses for 1 hour
@@ -264,9 +268,9 @@ if (!in_array(strtolower((string)tms_env('TMS_FORCE_SCHEMA_CHECK', '')), ['1', '
     } catch (Throwable $e) { $tmsSchemaOk = false; } // table not created yet
 }
 if ($tmsSchemaOk) {
-    foreach (['tms_db_init', 'tms_ai_tables', 'tms_explore_tables', 'tms_api_tables', 'tms_marketplace_tables', 'tms_supplier_tables', 'tms_notice_tables', 'tms_autopilot_tables'] as $_k) { $_SESSION[$_k] = true; }
+    foreach (['tms_db_init', 'tms_ai_tables', 'tms_explore_tables', 'tms_api_tables', 'tms_marketplace_tables', 'tms_supplier_tables', 'tms_notice_tables', 'tms_autopilot_tables', 'tms_memory_tables'] as $_k) { $_SESSION[$_k] = true; }
 } else {
-    foreach (['tms_db_init', 'tms_ai_tables', 'tms_explore_tables', 'tms_api_tables', 'tms_marketplace_tables', 'tms_supplier_tables', 'tms_notice_tables', 'tms_autopilot_tables'] as $_k) { unset($_SESSION[$_k]); }
+    foreach (['tms_db_init', 'tms_ai_tables', 'tms_explore_tables', 'tms_api_tables', 'tms_marketplace_tables', 'tms_supplier_tables', 'tms_notice_tables', 'tms_autopilot_tables', 'tms_memory_tables'] as $_k) { unset($_SESSION[$_k]); }
 }
 
 // ─── Core table setup (CREATE TABLE IF NOT EXISTS calls — safe/idempotent,
@@ -315,6 +319,12 @@ if (empty($_SESSION['tms_autopilot_tables'])) {
     require_once __DIR__ . '/services/TripAutopilot.php';
     TripAutopilot::migrate($dbh);
     $_SESSION['tms_autopilot_tables'] = true;
+}
+// Assistant memory the user controls (see backend/ai/TravelMemory.php).
+if (empty($_SESSION['tms_memory_tables'])) {
+    require_once __DIR__ . '/ai/TravelMemory.php';
+    TravelMemory::migrate($dbh);
+    $_SESSION['tms_memory_tables'] = true;
 }
 
 // ─── Schema-drift repair (NOT session-gated — see note below) ─────────────────
@@ -2580,6 +2590,7 @@ function tms_privacy_tables(): array {
         ['tbl_copilot_sessions', 'user_email'],
         ['tbl_travel_memories', 'user_email'],
         ['tbl_user_profile', 'user_email'],
+        ['tbl_ai_user_memory', 'user_email'], // assistant memory the user controls (TravelMemory)
         ['tbl_explore_history', 'user_email'],
         ['tbl_explore_chat', 'user_email'],
     ];
@@ -2669,6 +2680,10 @@ function tms_anonymize_user(PDO $dbh, string $email, int $userId): bool {
              EmailId = :anon, Password = :pw, DeletedAt = NOW() WHERE id = :id"
         )->execute([':anon' => $anonEmail, ':pw' => $lockedPassword, ':id' => $userId]);
 
+        try {
+            // Saved assistant preferences are deleted outright (not just re-pointed to the anonymous address).
+            $dbh->prepare("DELETE FROM tbl_ai_user_memory WHERE user_email = :e")->execute([':e' => $email]);
+        } catch (Exception $e) { /* table absent on an older install */ }
         try {
             $dbh->prepare("DELETE FROM tbltraveldocuments WHERE UserEmail = :e")->execute([':e' => $email]);
         } catch (Exception $e) {

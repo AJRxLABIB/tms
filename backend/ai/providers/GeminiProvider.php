@@ -111,7 +111,7 @@ class GeminiProvider implements AIProviderInterface {
 
     public function parseResponse(int $httpCode, string $rawBody, ?string $curlError): array {
         if ($curlError) {
-            return ['success' => false, 'error' => 'The AI assistant could not be reached. Please try again in a moment.', 'retriable' => true];
+            return ['success' => false, 'error' => 'The AI assistant could not be reached. Please try again in a moment.', 'kind' => 'unavailable', 'retriable' => true];
         }
 
         $data = json_decode($rawBody, true);
@@ -121,7 +121,7 @@ class GeminiProvider implements AIProviderInterface {
             error_log('[TMS AI Gemini] API error: HTTP ' . $httpCode . ': ' . $detail);
 
             if ($httpCode === 401 || $httpCode === 403) {
-                return ['success' => false, 'error' => 'The AI assistant is not configured correctly on this site.', 'retriable' => false];
+                return ['success' => false, 'error' => 'The AI assistant is not configured correctly on this site.', 'kind' => 'config', 'retriable' => false];
             }
             if ($httpCode === 429) {
                 // A 429 is either a per-minute burst (worth one short retry) or
@@ -153,14 +153,14 @@ class GeminiProvider implements AIProviderInterface {
                     }
                 }
                 if ($isDailyQuota) {
-                    return ['success' => false, 'error' => 'The AI assistant has reached today\'s usage limit. Please try again tomorrow.', 'retriable' => false];
+                    return ['success' => false, 'error' => 'The AI assistant has reached today\'s usage limit. Please try again tomorrow.', 'kind' => 'quota', 'retriable' => false];
                 }
-                return ['success' => false, 'error' => 'The AI assistant is busy right now. Please try again in a minute.', 'retriable' => true];
+                return ['success' => false, 'error' => 'The AI assistant is busy right now. Please try again in a minute.', 'kind' => 'unavailable', 'retriable' => true];
             }
             if (in_array($httpCode, [500, 502, 503, 504], true)) {
-                return ['success' => false, 'error' => 'The AI assistant had a problem answering that. Please try again.', 'retriable' => true];
+                return ['success' => false, 'error' => 'The AI assistant had a problem answering that. Please try again.', 'kind' => 'unavailable', 'retriable' => true];
             }
-            return ['success' => false, 'error' => 'The AI assistant had a problem answering that. Please try again.', 'retriable' => false];
+            return ['success' => false, 'error' => 'The AI assistant had a problem answering that. Please try again.', 'kind' => 'content', 'retriable' => false];
         }
 
         // A prompt blocked BEFORE generation is reported at the top level,
@@ -168,7 +168,7 @@ class GeminiProvider implements AIProviderInterface {
         // "Empty response from Gemini API."
         $blockReason = $data['promptFeedback']['blockReason'] ?? '';
         if ($blockReason !== '') {
-            return ['success' => false, 'error' => 'That message could not be processed. Please rephrase it and try again.', 'retriable' => false];
+            return ['success' => false, 'error' => 'That message could not be processed. Please rephrase it and try again.', 'kind' => 'content', 'retriable' => false];
         }
 
         $content = $data['candidates'][0]['content']['parts'][0]['text'] ?? '';
@@ -176,13 +176,13 @@ class GeminiProvider implements AIProviderInterface {
         if ($content === '') {
             $finishReason = $data['candidates'][0]['finishReason'] ?? '';
             if ($finishReason === 'SAFETY') {
-                return ['success' => false, 'error' => 'The answer was blocked by a safety filter. Try rephrasing your question.', 'retriable' => false];
+                return ['success' => false, 'error' => 'The answer was blocked by a safety filter. Try rephrasing your question.', 'kind' => 'content', 'retriable' => false];
             }
             if ($finishReason === 'MAX_TOKENS') {
-                return ['success' => false, 'error' => 'That answer was too long to finish. Try asking something more specific.', 'retriable' => false];
+                return ['success' => false, 'error' => 'That answer was too long to finish. Try asking something more specific.', 'kind' => 'content', 'retriable' => false];
             }
             error_log('[TMS AI Gemini] empty response (finishReason=' . $finishReason . ')');
-            return ['success' => false, 'error' => 'The AI assistant returned an empty answer. Please try again.', 'retriable' => false];
+            return ['success' => false, 'error' => 'The AI assistant returned an empty answer. Please try again.', 'kind' => 'content', 'retriable' => false];
         }
 
         $usage = $data['usageMetadata'] ?? [];

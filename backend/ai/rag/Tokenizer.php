@@ -16,7 +16,7 @@ final class RagTokenizer
     private const STOP = [
         'the','a','an','and','or','of','to','in','on','for','with','is','are','be','at','by','from','this','that',
         'it','as','do','under','below','than','less','within','max','maximum','package','packages','tour','tours','trip','trips','want','show','find','please','some','best','looking','need','does','i','me','my','we','you','your','can','what','how','which','any','have','has',
-        'আমি','আমার','এবং','ও','কি','কী','এই','সেই','জন্য','থেকে','এর','না','আছে','কত','কোন','কোনো','করা','করে',
+        'টাকা','টাকার','মধ্যে','নিচে','কম','দিনের','জনের','আমি','আমার','এবং','ও','কি','কী','এই','সেই','জন্য','থেকে','এর','না','আছে','কত','কোন','কোনো','করা','করে',
     ];
 
     /** Bengali (and a few variant spellings) -> English tokens. */
@@ -38,7 +38,9 @@ final class RagTokenizer
     /** @return string[] */
     public static function tokens(string $text, bool $expand = true): array
     {
-        $text = mb_strtolower($text, 'UTF-8');
+        // Bangla digits -> ASCII so "৩ দিন" matches "3 Days" (the caller's original text is untouched).
+        require_once dirname(__DIR__) . '/BanglaNormalizer.php';
+        $text = mb_strtolower(BanglaNormalizer::digits($text), 'UTF-8');
         if (!preg_match_all('/[\p{L}\p{N}\p{M}]+/u', $text, $m)) return [];
         $out = [];
         foreach ($m[0] as $w) {

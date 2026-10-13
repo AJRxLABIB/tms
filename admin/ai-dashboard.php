@@ -165,10 +165,30 @@ $activeProviderName  = defined('AI_PROVIDER') ? AI_PROVIDER : 'gemini';
 if ($activeProviderName === 'openai') {
     $activeProviderModel = defined('OPENAI_MODEL') ? OPENAI_MODEL : '';
     $activeProviderReady = defined('OPENAI_API_KEY') && OPENAI_API_KEY !== '';
+} elseif ($activeProviderName === 'ollama') {
+    $activeProviderModel = defined('OLLAMA_MODEL') ? OLLAMA_MODEL : '';
+    $activeProviderReady = $activeProviderModel !== '';
 } else {
     $activeProviderModel = defined('GEMINI_MODEL') ? GEMINI_MODEL : '';
     $activeProviderReady = defined('GEMINI_API_KEY') && GEMINI_API_KEY !== '' && GEMINI_API_KEY !== 'YOUR_GEMINI_API_KEY_HERE';
 }
+
+// Provider chain health (primary + any AI_FALLBACK_PROVIDERS) and last-24h numbers per provider from tbl_ai_telemetry.
+// Read-only; never shows keys or request contents.
+$chainNames = array_values(array_unique(array_filter(array_merge([$activeProviderName], array_map('trim', explode(',', defined('AI_FALLBACK_PROVIDERS') ? (string)AI_FALLBACK_PROVIDERS : ''))))));
+$providerHealth = ProviderHealth::snapshot($dbh, $chainNames);
+$providerStats = [];
+try {
+    foreach ($dbh->query("SELECT provider, COUNT(*) calls, SUM(success) ok, AVG(latency_ms) avg_ms, SUM(CASE WHEN error_message LIKE '%circuit_open%' THEN 1 ELSE 0 END) skipped
+                            FROM tbl_ai_telemetry WHERE created_at >= DATE_SUB(NOW(), INTERVAL 24 HOUR) AND cached = 0 GROUP BY provider")->fetchAll(PDO::FETCH_ASSOC) as $row) {
+        // p95 per provider (small table scan, last 24 h only)
+        $lat = $dbh->prepare("SELECT latency_ms FROM tbl_ai_telemetry WHERE provider = ? AND success = 1 AND cached = 0 AND created_at >= DATE_SUB(NOW(), INTERVAL 24 HOUR) ORDER BY latency_ms");
+        $lat->execute([$row['provider']]);
+        $vals = $lat->fetchAll(PDO::FETCH_COLUMN);
+        $row['p95'] = $vals ? (int)$vals[(int)max(0, ceil(0.95 * count($vals)) - 1)] : null;
+        $providerStats[$row['provider']] = $row;
+    }
+} catch (Throwable $e) { $providerStats = []; }
 
 // Round 35 -- eval run history for the panel below.
 $recentEvalRuns = (new AIEvaluator($dbh))->recentRuns(8);
@@ -436,6 +456,8 @@ body { background:#f0f4f8; }
    feels like a different theme. */
 .tms-theme-toggle-mini { background:rgba(255,255,255,.1); border:1px solid rgba(255,255,255,.2); color:#fff; width:28px; height:28px; border-radius:50%; cursor:pointer; display:inline-flex; align-items:center; justify-content:center; font-size:13px; margin-left:8px; }
 .tms-theme-toggle-mini:hover { background:rgba(255,255,255,.2); }
+.hp-note{color:#4a5568;}
+html[data-theme="dark"] .hp-note{color:#cbd5e0 !important;}
 html[data-theme="dark"] body { background:#10151c !important; }
 html[data-theme="dark"] .ai-page-header,
 html[data-theme="dark"] .stat-card,
@@ -494,7 +516,7 @@ html[data-theme="dark"] [style*="background:#fff"], html[data-theme="dark"] [sty
     // actually configured -- now that AI_PROVIDER can select a different
     // vendor, a hardcoded label here would make the dashboard lie about
     // which one is live the moment anyone changes it.
-    $activeProviderLabel = $activeProviderName === 'openai' ? 'OpenAI' : 'Google Gemini';
+    $activeProviderLabel = ['openai' => 'OpenAI', 'ollama' => 'Ollama (self-hosted)'][$activeProviderName] ?? 'Google Gemini';
   ?>
   <div class="ai-status">
     <span class="ai-status-dot" style="<?= $activeProviderReady ? '' : 'background:#dc2626;' ?>"></span>
@@ -503,6 +525,29 @@ html[data-theme="dark"] [style*="background:#fff"], html[data-theme="dark"] [sty
 </div>
 
 <div class="content-wrap">
+
+  <div class="panel" style="margin-bottom:20px;">
+    <div class="panel-header"><div class="panel-title"><i class="fa fa-heartbeat"></i> Provider health (last 24 hours)</div></div>
+    <div class="panel-body">
+      <table class="ai-table">
+        <caption class="sr-only">Health, success rate and latency per AI provider</caption>
+        <thead><tr><th scope="col">Provider</th><th scope="col">Role</th><th scope="col">Breaker</th><th scope="col">Calls</th><th scope="col">Success</th><th scope="col">Avg / p95 latency</th></tr></thead>
+        <tbody>
+        <?php foreach ($chainNames as $i => $pn): $h = $providerHealth[$pn]; $st = $providerStats[$pn] ?? null; ?>
+          <tr>
+            <td><?= htmlspecialchars($pn) ?></td>
+            <td><?= $i === 0 ? 'Primary' : 'Fallback' ?></td>
+            <td><?= htmlspecialchars($h['status']) ?><?php if ($h['status'] === 'open'): ?> (retry in <?= (int)$h['retry_after_seconds'] ?>s, <?= htmlspecialchars((string)$h['last_failure_kind']) ?>)<?php elseif ($h['status'] === 'degraded'): ?> (<?= (int)$h['consecutive_failures'] ?> recent failure(s))<?php endif; ?></td>
+            <td><?= $st ? (int)$st['calls'] : 0 ?></td>
+            <td><?= $st && (int)$st['calls'] > 0 ? round(100 * (int)$st['ok'] / (int)$st['calls']) . '%' : '—' ?></td>
+            <td><?= $st && $st['avg_ms'] !== null ? (int)$st['avg_ms'] . ' ms / ' . ($st['p95'] !== null ? (int)$st['p95'] . ' ms' : '—') : '—' ?></td>
+          </tr>
+        <?php endforeach; ?>
+        </tbody>
+      </table>
+      <p class="hp-note" style="font-size:12px;margin:10px 0 0;">Fallbacks are off unless <code>AI_FALLBACK_PROVIDERS</code> is set. A cloud fallback needs <code>AI_FALLBACK_ALLOW_EXTERNAL=1</code> (conversation text would be sent to that vendor). "Open" means the provider is being skipped until the retry time.</p>
+    </div>
+  </div>
 
   <?php if ($batchMsg): ?>
   <div style="background:#c6f6d5;border:1px solid #9ae6b4;color:#276749;border-radius:10px;padding:12px 16px;margin-bottom:20px;font-size:13px;">

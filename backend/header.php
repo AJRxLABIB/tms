@@ -78,6 +78,7 @@ $currentPage = basename($_SERVER['PHP_SELF']);
             <a href="alerts.php"><i class="fa fa-bell"></i> Price Alerts</a>
             <a href="group-trips.php"><i class="fa fa-users"></i> Group Trips</a>
             <a href="referral.php"><i class="fa fa-gift"></i> Refer Friends</a>
+            <a href="ai-memory.php"><i class="fa fa-bookmark"></i> My AI memory</a>
             <a href="privacy.php"><i class="fa fa-lock"></i> Privacy &amp; My Data</a>
             <?php else: ?>
             <span class="tms-topbar-divider"></span>

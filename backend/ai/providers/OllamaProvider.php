@@ -73,7 +73,7 @@ class OllamaProvider implements AIProviderInterface {
     public function parseResponse(int $httpCode, string $rawBody, ?string $curlError): array {
         if ($curlError || $httpCode === 0) {
             // Runtime not running / unreachable / timed out loading the model.
-            return ['success' => false, 'error' => 'The AI assistant is offline right now. Please try again later.', 'retriable' => false];
+            return ['success' => false, 'error' => 'The AI assistant is offline right now. Please try again later.', 'kind' => 'unavailable', 'retriable' => false];
         }
 
         $data = json_decode($rawBody, true);
@@ -82,14 +82,14 @@ class OllamaProvider implements AIProviderInterface {
             $detail = is_array($data) ? (string)($data['error'] ?? '') : '';
             error_log('[TMS AI Ollama] HTTP ' . $httpCode . ': ' . substr($detail !== '' ? $detail : $rawBody, 0, 200));
             if ($httpCode === 404) { // model not pulled
-                return ['success' => false, 'error' => 'The AI assistant is not set up on this site yet.', 'retriable' => false];
+                return ['success' => false, 'error' => 'The AI assistant is not set up on this site yet.', 'kind' => 'config', 'retriable' => false];
             }
-            return ['success' => false, 'error' => 'The AI assistant had a problem answering that. Please try again.', 'retriable' => in_array($httpCode, [500, 502, 503, 504], true)];
+            return ['success' => false, 'error' => 'The AI assistant had a problem answering that. Please try again.', 'kind' => in_array($httpCode, [500, 502, 503, 504], true) ? 'unavailable' : 'content', 'retriable' => in_array($httpCode, [500, 502, 503, 504], true)];
         }
 
         $content = is_array($data) ? (string)($data['message']['content'] ?? '') : '';
         if (trim($content) === '') {
-            return ['success' => false, 'error' => 'The AI assistant returned an empty answer. Please try again.', 'retriable' => false];
+            return ['success' => false, 'error' => 'The AI assistant returned an empty answer. Please try again.', 'kind' => 'content', 'retriable' => false];
         }
 
         $prompt = isset($data['prompt_eval_count']) ? (int)$data['prompt_eval_count'] : null;

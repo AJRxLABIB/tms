@@ -8,6 +8,7 @@
  * output), and written to an audit table.
  */
 require_once __DIR__ . '/rag/KnowledgeIndex.php';
+require_once __DIR__ . '/TripBudget.php';
 require_once __DIR__ . '/rag/EmbeddingReranker.php';
 
 final class ToolRegistry
@@ -32,6 +33,18 @@ final class ToolRegistry
             ],
             'get_package' => ['auth' => false, 'params' => ['package_id' => ['type' => 'int', 'required' => true, 'min' => 1, 'max' => 2147483647]]],
             'get_cancellation_policy' => ['auth' => false, 'params' => ['package_id' => ['type' => 'int', 'required' => true, 'min' => 1, 'max' => 2147483647]]],
+            // Pure arithmetic over catalogue price + figures the traveller supplied (see TripBudget). Reads one package; writes nothing.
+            'calculate_trip_budget' => ['auth' => false, 'params' => [
+                'travelers' => ['type' => 'int', 'required' => true, 'min' => 1, 'max' => 50],
+                'package_id' => ['type' => 'int', 'min' => 1, 'max' => 2147483647],
+                'days' => ['type' => 'int', 'min' => 1, 'max' => 60],
+                'budget_bdt' => ['type' => 'int', 'min' => 1, 'max' => 1000000000],
+                'food_per_person_per_day_bdt' => ['type' => 'int', 'min' => 0, 'max' => 1000000],
+                'local_transport_bdt' => ['type' => 'int', 'min' => 0, 'max' => 1000000000],
+                'activities_bdt' => ['type' => 'int', 'min' => 0, 'max' => 1000000000],
+                'other_bdt' => ['type' => 'int', 'min' => 0, 'max' => 1000000000],
+                'contingency_pct' => ['type' => 'int', 'min' => 0, 'max' => 30],
+            ]],
             'my_bookings' => ['auth' => true, 'params' => []],
             // Staff-entered, sourced, dated notices only (see TRAVEL_NOTICES.md). Never a live feed.
             'get_travel_notices' => ['auth' => false, 'params' => [
@@ -89,6 +102,7 @@ final class ToolRegistry
                 'get_cancellation_policy' => $this->policy($a['package_id']),
                 'my_bookings' => $this->myBookings((string)($ctx['email'] ?? '')),
                 'get_travel_notices' => $this->travelNotices($a),
+                'calculate_trip_budget' => $this->tripBudget($a),
             };
             $this->audit($tool, $a, $ctx, 'ok');
             return ['ok' => true, 'data' => $data];
@@ -114,6 +128,29 @@ final class ToolRegistry
         return array_map(fn($h) => ['id' => $h['id'], 'title' => $h['meta']['title'], 'location' => $h['meta']['location'],
             'country' => $h['meta']['country'], 'price_bdt' => $h['meta']['price'], 'duration' => $h['meta']['duration'],
             'citation' => $h['citation']], $hits);
+    }
+
+    private function tripBudget(array $a): array
+    {
+        $in = ['travelers' => $a['travelers']];
+        $notes = [];
+        if (isset($a['package_id'])) {
+            $p = $this->index->get($a['package_id']);
+            if (!$p) return ['error' => 'package_not_found', 'note' => 'That package is not published, so no price can be used.'];
+            $in['package_price_per_person'] = (int)$p['price'];
+            $in['package_price_basis'] = 'list price';
+            $in['package'] = $p['title'];
+            if (!isset($a['days']) && preg_match('/\d+/', (string)$p['duration'], $m)) { $in['days'] = (int)$m[0]; $notes[] = 'days taken from the package duration "' . $p['duration'] . '"'; }
+        }
+        foreach (['days' => 'days', 'budget' => 'budget_bdt', 'food_per_person_per_day' => 'food_per_person_per_day_bdt', 'local_transport' => 'local_transport_bdt',
+                  'activities' => 'activities_bdt', 'other' => 'other_bdt', 'contingency_pct' => 'contingency_pct'] as $k => $arg) {
+            if (isset($a[$arg])) $in[$k] = $a[$arg];
+        }
+        $r = TripBudget::compute($in);
+        if (!empty($in['package'])) { $r['package'] = $in['package']; $r['citation'] = $this->index->get($a['package_id'])['citation']; }
+        if ($notes) $r['assumptions'] = $notes;
+        $r['instruction'] = 'Quote these numbers exactly; do not recompute or round differently. Say which lines are catalogue prices, which are the traveller\'s own estimates and which are assumptions, and list not_included as costs that are NOT counted.';
+        return $r;
     }
 
     private function travelNotices(array $a): array

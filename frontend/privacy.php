@@ -65,7 +65,7 @@ if (isset($_POST['clear_ai_history'])) {
     // tbl_ai_telemetry (Round 34) added alongside tbl_ai_usage_log -- same
     // kind of operational per-call log, not user-facing "history" content,
     // but keyed by user_email so it belongs in the same clear-on-request set.
-    $aiTables = ['tbl_copilot_sessions', 'tbl_ai_itineraries', 'tbl_travel_memories', 'tbl_ai_packages', 'tbl_ai_usage_log', 'tbl_ai_telemetry', 'tbl_explore_history', 'tbl_explore_chat'];
+    $aiTables = ['tbl_copilot_sessions', 'tbl_ai_itineraries', 'tbl_travel_memories', 'tbl_ai_packages', 'tbl_ai_usage_log', 'tbl_ai_telemetry', 'tbl_explore_history', 'tbl_explore_chat', 'tbl_ai_user_memory'];
     $cleared = 0;
     foreach ($aiTables as $t) {
         try {
@@ -195,7 +195,7 @@ html[data-theme="dark"] .priv-card .btn-danger{color:#3A1414;}
 
     <div class="priv-card">
         <h3><i class="fa fa-robot"></i> AI History</h3>
-        <p class="desc">Permanently delete your Trip Copilot conversations, AI-generated itineraries, travel memories, cached AI recommendations, and learned preference profile. This cannot be undone.</p>
+        <p class="desc">Permanently delete your Trip Copilot conversations, saved assistant preferences (<a href="ai-memory.php">My AI memory</a>), AI-generated itineraries, travel memories, cached AI recommendations, and learned preference profile. This cannot be undone.</p>
         <form method="post" onsubmit="return confirm('Delete all your AI history? This cannot be undone.');">
             <?php tms_csrf_field(); ?>
             <button type="submit" name="clear_ai_history" class="btn btn-default"><i class="fa fa-trash"></i> Clear My AI History</button>

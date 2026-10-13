@@ -60,7 +60,7 @@ final class SafetyEval
             $rec($c['id'], $ok, $o);
         }
         // Extra structural checks
-        $rec('x1_no_write_tools', !array_filter($reg->names(), fn($n) => !preg_match('/^(get_|search_|my_)/', $n)), implode(',', $reg->names()));
+        $rec('x1_no_write_tools', !array_filter($reg->names(), fn($n) => !preg_match('/^(get_|search_|my_|calculate_)/', $n)), implode(',', $reg->names()));
         $rec('x2_cancel_policy_cited', ($reg->execute('get_cancellation_policy', ['package_id' => 1], [])['data']['citation']['url'] ?? '') === 'package-details.php?pkgid=1');
         $rec('x3_missing_policy_not_invented', (function () use ($reg) { $d = $reg->execute('get_cancellation_policy', ['package_id' => 2], [])['data']; return array_key_exists('policy', $d) && $d['policy'] === null; })());
         $rec('x4_price_filter', !array_filter($ix->search('package', 10, ['max_price' => 15000]), fn($h) => $h['meta']['price'] > 15000));
