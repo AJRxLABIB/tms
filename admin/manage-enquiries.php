@@ -18,7 +18,7 @@ tms_admin_require_role($dbh, ['support', 'manager']); // Round 20 RBAC (item 46)
 <link href="<?php echo tms_asset_ver('css/admin-v6.css'); ?>" rel="stylesheet">
 <style>
 .page-title-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;flex-wrap:wrap;gap:12px;}
-.page-title-row h2{font-family:'Inter',sans-serif;font-size:22px;font-weight:800;color:#17231E;margin:0;}
+.page-title-row h2{font-family:'Inter',sans-serif;font-size:22px;font-weight:800;color:var(--text-primary);margin:0;}
 .alert-msg{padding:12px 16px;border-radius:10px;font-size:13.5px;margin-bottom:18px;display:flex;align-items:center;gap:8px;}
 .alert-success{background:#d1fae5;color:#065f46;border:1px solid #a7f3d0;}
 .alert-error{background:#fee2e2;color:#991b1b;border:1px solid #fca5a5;}
@@ -59,7 +59,7 @@ try{
   <thead><tr><th>#</th><th>Name</th><th>Email</th><th>Mobile</th><th>Subject</th><th>Message</th><th>Date</th><th>Action</th></tr></thead>
   <tbody>
   <?php if(empty($enquiries)): ?>
-  <tr><td colspan="8" style="text-align:center;padding:40px;color:#94a3b8;">No enquiries yet.</td></tr>
+  <tr><td colspan="8" style="text-align:center;padding:40px;color:var(--text-muted);">No enquiries yet.</td></tr>
   <?php else: $i=1; foreach($enquiries as $e): ?>
   <tr>
     <td><?=$i++?></td>

@@ -135,7 +135,7 @@ if (isset($_POST['save_post'])) {
       <div class="row">
         <div class="col-md-6">
           <div class="form-group">
-            <label for="blogRelatedDestField">Related Destination <small style="font-weight:400;color:#999;">(optional)</small></label>
+            <label for="blogRelatedDestField">Related Destination <small style="font-weight:400;color:var(--text-muted);">(optional)</small></label>
             <select id="blogRelatedDestField" name="related_destination" class="form-control">
               <option value="">— None —</option>
               <?php foreach ($blogDestOptions as $c): ?>
@@ -146,7 +146,7 @@ if (isset($_POST['save_post'])) {
         </div>
         <div class="col-md-6">
           <div class="form-group">
-            <label for="blogRelatedPkgField">Related Package <small style="font-weight:400;color:#999;">(optional)</small></label>
+            <label for="blogRelatedPkgField">Related Package <small style="font-weight:400;color:var(--text-muted);">(optional)</small></label>
             <select id="blogRelatedPkgField" name="related_package_id" class="form-control">
               <option value="">— None —</option>
               <?php foreach ($blogPkgOptions as $p): ?>
@@ -157,7 +157,7 @@ if (isset($_POST['save_post'])) {
         </div>
       </div>
       <div class="form-group">
-        <label for="blogSourcesField">Sources <small style="font-weight:400;color:#999;">(optional — one URL or citation per line)</small></label>
+        <label for="blogSourcesField">Sources <small style="font-weight:400;color:var(--text-muted);">(optional — one URL or citation per line)</small></label>
         <textarea id="blogSourcesField" name="sources" class="form-control" rows="3" placeholder="e.g. https://example.gov/visa-requirements"></textarea>
       </div>
       <button name="save_post" class="btn-v6 success"><i class="fa fa-paper-plane"></i> Publish Post</button>

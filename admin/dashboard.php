@@ -165,14 +165,14 @@ $pageTitle = 'Dashboard';
           </thead>
           <tbody>
           <?php if(count($recent)===0): ?>
-            <tr><td colspan="5" style="text-align:center;color:#94a3b8;padding:32px;">No bookings yet.</td></tr>
+            <tr><td colspan="5" style="text-align:center;color:var(--text-muted);padding:32px;">No bookings yet.</td></tr>
           <?php else: ?>
           <?php foreach($recent as $b): ?>
           <tr>
             <td><span style="font-weight:600;color:#176B50;">#BK<?= str_pad($b->BookingId,3,'0',STR_PAD_LEFT) ?></span></td>
             <td style="max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"><?= htmlentities($b->UserEmail) ?></td>
             <td style="max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"><?= htmlentities($b->PackageName) ?></td>
-            <td style="color:#64748b;"><?= date('d M Y', strtotime($b->RegDate)) ?></td>
+            <td style="color:var(--text-muted);"><?= date('d M Y', strtotime($b->RegDate)) ?></td>
             <td>
               <?php if($b->status==1): ?>
                 <span class="badge-pill success">Confirmed</span>
@@ -220,11 +220,11 @@ $pageTitle = 'Dashboard';
         <div class="card-header"><h3><i class="fa fa-pie-chart" style="color:#1F8A66;margin-right:8px;"></i> Booking Status</h3></h3></div>
         <div class="card-body" style="padding:16px;">
           <canvas id="statusChart" height="180" style="display:none;" role="img" aria-label="Booking status: <?= $confirmedCount ?> confirmed, <?= $pending ?> pending, <?= $cancelledCount ?> cancelled"></canvas>
-          <div id="statusChartEmpty" style="text-align:center;padding:40px;color:#94a3b8;display:none;">
+          <div id="statusChartEmpty" style="text-align:center;padding:40px;color:var(--text-muted);display:none;">
             <i class="fa fa-pie-chart" style="font-size:32px;display:block;margin-bottom:10px;"></i>
             No bookings yet.
           </div>
-          <div id="statusChartUnavailable" style="text-align:center;padding:40px;color:#94a3b8;display:none;">
+          <div id="statusChartUnavailable" style="text-align:center;padding:40px;color:var(--text-muted);display:none;">
             <i class="fa fa-exclamation-triangle" style="font-size:32px;display:block;margin-bottom:10px;"></i>
             Chart couldn't load (offline or blocked script). Booking status is still shown in the summary cards above.
           </div>
@@ -265,7 +265,7 @@ if (typeof Chart === 'undefined') {
     type:'doughnut',
     data:{
       labels:['Confirmed','Pending','Cancelled'],
-      datasets:[{data:[confirmed,pending2,cancelled],backgroundColor:['#059669','#d97706','#dc2626'],borderWidth:0,borderRadius:4}]
+      datasets:[{data:[confirmed,pending2,cancelled],backgroundColor:['#047857','#92400E','#B91C1C'],borderWidth:0,borderRadius:4}]
     },
     options:{responsive:true,cutout:'68%',plugins:{legend:{position:'bottom',labels:{font:{size:12},padding:12,usePointStyle:true}}}}
   });

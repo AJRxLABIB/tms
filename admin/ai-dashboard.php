@@ -370,9 +370,9 @@ body { background:#f0f4f8; }
 .admin-nav a:hover,.admin-nav a.active { background:rgba(255,255,255,.1); color:#fff; }
 
 .ai-page-header { background:#fff; padding:24px 30px; border-bottom:1px solid #e2e8f0; display:flex; align-items:center; justify-content:space-between; }
-.ai-page-title { font-size:1.3rem; font-weight:800; color:#1a202c; display:flex; align-items:center; gap:10px; }
+.ai-page-title { font-size:1.3rem; font-weight:800; color:var(--text-primary); display:flex; align-items:center; gap:10px; }
 .ai-page-title i { color:#667eea; }
-.ai-status { display:flex; align-items:center; gap:8px; font-size:13px; color:#48bb78; font-weight:600; }
+.ai-status { display:flex; align-items:center; gap:8px; font-size:13px; color:#2F855A; font-weight:600; }
 .ai-status-dot { width:8px; height:8px; background:#48bb78; border-radius:50%; animation:pulse 2s infinite; }
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
 
@@ -382,16 +382,16 @@ body { background:#f0f4f8; }
 .stats-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:16px; margin-bottom:24px; }
 .stat-card { background:#fff; border-radius:16px; padding:20px; box-shadow:0 2px 12px rgba(0,0,0,.06); border:1px solid #f0f0f0; }
 .stat-icon { width:44px; height:44px; border-radius:12px; display:flex; align-items:center; justify-content:center; font-size:20px; margin-bottom:12px; }
-.stat-value { font-size:1.6rem; font-weight:900; color:#1a202c; }
-.stat-label { font-size:12px; color:#718096; margin-top:2px; }
+.stat-value { font-size:1.6rem; font-weight:900; color:var(--text-primary); }
+.stat-label { font-size:12px; color:var(--text-muted); margin-top:2px; }
 .stat-trend { font-size:11px; margin-top:6px; }
-.stat-trend.up { color:#48bb78; }
+.stat-trend.up { color:#2F855A; }
 
 /* Main grid */
 .main-grid { display:grid; grid-template-columns:1fr 1fr; gap:20px; margin-bottom:20px; }
 .panel { background:#fff; border-radius:16px; box-shadow:0 2px 12px rgba(0,0,0,.06); border:1px solid #f0f0f0; overflow:hidden; }
 .panel-header { padding:18px 20px; border-bottom:1px solid #f0f0f0; display:flex; align-items:center; justify-content:space-between; }
-.panel-title { font-size:14px; font-weight:800; color:#1a202c; display:flex; align-items:center; gap:8px; }
+.panel-title { font-size:14px; font-weight:800; color:var(--text-primary); display:flex; align-items:center; gap:8px; }
 .panel-title i { color:#667eea; }
 .panel-body { padding:20px; }
 
@@ -403,11 +403,11 @@ body { background:#f0f4f8; }
 .sentiment-fill.positive { background:linear-gradient(90deg,#48bb78,#38a169); }
 .sentiment-fill.neutral  { background:linear-gradient(90deg,#a0aec0,#718096); }
 .sentiment-fill.negative { background:linear-gradient(90deg,#fc8181,#e53e3e); }
-.sentiment-count { font-size:12px; font-weight:700; color:#1a202c; width:30px; text-align:right; }
+.sentiment-count { font-size:12px; font-weight:700; color:var(--text-primary); width:30px; text-align:right; }
 
 /* Table */
 .ai-table { width:100%; border-collapse:collapse; font-size:13px; }
-.ai-table th { background:#f8fafc; padding:10px 12px; text-align:left; font-size:11px; font-weight:700; color:#718096; text-transform:uppercase; letter-spacing:.5px; }
+.ai-table th { background:#f8fafc; padding:10px 12px; text-align:left; font-size:11px; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:.5px; }
 .ai-table td { padding:10px 12px; border-bottom:1px solid #f8f8f8; color:#2d3748; }
 .ai-table tr:last-child td { border-bottom:none; }
 .ai-table tr:hover td { background:#f8fafc; }
@@ -428,7 +428,7 @@ body { background:#f0f4f8; }
 .btn-admin:hover { opacity:.9; transform:translateY(-1px); }
 
 /* Usage chart placeholder */
-.usage-chart { height:160px; background:linear-gradient(135deg,#f8fafc,#edf2f7); border-radius:12px; display:flex; align-items:center; justify-content:center; color:#a0aec0; font-size:13px; }
+.usage-chart { height:160px; background:linear-gradient(135deg,#f8fafc,#edf2f7); border-radius:12px; display:flex; align-items:center; justify-content:center; color:var(--text-muted); font-size:13px; }
 
 /* Dark mode (this page previously had none — see the bootstrap script right
    after <head> and the toggle button added to .admin-nav). Mirrors the same
@@ -446,10 +446,17 @@ html[data-theme="dark"] .stat-value,
 html[data-theme="dark"] .panel-title,
 html[data-theme="dark"] .sentiment-count,
 html[data-theme="dark"] .ai-table td { color:#eef2f7 !important; }
+html[data-theme="dark"] [style*="#0B6B2E"], html[data-theme="dark"] [style*="#047857"], html[data-theme="dark"] [style*="#2F855A"], html[data-theme="dark"] .ai-status { color: #5CC79C !important; }
+html[data-theme="dark"] [style*="#B91C1C"], html[data-theme="dark"] [style*="#C0392B"] { color: #FCA5A5 !important; }
+html[data-theme="dark"] [style*="#0E7490"] { color: #67D5E8 !important; }
+html[data-theme="dark"] [style*="#92400E"], html[data-theme="dark"] [style*="#B45309"] { color: #FBBF77 !important; }
+html[data-theme="dark"] .stat-trend.up { color: #5CC79C !important; } html[data-theme="dark"] .insights-panel strong, html[data-theme="dark"] .insights-panel div { color: var(--text-primary); } html[data-theme="dark"] [style*="color:#b45309"] { color: #FBBF77 !important; }
+html[data-theme="dark"] strong { color: #EAF1EC !important; }
+html[data-theme="dark"] { --text-muted: #AAB8AF; --text-primary: #EAF1EC; }
 html[data-theme="dark"] .stat-label,
-html[data-theme="dark"] .sentiment-label { color:#94a3b8 !important; }
+html[data-theme="dark"] .sentiment-label { color:var(--text-muted) !important; }
 html[data-theme="dark"] .panel-header { border-color:#2b3542 !important; }
-html[data-theme="dark"] .ai-table th { background:#151b24 !important; color:#94a3b8 !important; }
+html[data-theme="dark"] .ai-table th { background:#151b24 !important; color:var(--text-muted) !important; }
 html[data-theme="dark"] .ai-table td { border-color:#232b37 !important; }
 html[data-theme="dark"] .ai-table tr:hover td { background:#232b37 !important; }
 html[data-theme="dark"] .sentiment-bar,
@@ -538,14 +545,14 @@ html[data-theme="dark"] [style*="background:#fff"], html[data-theme="dark"] [sty
       <div class="stat-icon" style="background:#f0f9ff;">📡</div>
       <div class="stat-value"><?= $telemetrySuccessRate !== null ? $telemetrySuccessRate . '%' : '—' ?></div>
       <div class="stat-label">AI Success Rate (7d, live calls)</div>
-      <div class="stat-trend" style="color:#718096;"><?= $telemetryAvgLatency !== null ? number_format($telemetryAvgLatency) . ' ms avg latency' : 'No calls logged yet' ?></div>
+      <div class="stat-trend" style="color:var(--text-muted);"><?= $telemetryAvgLatency !== null ? number_format($telemetryAvgLatency) . ' ms avg latency' : 'No calls logged yet' ?></div>
     </div>
   </div>
 
   <!-- AI Insights -->
   <div class="insights-panel">
     <div style="display:flex;align-items:center;justify-content:space-between;">
-      <div style="font-size:15px;font-weight:800;color:#1a202c;display:flex;align-items:center;gap:8px;"><i class="fa fa-lightbulb-o" style="color:#667eea;"></i> AI Business Insights</div>
+      <div style="font-size:15px;font-weight:800;color:var(--text-primary);display:flex;align-items:center;gap:8px;"><i class="fa fa-lightbulb-o" style="color:#667eea;"></i> AI Business Insights</div>
       <button class="btn-admin primary" onclick="getInsights()" id="insightsBtn"><i class="fa fa-magic"></i> Generate Insights</button>
     </div>
     <div class="insights-output" id="insightsOutput"></div>
@@ -554,10 +561,10 @@ html[data-theme="dark"] [style*="background:#fff"], html[data-theme="dark"] [sty
   <!-- AI Evaluation Suite (Round 35, item 22) -->
   <div class="insights-panel">
     <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;">
-      <div style="font-size:15px;font-weight:800;color:#1a202c;display:flex;align-items:center;gap:8px;"><i class="fa fa-flask" style="color:#667eea;"></i> AI Evaluation Suite</div>
+      <div style="font-size:15px;font-weight:800;color:var(--text-primary);display:flex;align-items:center;gap:8px;"><i class="fa fa-flask" style="color:#667eea;"></i> AI Evaluation Suite</div>
       <button class="btn-admin primary" onclick="runEvalSuite()" id="evalSuiteBtn"><i class="fa fa-play"></i> Run Eval Suite</button>
     </div>
-    <div style="font-size:12px;color:#718096;margin-top:6px;">
+    <div style="font-size:12px;color:var(--text-muted);margin-top:6px;">
       Runs 9 real calls (recommender, itinerary, sentiment, budget optimizer, packing list, crowd predictor, package generator, site assistant, NL search parser) against the live <?= htmlspecialchars($activeProviderLabel) ?> provider and checks whether each one genuinely succeeded -- not just that a graceful fallback covered for it. Uses real API quota and can take 1-3 minutes (paced with short gaps between calls to avoid tripping a free-tier provider's own per-minute limit); run manually when checking a provider/prompt change, not on a schedule.
     </div>
     <div class="insights-output" id="evalSuiteOutput" style="display:none;white-space:pre-wrap;"></div>
@@ -585,7 +592,7 @@ html[data-theme="dark"] [style*="background:#fff"], html[data-theme="dark"] [sty
           <span class="sentiment-count"><?= $cnt ?></span>
         </div>
         <?php endforeach; ?>
-        <div style="font-size:12px;color:#718096;margin-top:12px;">Total analysed: <?= $totalSent ?> reviews</div>
+        <div style="font-size:12px;color:var(--text-muted);margin-top:12px;">Total analysed: <?= $totalSent ?> reviews</div>
       </div>
     </div>
 
@@ -602,32 +609,32 @@ html[data-theme="dark"] [style*="background:#fff"], html[data-theme="dark"] [sty
         <?php if ($revenueForecast['available']): ?>
         <div style="display:flex;gap:24px;flex-wrap:wrap;margin-bottom:20px;padding-bottom:16px;border-bottom:1px solid #eef1f5;">
           <div>
-            <div style="font-size:11px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.4px;">This Month So Far</div>
-            <div style="font-size:20px;font-weight:800;color:#17231E;">৳<?= number_format($revenueForecast['so_far_this_month']) ?></div>
+            <div style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.4px;">This Month So Far</div>
+            <div style="font-size:20px;font-weight:800;color:var(--text-primary);">৳<?= number_format($revenueForecast['so_far_this_month']) ?></div>
           </div>
           <div>
-            <div style="font-size:11px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.4px;">Projected Month Total</div>
-            <div style="font-size:20px;font-weight:800;color:#0891b2;">৳<?= number_format($revenueForecast['projected_total_this_month']) ?></div>
+            <div style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.4px;">Projected Month Total</div>
+            <div style="font-size:20px;font-weight:800;color:#0E7490;">৳<?= number_format($revenueForecast['projected_total_this_month']) ?></div>
           </div>
           <div>
-            <div style="font-size:11px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.4px;">Recent Monthly Avg</div>
-            <div style="font-size:20px;font-weight:800;color:#64748b;">৳<?= number_format($revenueForecast['avg_monthly']) ?></div>
+            <div style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.4px;">Recent Monthly Avg</div>
+            <div style="font-size:20px;font-weight:800;color:var(--text-muted);">৳<?= number_format($revenueForecast['avg_monthly']) ?></div>
           </div>
         </div>
         <div style="font-size:11px;color:#c2c9d1;margin-top:-10px;margin-bottom:18px;">Trend-based estimate from the last 3 months of confirmed bookings — not a guarantee.</div>
         <?php else: ?>
-        <div style="font-size:12.5px;color:#a0aec0;margin-bottom:18px;">Not enough booking history yet to project revenue (needs at least 2 full months of confirmed bookings).</div>
+        <div style="font-size:12.5px;color:var(--text-muted);margin-bottom:18px;">Not enough booking history yet to project revenue (needs at least 2 full months of confirmed bookings).</div>
         <?php endif; ?>
 
         <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:18px;">
           <div>
-            <div style="font-size:11.5px;font-weight:700;color:#0891b2;text-transform:uppercase;letter-spacing:.4px;margin-bottom:8px;"><i class="fa fa-shopping-cart"></i> Likely to Book Soon</div>
+            <div style="font-size:11.5px;font-weight:700;color:#0E7490;text-transform:uppercase;letter-spacing:.4px;margin-bottom:8px;"><i class="fa fa-shopping-cart"></i> Likely to Book Soon</div>
             <?php if (empty($likelyNextBookings)): ?>
-              <div style="font-size:12px;color:#a0aec0;">No packages sitting in a cart right now that haven't already been booked.</div>
+              <div style="font-size:12px;color:var(--text-muted);">No packages sitting in a cart right now that haven't already been booked.</div>
             <?php else: foreach ($likelyNextBookings as $lb): ?>
               <div style="font-size:12.5px;padding:7px 0;border-bottom:1px solid #f8fafc;">
                 <strong><?= htmlspecialchars($lb->UserEmail) ?></strong> &middot; <?= htmlspecialchars($lb->PackageName) ?>
-                <div style="color:#94a3b8;font-size:11px;">Added to cart <?= htmlspecialchars($lb->CreatedAt) ?> &middot; est. ৳<?= number_format($lb->EstValue) ?></div>
+                <div style="color:var(--text-muted);font-size:11px;">Added to cart <?= htmlspecialchars($lb->CreatedAt) ?> &middot; est. ৳<?= number_format($lb->EstValue) ?></div>
               </div>
             <?php endforeach; endif; ?>
           </div>
@@ -635,35 +642,35 @@ html[data-theme="dark"] [style*="background:#fff"], html[data-theme="dark"] [sty
           <div>
             <div style="font-size:11.5px;font-weight:700;color:#b45309;text-transform:uppercase;letter-spacing:.4px;margin-bottom:8px;"><i class="fa fa-exclamation-triangle"></i> Packages at Risk</div>
             <?php if (empty($packagesAtRisk)): ?>
-              <div style="font-size:12px;color:#a0aec0;">No previously-popular packages have gone quiet — nothing at risk right now.</div>
+              <div style="font-size:12px;color:var(--text-muted);">No previously-popular packages have gone quiet — nothing at risk right now.</div>
             <?php else: foreach ($packagesAtRisk as $p): ?>
               <div style="font-size:12.5px;padding:7px 0;border-bottom:1px solid #f8fafc;">
                 <strong><?= htmlspecialchars($p->PackageName) ?></strong>
-                <div style="color:#94a3b8;font-size:11px;">No bookings in 30+ days — last was <?= htmlspecialchars($p->last_booking_date) ?> (<?= (int)$p->lifetime_bookings ?> lifetime bookings)</div>
+                <div style="color:var(--text-muted);font-size:11px;">No bookings in 30+ days — last was <?= htmlspecialchars($p->last_booking_date) ?> (<?= (int)$p->lifetime_bookings ?> lifetime bookings)</div>
               </div>
             <?php endforeach; endif; ?>
           </div>
 
           <div>
-            <div style="font-size:11.5px;font-weight:700;color:#dc2626;text-transform:uppercase;letter-spacing:.4px;margin-bottom:8px;"><i class="fa fa-user-times"></i> Cancellation Risk</div>
+            <div style="font-size:11.5px;font-weight:700;color:#B91C1C;text-transform:uppercase;letter-spacing:.4px;margin-bottom:8px;"><i class="fa fa-user-times"></i> Cancellation Risk</div>
             <?php if (empty($customersCancelRisk)): ?>
-              <div style="font-size:12px;color:#a0aec0;">No customers with a high cancellation pattern right now.</div>
+              <div style="font-size:12px;color:var(--text-muted);">No customers with a high cancellation pattern right now.</div>
             <?php else: foreach ($customersCancelRisk as $c): ?>
               <div style="font-size:12.5px;padding:7px 0;border-bottom:1px solid #f8fafc;">
                 <strong><?= htmlspecialchars($c->UserEmail) ?></strong>
-                <div style="color:#94a3b8;font-size:11px;"><?= (int)$c->cancel_rate ?>% cancel rate (<?= (int)$c->cancelled ?> of <?= (int)$c->total ?> bookings)</div>
+                <div style="color:var(--text-muted);font-size:11px;"><?= (int)$c->cancel_rate ?>% cancel rate (<?= (int)$c->cancelled ?> of <?= (int)$c->total ?> bookings)</div>
               </div>
             <?php endforeach; endif; ?>
           </div>
 
           <div>
-            <div style="font-size:11.5px;font-weight:700;color:#16a34a;text-transform:uppercase;letter-spacing:.4px;margin-bottom:8px;"><i class="fa fa-user-plus"></i> Likely to Return</div>
+            <div style="font-size:11.5px;font-weight:700;color:#0B6B2E;text-transform:uppercase;letter-spacing:.4px;margin-bottom:8px;"><i class="fa fa-user-plus"></i> Likely to Return</div>
             <?php if (empty($customersReturning)): ?>
-              <div style="font-size:12px;color:#a0aec0;">No repeat-customer pattern detected yet.</div>
+              <div style="font-size:12px;color:var(--text-muted);">No repeat-customer pattern detected yet.</div>
             <?php else: foreach ($customersReturning as $c): ?>
               <div style="font-size:12.5px;padding:7px 0;border-bottom:1px solid #f8fafc;">
                 <strong><?= htmlspecialchars($c->UserEmail) ?></strong>
-                <div style="color:#94a3b8;font-size:11px;"><?= (int)$c->confirmed_bookings ?> confirmed bookings, last on <?= htmlspecialchars($c->last_booking) ?></div>
+                <div style="color:var(--text-muted);font-size:11px;"><?= (int)$c->confirmed_bookings ?> confirmed bookings, last on <?= htmlspecialchars($c->last_booking) ?></div>
               </div>
             <?php endforeach; endif; ?>
           </div>
@@ -677,9 +684,9 @@ html[data-theme="dark"] [style*="background:#fff"], html[data-theme="dark"] [sty
         <div class="panel-title"><i class="fa fa-list-ul"></i> Most Mentioned in Reviews</div>
       </div>
       <div class="panel-body">
-        <div style="font-size:11.5px;font-weight:700;color:#dc2626;text-transform:uppercase;letter-spacing:.4px;margin-bottom:8px;">Top Issues</div>
+        <div style="font-size:11.5px;font-weight:700;color:#B91C1C;text-transform:uppercase;letter-spacing:.4px;margin-bottom:8px;">Top Issues</div>
         <?php if (empty($topPhrases['issues'])): ?>
-          <div style="font-size:12.5px;color:#a0aec0;margin-bottom:16px;">No recurring issues detected yet.</div>
+          <div style="font-size:12.5px;color:var(--text-muted);margin-bottom:16px;">No recurring issues detected yet.</div>
         <?php else: foreach ($topPhrases['issues'] as $p): ?>
           <div class="sentiment-row" style="margin-bottom:6px;">
             <span style="flex:1;font-size:12.5px;color:#4a5568;"><?= htmlspecialchars($p['phrase']) ?></span>
@@ -687,9 +694,9 @@ html[data-theme="dark"] [style*="background:#fff"], html[data-theme="dark"] [sty
           </div>
         <?php endforeach; endif; ?>
 
-        <div style="font-size:11.5px;font-weight:700;color:#059669;text-transform:uppercase;letter-spacing:.4px;margin:16px 0 8px;">Top Highlights</div>
+        <div style="font-size:11.5px;font-weight:700;color:#047857;text-transform:uppercase;letter-spacing:.4px;margin:16px 0 8px;">Top Highlights</div>
         <?php if (empty($topPhrases['highlights'])): ?>
-          <div style="font-size:12.5px;color:#a0aec0;">No recurring highlights detected yet.</div>
+          <div style="font-size:12.5px;color:var(--text-muted);">No recurring highlights detected yet.</div>
         <?php else: foreach ($topPhrases['highlights'] as $p): ?>
           <div class="sentiment-row" style="margin-bottom:6px;">
             <span style="flex:1;font-size:12.5px;color:#4a5568;"><?= htmlspecialchars($p['phrase']) ?></span>
@@ -702,12 +709,12 @@ html[data-theme="dark"] [style*="background:#fff"], html[data-theme="dark"] [sty
     <!-- Flagged Reviews / Fraud Detection (Phase 2c) -->
     <div class="panel" style="grid-column: 1 / -1;">
       <div class="panel-header">
-        <div class="panel-title"><i class="fa fa-shield" style="color:#dc2626;"></i> Flagged Reviews (Possible Fake/Spam)</div>
-        <span style="font-size:11px;color:#a0aec0;">Heuristic soft-flags — always verify before removing a review</span>
+        <div class="panel-title"><i class="fa fa-shield" style="color:#B91C1C;"></i> Flagged Reviews (Possible Fake/Spam)</div>
+        <span style="font-size:11px;color:var(--text-muted);">Heuristic soft-flags — always verify before removing a review</span>
       </div>
       <div class="panel-body">
         <?php if (empty($suspiciousReviews)): ?>
-          <div style="font-size:12.5px;color:#a0aec0;">No reviews currently flagged.</div>
+          <div style="font-size:12.5px;color:var(--text-muted);">No reviews currently flagged.</div>
         <?php else: ?>
         <div class="table-responsive">
         <table class="tms-table" style="font-size:12.5px;">
@@ -734,11 +741,11 @@ html[data-theme="dark"] [style*="background:#fff"], html[data-theme="dark"] [sty
     <div class="panel" style="grid-column: 1 / -1;">
       <div class="panel-header">
         <div class="panel-title"><i class="fa fa-users" style="color:#d97706;"></i> Possible Duplicate Accounts</div>
-        <span style="font-size:11px;color:#a0aec0;">Shared phone number or Gmail dot/plus-address variants</span>
+        <span style="font-size:11px;color:var(--text-muted);">Shared phone number or Gmail dot/plus-address variants</span>
       </div>
       <div class="panel-body">
         <?php if (empty($duplicateAccounts)): ?>
-          <div style="font-size:12.5px;color:#a0aec0;">No duplicate account patterns detected.</div>
+          <div style="font-size:12.5px;color:var(--text-muted);">No duplicate account patterns detected.</div>
         <?php else: ?>
         <div class="table-responsive"><table class="tms-table" style="font-size:12.5px;">
           <thead><tr><th>Reason</th><th>Accounts</th></tr></thead>
@@ -759,11 +766,11 @@ html[data-theme="dark"] [style*="background:#fff"], html[data-theme="dark"] [sty
     <div class="panel" style="grid-column: 1 / -1;">
       <div class="panel-header">
         <div class="panel-title"><i class="fa fa-exclamation-triangle" style="color:#d97706;"></i> Suspicious Booking Patterns</div>
-        <span style="font-size:11px;color:#a0aec0;">Coupon abuse clusters, rapid-fire bookings, abnormal cancellation rates</span>
+        <span style="font-size:11px;color:var(--text-muted);">Coupon abuse clusters, rapid-fire bookings, abnormal cancellation rates</span>
       </div>
       <div class="panel-body">
         <?php if (empty($suspiciousBookings)): ?>
-          <div style="font-size:12.5px;color:#a0aec0;">No suspicious booking patterns detected.</div>
+          <div style="font-size:12.5px;color:var(--text-muted);">No suspicious booking patterns detected.</div>
         <?php else: ?>
         <div class="table-responsive"><table class="tms-table" style="font-size:12.5px;">
           <thead><tr><th>Type</th><th>Details</th></tr></thead>
@@ -798,7 +805,7 @@ html[data-theme="dark"] [style*="background:#fff"], html[data-theme="dark"] [sty
             </tr>
             <?php endforeach; ?>
             <?php if (empty($topUsers)): ?>
-            <tr><td colspan="2" style="text-align:center;color:#a0aec0;padding:20px;">No data yet</td></tr>
+            <tr><td colspan="2" style="text-align:center;color:var(--text-muted);padding:20px;">No data yet</td></tr>
             <?php endif; ?>
           </tbody>
         </table></div>
@@ -820,13 +827,13 @@ html[data-theme="dark"] [style*="background:#fff"], html[data-theme="dark"] [sty
             <tr>
               <td><?= htmlspecialchars($t->feature) ?></td>
               <td><strong><?= (int)$t->calls ?></strong></td>
-              <td style="color:<?= $rate >= 90 ? '#16a34a' : ($rate >= 60 ? '#d97706' : '#dc2626') ?>;"><?= $rate ?>%</td>
-              <td style="font-size:11px;color:#718096;"><?= $t->avg_latency_ms !== null ? number_format((int)$t->avg_latency_ms) . ' ms' : '—' ?></td>
-              <td style="font-size:11px;color:#718096;"><?= $t->total_tokens > 0 ? number_format((int)$t->total_tokens) : '—' ?></td>
+              <td style="color:<?= $rate >= 90 ? '#0B6B2E' : ($rate >= 60 ? '#92400E' : '#B91C1C') ?>;"><?= $rate ?>%</td>
+              <td style="font-size:11px;color:var(--text-muted);"><?= $t->avg_latency_ms !== null ? number_format((int)$t->avg_latency_ms) . ' ms' : '—' ?></td>
+              <td style="font-size:11px;color:var(--text-muted);"><?= $t->total_tokens > 0 ? number_format((int)$t->total_tokens) : '—' ?></td>
             </tr>
             <?php endforeach; ?>
             <?php if (empty($telemetryByFeature)): ?>
-            <tr><td colspan="5" style="text-align:center;color:#a0aec0;padding:20px;">No telemetry logged yet -- generates as AI features are used</td></tr>
+            <tr><td colspan="5" style="text-align:center;color:var(--text-muted);padding:20px;">No telemetry logged yet -- generates as AI features are used</td></tr>
             <?php endif; ?>
           </tbody>
         </table></div>
@@ -846,14 +853,14 @@ html[data-theme="dark"] [style*="background:#fff"], html[data-theme="dark"] [sty
                 $runRate = (int)$run->total_cases > 0 ? round(100 * (int)$run->passed_cases / (int)$run->total_cases) : 0;
             ?>
             <tr>
-              <td style="font-size:11px;color:#718096;"><?= date('M j H:i', strtotime($run->created_at)) ?></td>
-              <td style="font-size:11px;color:#718096;"><?= htmlspecialchars($run->provider . ' (' . $run->model . ')') ?></td>
-              <td style="color:<?= $runRate >= 90 ? '#16a34a' : ($runRate >= 60 ? '#d97706' : '#dc2626') ?>;"><strong><?= (int)$run->passed_cases ?>/<?= (int)$run->total_cases ?></strong></td>
-              <td style="font-size:11px;color:#718096;"><?= htmlspecialchars(substr($run->run_by, 0, 20)) ?></td>
+              <td style="font-size:11px;color:var(--text-muted);"><?= date('M j H:i', strtotime($run->created_at)) ?></td>
+              <td style="font-size:11px;color:var(--text-muted);"><?= htmlspecialchars($run->provider . ' (' . $run->model . ')') ?></td>
+              <td style="color:<?= $runRate >= 90 ? '#0B6B2E' : ($runRate >= 60 ? '#92400E' : '#B91C1C') ?>;"><strong><?= (int)$run->passed_cases ?>/<?= (int)$run->total_cases ?></strong></td>
+              <td style="font-size:11px;color:var(--text-muted);"><?= htmlspecialchars(substr($run->run_by, 0, 20)) ?></td>
             </tr>
             <?php endforeach; ?>
             <?php if (empty($recentEvalRuns)): ?>
-            <tr><td colspan="4" style="text-align:center;color:#a0aec0;padding:20px;">No eval runs yet -- use the "Run Eval Suite" button above</td></tr>
+            <tr><td colspan="4" style="text-align:center;color:var(--text-muted);padding:20px;">No eval runs yet -- use the "Run Eval Suite" button above</td></tr>
             <?php endif; ?>
           </tbody>
         </table></div>
@@ -872,12 +879,12 @@ html[data-theme="dark"] [style*="background:#fff"], html[data-theme="dark"] [sty
             <?php foreach ($recentItineraries as $it): ?>
             <tr>
               <td><?= htmlspecialchars(substr($it->user_email, 0, 22)) ?></td>
-              <td style="font-size:11px;color:#718096;"><?= htmlspecialchars($it->ai_version) ?></td>
-              <td style="font-size:11px;color:#718096;"><?= date('M j H:i', strtotime($it->created_at)) ?></td>
+              <td style="font-size:11px;color:var(--text-muted);"><?= htmlspecialchars($it->ai_version) ?></td>
+              <td style="font-size:11px;color:var(--text-muted);"><?= date('M j H:i', strtotime($it->created_at)) ?></td>
             </tr>
             <?php endforeach; ?>
             <?php if (empty($recentItineraries)): ?>
-            <tr><td colspan="3" style="text-align:center;color:#a0aec0;padding:20px;">No itineraries yet</td></tr>
+            <tr><td colspan="3" style="text-align:center;color:var(--text-muted);padding:20px;">No itineraries yet</td></tr>
             <?php endif; ?>
           </tbody>
         </table></div>
@@ -891,7 +898,7 @@ html[data-theme="dark"] [style*="background:#fff"], html[data-theme="dark"] [sty
       </div>
       <div class="panel-body">
         <?php if (empty($topQuickReplies)): ?>
-        <div style="text-align:center;color:#a0aec0;padding:20px;">No quick-reply clicks recorded yet</div>
+        <div style="text-align:center;color:var(--text-muted);padding:20px;">No quick-reply clicks recorded yet</div>
         <?php else: foreach ($topQuickReplies as $qr): $pct = $maxQrClicks > 0 ? round(($qr->clicks / $maxQrClicks) * 100) : 0; ?>
         <div style="margin-bottom:10px;">
           <div style="display:flex;justify-content:space-between;font-size:12.5px;color:#334155;margin-bottom:3px;">
@@ -935,7 +942,7 @@ html[data-theme="dark"] [style*="background:#fff"], html[data-theme="dark"] [sty
             </tr>
             <?php endforeach; ?>
             <?php if (empty($safetyAlerts)): ?>
-            <tr><td colspan="5" style="text-align:center;color:#48bb78;padding:20px;"><i class="fa fa-check-circle"></i> No active alerts</td></tr>
+            <tr><td colspan="5" style="text-align:center;color:#2F855A;padding:20px;"><i class="fa fa-check-circle"></i> No active alerts</td></tr>
             <?php endif; ?>
           </tbody>
         </table></div>
@@ -946,7 +953,7 @@ html[data-theme="dark"] [style*="background:#fff"], html[data-theme="dark"] [sty
 
   <!-- Quick actions -->
   <div style="background:#fff;border-radius:16px;padding:20px;box-shadow:0 2px 12px rgba(0,0,0,.06);border:1px solid #f0f0f0;display:flex;flex-wrap:wrap;gap:12px;align-items:center;">
-    <span style="font-size:14px;font-weight:800;color:#1a202c;margin-right:8px;"><i class="fa fa-bolt" style="color:#667eea;"></i> Quick Actions:</span>
+    <span style="font-size:14px;font-weight:800;color:var(--text-primary);margin-right:8px;"><i class="fa fa-bolt" style="color:#667eea;"></i> Quick Actions:</span>
     <a href="?action=analyse_reviews" class="btn-admin success"><i class="fa fa-search"></i> Analyse Reviews</a>
     <a href="manage-packages.php" class="btn-admin primary"><i class="fa fa-box"></i> Manage Packages</a>
     <a href="manage-bookings.php" class="btn-admin primary"><i class="fa fa-calendar"></i> View Bookings</a>

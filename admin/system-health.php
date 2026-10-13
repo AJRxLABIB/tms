@@ -154,47 +154,47 @@ $pageTitle = 'System Health';
 <?php include('includes/header.php'); ?>
 <div class="tms-content">
     <h2><i class="fa fa-heartbeat"></i> System Health</h2>
-    <p style="color:#888;">Master prompt item 56 (Monitoring) — Database / AI / Weather / Maps / Payments / Email at a
+    <p style="color:var(--text-muted);">Master prompt item 56 (Monitoring) — Database / AI / Weather / Maps / Payments / Email at a
         glance. AI usage detail lives on <a href="ai-dashboard.php">AI Usage Dashboard</a>; payment/booking business
         metrics live on <a href="operations-dashboard.php">Operations</a> — this page is the cross-system summary.</p>
 
     <div class="ops-grid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px;margin:20px 0;">
       <div class="ops-card" style="background:#fff;border-radius:10px;padding:18px;box-shadow:0 2px 8px rgba(0,0,0,.06);">
-        <div style="font-size:28px;font-weight:800;color:<?php echo $dbStatus==='up'?'#059669':'#e74c3c'; ?>;">
+        <div style="font-size:28px;font-weight:800;color:<?php echo $dbStatus==='up'?'#047857':'#C0392B'; ?>;">
           <?php echo $dbStatus==='up' ? 'Up' : 'Down'; ?>
         </div>
-        <div style="color:#888;">Database<?php echo $dbLatencyMs!==null ? ' · '.$dbLatencyMs.'ms' : ''; ?></div>
+        <div style="color:var(--text-muted);">Database<?php echo $dbLatencyMs!==null ? ' · '.$dbLatencyMs.'ms' : ''; ?></div>
       </div>
       <div class="ops-card" style="background:#fff;border-radius:10px;padding:18px;box-shadow:0 2px 8px rgba(0,0,0,.06);">
-        <div style="font-size:28px;font-weight:800;color:<?php echo $aiSuccessRate===null?'#333':($aiSuccessRate>=90?'#059669':'#e67e22'); ?>;">
+        <div style="font-size:28px;font-weight:800;color:<?php echo $aiSuccessRate===null?'var(--text-primary)':($aiSuccessRate>=90?'#047857':'#B45309'); ?>;">
           <?php echo $aiSuccessRate!==null ? $aiSuccessRate.'%' : 'n/a'; ?>
         </div>
-        <div style="color:#888;">AI success rate (7d, <?php echo $aiCalls; ?> calls<?php echo $aiAvgLatency!==null?', '.$aiAvgLatency.'ms avg':''; ?>)</div>
+        <div style="color:var(--text-muted);">AI success rate (7d, <?php echo $aiCalls; ?> calls<?php echo $aiAvgLatency!==null?', '.$aiAvgLatency.'ms avg':''; ?>)</div>
       </div>
       <div class="ops-card" style="background:#fff;border-radius:10px;padding:18px;box-shadow:0 2px 8px rgba(0,0,0,.06);">
-        <div style="font-size:28px;font-weight:800;color:<?php echo ($paymentFailures ?? 0)>0?'#e74c3c':'#333'; ?>;"><?php echo $paymentFailures ?? 'n/a'; ?></div>
-        <div style="color:#888;">Payment failures (all-time)</div>
+        <div style="font-size:28px;font-weight:800;color:<?php echo ($paymentFailures ?? 0)>0?'#C0392B':'var(--text-primary)'; ?>;"><?php echo $paymentFailures ?? 'n/a'; ?></div>
+        <div style="color:var(--text-muted);">Payment failures (all-time)</div>
       </div>
       <div class="ops-card" style="background:#fff;border-radius:10px;padding:18px;box-shadow:0 2px 8px rgba(0,0,0,.06);">
-        <div style="font-size:28px;font-weight:800;color:<?php echo $emailFailures>0?'#e67e22':'#333'; ?>;"><?php echo $emailFailures; ?></div>
-        <div style="color:#888;">Email failures (7d, of <?php echo $emailTotal; ?> sent)</div>
+        <div style="font-size:28px;font-weight:800;color:<?php echo $emailFailures>0?'#B45309':'var(--text-primary)'; ?>;"><?php echo $emailFailures; ?></div>
+        <div style="color:var(--text-muted);">Email failures (7d, of <?php echo $emailTotal; ?> sent)</div>
       </div>
       <div class="ops-card" style="background:#fff;border-radius:10px;padding:18px;box-shadow:0 2px 8px rgba(0,0,0,.06);">
-        <div style="font-size:28px;font-weight:800;color:<?php echo $bookingFailures>0?'#e67e22':'#333'; ?>;"><?php echo $bookingFailures; ?></div>
-        <div style="color:#888;">Booking checkout failures (7d)</div>
+        <div style="font-size:28px;font-weight:800;color:<?php echo $bookingFailures>0?'#B45309':'var(--text-primary)'; ?>;"><?php echo $bookingFailures; ?></div>
+        <div style="color:var(--text-muted);">Booking checkout failures (7d)</div>
       </div>
       <div class="ops-card" style="background:#fff;border-radius:10px;padding:18px;box-shadow:0 2px 8px rgba(0,0,0,.06);">
-        <div style="font-size:28px;font-weight:800;color:<?php echo $weatherFailures>0?'#e67e22':'#333'; ?>;"><?php echo $weatherFailures; ?></div>
-        <div style="color:#888;">Weather fetch failures (7d, of <?php echo $weatherTotal; ?>)</div>
+        <div style="font-size:28px;font-weight:800;color:<?php echo $weatherFailures>0?'#B45309':'var(--text-primary)'; ?>;"><?php echo $weatherFailures; ?></div>
+        <div style="color:var(--text-muted);">Weather fetch failures (7d, of <?php echo $weatherTotal; ?>)</div>
       </div>
       <div class="ops-card" style="background:#fff;border-radius:10px;padding:18px;box-shadow:0 2px 8px rgba(0,0,0,.06);">
-        <div style="font-size:28px;font-weight:800;color:<?php echo $mapsFailures>0?'#e67e22':'#333'; ?>;"><?php echo $mapsFailures; ?></div>
-        <div style="color:#888;">Maps/Explore fetch failures (7d, of <?php echo $mapsTotal; ?>)</div>
+        <div style="font-size:28px;font-weight:800;color:<?php echo $mapsFailures>0?'#B45309':'var(--text-primary)'; ?>;"><?php echo $mapsFailures; ?></div>
+        <div style="color:var(--text-muted);">Maps/Explore fetch failures (7d, of <?php echo $mapsTotal; ?>)</div>
       </div>
     </div>
 
     <h4>External providers</h4>
-    <p style="color:#888;font-size:13px;margin-top:-8px;">Configured/not-configured only — this project never makes a
+    <p style="color:var(--text-muted);font-size:13px;margin-top:-8px;">Configured/not-configured only — this project never makes a
         real paid API call just to check a health page, and never displays key values (Rule 57).</p>
     <table class="table table-striped">
       <thead><tr><th>Provider</th><th>Status</th></tr></thead>
@@ -202,7 +202,7 @@ $pageTitle = 'System Health';
         <?php foreach ($providerChecks as $label => $configured): ?>
         <tr>
           <td><?php echo htmlspecialchars($label, ENT_QUOTES, 'UTF-8'); ?></td>
-          <td><span style="color:<?php echo $configured?'#059669':'#94a3b8'; ?>;">
+          <td><span style="color:<?php echo $configured?'#047857':'#5F6D65'; ?>;">
             <i class="fa fa-<?php echo $configured?'check-circle':'minus-circle'; ?>"></i>
             <?php echo $configured?'Configured':'Not configured'; ?>
           </span></td>
@@ -210,14 +210,14 @@ $pageTitle = 'System Health';
         <?php endforeach; ?>
       </tbody>
     </table>
-    <p style="color:#94a3b8;font-size:12px;">Maps (Leaflet/OpenStreetMap tiles) needs no API key and has no
+    <p style="color:var(--text-muted);font-size:12px;">Maps (Leaflet/OpenStreetMap tiles) needs no API key and has no
         configured/not-configured state to check — it's always available. Per-call error-rate tracking for Weather
         and Maps/Explore now exists too (Round 72, master prompt item 56) — see the two new stat cards above, sourced
         from the same <code>tbl_system_events</code> log as the Email/Booking cards, and the recent-events feed below.</p>
 
     <h4>Recent system events</h4>
     <?php if (empty($recentEvents)): ?>
-    <p style="color:#94a3b8;padding:20px 0;"><i class="fa fa-info-circle"></i> No email or booking-failure events recorded yet.</p>
+    <p style="color:var(--text-muted);padding:20px 0;"><i class="fa fa-info-circle"></i> No email or booking-failure events recorded yet.</p>
     <?php else: ?>
     <table class="table table-striped">
       <thead><tr><th>When</th><th>Category</th><th>Event</th><th>Result</th><th>Detail</th></tr></thead>
@@ -227,8 +227,8 @@ $pageTitle = 'System Health';
           <td><?php echo htmlspecialchars($ev->created_at, ENT_QUOTES, 'UTF-8'); ?></td>
           <td><?php echo htmlspecialchars(ucfirst($ev->category), ENT_QUOTES, 'UTF-8'); ?></td>
           <td><?php echo htmlspecialchars($ev->event_type, ENT_QUOTES, 'UTF-8'); ?></td>
-          <td><span style="color:<?php echo $ev->success?'#059669':'#e74c3c'; ?>;"><?php echo $ev->success?'OK':'Failed'; ?></span></td>
-          <td style="font-size:12px;color:#888;"><?php echo htmlspecialchars($ev->message ?? '', ENT_QUOTES, 'UTF-8'); ?></td>
+          <td><span style="color:<?php echo $ev->success?'#047857':'#C0392B'; ?>;"><?php echo $ev->success?'OK':'Failed'; ?></span></td>
+          <td style="font-size:12px;color:var(--text-muted);"><?php echo htmlspecialchars($ev->message ?? '', ENT_QUOTES, 'UTF-8'); ?></td>
         </tr>
         <?php endforeach; ?>
       </tbody>

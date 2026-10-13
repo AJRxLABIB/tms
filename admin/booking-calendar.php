@@ -52,19 +52,19 @@ $todayDay = $isCurrentViewMonth ? (int)(new DateTime())->format('j') : 0;
 <link href="<?php echo tms_asset_ver('css/admin-v6.css'); ?>" rel="stylesheet">
 <style>
 .page-title-row { display:flex; align-items:center; justify-content:space-between; margin-bottom:22px; flex-wrap:wrap; gap:12px; }
-.page-title-row h2 { font-family:'Inter',sans-serif; font-size:22px; font-weight:800; color:#17231E; margin:0; }
+.page-title-row h2 { font-family:'Inter',sans-serif; font-size:22px; font-weight:800; color:var(--text-primary); margin:0; }
 .month-nav { display:flex; align-items:center; gap:14px; background:#fff; border:1px solid #e2e8f0; border-radius:10px; padding:8px 14px; }
 .month-nav a { color:#176B50; text-decoration:none; font-size:14px; }
-.month-nav .cur { font-weight:700; font-size:14.5px; color:#17231E; min-width:150px; text-align:center; }
+.month-nav .cur { font-weight:700; font-size:14.5px; color:var(--text-primary); min-width:150px; text-align:center; }
 .cal-grid { display:grid; grid-template-columns:repeat(7,1fr); gap:8px; }
-.cal-dow { text-align:center; font-size:11.5px; font-weight:700; color:#94a3b8; text-transform:uppercase; letter-spacing:.5px; padding-bottom:6px; }
+.cal-dow { text-align:center; font-size:11.5px; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:.5px; padding-bottom:6px; }
 .cal-cell { background:#fff; border:1px solid #e2e8f0; border-radius:10px; min-height:110px; padding:8px; }
 .cal-cell.empty { background:transparent; border:none; }
 .cal-cell.today { border-color:#176B50; border-width:2px; }
 .cal-daynum { font-size:12.5px; font-weight:700; color:#334155; margin-bottom:6px; }
 .cal-booking { display:block; font-size:10.5px; padding:3px 6px; border-radius:5px; margin-bottom:3px; text-decoration:none; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-.cal-more { font-size:10px; color:#94a3b8; padding-left:4px; }
-.legend { display:flex; gap:16px; margin-top:18px; font-size:12.5px; color:#64748b; }
+.cal-more { font-size:10px; color:var(--text-muted); padding-left:4px; }
+.legend { display:flex; gap:16px; margin-top:18px; font-size:12.5px; color:var(--text-muted); }
 .legend span { display:inline-flex; align-items:center; gap:6px; }
 .legend i { width:10px; height:10px; border-radius:3px; display:inline-block; }
 html[data-theme="dark"] .month-nav,
@@ -74,7 +74,7 @@ html[data-theme="dark"] .month-nav .cur,
 html[data-theme="dark"] .cal-daynum { color:#eef2f7 !important; }
 html[data-theme="dark"] .cal-dow,
 html[data-theme="dark"] .legend,
-html[data-theme="dark"] .cal-more { color:#94a3b8 !important; }
+html[data-theme="dark"] .cal-more { color:var(--text-muted) !important; }
 </style>
 </head>
 <body>

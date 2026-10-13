@@ -18,7 +18,7 @@ tms_admin_require_role($dbh, ['support', 'manager']); // Round 20 RBAC (item 46)
 <link href="<?php echo tms_asset_ver('css/admin-v6.css'); ?>" rel="stylesheet">
 <style>
 .page-title-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;flex-wrap:wrap;gap:12px;}
-.page-title-row h2{font-family:'Inter',sans-serif;font-size:22px;font-weight:800;color:#17231E;margin:0;}
+.page-title-row h2{font-family:'Inter',sans-serif;font-size:22px;font-weight:800;color:var(--text-primary);margin:0;}
 .alert-msg{padding:12px 16px;border-radius:10px;font-size:13.5px;margin-bottom:18px;display:flex;align-items:center;gap:8px;}
 .alert-success{background:#d1fae5;color:#065f46;border:1px solid #a7f3d0;}
 .alert-error{background:#fee2e2;color:#991b1b;border:1px solid #fca5a5;}
@@ -85,7 +85,7 @@ try{
   <thead><tr><th>#</th><th>User</th><th>Issue</th><th>Message</th><th>Status</th><th>Date</th><th>Actions</th></tr></thead>
   <tbody>
   <?php if(empty($issues)): ?>
-  <tr><td colspan="7" style="text-align:center;padding:40px;color:#94a3b8;">No support issues reported.</td></tr>
+  <tr><td colspan="7" style="text-align:center;padding:40px;color:var(--text-muted);">No support issues reported.</td></tr>
   <?php else: $i=1; foreach($issues as $is): ?>
   <?php $answered = !empty($is->AdminRemark); ?>
   <tr>
@@ -94,7 +94,7 @@ try{
     <td><?=htmlspecialchars($is->Issue??'—')?></td>
     <td style="max-width:220px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="<?=htmlspecialchars($is->Description??'')?>"><?=htmlspecialchars(substr($is->Description??'',0,80))?></td>
     <td><span style="padding:3px 10px;border-radius:20px;font-size:12px;font-weight:600;background:<?=$answered?'#d1fae5':'#fef3c7'?>;color:<?=$answered?'#065f46':'#92400e'?>"><?=$answered?'Answered':'Open'?></span>
-      <?php if($answered): ?><div style="font-size:11px;color:#94a3b8;margin-top:4px;max-width:200px;">"<?=htmlspecialchars(substr($is->AdminRemark,0,60))?><?=strlen($is->AdminRemark)>60?'…':''?>"</div><?php endif; ?>
+      <?php if($answered): ?><div style="font-size:11px;color:var(--text-muted);margin-top:4px;max-width:200px;">"<?=htmlspecialchars(substr($is->AdminRemark,0,60))?><?=strlen($is->AdminRemark)>60?'…':''?>"</div><?php endif; ?>
     </td>
     <td><?=htmlspecialchars($is->PostingDate??'—')?></td>
     <td style="display:flex;gap:5px;">

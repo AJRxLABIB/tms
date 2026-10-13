@@ -36,7 +36,7 @@ tms_admin_require_role($dbh, ['superadmin', 'finance']);
     $reports = [
       ['bookings','list-alt','Bookings Report','All booking records with status and dates','#3F84B1'],
       ['users','user','Users Report','All registered users and their details','#9b59b6'],
-      ['enquiries','envelope','Enquiries Report','All enquiries submitted by visitors','#e67e22'],
+      ['enquiries','envelope','Enquiries Report','All enquiries submitted by visitors','#B45309'],
       ['packages','briefcase','Packages Report','All tour packages with pricing','#27ae60'],
     ];
     foreach ($reports as [$type,$icon,$title,$desc,$color]):

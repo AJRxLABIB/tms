@@ -17,7 +17,7 @@ tms_admin_require_role($dbh, ['superadmin', 'finance']);
 <link href="<?php echo tms_asset_ver('css/admin-v6.css'); ?>" rel="stylesheet">
 <style>
 .page-title-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;flex-wrap:wrap;gap:12px;}
-.page-title-row h2{font-family:'Inter',sans-serif;font-size:22px;font-weight:800;color:#17231E;margin:0;}
+.page-title-row h2{font-family:'Inter',sans-serif;font-size:22px;font-weight:800;color:var(--text-primary);margin:0;}
 .alert-msg{padding:12px 16px;border-radius:10px;font-size:13.5px;margin-bottom:18px;display:flex;align-items:center;gap:8px;}
 .alert-success{background:#d1fae5;color:#065f46;border:1px solid #a7f3d0;}
 .alert-error{background:#fee2e2;color:#991b1b;border:1px solid #fca5a5;}
@@ -61,23 +61,23 @@ foreach ($monthlyData as $m) { $maxMonthRevenue = max($maxMonthRevenue, (float)$
 <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:16px;margin-bottom:28px;">
   <div style="background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:20px;">
     <div style="font-size:26px;font-weight:800;color:#176B50;"><?=tms_currency($totalRev)?></div>
-    <div style="font-size:12px;color:#64748b;margin-top:4px;">Total Revenue</div>
+    <div style="font-size:12px;color:var(--text-muted);margin-top:4px;">Total Revenue</div>
   </div>
   <div style="background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:20px;">
-    <div style="font-size:26px;font-weight:800;color:#17231E;"><?=$totalBook?></div>
-    <div style="font-size:12px;color:#64748b;margin-top:4px;">Total Bookings</div>
+    <div style="font-size:26px;font-weight:800;color:var(--text-primary);"><?=$totalBook?></div>
+    <div style="font-size:12px;color:var(--text-muted);margin-top:4px;">Total Bookings</div>
   </div>
   <div style="background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:20px;">
     <div style="font-size:26px;font-weight:800;color:#065f46;"><?=$confirmedBook?></div>
-    <div style="font-size:12px;color:#64748b;margin-top:4px;">Confirmed</div>
+    <div style="font-size:12px;color:var(--text-muted);margin-top:4px;">Confirmed</div>
   </div>
   <div style="background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:20px;">
     <div style="font-size:26px;font-weight:800;color:#1F8A66;">৳ <?=number_format($avgRev,2)?></div>
-    <div style="font-size:12px;color:#64748b;margin-top:4px;">Avg. Per Booking</div>
+    <div style="font-size:12px;color:var(--text-muted);margin-top:4px;">Avg. Per Booking</div>
   </div>
   <div style="background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:20px;">
-    <div style="font-size:26px;font-weight:800;color:#17231E;"><?=tms_currency((float)$thisMonthRev)?></div>
-    <div style="font-size:12px;color:<?= $momChange >= 0 ? '#16a34a' : '#dc2626' ?>;margin-top:4px;">
+    <div style="font-size:26px;font-weight:800;color:var(--text-primary);"><?=tms_currency((float)$thisMonthRev)?></div>
+    <div style="font-size:12px;color:<?= $momChange >= 0 ? '#0B6B2E' : '#B91C1C' ?>;margin-top:4px;">
       <i class="fa fa-arrow-<?= $momChange >= 0 ? 'up' : 'down' ?>"></i> <?= number_format(abs($momChange),1) ?>% vs last month
     </div>
   </div>
@@ -86,16 +86,16 @@ foreach ($monthlyData as $m) { $maxMonthRevenue = max($maxMonthRevenue, (float)$
 <div style="background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:20px;margin-bottom:20px;">
   <h3 style="font-size:15px;font-weight:700;margin-bottom:20px;"><i class="fa fa-bar-chart" style="color:#176B50;margin-right:8px;"></i>Revenue by Month</h3>
   <?php if (empty($monthlyData)): ?>
-  <div style="text-align:center;color:#94a3b8;padding:20px;">No data yet.</div>
+  <div style="text-align:center;color:var(--text-muted);padding:20px;">No data yet.</div>
   <?php else: ?>
   <div style="display:flex;align-items:flex-end;gap:10px;height:180px;padding-top:10px;">
     <?php foreach (array_reverse($monthlyData) as $m):
       $barHeight = $maxMonthRevenue > 0 ? max(4, round(((float)$m->revenue / $maxMonthRevenue) * 150)) : 4;
     ?>
     <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:6px;">
-      <div style="font-size:10.5px;color:#64748b;font-weight:600;">৳<?= number_format($m->revenue/1000,1) ?>k</div>
+      <div style="font-size:10.5px;color:var(--text-muted);font-weight:600;">৳<?= number_format($m->revenue/1000,1) ?>k</div>
       <div style="width:100%;max-width:38px;background:linear-gradient(180deg,#1F8A66,#176B50);border-radius:6px 6px 0 0;height:<?= $barHeight ?>px;" title="<?= htmlspecialchars($m->month) ?>: <?= tms_currency((float)$m->revenue) ?>"></div>
-      <div style="font-size:10px;color:#94a3b8;"><?= date('M', strtotime($m->month.'-01')) ?></div>
+      <div style="font-size:10px;color:var(--text-muted);"><?= date('M', strtotime($m->month.'-01')) ?></div>
     </div>
     <?php endforeach; ?>
   </div>
@@ -109,7 +109,7 @@ foreach ($monthlyData as $m) { $maxMonthRevenue = max($maxMonthRevenue, (float)$
       <thead><tr><th>#</th><th>Package</th><th>Bookings</th><th>Revenue</th></tr></thead>
       <tbody>
       <?php if(empty($topPackages)): ?>
-      <tr><td colspan="4" style="text-align:center;color:#94a3b8;padding:20px;">No data yet.</td></tr>
+      <tr><td colspan="4" style="text-align:center;color:var(--text-muted);padding:20px;">No data yet.</td></tr>
       <?php else: $i=1; foreach($topPackages as $tp): ?>
       <tr>
         <td><?=$i++?></td>
@@ -127,7 +127,7 @@ foreach ($monthlyData as $m) { $maxMonthRevenue = max($maxMonthRevenue, (float)$
       <thead><tr><th>Month</th><th>Bookings</th><th>Revenue</th></tr></thead>
       <tbody>
       <?php if(empty($monthlyData)): ?>
-      <tr><td colspan="3" style="text-align:center;color:#94a3b8;padding:20px;">No data yet.</td></tr>
+      <tr><td colspan="3" style="text-align:center;color:var(--text-muted);padding:20px;">No data yet.</td></tr>
       <?php else: foreach($monthlyData as $m): ?>
       <tr>
         <td><?=$m->month?></td>

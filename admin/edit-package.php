@@ -179,11 +179,11 @@ if(isset($_POST['submit'])) {
                         <textarea id="pkgDetailsField" name="packagedetails" class="form-control" rows="5"><?php echo htmlentities($package->PackageDetails); ?></textarea>
                     </div>
                     <div class="form-group">
-                        <label for="pkgDurationField">Duration <small style="font-weight:400;color:#94a3b8;">(e.g. "5 Days 4 Nights")</small></label>
+                        <label for="pkgDurationField">Duration <small style="font-weight:400;color:var(--text-muted);">(e.g. "5 Days 4 Nights")</small></label>
                         <input type="text" id="pkgDurationField" name="packageduration" class="form-control" value="<?php echo htmlentities($package->PackageDuration ?? ''); ?>" placeholder="5 Days 4 Nights">
                     </div>
                     <div class="form-group">
-                        <label id="pkgMapCoordsGroupLabel">Map Coordinates <small style="font-weight:400;color:#94a3b8;">(powers the interactive map, nearby-places widget, and price comparison — leave blank if unknown)</small></label>
+                        <label id="pkgMapCoordsGroupLabel">Map Coordinates <small style="font-weight:400;color:var(--text-muted);">(powers the interactive map, nearby-places widget, and price comparison — leave blank if unknown)</small></label>
                         <div style="display:flex;gap:8px;" role="group" aria-labelledby="pkgMapCoordsGroupLabel">
                             <input type="number" step="any" name="maplat" class="form-control" aria-label="Latitude" placeholder="Latitude" value="<?php echo htmlentities($package->MapLat ?? ''); ?>">
                             <input type="number" step="any" name="maplng" class="form-control" aria-label="Longitude" placeholder="Longitude" value="<?php echo htmlentities($package->MapLng ?? ''); ?>">
@@ -191,12 +191,12 @@ if(isset($_POST['submit'])) {
                         <p><small><a href="https://www.latlong.net/" target="_blank" rel="noopener">Look up coordinates for this destination &rarr;</a></small></p>
                     </div>
                     <div class="form-group">
-                        <label for="pkgHotelNameField">Hotel Name <small style="font-weight:400;color:#94a3b8;">(shown in package comparison)</small></label>
+                        <label for="pkgHotelNameField">Hotel Name <small style="font-weight:400;color:var(--text-muted);">(shown in package comparison)</small></label>
                         <input type="text" id="pkgHotelNameField" name="hotelname" class="form-control" value="<?php echo htmlentities($package->HotelName ?? ''); ?>" placeholder="e.g. Sea Pearl Beach Resort">
                     </div>
                     <div style="display:flex;gap:12px;">
                         <div class="form-group" style="flex:1;">
-                            <label for="pkgHotelRatingField">Hotel Rating <small style="font-weight:400;color:#94a3b8;">(1&ndash;5 stars)</small></label>
+                            <label for="pkgHotelRatingField">Hotel Rating <small style="font-weight:400;color:var(--text-muted);">(1&ndash;5 stars)</small></label>
                             <input type="number" step="0.5" min="1" max="5" id="pkgHotelRatingField" name="hotelrating" class="form-control" value="<?php echo htmlentities($package->HotelRating ?? ''); ?>" placeholder="4.5">
                         </div>
                         <div class="form-group" style="flex:1;">
@@ -210,22 +210,22 @@ if(isset($_POST['submit'])) {
                             <input type="text" id="pkgTransportModeField" name="transportmode" class="form-control" value="<?php echo htmlentities($package->TransportMode ?? ''); ?>" placeholder="e.g. AC Bus, Flight">
                         </div>
                         <div class="form-group" style="flex:1;">
-                            <label for="pkgSeatsField">Seats Available <small style="font-weight:400;color:#94a3b8;">(leave blank = unlimited/not tracked)</small></label>
+                            <label for="pkgSeatsField">Seats Available <small style="font-weight:400;color:var(--text-muted);">(leave blank = unlimited/not tracked)</small></label>
                             <input type="number" min="0" id="pkgSeatsField" name="seatsavailable" class="form-control" value="<?php echo htmlentities($package->SeatsAvailable ?? ''); ?>" placeholder="e.g. 30">
                         </div>
                     </div>
                     <div class="form-group">
-                        <label for="pkgInclusionsField">Inclusions <small style="font-weight:400;color:#94a3b8;">(one item per line)</small></label>
+                        <label for="pkgInclusionsField">Inclusions <small style="font-weight:400;color:var(--text-muted);">(one item per line)</small></label>
                         <textarea id="pkgInclusionsField" name="inclusions" class="form-control" rows="4"
                                   placeholder="Hotel accommodation&#10;Daily breakfast&#10;Airport transfers"><?php echo htmlentities($package->Inclusions ?? ''); ?></textarea>
                     </div>
                     <div class="form-group">
-                        <label for="pkgExclusionsField">Exclusions <small style="font-weight:400;color:#94a3b8;">(one item per line)</small></label>
+                        <label for="pkgExclusionsField">Exclusions <small style="font-weight:400;color:var(--text-muted);">(one item per line)</small></label>
                         <textarea id="pkgExclusionsField" name="exclusions" class="form-control" rows="4"
                                   placeholder="International airfare&#10;Travel insurance&#10;Personal expenses"><?php echo htmlentities($package->Exclusions ?? ''); ?></textarea>
                     </div>
                     <div class="form-group">
-                        <label for="pkgCancellationPolicyField">Cancellation Policy <small style="font-weight:400;color:#94a3b8;">(one rule per line, shown to travelers before booking)</small></label>
+                        <label for="pkgCancellationPolicyField">Cancellation Policy <small style="font-weight:400;color:var(--text-muted);">(one rule per line, shown to travelers before booking)</small></label>
                         <textarea id="pkgCancellationPolicyField" name="cancellationpolicy" class="form-control" rows="4"
                                   placeholder="Free cancellation up to 7 days before departure&#10;50% refund within 3-7 days&#10;No refund within 48 hours"><?php echo htmlentities($package->CancellationPolicy ?? ''); ?></textarea>
                     </div>

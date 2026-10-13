@@ -41,28 +41,28 @@ $paymentService = new PaymentService($dbh);
 .status-confirmed{ background:#d1fae5; color:#065f46; }
 .status-cancelled{ background:#fee2e2; color:#991b1b; }
 .filter-bar { display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin-bottom:20px; }
-.filter-bar select, .filter-bar input { padding:8px 12px; border:1.5px solid #e2e8f0; border-radius:8px; font-size:13px; font-family:inherit; color:#17231E; outline:none; background:#f8fafc; }
+.filter-bar select, .filter-bar input { padding:8px 12px; border:1.5px solid #e2e8f0; border-radius:8px; font-size:13px; font-family:inherit; color:var(--text-primary); outline:none; background:#f8fafc; }
 .filter-bar select:focus, .filter-bar input:focus { border-color:#176B50; }
 .stat-strip { display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:14px; margin-bottom:24px; }
 .mini-stat { background:#fff; border:1px solid #e2e8f0; border-radius:12px; padding:16px 20px; }
-.mini-stat .val { font-size:24px; font-weight:700; color:#17231E; }
-.mini-stat .lbl { font-size:12px; color:#64748b; margin-top:2px; }
+.mini-stat .val { font-size:24px; font-weight:700; color:var(--text-primary); }
+.mini-stat .lbl { font-size:12px; color:var(--text-muted); margin-top:2px; }
 .action-btn { display:inline-flex; align-items:center; gap:5px; padding:5px 10px; border-radius:6px; font-size:12px; font-weight:500; border:none; cursor:pointer; text-decoration:none; transition:all .15s; }
 .btn-confirm  { background:#d1fae5; color:#065f46; }
 .btn-confirm:hover  { background:#a7f3d0; }
 .btn-cancel   { background:#fee2e2; color:#991b1b; }
 .btn-cancel:hover   { background:#fecaca; }
-.btn-delete   { background:#f1f5f9; color:#64748b; }
+.btn-delete   { background:#f1f5f9; color:var(--text-muted); }
 .btn-delete:hover   { background:#e2e8f0; }
 .page-title-row { display:flex; align-items:center; justify-content:space-between; margin-bottom:24px; flex-wrap:wrap; gap:12px; }
-.page-title-row h2 { font-family:'Inter',sans-serif; font-size:22px; font-weight:800; color:#17231E; margin:0; }
+.page-title-row h2 { font-family:'Inter',sans-serif; font-size:22px; font-weight:800; color:var(--text-primary); margin:0; }
 .alert-msg { padding:12px 16px; border-radius:10px; font-size:13.5px; margin-bottom:18px; display:flex; align-items:center; gap:8px; }
 .alert-success { background:#d1fae5; color:#065f46; border:1px solid #a7f3d0; }
 .alert-error   { background:#fee2e2; color:#991b1b; border:1px solid #fca5a5; }
 html[data-theme="dark"] .mini-stat { background:#1b222c !important; border-color:#2b3542 !important; }
 html[data-theme="dark"] .mini-stat .val,
 html[data-theme="dark"] .page-title-row h2 { color:#eef2f7 !important; }
-html[data-theme="dark"] .mini-stat .lbl { color:#94a3b8 !important; }
+html[data-theme="dark"] .mini-stat .lbl { color:var(--text-muted) !important; }
 </style>
 </head>
 <body>
@@ -354,7 +354,7 @@ $statusIcon  = [0=>'fa-clock-o', 1=>'fa-check-circle', 2=>'fa-times-circle'];
 
 <div class="page-title-row">
   <h2><i class="fa fa-calendar-check-o" style="color:#176B50;margin-right:10px;"></i>Manage Bookings</h2>
-  <span style="font-size:13px;color:#64748b;"><?= count($bookings) ?> booking(s) found</span>
+  <span style="font-size:13px;color:var(--text-muted);"><?= count($bookings) ?> booking(s) found</span>
 </div>
 
 <?php if ($msg): ?>
@@ -417,7 +417,7 @@ $statusIcon  = [0=>'fa-clock-o', 1=>'fa-check-circle', 2=>'fa-times-circle'];
   </thead>
   <tbody>
   <?php if (empty($bookings)): ?>
-    <tr><td colspan="9" style="text-align:center;padding:40px;color:#94a3b8;">
+    <tr><td colspan="9" style="text-align:center;padding:40px;color:var(--text-muted);">
       <i class="fa fa-calendar-o" style="font-size:32px;display:block;margin-bottom:10px;"></i>
       No bookings found.
     </td></tr>
@@ -457,7 +457,7 @@ $statusIcon  = [0=>'fa-clock-o', 1=>'fa-check-circle', 2=>'fa-times-circle'];
             <form method="post" style="display:contents" onsubmit="return rejectRefund(this)"><input type="hidden" name="action" value="refund_rejected"><input type="hidden" name="id" value="<?= $bid ?>"><input type="hidden" name="note"><?php tms_csrf_field(); ?><button type="submit" class="action-btn btn-cancel">Reject</button></form>
           </div>
         <?php elseif ($b->RefundStatus): ?>
-          <span style="font-size:11.5px;color:#64748b;"><?= ucfirst($b->RefundStatus) ?></span>
+          <span style="font-size:11.5px;color:var(--text-muted);"><?= ucfirst($b->RefundStatus) ?></span>
         <?php else: ?>
           <span style="font-size:11.5px;color:#cbd5e1;">—</span>
         <?php endif; ?>
@@ -501,7 +501,7 @@ $statusIcon  = [0=>'fa-clock-o', 1=>'fa-check-circle', 2=>'fa-times-circle'];
 </table>
 </div>
 
-<div style="font-size:12.5px;color:#94a3b8;margin:10px 0;"><?php echo $bookingTotal; ?> booking<?php echo $bookingTotal!==1?'s':''; ?> total &nbsp;·&nbsp; page <?php echo $bookingPage; ?> of <?php echo $bookingTotalPages; ?></div>
+<div style="font-size:12.5px;color:var(--text-muted);margin:10px 0;"><?php echo $bookingTotal; ?> booking<?php echo $bookingTotal!==1?'s':''; ?> total &nbsp;·&nbsp; page <?php echo $bookingPage; ?> of <?php echo $bookingTotalPages; ?></div>
 <?php if ($bookingTotalPages > 1): ?>
 <div style="display:flex;justify-content:center;gap:6px;margin-top:16px;flex-wrap:wrap;">
     <?php for ($pn = 1; $pn <= $bookingTotalPages; $pn++):

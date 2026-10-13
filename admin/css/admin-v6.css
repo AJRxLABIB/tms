@@ -28,17 +28,17 @@
   --card-shadow: 0 1px 3px rgba(16,75,58,0.06), 0 4px 16px rgba(16,75,58,0.06);
   --primary: #176B50;
   --primary-light: #DFF6F6;
-  --success: #059669;
+  --success: #047857;
   --success-light: #d1fae5;
-  --warning: #d97706;
+  --warning: #92400E;
   --warning-light: #fef3c7;
-  --danger: #dc2626;
+  --danger: #B91C1C;
   --danger-light: #fee2e2;
   --purple: #1F8A66;
   --purple-light: #ede9fe;
   --text-primary: #17231E;
-  --text-secondary: #5D7481;
-  --text-muted: #97ABB6;
+  --text-secondary: #4F625A;
+  --text-muted: #5F6D65;
   --border: #e2e8f0;
   --transition: all 0.22s cubic-bezier(0.4, 0, 0.2, 1);
 }
@@ -114,7 +114,7 @@ html, body {
 
 .nav-section-label {
   font-size: 10px; font-weight: 600;
-  color: #8FB5A3; letter-spacing: 1px;
+  color: #B3D0C1; letter-spacing: 1px;
   text-transform: uppercase;
   padding: 14px 20px 6px;
   white-space: nowrap;
@@ -574,3 +574,31 @@ html[data-theme="dark"] .btn-v6:not(.primary) { background: #232E27 !important; 
 html[data-theme="dark"] .action-btn.btn-edit { background: #1B2E26 !important; color: #5CC79C !important; }
 html[data-theme="dark"] .action-btn.btn-delete { background: #3A1B1B !important; color: #F08080 !important; }
 html[data-theme="dark"] .breadcrumb a, html[data-theme="dark"] .topbar-breadcrumb a { color: #5CC79C !important; }
+
+/* a11y: Bootstrap default link blue (#337ab7) fails 4.5:1; use theme primary */
+.tms-content a:not(.btn):not(.nav-link), .topbar-breadcrumb a { color: var(--primary); }
+
+/* a11y round: bootstrap label colours + stuck light backgrounds in dark mode */
+.label-info { background-color: #0B6E8A !important; color: #fff !important; }
+.label-success { background-color: #0B6B2E !important; color: #fff !important; }
+.label-warning { background-color: #8A5300 !important; color: #fff !important; }
+.label-danger { background-color: #B3302B !important; color: #fff !important; }
+.cal-dow, .legend > span, .stat-label, .stat-trend { color: var(--text-secondary); }
+.panel-body th, .table > thead > tr > th { color: var(--text-secondary); }
+html[data-theme="dark"] [style*="background:#f9f9f9"], html[data-theme="dark"] [style*="background: #f9f9f9"], html[data-theme="dark"] tr[style*="#f9f9f9"] > td { background: var(--card-bg) !important; }
+html[data-theme="dark"] .pagination > li > a { background: var(--card-bg); color: var(--text-primary); border-color: var(--border); }
+html[data-theme="dark"] .pagination > .active > a { background: var(--primary); color: #0E3B2D; }
+html[data-theme="dark"] .table-striped > tbody > tr:nth-of-type(odd), html[data-theme="dark"] .table-striped > tbody > tr:nth-of-type(odd) > td, html[data-theme="dark"] .table-hover > tbody > tr:hover > td { background-color: rgba(255,255,255,.04) !important; color: var(--text-primary) !important; }
+
+.btn-info { background-color: #0B6E8A; border-color: #0B6E8A; color: #fff; }
+.alert-success, .success[class*="alert"] { color: #064E3B; }
+.tms-content small { color: var(--text-muted); }
+/* dark: darkened light-mode inline colours need lifting back */
+html[data-theme="dark"] [style*="#0B6B2E"], html[data-theme="dark"] [style*="#047857"], html[data-theme="dark"] [style*="#2F855A"] { color: #5CC79C !important; }
+html[data-theme="dark"] [style*="#B91C1C"], html[data-theme="dark"] [style*="#C0392B"] { color: #FCA5A5 !important; }
+html[data-theme="dark"] [style*="#0E7490"] { color: #67D5E8 !important; }
+html[data-theme="dark"] [style*="#92400E"], html[data-theme="dark"] [style*="#B45309"], html[data-theme="dark"] #qrFallbackNote { color: #FBBF77 !important; }
+html[data-theme="dark"] .manual-key { background: var(--card-bg) !important; color: var(--text-primary) !important; border-color: var(--border) !important; }
+html[data-theme="dark"] .pagination a, html[data-theme="dark"] .pagination > li > span { background: var(--card-bg) !important; color: var(--text-primary) !important; border-color: var(--border) !important; }
+html[data-theme="dark"] [style*="#5F6D65"], html[data-theme="dark"] .tms-content label, html[data-theme="dark"] .btn-ghost-sm { color: #AAB8AF !important; }
+html[data-theme="dark"] a[href^="?p="], html[data-theme="dark"] .tms-content a[href^="?p="] { background: var(--card-bg) !important; color: var(--text-primary) !important; border-color: var(--border) !important; }

@@ -157,7 +157,7 @@ $admins = $dbh->query("SELECT id, UserName, Role, updationDate FROM admin ORDER 
 <link href="<?php echo tms_asset_ver('css/admin-v6.css'); ?>" rel="stylesheet">
 <style>
 .page-title-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;flex-wrap:wrap;gap:12px;}
-.page-title-row h2{font-family:'Inter',sans-serif;font-size:22px;font-weight:800;color:#17231E;margin:0;}
+.page-title-row h2{font-family:'Inter',sans-serif;font-size:22px;font-weight:800;color:var(--text-primary);margin:0;}
 .alert-msg{padding:12px 16px;border-radius:10px;font-size:13.5px;margin-bottom:18px;display:flex;align-items:center;gap:8px;}
 .alert-success{background:#d1fae5;color:#065f46;border:1px solid #a7f3d0;}
 .alert-error{background:#fee2e2;color:#991b1b;border:1px solid #fca5a5;}
@@ -174,7 +174,7 @@ $admins = $dbh->query("SELECT id, UserName, Role, updationDate FROM admin ORDER 
 .role-ai_manager{background:#ede9fe;color:#6d28d9;}
 .role-operations{background:#e0e7ff;color:#3730a3;}
 .create-card{background:#fff;border:1px solid #e2e8f0;border-radius:14px;padding:22px 24px;margin-bottom:24px;max-width:520px;}
-.create-card h4{font-size:15px;font-weight:700;margin:0 0 16px;color:#17231E;}
+.create-card h4{font-size:15px;font-weight:700;margin:0 0 16px;color:var(--text-primary);}
 .form-row{margin-bottom:13px;}
 .form-row label{display:block;font-size:11.5px;font-weight:700;color:#4a5568;text-transform:uppercase;letter-spacing:.4px;margin-bottom:5px;}
 .form-row input,.form-row select{width:100%;padding:9px 12px;border:2px solid #e2e8f0;border-radius:8px;font-size:13.5px;outline:none;}
@@ -184,7 +184,7 @@ $admins = $dbh->query("SELECT id, UserName, Role, updationDate FROM admin ORDER 
 .role-select-inline{padding:4px 8px;border-radius:6px;border:1px solid #cbd5e1;font-size:12px;}
 html[data-theme="dark"] .create-card { background:#1b222c !important; border-color:#2b3542 !important; }
 html[data-theme="dark"] .create-card h4 { color:#eef2f7 !important; }
-html[data-theme="dark"] .form-row label { color:#94a3b8 !important; }
+html[data-theme="dark"] .form-row label { color:var(--text-muted) !important; }
 </style>
 </head>
 <body>
@@ -231,7 +231,7 @@ html[data-theme="dark"] .form-row label { color:#94a3b8 !important; }
   <?php foreach ($admins as $a): ?>
   <tr>
     <td><?= (int)$a->id ?></td>
-    <td><?= htmlspecialchars($a->UserName) ?><?php if ($a->UserName === $_SESSION['alogin']): ?> <span style="color:#94a3b8;font-size:11px;">(you)</span><?php endif; ?></td>
+    <td><?= htmlspecialchars($a->UserName) ?><?php if ($a->UserName === $_SESSION['alogin']): ?> <span style="color:var(--text-muted);font-size:11px;">(you)</span><?php endif; ?></td>
     <td><span class="role-badge role-<?= htmlspecialchars($a->Role ?: 'superadmin') ?>"><?= htmlspecialchars(tms_admin_role_labels()[$a->Role] ?? $a->Role) ?></span></td>
     <td><?= htmlspecialchars($a->updationDate ?? '—') ?></td>
     <td style="display:flex;gap:8px;align-items:center;">

@@ -18,7 +18,7 @@ tms_admin_require_role($dbh, ['support', 'manager']); // Round 20 RBAC (item 46)
 <link href="<?php echo tms_asset_ver('css/admin-v6.css'); ?>" rel="stylesheet">
 <style>
 .page-title-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;flex-wrap:wrap;gap:12px;}
-.page-title-row h2{font-family:'Inter',sans-serif;font-size:22px;font-weight:800;color:#17231E;margin:0;}
+.page-title-row h2{font-family:'Inter',sans-serif;font-size:22px;font-weight:800;color:var(--text-primary);margin:0;}
 .alert-msg{padding:12px 16px;border-radius:10px;font-size:13.5px;margin-bottom:18px;display:flex;align-items:center;gap:8px;}
 .alert-success{background:#d1fae5;color:#065f46;border:1px solid #a7f3d0;}
 .alert-error{background:#fee2e2;color:#991b1b;border:1px solid #fca5a5;}
@@ -87,7 +87,7 @@ try{
   <thead><tr><th>#</th><th>Name</th><th>Email</th><th>Mobile</th><th>Joined</th><th>Actions</th></tr></thead>
   <tbody>
   <?php if(empty($users)): ?>
-  <tr><td colspan="6" style="text-align:center;padding:40px;color:#94a3b8;">No users registered yet.</td></tr>
+  <tr><td colspan="6" style="text-align:center;padding:40px;color:var(--text-muted);">No users registered yet.</td></tr>
   <?php else: $i=1; foreach($users as $u): ?>
   <tr>
     <td><?=$i++?></td>
@@ -102,7 +102,7 @@ try{
 </table>
 </div>
 
-<div style="font-size:12.5px;color:#94a3b8;margin:10px 0;"><?=$userTotal?> user<?=$userTotal!==1?'s':''?> total &nbsp;·&nbsp; page <?=$userPage?> of <?=$userTotalPages?></div>
+<div style="font-size:12.5px;color:var(--text-muted);margin:10px 0;"><?=$userTotal?> user<?=$userTotal!==1?'s':''?> total &nbsp;·&nbsp; page <?=$userPage?> of <?=$userTotalPages?></div>
 <?php if($userTotalPages > 1): ?>
 <div style="display:flex;justify-content:center;gap:6px;margin-top:16px;flex-wrap:wrap;">
     <?php for($pn=1; $pn<=$userTotalPages; $pn++):

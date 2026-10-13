@@ -105,7 +105,7 @@ if (isset($TMS_TRANSLATIONS) && is_array($TMS_TRANSLATIONS)) {
 <link href="<?php echo tms_asset_ver('css/admin-v6.css'); ?>" rel="stylesheet">
 <style>
 .page-title-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;flex-wrap:wrap;gap:12px;}
-.page-title-row h2{font-family:'Inter',sans-serif;font-size:22px;font-weight:800;color:#17231E;margin:0;}
+.page-title-row h2{font-family:'Inter',sans-serif;font-size:22px;font-weight:800;color:var(--text-primary);margin:0;}
 .alert-msg{padding:12px 16px;border-radius:10px;font-size:13.5px;margin-bottom:18px;display:flex;align-items:center;gap:8px;}
 .alert-success{background:#d1fae5;color:#065f46;border:1px solid #a7f3d0;}
 .alert-error{background:#fee2e2;color:#991b1b;border:1px solid #fca5a5;}
@@ -136,7 +136,7 @@ html[data-theme="dark"] .cov-bar { background:#2b3542 !important; }
 <!-- Static dictionary coverage (read-only) -->
 <div style="background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:20px;margin-bottom:24px;">
   <h3 style="font-size:15px;font-weight:700;margin-bottom:4px;">Site Chrome Dictionary (nav/footer/buttons)</h3>
-  <p style="font-size:12.5px;color:#64748b;margin-bottom:14px;">
+  <p style="font-size:12.5px;color:var(--text-muted);margin-bottom:14px;">
     Read-only — these are the always-instant, hand-written translations used for navigation, footer, and common buttons
     (<code>tms_t()</code> in <code>includes/i18n.php</code>). Editing these is a code change, not a database one, so
     there's no edit action here — this is just visibility into what's covered per language.
@@ -156,15 +156,15 @@ html[data-theme="dark"] .cov-bar { background:#2b3542 !important; }
 <!-- AI translation cache — real, database-backed, editable -->
 <div style="background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:20px;margin-bottom:16px;">
   <h3 style="font-size:15px;font-weight:700;margin-bottom:4px;">AI-Translated Content Cache</h3>
-  <p style="font-size:12.5px;color:#64748b;margin-bottom:14px;">
+  <p style="font-size:12.5px;color:var(--text-muted);margin-bottom:14px;">
     Package descriptions, the About/Contact page, and similar longer content are translated on first view and cached
     here (<code>tbl_translation_cache</code>) so the AI is only ever called once per string per language. Fix a bad
     translation directly, or clear it to force a fresh AI re-translation next time that page is viewed in that language.
   </p>
   <form method="get" style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;margin-bottom:4px;">
-    <div><label style="font-size:12px;font-weight:500;color:#64748b;display:block;margin-bottom:4px;" for="tr_q">Search</label>
+    <div><label style="font-size:12px;font-weight:500;color:var(--text-muted);display:block;margin-bottom:4px;" for="tr_q">Search</label>
     <input type="text" id="tr_q" name="q" value="<?= htmlspecialchars($searchQ) ?>" placeholder="Search source or translated text..." style="padding:8px 12px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:13px;min-width:240px;"></div>
-    <div><label style="font-size:12px;font-weight:500;color:#64748b;display:block;margin-bottom:4px;" for="tr_lang_filter">Language</label>
+    <div><label style="font-size:12px;font-weight:500;color:var(--text-muted);display:block;margin-bottom:4px;" for="tr_lang_filter">Language</label>
     <select id="tr_lang_filter" name="lang_filter" style="padding:8px 12px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:13px;">
       <option value="">All languages</option>
       <?php foreach ($langCounts as $lc => $cnt): ?>
@@ -178,13 +178,13 @@ html[data-theme="dark"] .cov-bar { background:#2b3542 !important; }
   </form>
 </div>
 
-<div style="font-size:12.5px;color:#94a3b8;margin-bottom:10px;"><?= $total ?> cached translation<?= $total !== 1 ? 's' : '' ?> &nbsp;·&nbsp; page <?= $page ?> of <?= $totalPages ?></div>
+<div style="font-size:12.5px;color:var(--text-muted);margin-bottom:10px;"><?= $total ?> cached translation<?= $total !== 1 ? 's' : '' ?> &nbsp;·&nbsp; page <?= $page ?> of <?= $totalPages ?></div>
 <div class="table-responsive">
 <table class="tms-table" style="font-size:13px;">
   <thead><tr><th>Lang</th><th>Source (English)</th><th>Translated</th><th>Cached</th><th>Actions</th></tr></thead>
   <tbody>
   <?php if (empty($rows)): ?>
-  <tr><td colspan="5" style="text-align:center;padding:40px;color:#94a3b8;">No cached translations<?= ($searchQ !== '' || $langFilter !== '') ? ' match this filter.' : ' yet — they appear here as visitors view pages in a non-English language.' ?></td></tr>
+  <tr><td colspan="5" style="text-align:center;padding:40px;color:var(--text-muted);">No cached translations<?= ($searchQ !== '' || $langFilter !== '') ? ' match this filter.' : ' yet — they appear here as visitors view pages in a non-English language.' ?></td></tr>
   <?php else: foreach ($rows as $r): ?>
   <tr>
     <td><span class="lang-chip"><?= htmlspecialchars($r->lang) ?></span></td>
@@ -198,7 +198,7 @@ html[data-theme="dark"] .cov-bar { background:#2b3542 !important; }
         <button type="submit" name="update_translation" class="action-btn btn-edit" title="Save fix"><i class="fa fa-save"></i></button>
       </form>
     </td>
-    <td style="font-size:11.5px;color:#94a3b8;white-space:nowrap;"><?= htmlspecialchars($r->created_at) ?></td>
+    <td style="font-size:11.5px;color:var(--text-muted);white-space:nowrap;"><?= htmlspecialchars($r->created_at) ?></td>
     <td><form method="post" style="display:contents" onsubmit="return confirm('Clear this cached translation? It will be re-translated by AI next time it\'s needed.')">
            <input type="hidden" name="action" value="delete">
            <input type="hidden" name="hash" value="<?= htmlspecialchars($r->source_hash) ?>">

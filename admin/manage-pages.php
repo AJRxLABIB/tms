@@ -18,7 +18,7 @@ tms_admin_require_role($dbh, ['content_manager', 'manager']); // Round 20 RBAC (
 <link href="<?php echo tms_asset_ver('css/admin-v6.css'); ?>" rel="stylesheet">
 <style>
 .page-title-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;flex-wrap:wrap;gap:12px;}
-.page-title-row h2{font-family:'Inter',sans-serif;font-size:22px;font-weight:800;color:#17231E;margin:0;}
+.page-title-row h2{font-family:'Inter',sans-serif;font-size:22px;font-weight:800;color:var(--text-primary);margin:0;}
 .alert-msg{padding:12px 16px;border-radius:10px;font-size:13.5px;margin-bottom:18px;display:flex;align-items:center;gap:8px;}
 .alert-success{background:#d1fae5;color:#065f46;border:1px solid #a7f3d0;}
 .alert-error{background:#fee2e2;color:#991b1b;border:1px solid #fca5a5;}
@@ -77,7 +77,7 @@ catch(Exception $e){ $pages=[]; }
   <thead><tr><th>#</th><th>Page Type</th><th>Last Updated</th><th>Actions</th></tr></thead>
   <tbody>
   <?php if(empty($pages)): ?>
-  <tr><td colspan="4" style="text-align:center;padding:40px;color:#94a3b8;">No pages found.</td></tr>
+  <tr><td colspan="4" style="text-align:center;padding:40px;color:var(--text-muted);">No pages found.</td></tr>
   <?php else: $i=1; foreach($pages as $p): ?>
   <tr>
     <td><?=$i++?></td>
@@ -94,7 +94,7 @@ catch(Exception $e){ $pages=[]; }
         <?php tms_csrf_field(); ?>
         <input type="hidden" name="page_id" value="<?=$p->id?>">
         <textarea name="detail" style="width:100%;min-height:200px;padding:10px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:12.5px;font-family:monospace;"><?=htmlspecialchars($p->detail??'')?></textarea>
-        <div style="font-size:11px;color:#94a3b8;margin:6px 0;">HTML content — edit carefully, this is inserted directly into the page.</div>
+        <div style="font-size:11px;color:var(--text-muted);margin:6px 0;">HTML content — edit carefully, this is inserted directly into the page.</div>
         <button type="submit" name="save_page" class="btn-v6 primary"><i class="fa fa-save"></i> Save Changes</button>
       </form>
     </td>

@@ -101,12 +101,12 @@ $qrUrl  = $otpUri ? tms_totp_qr_url($otpUri) : '';
 <link href="<?php echo tms_asset_ver('css/admin-v6.css'); ?>" rel="stylesheet">
 <style>
 .page-title-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;flex-wrap:wrap;gap:12px;}
-.page-title-row h2{font-family:'Inter',sans-serif;font-size:22px;font-weight:800;color:#17231E;margin:0;}
+.page-title-row h2{font-family:'Inter',sans-serif;font-size:22px;font-weight:800;color:var(--text-primary);margin:0;}
 .alert-msg{padding:12px 16px;border-radius:10px;font-size:13.5px;margin-bottom:18px;display:flex;align-items:center;gap:8px;}
 .alert-success{background:#d1fae5;color:#065f46;border:1px solid #a7f3d0;}
 .alert-error{background:#fee2e2;color:#991b1b;border:1px solid #fca5a5;}
 .card{background:#fff;border:1px solid #e2e8f0;border-radius:14px;padding:24px;margin-bottom:20px;max-width:520px;}
-.card h4{font-size:15px;font-weight:700;margin:0 0 14px;color:#17231E;}
+.card h4{font-size:15px;font-weight:700;margin:0 0 14px;color:var(--text-primary);}
 .status-pill{display:inline-flex;align-items:center;gap:6px;padding:4px 12px;border-radius:20px;font-size:12.5px;font-weight:700;}
 .status-on{background:#d1fae5;color:#065f46;}
 .status-off{background:#fef3c7;color:#92400e;}
@@ -143,7 +143,7 @@ $qrUrl  = $otpUri ? tms_totp_qr_url($otpUri) : '';
 <?php if (!$me->TwoFAEnabled): ?>
   <div class="card">
     <h4><i class="fa fa-qrcode"></i> Set Up Two-Factor Authentication</h4>
-    <p style="font-size:13.5px;color:#64748b;margin:0 0 4px;">
+    <p style="font-size:13.5px;color:var(--text-muted);margin:0 0 4px;">
       Scan this QR code with Google Authenticator, Authy, 1Password, or any standard TOTP app.
     </p>
     <div class="qr-box">
@@ -153,7 +153,7 @@ $qrUrl  = $otpUri ? tms_totp_qr_url($otpUri) : '';
         Couldn't load the QR image — use the manual entry key below instead.
       </p>
     </div>
-    <p style="font-size:12px;color:#94a3b8;margin-bottom:4px;">Or enter this key manually:</p>
+    <p style="font-size:12px;color:var(--text-muted);margin-bottom:4px;">Or enter this key manually:</p>
     <div class="manual-key"><?= htmlspecialchars($pendingSecret) ?></div>
 
     <form method="post" style="margin-top:16px;">
@@ -171,12 +171,12 @@ $qrUrl  = $otpUri ? tms_totp_qr_url($otpUri) : '';
   </div>
 <?php else: ?>
   <div class="card">
-    <h4><i class="fa fa-check-circle" style="color:#059669;"></i> Two-factor authentication is active</h4>
-    <p style="font-size:13.5px;color:#64748b;">You'll be asked for a code from your authenticator app every time you sign in.</p>
+    <h4><i class="fa fa-check-circle" style="color:#047857;"></i> Two-factor authentication is active</h4>
+    <p style="font-size:13.5px;color:var(--text-muted);">You'll be asked for a code from your authenticator app every time you sign in.</p>
   </div>
   <div class="card">
-    <h4><i class="fa fa-ban" style="color:#dc2626;"></i> Disable Two-Factor Authentication</h4>
-    <p style="font-size:13px;color:#94a3b8;margin-bottom:14px;">Requires your current password and a valid code, since this reduces your account's security.</p>
+    <h4><i class="fa fa-ban" style="color:#B91C1C;"></i> Disable Two-Factor Authentication</h4>
+    <p style="font-size:13px;color:var(--text-muted);margin-bottom:14px;">Requires your current password and a valid code, since this reduces your account's security.</p>
     <form method="post">
       <?php tms_csrf_field(); ?>
       <div class="form-row">

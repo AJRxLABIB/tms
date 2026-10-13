@@ -93,6 +93,7 @@
       <?php endif; ?>
       <?php if ($canSee(['ai_manager', 'manager'])): ?>
         <?php navItem('ai-dashboard.php','magic','AI Usage Dashboard',$cur); ?>
+        <?php navItem('ai-safety.php','shield','AI Safety &amp; Evaluation',$cur); ?>
       <?php endif; ?>
       <?php if ($canSee(['finance', 'package_manager', 'manager'])): ?>
         <?php navItem('manage-coupons.php','tag','Coupons',$cur); ?>

@@ -147,44 +147,44 @@ $pageTitle = 'Operations Dashboard';
 <?php include('includes/header.php'); ?>
 <div class="tms-content">
     <h2><i class="fa fa-dashboard"></i> Operations Dashboard</h2>
-    <p style="color:#888;">What needs attention right now — see <a href="dashboard.php">Dashboard</a> for historical analytics.</p>
+    <p style="color:var(--text-muted);">What needs attention right now — see <a href="dashboard.php">Dashboard</a> for historical analytics.</p>
 
     <div class="ops-grid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px;margin:20px 0;">
       <div class="ops-card" style="background:#fff;border-radius:10px;padding:18px;box-shadow:0 2px 8px rgba(0,0,0,.06);">
         <div style="font-size:28px;font-weight:800;"><?php echo count($arrivals); ?></div>
-        <div style="color:#888;">Arrivals today</div>
+        <div style="color:var(--text-muted);">Arrivals today</div>
       </div>
       <div class="ops-card" style="background:#fff;border-radius:10px;padding:18px;box-shadow:0 2px 8px rgba(0,0,0,.06);">
         <div style="font-size:28px;font-weight:800;"><?php echo count($departures); ?></div>
-        <div style="color:#888;">Departures today</div>
+        <div style="color:var(--text-muted);">Departures today</div>
       </div>
       <div class="ops-card" style="background:#fff;border-radius:10px;padding:18px;box-shadow:0 2px 8px rgba(0,0,0,.06);">
-        <div style="font-size:28px;font-weight:800;color:<?php echo $pendingBookings>0?'#e67e22':'#333'; ?>;"><?php echo $pendingBookings; ?></div>
-        <div style="color:#888;">Pending bookings</div>
+        <div style="font-size:28px;font-weight:800;color:<?php echo $pendingBookings>0?'#B45309':'var(--text-primary)'; ?>;"><?php echo $pendingBookings; ?></div>
+        <div style="color:var(--text-muted);">Pending bookings</div>
       </div>
       <div class="ops-card" style="background:#fff;border-radius:10px;padding:18px;box-shadow:0 2px 8px rgba(0,0,0,.06);">
-        <div style="font-size:28px;font-weight:800;color:<?php echo ($paymentFailures ?? 0)>0?'#e74c3c':'#333'; ?>;"><?php echo $paymentFailures ?? 'n/a'; ?></div>
-        <div style="color:#888;">Payment failures</div>
+        <div style="font-size:28px;font-weight:800;color:<?php echo ($paymentFailures ?? 0)>0?'#C0392B':'var(--text-primary)'; ?>;"><?php echo $paymentFailures ?? 'n/a'; ?></div>
+        <div style="color:var(--text-muted);">Payment failures</div>
       </div>
       <div class="ops-card" style="background:#fff;border-radius:10px;padding:18px;box-shadow:0 2px 8px rgba(0,0,0,.06);">
         <div style="font-size:28px;font-weight:800;"><?php echo $pendingPayments ?? 'n/a'; ?></div>
-        <div style="color:#888;">Payments pending</div>
+        <div style="color:var(--text-muted);">Payments pending</div>
       </div>
       <div class="ops-card" style="background:#fff;border-radius:10px;padding:18px;box-shadow:0 2px 8px rgba(0,0,0,.06);">
-        <div style="font-size:28px;font-weight:800;color:<?php echo $refundRequests>0?'#e67e22':'#333'; ?>;"><?php echo $refundRequests; ?></div>
-        <div style="color:#888;">Refund requests</div>
+        <div style="font-size:28px;font-weight:800;color:<?php echo $refundRequests>0?'#B45309':'var(--text-primary)'; ?>;"><?php echo $refundRequests; ?></div>
+        <div style="color:var(--text-muted);">Refund requests</div>
       </div>
       <div class="ops-card" style="background:#fff;border-radius:10px;padding:18px;box-shadow:0 2px 8px rgba(0,0,0,.06);">
-        <div style="font-size:28px;font-weight:800;color:<?php echo $openTickets>0?'#e67e22':'#333'; ?>;"><?php echo $openTickets; ?></div>
-        <div style="color:#888;">Open support tickets</div>
+        <div style="font-size:28px;font-weight:800;color:<?php echo $openTickets>0?'#B45309':'var(--text-primary)'; ?>;"><?php echo $openTickets; ?></div>
+        <div style="color:var(--text-muted);">Open support tickets</div>
       </div>
       <div class="ops-card" style="background:#fff;border-radius:10px;padding:18px;box-shadow:0 2px 8px rgba(0,0,0,.06);">
-        <div style="font-size:28px;font-weight:800;color:<?php echo count($lowInventory)>0?'#e74c3c':'#333'; ?>;"><?php echo count($lowInventory); ?></div>
-        <div style="color:#888;">Low-inventory packages</div>
+        <div style="font-size:28px;font-weight:800;color:<?php echo count($lowInventory)>0?'#C0392B':'var(--text-primary)'; ?>;"><?php echo count($lowInventory); ?></div>
+        <div style="color:var(--text-muted);">Low-inventory packages</div>
       </div>
       <div class="ops-card" style="background:#fff;border-radius:10px;padding:18px;box-shadow:0 2px 8px rgba(0,0,0,.06);">
-        <div style="font-size:28px;font-weight:800;color:<?php echo count($weatherAlerts)>0?'#e74c3c':'#333'; ?>;"><?php echo count($weatherAlerts); ?></div>
-        <div style="color:#888;">Weather alerts (next <?php echo (int)$weatherWindowDays; ?>d)</div>
+        <div style="font-size:28px;font-weight:800;color:<?php echo count($weatherAlerts)>0?'#C0392B':'var(--text-primary)'; ?>;"><?php echo count($weatherAlerts); ?></div>
+        <div style="color:var(--text-muted);">Weather alerts (next <?php echo (int)$weatherWindowDays; ?>d)</div>
       </div>
     </div>
 
@@ -212,7 +212,7 @@ $pageTitle = 'Operations Dashboard';
     </table>
     <?php endif; ?>
 
-    <h4><i class="fa fa-cloud" style="color:#0ea5e9;"></i> Weather alerts <small style="font-weight:400;color:#94a3b8;">— destinations with confirmed travelers arriving in the next <?php echo (int)$weatherWindowDays; ?> days, checked against live weather</small></h4>
+    <h4><i class="fa fa-cloud" style="color:#0ea5e9;"></i> Weather alerts <small style="font-weight:400;color:var(--text-muted);">— destinations with confirmed travelers arriving in the next <?php echo (int)$weatherWindowDays; ?> days, checked against live weather</small></h4>
     <?php if (!empty($weatherAlerts)): ?>
     <table class="table table-striped">
       <thead><tr><th>Package</th><th>Destination</th><th>Next Arrival</th><th>Travelers</th><th>Alert</th><th>Source</th></tr></thead>
@@ -228,19 +228,19 @@ $pageTitle = 'Operations Dashboard';
               <div><i class="fa fa-exclamation-triangle"></i> <?php echo htmlspecialchars($hit, ENT_QUOTES, 'UTF-8'); ?></div>
             <?php endforeach; ?>
           </td>
-          <td style="color:#94a3b8;font-size:12px;"><?php echo htmlspecialchars($wa['source'], ENT_QUOTES, 'UTF-8'); ?></td>
+          <td style="color:var(--text-muted);font-size:12px;"><?php echo htmlspecialchars($wa['source'], ENT_QUOTES, 'UTF-8'); ?></td>
         </tr>
         <?php endforeach; ?>
       </tbody>
     </table>
     <?php elseif (empty($upcomingDestinations)): ?>
-    <p style="color:#888;">No confirmed bookings with a destination arriving in the next <?php echo (int)$weatherWindowDays; ?> days (or none of those packages have map coordinates set yet — weather needs a location).</p>
+    <p style="color:var(--text-muted);">No confirmed bookings with a destination arriving in the next <?php echo (int)$weatherWindowDays; ?> days (or none of those packages have map coordinates set yet — weather needs a location).</p>
     <?php else: ?>
     <p style="color:#2e9e5b;"><i class="fa fa-check-circle"></i> No severe weather found for any destination with travelers arriving in the next <?php echo (int)$weatherWindowDays; ?> days.<?php if ($weatherCheckFailed > 0): ?> (<?php echo (int)$weatherCheckFailed; ?> destination<?php echo $weatherCheckFailed===1?'':'s'; ?> could not be checked right now — the weather provider didn't respond.)<?php endif; ?></p>
     <?php endif; ?>
 
-    <h4><i class="fa fa-plane" style="color:#94a3b8;"></i> Flight disruptions</h4>
-    <p style="color:#888;">Not applicable on this platform — TMS has no flight-booking model (no flight numbers, carriers, or a flight-booking table anywhere in the schema). <a href="../flight-status.php">Flight Status Lookup</a> is a standalone tool a visitor can use to check any flight, but it isn't tied to any booking here, so there is nothing real for this dashboard to monitor. Shown here rather than a fabricated widget, per this project's "no fake placeholder features" rule.</p>
+    <h4><i class="fa fa-plane" style="color:var(--text-muted);"></i> Flight disruptions</h4>
+    <p style="color:var(--text-muted);">Not applicable on this platform — TMS has no flight-booking model (no flight numbers, carriers, or a flight-booking table anywhere in the schema). <a href="../flight-status.php">Flight Status Lookup</a> is a standalone tool a visitor can use to check any flight, but it isn't tied to any booking here, so there is nothing real for this dashboard to monitor. Shown here rather than a fabricated widget, per this project's "no fake placeholder features" rule.</p>
 </div><!-- /.tms-content -->
 <?php include('includes/footer.php'); ?>
 </main>

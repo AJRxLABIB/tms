@@ -18,7 +18,7 @@ tms_admin_require_role($dbh, ['operations', 'manager']); // Round 20 RBAC (item 
 <link href="<?php echo tms_asset_ver('css/admin-v6.css'); ?>" rel="stylesheet">
 <style>
 .page-title-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;flex-wrap:wrap;gap:12px;}
-.page-title-row h2{font-family:'Inter',sans-serif;font-size:22px;font-weight:800;color:#17231E;margin:0;}
+.page-title-row h2{font-family:'Inter',sans-serif;font-size:22px;font-weight:800;color:var(--text-primary);margin:0;}
 .alert-msg{padding:12px 16px;border-radius:10px;font-size:13.5px;margin-bottom:18px;display:flex;align-items:center;gap:8px;}
 .alert-success{background:#d1fae5;color:#065f46;border:1px solid #a7f3d0;}
 .alert-error{background:#fee2e2;color:#991b1b;border:1px solid #fca5a5;}
@@ -76,22 +76,22 @@ catch(Exception $e){ $contacts=[]; }
 <?php if($msg): ?><div class="alert-msg alert-<?=$msgType?>"><i class="fa fa-check-circle"></i><?=htmlspecialchars($msg)?></div><?php endif; ?>
 <div style="background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:20px;margin-bottom:24px;">
   <h3 style="font-size:16px;font-weight:700;margin-bottom:14px;">Add Country Emergency Info</h3>
-  <p style="font-size:12px;color:#94a3b8;margin-top:-8px;margin-bottom:14px;">This feeds the live "Emergency Contacts &amp; Travel Safety" page — one entry per country.</p>
+  <p style="font-size:12px;color:var(--text-muted);margin-top:-8px;margin-bottom:14px;">This feeds the live "Emergency Contacts &amp; Travel Safety" page — one entry per country.</p>
   <form method="post" style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;">
   <?php tms_csrf_field(); ?>
-    <div><label style="font-size:12px;font-weight:500;color:#64748b;display:block;margin-bottom:4px;" for="emg_country">Country *</label>
+    <div><label style="font-size:12px;font-weight:500;color:var(--text-muted);display:block;margin-bottom:4px;" for="emg_country">Country *</label>
     <input type="text" id="emg_country" name="country" placeholder="e.g. Bangladesh" style="padding:8px 12px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:13px;" required></div>
-    <div><label style="font-size:12px;font-weight:500;color:#64748b;display:block;margin-bottom:4px;" for="emg_police">Police</label>
+    <div><label style="font-size:12px;font-weight:500;color:var(--text-muted);display:block;margin-bottom:4px;" for="emg_police">Police</label>
     <input type="text" id="emg_police" name="police" placeholder="999" style="padding:8px 12px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:13px;width:100px;"></div>
-    <div><label style="font-size:12px;font-weight:500;color:#64748b;display:block;margin-bottom:4px;" for="emg_ambulance">Ambulance</label>
+    <div><label style="font-size:12px;font-weight:500;color:var(--text-muted);display:block;margin-bottom:4px;" for="emg_ambulance">Ambulance</label>
     <input type="text" id="emg_ambulance" name="ambulance" placeholder="999" style="padding:8px 12px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:13px;width:100px;"></div>
-    <div><label style="font-size:12px;font-weight:500;color:#64748b;display:block;margin-bottom:4px;" for="emg_fire">Fire</label>
+    <div><label style="font-size:12px;font-weight:500;color:var(--text-muted);display:block;margin-bottom:4px;" for="emg_fire">Fire</label>
     <input type="text" id="emg_fire" name="fire" placeholder="999" style="padding:8px 12px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:13px;width:100px;"></div>
-    <div><label style="font-size:12px;font-weight:500;color:#64748b;display:block;margin-bottom:4px;" for="emg_helpline">Tourist Helpline</label>
+    <div><label style="font-size:12px;font-weight:500;color:var(--text-muted);display:block;margin-bottom:4px;" for="emg_helpline">Tourist Helpline</label>
     <input type="text" id="emg_helpline" name="helpline" placeholder="+880..." style="padding:8px 12px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:13px;"></div>
-    <div><label style="font-size:12px;font-weight:500;color:#64748b;display:block;margin-bottom:4px;" for="emg_embassy">Embassy</label>
+    <div><label style="font-size:12px;font-weight:500;color:var(--text-muted);display:block;margin-bottom:4px;" for="emg_embassy">Embassy</label>
     <input type="text" id="emg_embassy" name="embassy" placeholder="Embassy contact" style="padding:8px 12px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:13px;"></div>
-    <div style="flex-basis:100%;"><label style="font-size:12px;font-weight:500;color:#64748b;display:block;margin-bottom:4px;" for="emg_tips">Safety Tips</label>
+    <div style="flex-basis:100%;"><label style="font-size:12px;font-weight:500;color:var(--text-muted);display:block;margin-bottom:4px;" for="emg_tips">Safety Tips</label>
     <textarea id="emg_tips" name="tips" placeholder="General safety guidance for this country..." style="padding:8px 12px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:13px;width:100%;min-height:60px;"></textarea></div>
     <button type="submit" name="add_contact" class="btn-v6 primary"><i class="fa fa-plus"></i> Add</button>
   </form>
@@ -101,7 +101,7 @@ catch(Exception $e){ $contacts=[]; }
   <thead><tr><th>#</th><th>Country</th><th>Police</th><th>Ambulance</th><th>Fire</th><th>Helpline</th><th>Actions</th></tr></thead>
   <tbody>
   <?php if(empty($contacts)): ?>
-  <tr><td colspan="7" style="text-align:center;padding:40px;color:#94a3b8;">No emergency contact info added yet.</td></tr>
+  <tr><td colspan="7" style="text-align:center;padding:40px;color:var(--text-muted);">No emergency contact info added yet.</td></tr>
   <?php else: $i=1; foreach($contacts as $c): ?>
   <tr>
     <td><?=$i++?></td>

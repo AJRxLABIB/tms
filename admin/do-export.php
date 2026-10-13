@@ -68,15 +68,15 @@ if ($format === 'csv') {
 ?>
 
 <button class="print-btn" onclick="window.print()"><i class="fa fa-print"></i> Print / Save as PDF</button>
-<h3>TMS – <?= ucfirst($type) ?> Report &nbsp;<small style="color:#aaa;font-size:14px;"><?= date('d M Y') ?></small></h3>
-<p style="color:#888;"><?= count($data) ?> record(s)</p>
+<h3>TMS – <?= ucfirst($type) ?> Report &nbsp;<small style="color:var(--text-muted);font-size:14px;"><?= date('d M Y') ?></small></h3>
+<p style="color:var(--text-muted);"><?= count($data) ?> record(s)</p>
 <table>
   <thead><tr><?php foreach ($headers as $h): ?><th><?= htmlspecialchars($h) ?></th><?php endforeach; ?></tr></thead>
   <tbody>
   <?php foreach ($data as $row): ?>
   <tr><?php foreach ($row as $cell): ?><td><?= htmlspecialchars((string)$cell) ?></td><?php endforeach; ?></tr>
   <?php endforeach; ?>
-  <?php if (count($data)===0): ?><tr><td colspan="<?= count($headers) ?>" style="text-align:center;color:#aaa;">No data found.</td></tr><?php endif; ?>
+  <?php if (count($data)===0): ?><tr><td colspan="<?= count($headers) ?>" style="text-align:center;color:var(--text-muted);">No data found.</td></tr><?php endif; ?>
   </tbody>
 </table>
 <?php include('includes/footer.php'); ?>
