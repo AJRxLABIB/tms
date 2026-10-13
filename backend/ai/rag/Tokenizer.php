@@ -15,7 +15,7 @@ final class RagTokenizer
 {
     private const STOP = [
         'the','a','an','and','or','of','to','in','on','for','with','is','are','be','at','by','from','this','that',
-        'it','as','do','does','i','me','my','we','you','your','can','what','how','which','any','have','has',
+        'it','as','do','under','below','than','less','within','max','maximum','package','packages','tour','tours','trip','trips','want','show','find','please','some','best','looking','need','does','i','me','my','we','you','your','can','what','how','which','any','have','has',
         'আমি','আমার','এবং','ও','কি','কী','এই','সেই','জন্য','থেকে','এর','না','আছে','কত','কোন','কোনো','করা','করে',
     ];
 
@@ -47,6 +47,7 @@ final class RagTokenizer
                 continue;
             }
             if (in_array($w, self::STOP, true)) continue;
+            if (ctype_digit($w) && strlen($w) >= 4) continue; // prices/years are noise for topical matching
             $out[] = self::stem($w);
         }
         return $out;
