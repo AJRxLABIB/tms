@@ -226,7 +226,7 @@ html[data-theme="dark"] .forecast-temps { color: var(--text-muted) !important; }
                         <?php echo date('F Y'); ?>
                     </div>
                 </div>
-                <p style="font-size:11.5px;color:#999;margin-top:10px;">
+                <p style="font-size:11.5px;color:var(--text-muted);margin-top:10px;">
                     <i class="fa fa-info-circle"></i>
                     <?php
                     // BUG FIX: this checked for error === 'no_key', a value
@@ -264,7 +264,7 @@ html[data-theme="dark"] .forecast-temps { color: var(--text-muted) !important; }
                         for($i=1;$i<=5;$i++) echo $i<=$stars ? '★' : '☆';
                         ?>
                     </span>
-                    <span style="font-size:13px;color:#777;">(<?php echo $stars; ?>/5)</span>
+                    <span style="font-size:13px;color:var(--text-muted);">(<?php echo $stars; ?>/5)</span>
                 </div>
             </div>
 
@@ -284,7 +284,7 @@ html[data-theme="dark"] .forecast-temps { color: var(--text-muted) !important; }
                         <span class="forecast-temps"><strong><?php echo $f['temp_max']; ?>°C</strong> / <?php echo $f['temp_min']; ?>°C</span>
                     </div>
                     <?php endforeach; ?>
-                    <p style="font-size:11px;color:#aaa;margin-top:8px;">Live forecast via <?php echo $liveWeather['source'] === 'openweathermap' ? 'OpenWeatherMap' : 'Open-Meteo'; ?></p>
+                    <p style="font-size:11px;color:var(--text-muted);margin-top:8px;">Live forecast via <?php echo $liveWeather['source'] === 'openweathermap' ? 'OpenWeatherMap' : 'Open-Meteo'; ?></p>
                 <?php else: ?>
                 <?php
                 // HONESTY FIX (Round 14): this block used to render seven

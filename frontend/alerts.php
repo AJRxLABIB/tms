@@ -126,7 +126,7 @@ $availAlerts = $availAlerts->fetchAll(PDO::FETCH_OBJ);
 
   <div class="alert-box">
     <h4>Your price alerts</h4>
-    <?php if (empty($priceAlerts)): ?><p style="color:#888;">No price alerts yet.</p><?php endif; ?>
+    <?php if (empty($priceAlerts)): ?><p style="color:var(--text-muted);">No price alerts yet.</p><?php endif; ?>
     <?php foreach ($priceAlerts as $a): ?>
       <div class="alert-row">
         <span><?php echo htmlspecialchars($a->PackageName, ENT_QUOTES, 'UTF-8'); ?> — at or below <?php echo tms_currency((float)$a->TargetPrice); ?>
@@ -146,7 +146,7 @@ $availAlerts = $availAlerts->fetchAll(PDO::FETCH_OBJ);
 
   <div class="alert-box">
     <h4>Your availability alerts</h4>
-    <?php if (empty($availAlerts)): ?><p style="color:#888;">No availability alerts yet.</p><?php endif; ?>
+    <?php if (empty($availAlerts)): ?><p style="color:var(--text-muted);">No availability alerts yet.</p><?php endif; ?>
     <?php foreach ($availAlerts as $a): ?>
       <div class="alert-row">
         <span><?php echo htmlspecialchars($a->PackageName, ENT_QUOTES, 'UTF-8'); ?>

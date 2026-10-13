@@ -133,7 +133,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     .form-group{margin-bottom:15px;}
     .form-group label{font-size:11px;font-weight:700;color:#4a5568;text-transform:uppercase;letter-spacing:.5px;margin-bottom:5px;display:block;}
     .input-icon{position:relative;}
-    .input-icon .fi{position:absolute;left:12px;top:50%;transform:translateY(-50%);color:#a0aec0;font-size:13px;pointer-events:none;}
+    .input-icon .fi{position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--text-muted);font-size:13px;pointer-events:none;}
     .input-icon input{padding-left:34px;}
     /* ACCESSIBILITY FIX (Round 69, WCAG 2.5.8 target size): padding:0 and
        no explicit box left this button's clickable area at roughly the
@@ -141,7 +141,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
        An explicit 24x24 flex-centered box fixes this without moving the
        icon's visible position (right nudged from 10px to 4px to
        compensate for the wider box). */
-    .input-icon .eye-btn{position:absolute;right:4px;top:50%;transform:translateY(-50%);background:none;border:none;color:#a0aec0;cursor:pointer;padding:0;font-size:13px;width:24px;height:24px;display:flex;align-items:center;justify-content:center;}
+    .input-icon .eye-btn{position:absolute;right:4px;top:50%;transform:translateY(-50%);background:none;border:none;color:var(--text-muted);cursor:pointer;padding:0;font-size:13px;width:24px;height:24px;display:flex;align-items:center;justify-content:center;}
     .form-control{width:100%;border:2px solid #e2e8f0;border-radius:8px;height:44px;font-size:14px;transition:.2s;}
     .form-control:focus{border-color:#176B50;box-shadow:0 0 0 3px rgba(23,107,80,.15);outline:none;}
     .btn-register{background:linear-gradient(135deg,#176B50,#104B3A);color:#fff;border:none;border-radius:8px;height:46px;font-size:15px;font-weight:700;width:100%;transition:.2s;cursor:pointer;}
@@ -150,7 +150,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     .alert{border-radius:8px;font-size:13px;padding:11px 14px;border:none;margin-bottom:16px;}
     .alert-danger{background:#fff5f5;color:#c53030;}
     .alert-success{background:#f0fff4;color:#276749;}
-    .signin-link{text-align:center;margin-top:18px;font-size:13px;color:#718096;}
+    .signin-link{text-align:center;margin-top:18px;font-size:13px;color:var(--text-muted);}
     .signin-link a{color:#176B50;font-weight:700;text-decoration:none;}
     .strength-bar{height:4px;border-radius:2px;margin-top:5px;background:#e2e8f0;overflow:hidden;}
     .strength-fill{height:100%;border-radius:2px;transition:.3s;width:0;}

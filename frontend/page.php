@@ -314,7 +314,7 @@ function tms_page_t(array $T, string $key, string $fallback): string {
 <?php else: ?>
 	<div style="text-align:center;padding:60px 20px;">
 		<i class="fa fa-file-o" style="font-size:50px;color:#ddd;display:block;margin-bottom:16px;"></i>
-		<h3 style="color:#aaa;">Page not found</h3>
+		<h3 style="color:var(--text-muted);">Page not found</h3>
 		<a href="index.php" class="btn btn-primary" style="margin-top:10px;">Back to Home</a>
 	</div>
 <?php endif; ?>

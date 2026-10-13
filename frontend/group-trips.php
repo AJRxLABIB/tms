@@ -70,7 +70,7 @@ $groups = $groups->fetchAll(PDO::FETCH_OBJ);
 
   <div class="gt-box">
     <h4>Your group trips</h4>
-    <?php if (empty($groups)): ?><p style="color:#888;">You're not part of any group trip yet.</p><?php endif; ?>
+    <?php if (empty($groups)): ?><p style="color:var(--text-muted);">You're not part of any group trip yet.</p><?php endif; ?>
     <?php foreach ($groups as $g): ?>
       <div class="gt-row">
         <span><strong><?php echo htmlspecialchars($g->Name, ENT_QUOTES, 'UTF-8'); ?></strong> — <?php echo (int)$g->MemberCount; ?> member<?php echo $g->MemberCount==1?'':'s'; ?></span>

@@ -91,7 +91,7 @@ $tmsMapOtherColor = '#95a5a6';
 .dest-item { padding:10px; border-radius:8px; cursor:pointer; transition:0.2s; margin-bottom:8px; border:1px solid #f0f0f0; }
 .dest-item:hover, .dest-item.active { background: linear-gradient(135deg,#176B5011,#104B3A11); border-color:#176B50; }
 .dest-item h5 { font-size:13px; font-weight:700; margin:0 0 3px; color:#333; }
-.dest-item p { font-size:12px; color:#777; margin:0; }
+.dest-item p { font-size:12px; color:var(--text-muted); margin:0; }
 .dest-item span { font-size:12px; font-weight:700; color:#176B50; }
 .dest-item-nomap { opacity:0.6; cursor:help; }
 .dest-item-nomap:hover { background:#f7f7f7; border-color:#f0f0f0; }
@@ -111,13 +111,13 @@ $tmsMapOtherColor = '#95a5a6';
 .map-search-wrap { position:relative; margin-bottom:20px; }
 .map-search-input { width:100%; padding:12px 16px 12px 42px; border-radius:10px; border:2px solid #e5e7eb; font-size:14px; }
 .map-search-input:focus { outline:none; border-color:#176B50; }
-.map-search-icon { position:absolute; left:15px; top:13px; color:#999; }
+.map-search-icon { position:absolute; left:15px; top:13px; color:var(--text-muted); }
 .map-search-results { position:absolute; top:calc(100% + 6px); left:0; right:0; background:var(--white); border-radius:10px; box-shadow:0 8px 30px rgba(0,0,0,0.18); max-height:320px; overflow-y:auto; z-index:1000; display:none; }
 .map-search-result { padding:10px 16px; cursor:pointer; border-bottom:1px solid #f2f2f2; }
 .map-search-result:last-child { border-bottom:none; }
 .map-search-result:hover { background:#f5f6fb; }
 .map-search-result strong { display:block; font-size:13px; color:#333; }
-.map-search-result span { font-size:12px; color:#888; }
+.map-search-result span { font-size:12px; color:var(--text-muted); }
 
 /* ── Get Directions (Task 4 fix): this used to render the mode buttons and
      route stats INSIDE the marker's Leaflet popup, so the popup ballooned
@@ -135,7 +135,7 @@ $tmsMapOtherColor = '#95a5a6';
 .tms-dir-panel.open { display:block; }
 .tms-dir-panel-head { display:flex; align-items:center; justify-content:space-between; margin-bottom:8px; }
 .tms-dir-panel-title { font-weight:700; font-size:13px; color:#333; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:190px; }
-.tms-dir-panel-close { background:none; border:none; color:#999; font-size:16px; cursor:pointer; line-height:1; padding:2px 4px; }
+.tms-dir-panel-close { background:none; border:none; color:var(--text-muted); font-size:16px; cursor:pointer; line-height:1; padding:2px 4px; }
 .tms-dir-panel-close:hover { color:#e74c3c; }
 .mode-btn { display:inline-block; padding:5px 9px; border-radius:6px; border:1px solid #ddd; font-size:11.5px; cursor:pointer; margin-right:5px; background:var(--white); }
 .mode-btn.active { background:#176B50; color:#fff; border-color:#176B50; }
@@ -481,7 +481,7 @@ searchInput.addEventListener('input', function() {
         return (pkg.name + ' ' + pkg.location + ' ' + pkg.type).toLowerCase().indexOf(q) !== -1;
     }).slice(0, 12);
     if (!matches.length) {
-        searchResults.innerHTML = '<div class="map-search-result" style="color:#999;">No matching destinations</div>';
+        searchResults.innerHTML = '<div class="map-search-result" style="color:var(--text-muted);">No matching destinations</div>';
         searchResults.style.display = 'block';
         return;
     }
@@ -621,7 +621,7 @@ function computeRoute() {
         var mins = Math.round(route.duration / 60);
         var timeLabel = mins >= 60 ? Math.floor(mins/60) + 'h ' + (mins%60) + 'm' : mins + ' min';
         statsEl.innerHTML = '<strong>' + km + ' km</strong> · <strong>' + timeLabel + '</strong> by ' + currentMode +
-            '<br><span style="color:#999;">Route shown on map · OpenStreetMap data</span>';
+            '<br><span style="color:var(--text-muted);">Route shown on map · OpenStreetMap data</span>';
     }).catch(function(){
         statsEl.innerHTML = 'Could not calculate a route right now. You can still get directions manually via <a href="https://www.openstreetmap.org/directions?from='+userStart.lat+'%2C'+userStart.lng+'&to='+activeDestination.lat+'%2C'+activeDestination.lng+'" target="_blank" rel="noopener">OpenStreetMap</a>.';
     });

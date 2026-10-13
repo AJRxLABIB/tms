@@ -146,7 +146,7 @@ html[data-theme="dark"] .pay-total{color:var(--text) !important;}
     <?php else: ?>
     <div class="alert alert-info" style="margin-top:18px;"><?php echo htmlspecialchars(tms_t('msg_online_payment_unavailable', 'Online payment is not available yet. Your booking is saved as Pending and our team will contact you to arrange payment.'), ENT_QUOTES, 'UTF-8'); ?></div>
     <?php endif; ?>
-    <p style="font-size:12px;color:#888;margin-top:14px;text-align:center;"><?php echo tms_t('dest_skip_payment_note', 'You can also skip this — your booking stays Pending and our team can confirm it manually, exactly like before.'); ?></p>
+    <p style="font-size:12px;color:var(--text-muted);margin-top:14px;text-align:center;"><?php echo tms_t('dest_skip_payment_note', 'You can also skip this — your booking stays Pending and our team can confirm it manually, exactly like before.'); ?></p>
   </div>
   <?php endif; ?>
 </div>

@@ -288,9 +288,9 @@ tms_seo_meta([
 .pagination>.active>a,.pagination>.active>a:hover{background:var(--secondary);border-color:var(--secondary);}
 .pagination>li>a:hover{background:#e8f2fa;color:var(--secondary);}
 /* ── Results count ── */
-.results-info{color:#888;font-size:13px;margin-bottom:16px;}
+.results-info{color:var(--text-muted);font-size:13px;margin-bottom:16px;}
 /* ── No results ── */
-.no-results{text-align:center;padding:60px 20px;color:#aaa;}
+.no-results{text-align:center;padding:60px 20px;color:var(--text-muted);}
 .no-results i{font-size:50px;display:block;margin-bottom:16px;}
 </style>
 </head>
@@ -337,7 +337,7 @@ html[data-theme="dark"] .no-results { color: var(--text-light) !important; }
             <button type="button" id="nlSearchBtn" class="btn-search" onclick="tmsNlSearch()">
                 <i class="fa fa-magic"></i> <?php echo tms_t('btn_find_it','Find it'); ?>
             </button>
-            <div id="nlSearchStatus" style="width:100%;font-size:12.5px;color:#888;"></div>
+            <div id="nlSearchStatus" style="width:100%;font-size:12.5px;color:var(--text-muted);"></div>
         </div>
         <script>
         const TMS_NL_CSRF = <?php echo json_encode(tms_csrf_token()); ?>;
@@ -533,7 +533,7 @@ html[data-theme="dark"] .no-results { color: var(--text-light) !important; }
                             <?php for ($s = 1; $s <= 5; $s++): ?>
                                 <i class="fa fa-star<?php echo $s <= round($result->AvgRating) ? '' : '-o'; ?>" style="color:var(--brass);font-size:13px;"></i>
                             <?php endfor; ?>
-                            <span style="font-size:12px;color:#888;margin-left:4px;"><?php echo number_format($result->AvgRating, 1); ?></span>
+                            <span style="font-size:12px;color:var(--text-muted);margin-left:4px;"><?php echo number_format($result->AvgRating, 1); ?></span>
                         </p>
                         <?php endif; ?>
                     </div>
@@ -656,7 +656,7 @@ function tmsSwitchView(view) {
         mapBtn.classList.add('active');
         if (!tmsPkgMap) {
             if (!TMS_MAP_POINTS.length) {
-                mapEl.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:#94a3b8;font-size:13px;">None of the packages on this page have map coordinates set yet.</div>';
+                mapEl.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:var(--text-muted);font-size:13px;">None of the packages on this page have map coordinates set yet.</div>';
                 return;
             }
             // Master prompt item 62 (error/empty/loading states): this box
@@ -669,9 +669,9 @@ function tmsSwitchView(view) {
             // the same blank grey box with zero explanation. Show a brief
             // spinner immediately, and a clear message instead of a crash
             // if Leaflet itself never loaded.
-            mapEl.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:#94a3b8;font-size:13px;"><i class="fa fa-spinner fa-spin" style="margin-right:8px;"></i> Loading map…</div>';
+            mapEl.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:var(--text-muted);font-size:13px;"><i class="fa fa-spinner fa-spin" style="margin-right:8px;"></i> Loading map…</div>';
             if (typeof L === 'undefined') {
-                mapEl.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:#94a3b8;font-size:13px;text-align:center;padding:20px;"><i class="fa fa-exclamation-triangle" style="display:block;font-size:24px;margin-bottom:8px;"></i>Map couldn\'t load (offline or blocked script). Use List view to browse these packages instead.</div>';
+                mapEl.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:var(--text-muted);font-size:13px;text-align:center;padding:20px;"><i class="fa fa-exclamation-triangle" style="display:block;font-size:24px;margin-bottom:8px;"></i>Map couldn\'t load (offline or blocked script). Use List view to browse these packages instead.</div>';
                 return;
             }
             mapEl.innerHTML = '';

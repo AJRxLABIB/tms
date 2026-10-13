@@ -50,30 +50,30 @@ body { background: #f0f4f8; margin: 0; }
 .brand-row { display: flex; align-items: center; gap: 10px; color: #fff; margin-bottom: 12px; }
 .brand-icon { width: 40px; height: 40px; background: linear-gradient(135deg,#176B50,#104B3A); border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 18px; }
 .brand-text strong { display: block; font-size: 15px; font-weight: 800; }
-.brand-text span { font-size: 11px; color: rgba(255,255,255,.4); }
+.brand-text span { font-size: 11px; color: rgba(255,255,255,.72); }
 .online-pill { display: inline-flex; align-items: center; gap: 6px; background: rgba(72,187,120,.12); border: 1px solid rgba(72,187,120,.25); color: #68d391; border-radius: 20px; padding: 3px 10px; font-size: 11px; }
 .online-dot { width: 6px; height: 6px; background: #48bb78; border-radius: 50%; animation: pulse 2s infinite; }
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
 .trip-selector { padding: 12px 20px; border-bottom: 1px solid rgba(255,255,255,.06); }
-.trip-selector label { font-size: 10px; color: rgba(255,255,255,.35); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 5px; display: block; }
+.trip-selector label { font-size: 10px; color: rgba(255,255,255,.7); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 5px; display: block; }
 .trip-select { width:100%; background: rgba(255,255,255,.07); border: 1px solid rgba(255,255,255,.12); color: #fff; border-radius: 8px; padding: 7px 10px; font-size: 12px; outline: none; }
 .trip-select option { background: #1a1a2e; }
 .trip-info-card { margin: 12px 20px; background: rgba(23,107,80,.15); border: 1px solid rgba(23,107,80,.25); border-radius: 10px; padding: 12px; }
 .trip-info-title { font-size: 13px; font-weight: 700; color: #fff; margin-bottom: 6px; }
 .trip-info-meta { font-size: 11px; color: rgba(255,255,255,.5); }
 .quick-actions { padding: 12px 20px; border-bottom: 1px solid rgba(255,255,255,.06); }
-.qa-label { font-size: 10px; color: rgba(255,255,255,.35); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px; }
+.qa-label { font-size: 10px; color: rgba(255,255,255,.7); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px; }
 .qa-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 5px; }
 .qa-btn { background: rgba(255,255,255,.05); border: 1px solid rgba(255,255,255,.08); color: rgba(255,255,255,.7); border-radius: 7px; padding: 7px 8px; font-size: 11px; cursor: pointer; text-align: center; transition: .2s; }
 .qa-btn:hover { background: rgba(23,107,80,.2); color: #fff; }
 .sidebar-links { padding: 12px 20px; margin-top: auto; border-top: 1px solid rgba(255,255,255,.06); }
-.s-link { display: flex; align-items: center; gap: 8px; color: rgba(255,255,255,.4); font-size: 12px; text-decoration: none; padding: 5px 6px; border-radius: 6px; }
+.s-link { display: flex; align-items: center; gap: 8px; color: rgba(255,255,255,.72); font-size: 12px; text-decoration: none; padding: 5px 6px; border-radius: 6px; }
 .s-link:hover { background: rgba(255,255,255,.04); color: rgba(255,255,255,.7); }
 .s-link i { color: #176B50; width: 12px; }
 .chat-main { display: flex; flex-direction: column; background: #f8fafc; }
 .chat-topbar { background: #fff; padding: 14px 20px; border-bottom: 1px solid #e2e8f0; display: flex; align-items: center; justify-content: space-between; }
 .chat-topbar-title { font-size: 15px; font-weight: 800; color: #1a202c; }
-.chat-topbar-sub { font-size: 12px; color: #718096; }
+.chat-topbar-sub { font-size: 12px; color:var(--text-muted); }
 .topbar-actions { display: flex; gap: 8px; }
 .topbar-btn { background: #f0f4f8; border: none; border-radius: 7px; padding: 6px 12px; font-size: 12px; color: #4a5568; cursor: pointer; display: flex; align-items: center; gap: 5px; text-decoration: none; }
 .topbar-btn:hover { background: #e2e8f0; }
@@ -81,7 +81,7 @@ body { background: #f0f4f8; margin: 0; }
 .msg { max-width: 78%; display: flex; flex-direction: column; }
 .msg.user { align-self: flex-end; align-items: flex-end; }
 .msg.assistant { align-self: flex-start; align-items: flex-start; }
-.msg-meta { font-size: 10px; color: #a0aec0; margin-bottom: 3px; display: flex; align-items: center; gap: 5px; }
+.msg-meta { font-size: 10px; color:var(--text-muted); margin-bottom: 3px; display: flex; align-items: center; gap: 5px; }
 .msg-avatar { width: 26px; height: 26px; border-radius: 7px; background: linear-gradient(135deg,#176B50,#104B3A); display: flex; align-items: center; justify-content: center; font-size: 12px; color: #fff; }
 .msg-bubble { padding: 11px 14px; border-radius: 14px; font-size: 13px; line-height: 1.6; }
 .msg.assistant .msg-bubble { background: #fff; color: #1a202c; border-radius: 0 14px 14px 14px; box-shadow: 0 2px 8px rgba(0,0,0,.06); }
@@ -108,7 +108,7 @@ body { background: #f0f4f8; margin: 0; }
 .send-btn:disabled { opacity: .5; }
 .no-booking { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 40px; }
 .no-booking h3 { font-size: 1.2rem; font-weight: 800; color: #1a202c; margin-bottom: 10px; }
-.no-booking p { color: #718096; max-width: 380px; margin-bottom: 20px; font-size: 14px; }
+.no-booking p { color:#4B5563; max-width: 380px; margin-bottom: 20px; font-size: 14px; }
 @media(max-width:768px){.copilot-sidebar{display:none}.copilot-layout{grid-template-columns:1fr}}
 </style>
 </head>

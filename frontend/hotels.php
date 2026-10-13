@@ -113,8 +113,8 @@ tms_seo_meta([
 .pkg-toolbar .form-control{border:1.5px solid #e0e0e0;border-radius:7px;height:40px;font-size:14px;}
 .btn-search{background:var(--secondary);color:#fff;border:none;border-radius:7px;height:40px;padding:0 22px;font-weight:600;}
 .btn-reset{background:#f5f5f5;color:#555;border:1px solid #ddd;border-radius:7px;height:40px;padding:0 16px;font-weight:600;}
-.results-info{color:#888;font-size:13px;margin-bottom:16px;}
-.no-results{text-align:center;padding:60px 20px;color:#aaa;}
+.results-info{color:var(--text-muted);font-size:13px;margin-bottom:16px;}
+.no-results{text-align:center;padding:60px 20px;color:var(--text-muted);}
 .no-results i{font-size:50px;display:block;margin-bottom:16px;}
 .pagination-wrap{text-align:center;margin:30px 0 10px;}
 .pagination>li>a,.pagination>li>span{color:var(--secondary);border-radius:6px!important;margin:0 2px;border:1.5px solid #d8e8f5;}
@@ -202,11 +202,11 @@ tms_seo_meta([
                 <p><i class="fa fa-map-marker" style="color:#e74c3c"></i> <?php echo htmlspecialchars($h->City.', '.$h->Country, ENT_QUOTES, 'UTF-8'); ?></p>
                 <p><i class="fa fa-list" style="color:#27ae60"></i> <?php echo htmlspecialchars($h->Amenities ?? '', ENT_QUOTES, 'UTF-8'); ?></p>
                 <?php if ((float)$h->AvgRating > 0): ?>
-                <p style="margin:4px 0;"><i class="fa fa-star" style="color:#f0ad4e;font-size:13px;"></i> <span style="font-size:12px;color:#888;"><?php echo number_format((float)$h->AvgRating,1); ?>/5</span></p>
+                <p style="margin:4px 0;"><i class="fa fa-star" style="color:#f0ad4e;font-size:13px;"></i> <span style="font-size:12px;color:var(--text-muted);"><?php echo number_format((float)$h->AvgRating,1); ?>/5</span></p>
                 <?php endif; ?>
             </div>
             <div class="col-md-3 room-right">
-                <h5><?php echo tms_currency((float)$h->PricePerNight); ?><span style="font-size:11px;color:#999;font-weight:400;"> /night</span></h5>
+                <h5><?php echo tms_currency((float)$h->PricePerNight); ?><span style="font-size:11px;color:var(--text-muted);font-weight:400;"> /night</span></h5>
                 <a href="hotel-details.php?id=<?php echo (int)$h->HotelId; ?>" class="view"><?php echo tms_t('btn_view_book','View &amp; Book'); ?> <i class="fa fa-arrow-right"></i></a>
             </div>
             <div class="clearfix"></div>

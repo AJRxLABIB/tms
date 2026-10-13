@@ -856,6 +856,30 @@ html[data-theme="dark"] .leave-comment textarea {
 @keyframes tmsRippleAnim {
     to { transform: scale(1); opacity: 0; }
 }
+/* a11y (WCAG 1.4.3): the forest primary (#176B50) is a dark-on-light colour; on dark
+   surfaces text uses the mint tint, and white-on-mint controls use dark ink. */
+html[data-theme="dark"] .tms-nav-menu > li.active > a,
+html[data-theme="dark"] .rom-btm .room-midle h4,
+html[data-theme="dark"] .rom-btm .room-midle h4 a,
+html[data-theme="dark"] [style*="color:#176B50"], html[data-theme="dark"] [style*="color: #176B50"] { color: #5CC79C !important; }
+html[data-theme="dark"] .view, html[data-theme="dark"] .btn-book, html[data-theme="dark"] .btn-enquiry,
+html[data-theme="dark"] .btn-save, html[data-theme="dark"] .wallet-card .btn-primary, html[data-theme="dark"] .btn-pay,
+html[data-theme="dark"] .btn-login, html[data-theme="dark"] .btn-recover, html[data-theme="dark"] .rom-btm .room-right button { color: #0E3B2D !important; }
+html[data-theme="dark"] [style*="background:#fff"], html[data-theme="dark"] [style*="background: #fff"],
+html[data-theme="dark"] [style*="background:#ffffff"], html[data-theme="dark"] [style*="background: white"],
+html[data-theme="dark"] [style*="background:white"], html[data-theme="dark"] .wallet-card, html[data-theme="dark"] .btn-default { background: #18211C !important; border-color: #2A362F !important; color: #EAF1EC; }
+html[data-theme="dark"] .wallet-card h4 { color: #5CC79C !important; }
+html[data-theme="dark"] .field-label, html[data-theme="dark"] .planner-card label { color: #AAB8AF !important; }
+html[data-theme="dark"] .bk-timeline .step { color: #93A399 !important; }
+html[data-theme="dark"] .bk-timeline .step.done { color: #4CC38A !important; }
+html[data-theme="dark"] .cancel-btn { color: #F08080 !important; border-color: #F08080 !important; }
+html[data-theme="dark"] .nearby-tab { color: #AAB8AF; }
+html[data-theme="dark"] #nlSearchBtn, html[data-theme="dark"] .btn-search, html[data-theme="dark"] .btn-checkout { color: #0E3B2D !important; }
+html[data-theme="dark"] .btn-reset { background: #232E27 !important; color: #EAF1EC !important; border-color: #2A362F !important; }
+html[data-theme="dark"] .planner-card, html[data-theme="dark"] .history-header { background: #18211C !important; color: #EAF1EC; }
+html[data-theme="dark"] .history-header .booking-id { color: #5CC79C !important; }
+html[data-theme="dark"] .nearby-tab.active,
+html[data-theme="dark"] .btn-secondary, html[data-theme="dark"] .btn-info { color: #0E3B2D !important; }
 </style>
 
 <script>

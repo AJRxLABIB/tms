@@ -44,7 +44,7 @@ $preloadDest = tms_clean($_GET['dest'] ?? '');
 .guide-sidebar { background:#fff; border-radius:20px; padding:24px; box-shadow:0 4px 20px rgba(0,0,0,.08); align-self:start; position:sticky; top:20px; }
 .guide-avatar { width:72px; height:72px; border-radius:20px; background:linear-gradient(135deg,#f6d365,#fda085); display:flex; align-items:center; justify-content:center; font-size:32px; margin:0 auto 16px; }
 .guide-name { text-align:center; font-size:1rem; font-weight:800; color:#1a202c; margin-bottom:4px; }
-.guide-role { text-align:center; font-size:12px; color:#718096; margin-bottom:20px; }
+.guide-role { text-align:center; font-size:12px; color:var(--text-muted); margin-bottom:20px; }
 
 .dest-input-wrap { margin-bottom:20px; }
 .dest-input { width:100%; padding:10px 14px; border:2px solid #e2e8f0; border-radius:10px; font-size:14px; outline:none; transition:.2s; }
@@ -52,7 +52,7 @@ $preloadDest = tms_clean($_GET['dest'] ?? '');
 .btn-set-dest { width:100%; background:linear-gradient(135deg,#f6d365,#fda085); border:none; border-radius:10px; padding:10px; font-size:13px; font-weight:700; color:#1a202c; cursor:pointer; transition:.2s; }
 .btn-set-dest:hover { transform:translateY(-1px); box-shadow:0 4px 12px rgba(246,173,85,.4); }
 
-.guide-sidebar h6 { font-size:11px; font-weight:700; color:#a0aec0; text-transform:uppercase; letter-spacing:.8px; margin-bottom:10px; }
+.guide-sidebar h6 { font-size:11px; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:.8px; margin-bottom:10px; }
 .topic-btn { width:100%; text-align:left; background:#f8fafc; border:1px solid #f0f0f0; border-radius:8px; padding:8px 12px; font-size:13px; color:#4a5568; cursor:pointer; margin-bottom:6px; transition:.2s; display:flex; align-items:center; gap:8px; }
 .topic-btn:hover { background:#fffbeb; border-color:#f6ad55; color:#744210; }
 
@@ -134,7 +134,7 @@ $preloadDest = tms_clean($_GET['dest'] ?? '');
             <div class="no-dest" id="noDestState">
                 <div class="no-dest-icon">🗺️</div>
                 <h5 style="font-weight:800;color:#1a202c;">Where are you going?</h5>
-                <p style="color:#718096;font-size:14px;">Enter a destination in the sidebar and I'll become your personal local expert guide.</p>
+                <p style="color:var(--text-muted);font-size:14px;">Enter a destination in the sidebar and I'll become your personal local expert guide.</p>
             </div>
             <div class="typing" id="guideTyping">
                 <div class="typing-bub">
@@ -224,7 +224,7 @@ function addGuideMessage(html) {
     <div class="gmsg gmsg-guide">
         <div class="gmsg-name">🧭 AI Guide</div>
         <div class="gmsg-bubble">${html}</div>
-        <div style="font-size:10px;color:#a0aec0;margin-top:3px;">${now}</div>
+        <div style="font-size:10px;color:var(--text-muted);margin-top:3px;">${now}</div>
     </div>`);
     msgs.scrollTop = msgs.scrollHeight;
 }

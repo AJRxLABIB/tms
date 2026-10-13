@@ -55,7 +55,7 @@ $pointsFromReferrals = count($referred) * 50;
 .stat-row{display:flex;gap:16px;margin-bottom:20px;}
 .stat-box{flex:1;background:var(--white);border-radius:12px;padding:20px;text-align:center;box-shadow:0 3px 15px rgba(0,0,0,0.08);}
 .stat-box .num{font-size:32px;font-weight:900;color:#176B50;}
-.stat-box .lbl{font-size:12.5px;color:#94a3b8;margin-top:4px;}
+.stat-box .lbl{font-size:12.5px;color:var(--text-muted);margin-top:4px;}
 .share-btns{display:flex;gap:10px;margin-top:14px;flex-wrap:wrap;}
 .share-btns a{padding:9px 16px;border-radius:8px;font-size:13px;font-weight:600;text-decoration:none;color:#fff;display:inline-flex;align-items:center;gap:6px;}
 </style>
@@ -74,12 +74,12 @@ $pointsFromReferrals = count($referred) * 50;
 
   <div class="info-card">
     <h5><i class="fa fa-link"></i> Your Referral Link</h5>
-    <p style="color:#888;font-size:13px;">Share this link — anyone who signs up through it gives you both 50 points.</p>
+    <p style="color:var(--text-muted);font-size:13px;">Share this link — anyone who signs up through it gives you both 50 points.</p>
     <div class="ref-link-box">
       <input type="text" id="refLinkInput" readonly value="<?= htmlspecialchars($referralLink, ENT_QUOTES, 'UTF-8') ?>">
       <button class="btn-copy" onclick="copyRefLink()"><i class="fa fa-copy"></i> Copy</button>
     </div>
-    <p style="margin-top:10px;font-size:12.5px;color:#94a3b8;">Your referral code: <strong><?= htmlspecialchars($myCode, ENT_QUOTES, 'UTF-8') ?></strong></p>
+    <p style="margin-top:10px;font-size:12.5px;color:var(--text-muted);">Your referral code: <strong><?= htmlspecialchars($myCode, ENT_QUOTES, 'UTF-8') ?></strong></p>
     <div class="share-btns">
       <a href="https://wa.me/?text=<?= urlencode("Plan your next trip with TMS Travel! Sign up with my link and we both get bonus points: $referralLink") ?>" target="_blank" style="background:#25D366;"><i class="fa fa-whatsapp"></i> WhatsApp</a>
       <a href="mailto:?subject=<?= urlencode('Join me on TMS Travel') ?>&body=<?= urlencode("Hey! I've been using TMS Travel to plan trips. Sign up with my referral link and we both get 50 bonus points: $referralLink") ?>" style="background:#64748b;"><i class="fa fa-envelope"></i> Email</a>
@@ -89,7 +89,7 @@ $pointsFromReferrals = count($referred) * 50;
   <div class="info-card">
     <h5><i class="fa fa-user-plus"></i> Friends You've Referred</h5>
     <?php if (empty($referred)): ?>
-      <p style="color:#999;text-align:center;padding:24px;">No referrals yet — share your link above to start earning!</p>
+      <p style="color:var(--text-muted);text-align:center;padding:24px;">No referrals yet — share your link above to start earning!</p>
     <?php else: ?>
     <div class="table-responsive"><table class="table table-striped" style="margin-top:10px;">
       <thead><tr><th>Name</th><th>Joined</th></tr></thead>

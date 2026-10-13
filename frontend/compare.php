@@ -115,7 +115,7 @@ foreach ($packages as $p) {
 <div class="empty-state">
   <i class="fa fa-columns" style="font-size:64px;color:#ddd;"></i>
   <h3 style="margin-top:16px;"><?php echo tms_t('msg_no_packages_to_compare','No packages to compare'); ?></h3>
-  <p style="color:#888;"><?php echo tms_t('dest_compare_instructions','Go to <a href="package-list.php">Tour Packages</a> and click "Compare" on up to 3 packages.'); ?></p>
+  <p style="color:var(--text-muted);"><?php echo tms_t('dest_compare_instructions','Go to <a href="package-list.php" style="text-decoration:underline;">Tour Packages</a> and click "Compare" on up to 3 packages.'); ?></p>
 </div>
 <?php else: ?>
 <div style="margin-bottom:16px;display:flex;justify-content:space-between;align-items:center;">

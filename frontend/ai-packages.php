@@ -76,7 +76,7 @@ if (!empty($_SESSION['login'])) {
 .pricing-box{background:#fff;padding:18px;text-align:center}
 .pricing-box.total-box{background:linear-gradient(135deg,#176B50,#104B3A);color:#fff}
 .pricing-amount{font-size:1.3rem;font-weight:900}
-.pricing-label{font-size:11px;color:#718096;text-transform:uppercase;letter-spacing:.5px;margin-top:3px}
+.pricing-label{font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px;margin-top:3px}
 .total-box .pricing-label{color:rgba(255,255,255,.75)}
 
 /* Sections */
@@ -125,7 +125,7 @@ if (!empty($_SESSION['login'])) {
 .ai-thinking-pkg{text-align:center;padding:70px 20px;display:none}
 .thinking-orbit{width:80px;height:80px;border:4px solid #e2e8f0;border-top-color:#176B50;border-radius:50%;animation:spin 1.2s linear infinite;margin:0 auto 24px}
 @keyframes spin{to{transform:rotate(360deg)}}
-.thinking-msgs{color:#718096;font-size:14px}
+.thinking-msgs{color:var(--text-muted);font-size:14px}
 
 /* My packages tab */
 .my-pkgs-section{margin-top:50px}
@@ -133,7 +133,7 @@ if (!empty($_SESSION['login'])) {
 .my-pkg-card:hover{box-shadow:0 6px 20px rgba(0,0,0,.1);transform:translateY(-2px)}
 .my-pkg-icon{width:50px;height:50px;background:linear-gradient(135deg,#176B50,#104B3A);border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0}
 .my-pkg-name{font-size:14px;font-weight:700;color:#1a202c;margin-bottom:4px}
-.my-pkg-meta{font-size:12px;color:#718096}
+.my-pkg-meta{font-size:12px;color:var(--text-muted)}
 .my-pkg-price{font-size:16px;font-weight:800;color:#176B50;margin-left:auto;text-align:right;flex-shrink:0}
 
 @media(max-width:768px){.incl-grid{grid-template-columns:1fr}.ai-pkg-meta{gap:10px}.pkg-actions{flex-direction:column}}
@@ -426,7 +426,7 @@ function renderPackage(pkg) {
       <div class="acc-card">
         <span class="acc-type">${esc(acc.type || 'Hotel')}</span>
         <div class="acc-name">${esc(acc.name)}</div>
-        <div style="font-size:13px;color:#718096;margin-top:4px;">
+        <div style="font-size:13px;color:var(--text-muted);margin-top:4px;">
           <i class="fa fa-map-marker"></i> ${esc(acc.location || '')}
           ${acc.estimated_rate ? `&nbsp;|&nbsp; <i class="fa fa-money"></i> ~${esc(acc.estimated_rate)}/night` : ''}
         </div>
@@ -465,7 +465,7 @@ function renderPackage(pkg) {
         <div style="font-size:2rem;font-weight:900;color:${ecoScore>=70?'#48bb78':ecoScore>=50?'#ed8936':'#e53e3e'}">${ecoScore}</div>
         <div style="flex:1">
           <div class="eco-bar-wrap"><div class="eco-bar-fill" style="width:${ecoScore}%"></div></div>
-          <div style="font-size:12px;color:#718096;margin-top:4px;">${esc(pkg.carbon_note || '')}</div>
+          <div style="font-size:12px;color:var(--text-muted);margin-top:4px;">${esc(pkg.carbon_note || '')}</div>
         </div>
       </div>
     </div>

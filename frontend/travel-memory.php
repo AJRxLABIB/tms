@@ -73,7 +73,7 @@ try {
 .trip-img { width:70px; height:50px; border-radius:10px; object-fit:cover; flex-shrink:0; }
 .trip-info { flex:1; }
 .trip-info h6 { font-weight:800; color:#1a202c; margin-bottom:2px; font-size:14px; }
-.trip-info p  { font-size:12px; color:#718096; margin:0; }
+.trip-info p  { font-size:12px; color:var(--text-muted); margin:0; }
 .trip-select-radio { width:20px; height:20px; border-radius:50%; border:2px solid #e2e8f0; flex-shrink:0; display:flex; align-items:center; justify-content:center; transition:.2s; }
 .trip-option.selected .trip-select-radio { background:#f093fb; border-color:#f093fb; }
 .trip-option.selected .trip-select-radio::after { content:''; width:8px; height:8px; background:#fff; border-radius:50%; }
@@ -136,7 +136,7 @@ try {
         <div class="bs-card">
             <h5>🗺️ Select a Completed Trip</h5>
             <?php if(empty($bookings)): ?>
-                <div style="text-align:center;padding:30px;color:#718096;">
+                <div style="text-align:center;padding:30px;color:var(--text-muted);">
                     <i class="fa fa-suitcase" style="font-size:40px;margin-bottom:12px;display:block;"></i>
                     <p>No confirmed bookings yet. <a href="package-list.php" style="color:#f093fb;">Browse packages</a> to start your travel journey!</p>
                 </div>
@@ -171,7 +171,7 @@ try {
     <div class="loading-state" id="loadingState">
         <div class="loading-spin"></div>
         <h5 style="font-weight:800;color:#1a202c;">AI is crafting your travel story…</h5>
-        <p style="color:#718096;" id="loadMsg">Reliving your journey</p>
+        <p style="color:var(--text-muted);" id="loadMsg">Reliving your journey</p>
     </div>
 
     <!-- Memory Output -->
@@ -186,7 +186,7 @@ try {
         <!-- Journal -->
         <div class="journal-card">
             <h4><span>📝</span> Your Travel Journal</h4>
-            <p style="font-size:13px;color:#718096;margin-bottom:20px;">An AI-crafted narrative of your adventure</p>
+            <p style="font-size:13px;color:var(--text-muted);margin-bottom:20px;">An AI-crafted narrative of your adventure</p>
             <div class="journal-text" id="journalText"></div>
             <div style="margin-top:16px;">
                 <button onclick="copyToClipboard('journalText')" style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:8px 16px;font-size:13px;cursor:pointer;color:#4a5568;">
@@ -204,7 +204,7 @@ try {
         <!-- Social Captions -->
         <div class="journal-card">
             <h4><span>📱</span> Social Media Captions</h4>
-            <p style="font-size:13px;color:#718096;margin-bottom:16px;">Ready to share on Instagram, Facebook, or WhatsApp</p>
+            <p style="font-size:13px;color:var(--text-muted);margin-bottom:16px;">Ready to share on Instagram, Facebook, or WhatsApp</p>
             <div class="caption-grid" id="captionGrid"></div>
         </div>
 
@@ -225,7 +225,7 @@ try {
         <h5 style="font-weight:800;color:#1a202c;margin-bottom:16px;">📚 Your Saved Memories</h5>
         <?php foreach($savedMemories as $m): ?>
         <div style="background:#fff;border-radius:14px;padding:20px;box-shadow:0 4px 16px rgba(0,0,0,.07);margin-bottom:14px;">
-            <div style="font-size:12px;color:#718096;margin-bottom:8px;"><?= date('d M Y', strtotime($m->created_at)) ?> · Booking #<?= $m->booking_id ?></div>
+            <div style="font-size:12px;color:var(--text-muted);margin-bottom:8px;"><?= date('d M Y', strtotime($m->created_at)) ?> · Booking #<?= $m->booking_id ?></div>
             <p style="font-size:13px;color:#2d3748;line-height:1.7;margin:0;"><?= htmlspecialchars(mb_substr($m->journal_text, 0, 200)) ?>…</p>
         </div>
         <?php endforeach; ?>

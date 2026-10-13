@@ -94,7 +94,7 @@ tms_seo_meta([
 .post-hero{width:100%;max-height:420px;object-fit:cover;border-radius:12px;margin-bottom:28px;}
 .post-body{max-width:820px;margin:0 auto;}
 .post-body h1{font-size:30px;font-weight:800;color:#222;margin-bottom:10px;}
-.post-meta{color:#aaa;font-size:14px;margin-bottom:24px;padding-bottom:16px;border-bottom:1px solid #eee;}
+.post-meta{color:var(--text-muted);font-size:14px;margin-bottom:24px;padding-bottom:16px;border-bottom:1px solid #eee;}
 .post-content{font-size:16px;line-height:1.9;color:#444;}
 html[data-theme="dark"] .post-meta { color: var(--text-light) !important; }
 html[data-theme="dark"] .post-content { color: var(--text) !important; }
@@ -138,7 +138,7 @@ html[data-theme="dark"] .post-content { color: var(--text) !important; }
     <?php endif; ?>
     <div class="post-content"><?= nl2br(htmlspecialchars($post->Content)) ?></div>
     <?php if (!empty($post->Sources)): ?>
-    <div class="post-sources" style="margin-top:28px;padding-top:18px;border-top:1px solid #eee;font-size:13.5px;color:#777;">
+    <div class="post-sources" style="margin-top:28px;padding-top:18px;border-top:1px solid #eee;font-size:13.5px;color:var(--text-muted);">
       <strong>Sources:</strong>
       <ul style="margin:8px 0 0;padding-left:20px;">
         <?php foreach (preg_split('/\r\n|\r|\n/', trim($post->Sources)) as $srcLine): ?>

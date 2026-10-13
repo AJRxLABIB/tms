@@ -1337,7 +1337,7 @@ html[data-theme="dark"] .tms-notif-msg { color: #eef2f7; }
   margin-bottom: 48px;
 }
 .tms-footer-brand .tms-logo-text strong { color: #fff; }
-.tms-footer-brand .tms-logo-text span { color: rgba(255,255,255,0.4); }
+.tms-footer-brand .tms-logo-text span { color: rgba(255,255,255,0.72); }
 .tms-footer-brand p { font-size: 13.5px; margin-top: 14px; line-height: 1.7; color: rgba(255,255,255,0.55); }
 .tms-footer-social { display: flex; gap: 10px; margin-top: 20px; }
 .tms-social-btn {
@@ -1697,7 +1697,7 @@ textarea:focus-visible,
   top: 10px; left: -6px;
   z-index: 2;
   background: var(--brass);
-  color: #2b2205;
+  color: #140F00;
   font-family: var(--font-mono);
   font-size: 9.5px;
   font-weight: 700;
@@ -1751,7 +1751,7 @@ textarea:focus-visible,
   align-items: center;
   gap: 5px;
   background: #fff3cd;
-  color: #8a6d00;
+  color: #735A00;
   border: 1px solid #ffe08a;
   border-radius: 20px;
   padding: 3px 11px;
@@ -1839,3 +1839,22 @@ html body i.fa.fa-user, html body i.fa.fa-ticket, html body i.fa.fa-clock-o, htm
 /* signed-in topbar links: single line, tighter spacing so they don't wrap */
 .tms-topbar a { white-space: nowrap; }
 @media (max-width: 1280px) { .tms-topbar a { font-size: 12px; } }
+
+/* ── a11y (WCAG 1.4.3) refinements ───────────────────────────── */
+::placeholder, .form-control::placeholder, input::placeholder, textarea::placeholder,
+::-webkit-input-placeholder, .form-control::-webkit-input-placeholder { color: #6B756F !important; opacity: 1 !important; }
+html[data-theme="dark"] ::placeholder, html[data-theme="dark"] .form-control::placeholder { color: #93A399; opacity: 1; }
+.label-warning { background-color: #8A5A00; color: #fff; }
+.label-default { background-color: #5F6D65; color: #fff; }
+
+/* ─── a11y contrast fixes (round 3) ─── */
+.pkg-card > h4 { color: var(--text) !important; }
+#couponCode, #fld_comment, .form-control { color: var(--text) !important; }
+html[data-theme="dark"] .btn-topbar-signup, html[data-theme="dark"] .btn-topbar-signup:hover { background: #104B3A !important; color: #fff !important; }
+html[data-theme="dark"] .pagination > li > a { background: #18211C !important; color: #CFE3D6 !important; border-color: #2B3A32 !important; }
+html[data-theme="dark"] .pagination > .active > a { background: #104B3A !important; color: #fff !important; }
+html[data-theme="dark"] td span[style*="color:#0B6B2E"] { color: #5CC79C !important; }
+.btn-cta-outline { border-color: rgba(255,255,255,.85); }
+p > a:not(.btn):not([class]), td > a:not(.btn):not([class]) { text-decoration: underline; }
+
+.tms-theme-switch { min-width: 32px; min-height: 32px; }

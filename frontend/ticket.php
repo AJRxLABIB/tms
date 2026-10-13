@@ -90,20 +90,20 @@ if ($booking) {
   .ticket-body { padding:28px 30px; }
   .row { display:flex; flex-wrap:wrap; gap:24px; margin-bottom:22px; }
   .field { flex:1; min-width:170px; }
-  .field .lbl { font-size:11px; color:#94a3b8; text-transform:uppercase; letter-spacing:.5px; margin-bottom:4px; }
+  .field .lbl { font-size:11px; color:var(--text-muted); text-transform:uppercase; letter-spacing:.5px; margin-bottom:4px; }
   .field .val { font-size:15px; font-weight:600; color:#1e293b; }
   hr.dashed { border:none; border-top:2px dashed #e2e8f0; margin:22px 0; }
   .cost-box { background:#f8fafc; border-radius:10px; padding:16px 20px; }
   .cost-row { display:flex; justify-content:space-between; font-size:13.5px; padding:4px 0; color:#475569; }
   .cost-row.total { font-size:16px; font-weight:800; color:#1e293b; border-top:1px solid #e2e8f0; margin-top:6px; padding-top:10px; }
-  .footer-note { padding:18px 30px 28px; font-size:12px; color:#94a3b8; line-height:1.6; }
+  .footer-note { padding:18px 30px 28px; font-size:12px; color:var(--text-muted); line-height:1.6; }
   .empty-box { background:#fff; border-radius:14px; padding:60px 30px; text-align:center; box-shadow:0 6px 30px rgba(0,0,0,0.09); }
   .empty-box i { font-size:48px; color:#e2e8f0; margin-bottom:16px; display:block; }
   .boarding-stub { position:relative; display:flex; align-items:center; gap:16px; padding:20px 30px; border-top:1px dashed #e2e8f0; }
   .stub-perf { position:absolute; top:-11px; left:0; right:0; height:22px; background:
       radial-gradient(circle at 0 11px, transparent 10px, #f1f3f6 11px) left/22px 22px repeat-x; }
   .qr-box { width:96px; height:96px; flex-shrink:0; background:#fff; border:1px solid #e2e8f0; border-radius:8px; padding:6px; box-sizing:border-box; display:flex; align-items:center; justify-content:center; }
-  .qr-noscript { font-size:11px; color:#94a3b8; text-align:center; }
+  .qr-noscript { font-size:11px; color:var(--text-muted); text-align:center; }
   .stub-info { font-size:12.5px; color:#475569; line-height:1.6; }
   @media print {
     body { background:#fff; padding:0; }
@@ -125,13 +125,13 @@ if ($booking) {
     <div class="empty-box">
       <i class="fa fa-ticket"></i>
       <h3><?php echo tms_t('heading_ticket_not_found','Ticket not found'); ?></h3>
-      <p style="color:#94a3b8;"><?php echo tms_t('msg_ticket_not_found_subtitle',"We couldn't find that booking on your account."); ?></p>
+      <p style="color:var(--text-muted);"><?php echo tms_t('msg_ticket_not_found_subtitle',"We couldn't find that booking on your account."); ?></p>
     </div>
   <?php elseif ($notReady): ?>
     <div class="empty-box">
       <i class="fa fa-clock-o"></i>
       <h3><?php echo tms_t('heading_ticket_not_ready','Ticket not ready yet'); ?></h3>
-      <p style="color:#94a3b8;">
+      <p style="color:var(--text-muted);">
         <?php echo (int)$booking->status === 2
           ? tms_t('msg_booking_cancelled_no_ticket','This booking was cancelled, so no ticket is available.')
           : tms_t('msg_booking_pending_no_ticket','This booking is still pending confirmation. Your e-ticket will be ready once our team confirms it.'); ?>
@@ -243,7 +243,7 @@ if ($booking) {
             // recalculated (see tms_capture_booking_fx()).
             $dispMeta = TMS_CURRENCIES[$booking->DisplayCurrency];
           ?>
-          <div class="cost-row" style="font-size:12px;color:#94a3b8;">
+          <div class="cost-row" style="font-size:12px;color:var(--text-muted);">
             <span><?php echo tms_t('dest_shown_in_currency_prefix','Shown to you in'); ?> <?php echo htmlspecialchars($booking->DisplayCurrency, ENT_QUOTES, 'UTF-8'); ?> <?php echo tms_t('dest_shown_in_currency_suffix','when you booked'); ?></span>
             <span><?php echo htmlspecialchars($dispMeta['symbol'], ENT_QUOTES, 'UTF-8'); ?> <?php echo number_format((float)$booking->DisplayAmount, (int)$dispMeta['decimals']); ?> (rate <?php echo number_format((float)$booking->FxRate, 4); ?>, <?php echo htmlspecialchars((string)$booking->FxRateSource, ENT_QUOTES, 'UTF-8'); ?>, as of <?php echo htmlspecialchars((string)$booking->FxRateTimestamp, ENT_QUOTES, 'UTF-8'); ?>)</span>
           </div>

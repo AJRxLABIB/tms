@@ -16,7 +16,7 @@ $hotel = $hq->fetch(PDO::FETCH_OBJ);
 if (!$hotel) {
     http_response_code(404);
     include('backend/header.php');
-    echo '<div class="container" style="padding:60px 20px;text-align:center;color:#aaa;"><i class="fa fa-hotel" style="font-size:50px;display:block;margin-bottom:16px;"></i><h3>Hotel not found</h3><p><a href="hotels.php">Back to Hotels</a></p></div>';
+    echo '<div class="container" style="padding:60px 20px;text-align:center;color:var(--text-muted);"><i class="fa fa-hotel" style="font-size:50px;display:block;margin-bottom:16px;"></i><h3>Hotel not found</h3><p><a href="hotels.php">Back to Hotels</a></p></div>';
     include('backend/footer.php');
     exit;
 }
@@ -185,10 +185,10 @@ tms_seo_meta([
                     <h1 style="margin-top:10px;"><?php echo htmlspecialchars($hotel->HotelName, ENT_QUOTES, 'UTF-8'); ?></h1>
                     <p><i class="fa fa-map-marker" style="color:#e74c3c"></i> <?php echo htmlspecialchars($hotel->City.', '.$hotel->Country, ENT_QUOTES, 'UTF-8'); ?></p>
                     <p><?php for ($s=1;$s<=5;$s++): ?><i class="fa fa-star<?php echo $s<=(int)$hotel->StarRating?'':'-o'; ?>" style="color:#f0ad4e;"></i><?php endfor; ?>
-                    &nbsp; <?php if ((float)$hotel->AvgRating>0): ?><span style="color:#888;font-size:13px;"><?php echo number_format((float)$hotel->AvgRating,1); ?>/5 guest rating<?php if ($hotelReviewCount > 0): ?> (<?php echo $hotelReviewCount; ?> review<?php echo $hotelReviewCount===1?'':'s'; ?>)<?php endif; ?></span><?php endif; ?></p>
+                    &nbsp; <?php if ((float)$hotel->AvgRating>0): ?><span style="color:var(--text-muted);font-size:13px;"><?php echo number_format((float)$hotel->AvgRating,1); ?>/5 guest rating<?php if ($hotelReviewCount > 0): ?> (<?php echo $hotelReviewCount; ?> review<?php echo $hotelReviewCount===1?'':'s'; ?>)<?php endif; ?></span><?php endif; ?></p>
                     <p style="color:var(--text-muted);"><?php echo nl2br(htmlspecialchars($hotel->Description ?? '', ENT_QUOTES, 'UTF-8')); ?></p>
                     <p><i class="fa fa-list" style="color:#27ae60"></i> <strong>Amenities:</strong> <?php echo htmlspecialchars($hotel->Amenities ?? '', ENT_QUOTES, 'UTF-8'); ?></p>
-                    <h3 style="color:var(--primary);margin-top:16px;"><?php echo tms_currency((float)$hotel->PricePerNight); ?> <span style="font-size:13px;color:#999;font-weight:400;">/night</span></h3>
+                    <h3 style="color:var(--primary);margin-top:16px;"><?php echo tms_currency((float)$hotel->PricePerNight); ?> <span style="font-size:13px;color:var(--text-muted);font-weight:400;">/night</span></h3>
                 </div>
             </div>
 
@@ -238,11 +238,11 @@ tms_seo_meta([
                             <input type="number" name="guests" id="hdGuests" class="form-control" value="1" min="1" max="20" required>
                         </div>
                         <div class="form-group">
-                            <label for="hdMobile">Mobile Number <small style="color:#aaa;">(optional)</small></label>
+                            <label for="hdMobile">Mobile Number <small style="color:var(--text-muted);">(optional)</small></label>
                             <input type="tel" name="mobile" id="hdMobile" class="form-control" placeholder="e.g. 017XXXXXXXX" maxlength="20">
                         </div>
                         <div class="form-group">
-                            <label for="hdComment">Special Requests <small style="color:#aaa;">(optional)</small></label>
+                            <label for="hdComment">Special Requests <small style="color:var(--text-muted);">(optional)</small></label>
                             <textarea name="comment" id="hdComment" class="form-control" style="height:70px;padding:10px 12px;"></textarea>
                         </div>
                         <button type="submit" name="book_hotel" class="btn-book"><i class="fa fa-check-circle"></i> Book Now</button>

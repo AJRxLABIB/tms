@@ -99,7 +99,7 @@ include('backend/config.php');
     border: 1px solid #e2e8f0; text-align: center;
 }
 .cost-box .amount { font-size: 1.2rem; font-weight: 800; color: #1a202c; }
-.cost-box .label  { font-size: 11px; color: #718096; text-transform: uppercase; letter-spacing: .5px; }
+.cost-box .label  { font-size: 11px; color:var(--text-muted); text-transform: uppercase; letter-spacing: .5px; }
 
 .day-card {
     background: #fff; border-radius: 16px;
@@ -119,7 +119,7 @@ include('backend/config.php');
 }
 .day-title { font-size: 1rem; font-weight: 700; color: #1a202c; }
 .day-budget-chip { background: #ebf8ff; color: #2c5282; border-radius: 20px; padding: 4px 12px; font-size: 12px; font-weight: 600; }
-.day-weather-note { font-size: 12px; color: #718096; margin-left: auto; padding-right: 16px; }
+.day-weather-note { font-size: 12px; color:var(--text-muted); margin-left: auto; padding-right: 16px; }
 
 .day-body { padding: 0 24px 20px; }
 .schedule-item {
@@ -140,7 +140,7 @@ include('backend/config.php');
 .schedule-content { flex: 1; }
 .schedule-activity { font-size: 14px; font-weight: 700; color: #1a202c; margin-bottom: 2px; }
 .schedule-location { font-size: 12px; color: #176B50; margin-bottom: 4px; }
-.schedule-meta { display: flex; gap: 12px; font-size: 11px; color: #718096; }
+.schedule-meta { display: flex; gap: 12px; font-size: 11px; color:var(--text-muted); }
 .schedule-notes { font-size: 12px; color: #4a5568; margin-top: 4px; font-style: italic; }
 
 .day-meals {
@@ -222,27 +222,27 @@ include('backend/config.php');
         ?>
         <div class="row g-3">
             <div class="col-md-6">
-                <label class="field-label">Destination *</label>
+                <label class="field-label" for="p_dest">Destination *</label>
                 <input type="text" id="p_dest" class="field-input" placeholder="e.g. Cox's Bazar, Bandarban, Thailand…">
             </div>
             <div class="col-md-3">
-                <label class="field-label">Start Date *</label>
+                <label class="field-label" for="p_start">Start Date *</label>
                 <input type="date" id="p_start" class="field-input">
             </div>
             <div class="col-md-3">
-                <label class="field-label">Duration (days)</label>
+                <label class="field-label" for="p_days">Duration (days)</label>
                 <input type="number" id="p_days" class="field-input" value="5" min="1" max="30">
             </div>
             <div class="col-md-3">
-                <label class="field-label">Travelers</label>
+                <label class="field-label" for="p_travelers">Travelers</label>
                 <input type="number" id="p_travelers" class="field-input" value="2" min="1" max="50">
             </div>
             <div class="col-md-3">
-                <label class="field-label">Total Budget (BDT)</label>
+                <label class="field-label" for="p_budget">Total Budget (BDT)</label>
                 <input type="number" id="p_budget" class="field-input" placeholder="e.g. 40000">
             </div>
             <div class="col-md-3">
-                <label class="field-label">Travel Style</label>
+                <label class="field-label" for="p_style">Travel Style</label>
                 <select id="p_style" class="field-select">
                     <option value="leisure">Leisure</option>
                     <option value="family">Family</option>
@@ -253,7 +253,7 @@ include('backend/config.php');
                 </select>
             </div>
             <div class="col-md-3">
-                <label class="field-label">Climate</label>
+                <label class="field-label" for="p_climate">Climate</label>
                 <select id="p_climate" class="field-select">
                     <option value="warm">Warm / Tropical</option>
                     <option value="cold">Cold / Cool</option>
@@ -263,11 +263,11 @@ include('backend/config.php');
                 </select>
             </div>
             <div class="col-md-6">
-                <label class="field-label">Preferred Activities</label>
+                <label class="field-label" for="p_activities">Preferred Activities</label>
                 <input type="text" id="p_activities" class="field-input" placeholder="sightseeing, beach, hiking, food…">
             </div>
             <div class="col-md-3">
-                <label class="field-label">Accommodation</label>
+                <label class="field-label" for="p_accommodation">Accommodation</label>
                 <select id="p_accommodation" class="field-select">
                     <option value="hotel">Hotel</option>
                     <option value="resort">Resort</option>
@@ -277,7 +277,7 @@ include('backend/config.php');
                 </select>
             </div>
             <div class="col-md-3">
-                <label class="field-label">Transport</label>
+                <label class="field-label" for="p_transport">Transport</label>
                 <select id="p_transport" class="field-select">
                     <option value="mixed">Mixed (optimal)</option>
                     <option value="private">Private car</option>
@@ -286,7 +286,7 @@ include('backend/config.php');
                 </select>
             </div>
             <div class="col-12">
-                <label class="field-label">Special Requests (optional)</label>
+                <label class="field-label" for="p_special">Special Requests (optional)</label>
                 <textarea id="p_special" class="field-textarea" placeholder="Dietary needs, accessibility, specific places to visit, things to avoid…"></textarea>
             </div>
             <div class="col-12">
@@ -302,7 +302,7 @@ include('backend/config.php');
     <div class="ai-thinking" id="thinkingDiv">
         <div class="ai-spinner"></div>
         <h4 style="font-weight:800;color:#1a202c;">AI is crafting your itinerary…</h4>
-        <p id="thinkingMsg" style="color:#718096;">Analyzing destination and optimizing your schedule</p>
+        <p id="thinkingMsg" style="color:var(--text-muted);">Analyzing destination and optimizing your schedule</p>
     </div>
 
     <!-- Itinerary Output -->
@@ -322,7 +322,7 @@ include('backend/config.php');
              blank still asks for a genuinely different alternative, it just
              won't be steered toward anything specific. -->
         <div id="regenBox" style="display:none;max-width:640px;margin:16px auto 0;text-align:left;">
-            <label class="field-label">What would you like changed? (optional)</label>
+            <label class="field-label" for="regenFeedback">What would you like changed? (optional)</label>
             <textarea id="regenFeedback" class="field-textarea" placeholder="e.g. less walking on day 2, a cheaper hotel, add a beach day, more free time in the evenings…"></textarea>
             <button class="btn-generate" style="margin-top:10px;width:100%;" id="regenGoBtn" onclick="regeneratePlan()">
                 <i class="fa fa-magic"></i> <span id="regenGoBtnText">Regenerate With This Feedback</span>

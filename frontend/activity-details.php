@@ -14,7 +14,7 @@ $activity = $aq->fetch(PDO::FETCH_OBJ);
 if (!$activity) {
     http_response_code(404);
     include('backend/header.php');
-    echo '<div class="container" style="padding:60px 20px;text-align:center;color:#aaa;"><i class="fa fa-map-signs" style="font-size:50px;display:block;margin-bottom:16px;"></i><h3>Activity not found</h3><p><a href="activities.php">Back to Activities</a></p></div>';
+    echo '<div class="container" style="padding:60px 20px;text-align:center;color:var(--text-muted);"><i class="fa fa-map-signs" style="font-size:50px;display:block;margin-bottom:16px;"></i><h3>Activity not found</h3><p><a href="activities.php">Back to Activities</a></p></div>';
     include('backend/footer.php');
     exit;
 }
@@ -174,10 +174,10 @@ tms_seo_meta([
                     &nbsp;·&nbsp; <i class="fa fa-clock-o"></i> <?php echo rtrim(rtrim(number_format((float)$activity->DurationHours,1),'0'),'.'); ?> hours</p>
                     <?php if ((float)$activity->AvgRating>0): ?>
                     <p><?php for ($s=1;$s<=5;$s++): ?><i class="fa fa-star<?php echo $s<=round((float)$activity->AvgRating)?'':'-o'; ?>" style="color:#f0ad4e;"></i><?php endfor; ?>
-                    <span style="color:#888;font-size:13px;"> <?php echo number_format((float)$activity->AvgRating,1); ?>/5<?php if ($activityReviewCount > 0): ?> (<?php echo $activityReviewCount; ?> review<?php echo $activityReviewCount===1?'':'s'; ?>)<?php endif; ?></span></p>
+                    <span style="color:var(--text-muted);font-size:13px;"> <?php echo number_format((float)$activity->AvgRating,1); ?>/5<?php if ($activityReviewCount > 0): ?> (<?php echo $activityReviewCount; ?> review<?php echo $activityReviewCount===1?'':'s'; ?>)<?php endif; ?></span></p>
                     <?php endif; ?>
                     <p style="color:var(--text-muted);"><?php echo nl2br(htmlspecialchars($activity->Description ?? '', ENT_QUOTES, 'UTF-8')); ?></p>
-                    <h3 style="color:var(--primary);margin-top:16px;"><?php echo tms_currency((float)$activity->PricePerPerson); ?> <span style="font-size:13px;color:#999;font-weight:400;">/person</span></h3>
+                    <h3 style="color:var(--primary);margin-top:16px;"><?php echo tms_currency((float)$activity->PricePerPerson); ?> <span style="font-size:13px;color:var(--text-muted);font-weight:400;">/person</span></h3>
                 </div>
             </div>
 
@@ -219,11 +219,11 @@ tms_seo_meta([
                             <input type="number" name="participants" id="actParticipantsField" class="form-control" value="1" min="1" max="30" required>
                         </div>
                         <div class="form-group">
-                            <label for="actMobileField">Mobile Number <small style="color:#aaa;">(optional)</small></label>
+                            <label for="actMobileField">Mobile Number <small style="color:var(--text-muted);">(optional)</small></label>
                             <input type="tel" name="mobile" id="actMobileField" class="form-control" placeholder="e.g. 017XXXXXXXX" maxlength="20">
                         </div>
                         <div class="form-group">
-                            <label for="actCommentField">Special Requests <small style="color:#aaa;">(optional)</small></label>
+                            <label for="actCommentField">Special Requests <small style="color:var(--text-muted);">(optional)</small></label>
                             <textarea name="comment" id="actCommentField" class="form-control" style="height:70px;padding:10px 12px;"></textarea>
                         </div>
                         <button type="submit" name="book_activity" class="btn-book"><i class="fa fa-check-circle"></i> Book Now</button>

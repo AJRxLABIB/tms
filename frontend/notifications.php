@@ -99,7 +99,7 @@ try {
 <div class="container" style="margin-bottom:20px;">
   <div class="notif-box">
     <?php if (empty($items)): ?>
-      <p style="color:#888;padding:20px 0;">You're all caught up — no notifications yet.</p>
+      <p style="color:var(--text-muted);padding:20px 0;">You're all caught up — no notifications yet.</p>
     <?php else: foreach ($items as $n): ?>
       <a class="notif-row<?php echo $n->IsRead ? '' : ' was-unread'; ?>" href="<?php echo htmlspecialchars($n->Link ?: '#', ENT_QUOTES, 'UTF-8'); ?>">
         <div class="notif-msg"><?php echo htmlspecialchars($n->Message, ENT_QUOTES, 'UTF-8'); ?></div>

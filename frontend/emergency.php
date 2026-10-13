@@ -47,12 +47,12 @@ $selected = isset($_GET['country']) ? $_GET['country'] : '';
 .country-card:hover { transform:translateY(-2px); box-shadow:0 8px 30px rgba(0,0,0,0.12); }
 .country-card h4 { color:#333; font-size:1.1em; font-weight:700; margin-bottom:15px; }
 html[data-theme="dark"] .country-card h4 { color: var(--text) !important; }
-.emergency-num { display:flex; align-items:center; padding:10px 15px; background:#fff5f5; border-radius:8px; margin-bottom:8px; }
+.emergency-num { display:flex; align-items:center; padding:10px 15px; background:var(--danger-bg,#fff5f5); border-radius:8px; margin-bottom:8px; }
 .emergency-num .icon { width:40px; height:40px; border-radius:50%; display:flex; align-items:center; justify-content:center; margin-right:12px; font-size:16px; color:#fff; flex-shrink:0; }
-.emergency-num .label { font-size:13px; color:#777; }
-.emergency-num .number { font-size:1.5em; font-weight:700; color:#e74c3c; }
+.emergency-num .label { font-size:13px; color:var(--text); }
+.emergency-num .number { font-size:1.5em; font-weight:700; color:var(--danger-text,#B3302B); }
 .safety-tips-box { background: linear-gradient(135deg,#fff5f5,#fff); border-radius:10px; padding:18px; border:1px solid #f5c6cb; margin-top:15px; }
-.safety-tips-box h5 { color:#c0392b; font-weight:700; margin-bottom:10px; }
+.safety-tips-box h5 { color:var(--danger-text,#B3302B); font-weight:700; margin-bottom:10px; }
 .safety-tips-box p { font-size:13px; color:#555; line-height:1.7; }
 .sos-banner { background: linear-gradient(135deg,#c0392b,#e74c3c); color:#fff; border-radius:12px; padding:25px; text-align:center; margin-bottom:25px; }
 .sos-banner h3 { font-size:2em; margin-bottom:5px; }
@@ -61,8 +61,8 @@ html[data-theme="dark"] .country-card h4 { color: var(--text) !important; }
 .tip-item { display:flex; align-items:flex-start; padding:12px 0; border-bottom:1px solid #f0f0f0; }
 .tip-item:last-child { border:none; }
 .tip-icon { width:40px; height:40px; border-radius:8px; display:flex; align-items:center; justify-content:center; color:#fff; margin-right:15px; flex-shrink:0; font-size:16px; }
-.tip-item h6 { font-weight:700; color:#333; margin:0 0 4px; font-size:14px; }
-.tip-item p { font-size:13px; color:#777; margin:0; }
+.tip-item h6 { font-weight:700; color:var(--text); margin:0 0 4px; font-size:14px; }
+.tip-item p { font-size:13px; color:var(--text-muted); margin:0; }
 .search-bar { background:var(--white); border-radius:10px; padding:15px 20px; box-shadow:0 2px 10px rgba(0,0,0,0.08); margin-bottom:20px; }
 .flag-emoji { font-size:24px; margin-right:10px; }
 .print-btn { background:#333; color:#fff; border:none; border-radius:8px; padding:8px 20px; font-size:14px; cursor:pointer; float:right; }
@@ -145,7 +145,7 @@ html[data-theme="dark"] .country-card h4 { color: var(--text) !important; }
                      page showed the SOS banner, a search box that filtered nothing,
                      and then simply nothing — no explanation at all. */ ?>
             <div class="emergency-card" style="text-align:center;padding:30px 20px;">
-                <i class="fa fa-info-circle" style="font-size:34px;color:#94a3b8;"></i>
+                <i class="fa fa-info-circle" style="font-size:34px;color:var(--text-muted);"></i>
                 <h4 style="margin-top:12px;">Country contacts aren't loaded yet</h4>
                 <p style="color:#64748b;max-width:520px;margin:8px auto 0;">
                     In any emergency, dial your destination's national emergency number —
@@ -161,7 +161,7 @@ html[data-theme="dark"] .country-card h4 { color: var(--text) !important; }
         <!-- General Safety Tips Sidebar -->
         <div class="col-md-4">
             <div class="general-tips wow fadeInRight">
-                <h4 style="color:#c0392b;margin-bottom:20px;"><i class="fa fa-exclamation-triangle"></i> Universal Travel Safety Tips</h4>
+                <h4 style="color:var(--danger-text,#B3302B);margin-bottom:20px;"><i class="fa fa-exclamation-triangle"></i> Universal Travel Safety Tips</h4>
                 <?php
                 $tips = [
                     ['#3498db','fa-id-card','Carry ID','Always have a copy of your passport and ID. Keep digital copies in email too.'],

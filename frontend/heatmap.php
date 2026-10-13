@@ -102,7 +102,7 @@ unset($p);
    :nth-of-type counts only the rank rows. */
 .heat-rank-item:nth-of-type(1) .heat-rank-num, .heat-rank-item:nth-of-type(2) .heat-rank-num, .heat-rank-item:nth-of-type(3) .heat-rank-num { background:#176B50; }
 .heat-rank-name { font-size:13px; font-weight:700; margin:0 0 2px; color:#333; }
-.heat-rank-meta { font-size:11px; color:#888; }
+.heat-rank-meta { font-size:11px; color:var(--text-muted); }
 .heat-legend { display:flex; gap:16px; flex-wrap:wrap; align-items:center; margin:0 0 15px; font-size:12.5px; color:#555; }
 html[data-theme="dark"] .heat-sidebar h4,
 html[data-theme="dark"] .heat-rank-name { color: var(--text) !important; }
@@ -128,7 +128,7 @@ html[data-theme="dark"] .heat-legend { color: var(--text-muted) !important; }
     <div class="heat-empty">
         <i class="fa fa-map-o"></i>
         <h3>Not enough location data yet</h3>
-        <p style="color:#94a3b8;">Packages need map coordinates before they can appear here. Check back once more destinations have been geocoded.</p>
+        <p style="color:var(--text-muted);">Packages need map coordinates before they can appear here. Check back once more destinations have been geocoded.</p>
     </div>
     <?php else: ?>
 
@@ -136,7 +136,7 @@ html[data-theme="dark"] .heat-legend { color: var(--text-muted) !important; }
         <span>Low demand</span>
         <span class="bar"></span>
         <span>High demand</span>
-        <span style="margin-left:auto;color:#94a3b8;">Based on page views + confirmed bookings, updated live</span>
+        <span style="margin-left:auto;color:var(--text-muted);">Based on page views + confirmed bookings, updated live</span>
     </div>
 
     <div class="row">
@@ -147,7 +147,7 @@ html[data-theme="dark"] .heat-legend { color: var(--text-muted) !important; }
             <div class="heat-sidebar">
                 <h4><i class="fa fa-trophy" style="color:#ff6b35"></i> Top 10 Destinations</h4>
                 <?php if (empty($topDestinations)): ?>
-                <p style="color:#94a3b8;font-size:13px;">No demand data yet.</p>
+                <p style="color:var(--text-muted);font-size:13px;">No demand data yet.</p>
                 <?php else: foreach ($topDestinations as $i => $d): ?>
                 <a href="package-details.php?pkgid=<?php echo $d->PackageId; ?>" class="heat-rank-item">
                     <span class="heat-rank-num"><?php echo $i + 1; ?></span>

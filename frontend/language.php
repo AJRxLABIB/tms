@@ -75,7 +75,7 @@ if (isset($_GET['lang'])) {
 .lang-card.current { border-color:#4568dc; background: linear-gradient(135deg,#f0f4ff,#f8f0ff); }
 .lang-flag { font-size:48px; display:block; margin-bottom:10px; }
 .lang-name { font-size:1.1em; font-weight:700; color:#333; display:block; }
-.lang-native { font-size:0.9em; color:#777; display:block; margin-top:3px; }
+.lang-native { font-size:0.9em; color:var(--text-muted); display:block; margin-top:3px; }
 html[data-theme="dark"] .lang-name { color: var(--text) !important; }
 html[data-theme="dark"] .lang-native { color: var(--text-muted) !important; }
 .lang-badge { display:inline-block; padding:3px 10px; border-radius:20px; font-size:11px; font-weight:700; margin-top:8px; background:#e8f0ff; color:#4568dc; }
@@ -131,7 +131,7 @@ html[data-theme="dark"] .lang-native { color: var(--text-muted) !important; }
     <!-- Translation Preview -->
     <div class="preview-section wow fadeInUp">
         <h4><i class="fa fa-eye" style="color:#4568dc"></i> Translation Preview</h4>
-        <p style="color:#777;font-size:14px;">Here's how key phrases appear in the selected language:</p>
+        <p style="color:var(--text-muted);font-size:14px;">Here's how key phrases appear in the selected language:</p>
         <div class="table-responsive"><table class="table table-bordered" style="font-size:14px;" id="previewTable">
             <thead style="background:#4568dc;color:#fff;">
                 <tr><th>English</th><th id="langHeader">Selected Language</th></tr>

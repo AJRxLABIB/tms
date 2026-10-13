@@ -168,7 +168,7 @@ document.addEventListener('DOMContentLoaded', function () {
       var svg = box.querySelector('svg');
       if (svg) { svg.style.width = '100px'; svg.style.height = '100px'; }
     } catch (e) {
-      box.innerHTML = '<span style="font-size:10px;color:#94a3b8;">QR unavailable</span>';
+      box.innerHTML = '<span style="font-size:10px;color:var(--text-muted);">QR unavailable</span>';
     }
   });
 });
@@ -187,19 +187,19 @@ document.addEventListener('DOMContentLoaded', function () {
 .history-body .detail-row{display:flex;gap:8px;align-items:flex-start;margin-bottom:8px;font-size:14px;color:#555;}
 html[data-theme="dark"] .history-body .detail-row { color: var(--text-muted) !important; }
 .history-body .detail-row i{color:var(--secondary);width:16px;flex-shrink:0;margin-top:2px;}
-.cancel-btn{background:var(--white);color:#e74c3c;border:1.5px solid #e74c3c;border-radius:6px;padding:7px 18px;font-size:13px;font-weight:600;cursor:pointer;transition:.2s;}
-.cancel-btn:hover{background:#e74c3c;color:#fff;}
+.cancel-btn{background:var(--white);color:#C23B3B;border:1.5px solid #C23B3B;border-radius:6px;padding:7px 18px;font-size:13px;font-weight:600;cursor:pointer;transition:.2s;}
+.cancel-btn:hover{background:#C23B3B;color:#fff;}
 .ticket-btn{background:var(--white);color:var(--secondary);border:1.5px solid var(--secondary);border-radius:6px;padding:7px 18px;font-size:13px;font-weight:600;cursor:pointer;transition:.2s;text-decoration:none;display:inline-flex;align-items:center;gap:6px;}
 .ticket-btn:hover{background:var(--secondary);color:#fff;}
-.empty-state{text-align:center;padding:70px 20px;color:#aaa;}
+.empty-state{text-align:center;padding:70px 20px;color:var(--text-muted);}
 .empty-state i{font-size:60px;display:block;margin-bottom:20px;color:#ddd;}
 
 /* Round 2 additions: timeline, modification request, refund badge, QR */
 .bk-timeline{display:flex;align-items:center;gap:4px;margin:12px 0 16px;flex-wrap:wrap;}
-.bk-timeline .step{display:flex;align-items:center;gap:6px;font-size:11.5px;font-weight:600;color:#b8c2d0;}
-.bk-timeline .step.done{color:#22a06b;}
+.bk-timeline .step{display:flex;align-items:center;gap:6px;font-size:11.5px;font-weight:600;color:#5F6D65;}
+.bk-timeline .step.done{color:#1A7F55;}
 .bk-timeline .step.current{color:var(--secondary);}
-.bk-timeline .step.bad{color:#e74c3c;}
+.bk-timeline .step.bad{color:#C23B3B;}
 .bk-timeline .dot{width:9px;height:9px;border-radius:50%;background:currentColor;flex-shrink:0;}
 .bk-timeline .bar{width:26px;height:2px;background:#e5e9f0;}
 .refund-badge{display:inline-flex;align-items:center;gap:5px;font-size:11.5px;font-weight:600;padding:4px 10px;border-radius:14px;margin-top:6px;}
@@ -263,7 +263,7 @@ html[data-theme="dark"] .history-body .detail-row { color: var(--text-muted) !im
         <h3 class="wow fadeInDown animated" data-wow-delay=".1s" style="margin-bottom:24px;">
             <i class="fa fa-history" style="color:var(--secondary)"></i>
             <?php echo tms_t('heading_your_bookings','Your Bookings'); ?>
-            <span style="font-size:14px;font-weight:400;color:#888;margin-left:8px;">(<?php echo count($bookings); ?> <?php echo tms_t('label_total_word','total'); ?>)</span>
+            <span style="font-size:14px;font-weight:400;color:var(--text-muted);margin-left:8px;">(<?php echo count($bookings); ?> <?php echo tms_t('label_total_word','total'); ?>)</span>
         </h3>
 
         <?php if (count($bookings) > 0): ?>
@@ -326,7 +326,7 @@ html[data-theme="dark"] .history-body .detail-row { color: var(--text-muted) !im
                             </button>
                         </form>
                         <?php endif; ?>
-                        <small style="color:#aaa;"><?php echo tms_t('label_booked_colon','Booked:'); ?> <?php echo htmlspecialchars($b->RegDate, ENT_QUOTES,'UTF-8'); ?></small>
+                        <small style="color:var(--text-muted);"><?php echo tms_t('label_booked_colon','Booked:'); ?> <?php echo htmlspecialchars($b->RegDate, ENT_QUOTES,'UTF-8'); ?></small>
                     </div>
                 </div>
                 <div class="history-body">
@@ -391,7 +391,7 @@ html[data-theme="dark"] .history-body .detail-row { color: var(--text-muted) !im
                             <span class="refund-badge refund-<?php echo htmlspecialchars($b->RefundStatus, ENT_QUOTES,'UTF-8'); ?>">
                                 <i class="fa fa-undo"></i> <?php echo tms_t('label_refund_prefix','Refund'); ?> <?php echo htmlspecialchars(ucfirst($b->RefundStatus), ENT_QUOTES,'UTF-8'); ?>
                             </span>
-                            <?php if (!empty($b->RefundNote)): ?><div style="font-size:12px;color:#94a3b8;margin-top:3px;"><?php echo htmlspecialchars($b->RefundNote, ENT_QUOTES,'UTF-8'); ?></div><?php endif; ?>
+                            <?php if (!empty($b->RefundNote)): ?><div style="font-size:12px;color:var(--text-muted);margin-top:3px;"><?php echo htmlspecialchars($b->RefundNote, ENT_QUOTES,'UTF-8'); ?></div><?php endif; ?>
                             <?php endif; ?>
 
                             <?php if ($b->ModificationStatus === 'pending'): ?>
@@ -407,7 +407,7 @@ html[data-theme="dark"] .history-body .detail-row { color: var(--text-muted) !im
                         <div style="text-align:center;">
                             <div class="qr-thumb tms-qr" style="width:120px;height:120px;display:inline-flex;align-items:center;justify-content:center;background:var(--white);border:1px solid #e2e8f0;border-radius:8px;padding:6px;box-sizing:border-box;"
                                  data-qr-value="TMS-BK<?php echo (int)$b->BookingId; ?>-<?php echo htmlspecialchars($b->VerificationCode, ENT_QUOTES, 'UTF-8'); ?>"></div>
-                            <div style="font-size:10px;color:#aaa;margin-top:2px;"><?php echo tms_t('label_scan_to_verify','Scan to verify'); ?></div>
+                            <div style="font-size:10px;color:var(--text-muted);margin-top:2px;"><?php echo tms_t('label_scan_to_verify','Scan to verify'); ?></div>
                         </div>
                         <?php endif; ?>
 
@@ -490,7 +490,7 @@ html[data-theme="dark"] .history-body .detail-row { color: var(--text-muted) !im
                 <label for="thNewToDate"><?php echo tms_t('label_new_return_date','New Return Date'); ?></label>
                 <input type="date" name="new_todate" id="thNewToDate" class="form-control" min="<?php echo date('Y-m-d', strtotime('+1 day')); ?>" required>
             </div>
-            <p style="font-size:12px;color:#94a3b8;margin-bottom:16px;">
+            <p style="font-size:12px;color:var(--text-muted);margin-bottom:16px;">
                 <?php echo tms_t('dest_date_change_instructions', "This sends a request to our team — dates won't change until it's reviewed and approved, since availability and pricing need a quick check first."); ?>
             </p>
             <div style="display:flex;gap:10px;">

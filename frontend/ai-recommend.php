@@ -146,7 +146,7 @@ if (!isset($_POST['recommend']) && !empty($_SESSION['login'])) {
 .match-med { background:#fff3cd; color:#856404; }
 .match-low { background:#f8d7da; color:#721c24; }
 .pkg-card-body h4 { font-size:1em; font-weight:700; color:#333; margin-bottom:5px; }
-.pkg-card-body p { font-size:13px; color:#777; margin-bottom:4px; }
+.pkg-card-body p { font-size:13px; color:var(--text-muted); margin-bottom:4px; }
 .price-tag { font-size:1.3em; font-weight:700; color:#176B50; }
 .stars { color:#f0ad4e; font-size:13px; }
 .match-bar-wrap { background:#eee; border-radius:10px; height:6px; margin:10px 0; }
@@ -158,7 +158,7 @@ if (!isset($_POST['recommend']) && !empty($_SESSION['login'])) {
 .no-results { text-align:center; padding:60px 20px; }
 .no-results i { font-size:60px; color:#ddd; display:block; margin-bottom:20px; }
 .input-group-icon { position:relative; }
-.input-group-icon .fa { position:absolute; left:12px; top:50%; transform:translateY(-50%); color:#aaa; z-index:5; }
+.input-group-icon .fa { position:absolute; left:12px; top:50%; transform:translateY(-50%); color:var(--text-muted); z-index:5; }
 html[data-theme="dark"] .filter-card h3,
 html[data-theme="dark"] .pkg-card-body h4 { color: var(--text) !important; }
 html[data-theme="dark"] .form-group label,
@@ -186,25 +186,25 @@ html[data-theme="dark"] .input-group-icon .fa { color: var(--text-muted) !import
             <div class="row">
                 <div class="col-md-4">
                     <div class="form-group">
-                        <label><i class="fa fa-money"></i> Total Budget (৳)</label>
+                        <label for="fld_budget"><i class="fa fa-money"></i> Total Budget (৳)</label>
                         <div class="input-group-icon">
                             <span class="fa" style="font-weight:700;font-style:normal;font-family:Arial,sans-serif;">৳</span>
-                            <input type="number" name="budget" class="form-control" placeholder="e.g. 5000" min="100" value="<?php echo isset($_POST['budget'])?htmlentities($_POST['budget']):''; ?>" required>
+                            <input type="number" id="fld_budget" name="budget" class="form-control" placeholder="e.g. 5000" min="100" value="<?php echo isset($_POST['budget'])?htmlentities($_POST['budget']):''; ?>" required>
                         </div>
                     </div>
                 </div>
                 <div class="col-md-4">
                     <div class="form-group">
-                        <label><i class="fa fa-users"></i> Number of Travelers</label>
-                        <select name="travelers" class="form-control">
+                        <label for="fld_travelers"><i class="fa fa-users"></i> Number of Travelers</label>
+                        <select name="travelers" class="form-control" id="fld_travelers">
                             <?php for($i=1;$i<=10;$i++) echo "<option value='$i' ".((isset($_POST['travelers'])&&$_POST['travelers']==$i)?'selected':'').">$i Person".($i>1?'s':'')."</option>"; ?>
                         </select>
                     </div>
                 </div>
                 <div class="col-md-4">
                     <div class="form-group">
-                        <label><i class="fa fa-calendar"></i> Trip Duration (days)</label>
-                        <select name="duration" class="form-control">
+                        <label for="fld_duration"><i class="fa fa-calendar"></i> Trip Duration (days)</label>
+                        <select name="duration" class="form-control" id="fld_duration">
                             <option value="3" <?php echo (isset($_POST['duration'])&&$_POST['duration']==3)?'selected':''; ?>>3–5 days</option>
                             <option value="7" <?php echo (isset($_POST['duration'])&&$_POST['duration']==7)?'selected':''; ?>>5–7 days</option>
                             <option value="10" <?php echo (isset($_POST['duration'])&&$_POST['duration']==10)?'selected':''; ?>>7–10 days</option>
@@ -214,13 +214,13 @@ html[data-theme="dark"] .input-group-icon .fa { color: var(--text-muted) !import
                 </div>
                 <div class="col-md-6">
                     <div class="form-group">
-                        <label><i class="fa fa-heart"></i> Travel Style</label>
+                        <label for="fld_traveltype"><i class="fa fa-heart"></i> Travel Style</label>
                         <?php
                         // Pre-select from: this submission > the user's saved
                         // profile preference > the original 'family' default.
                         $selectedMode = $_POST['traveltype'] ?? ($savedProfile['travel_mode'] ?? '') ?: 'family';
                         ?>
-                        <select name="traveltype" class="form-control">
+                        <select name="traveltype" class="form-control" id="fld_traveltype">
                             <option value="family" <?php echo ($selectedMode=='family')?'selected':''; ?>>Family Vacation</option>
                             <option value="couple" <?php echo ($selectedMode=='couple')?'selected':''; ?>>Couple / Honeymoon</option>
                             <option value="group" <?php echo ($selectedMode=='group')?'selected':''; ?>>Group Tour</option>
@@ -233,9 +233,9 @@ html[data-theme="dark"] .input-group-icon .fa { color: var(--text-muted) !import
                 </div>
                 <div class="col-md-6">
                     <div class="form-group">
-                        <label><i class="fa fa-sun-o"></i> Preferred Climate</label>
+                        <label for="fld_climate"><i class="fa fa-sun-o"></i> Preferred Climate</label>
                         <?php $selectedClimate = $_POST['climate'] ?? ($savedProfile['preferred_climate'] ?? 'any'); ?>
-                        <select name="climate" class="form-control">
+                        <select name="climate" class="form-control" id="fld_climate">
                             <option value="any" <?php echo ($selectedClimate=='any')?'selected':''; ?>>Any Climate</option>
                             <option value="hot" <?php echo ($selectedClimate=='hot')?'selected':''; ?>>Warm / Tropical</option>
                             <option value="cold" <?php echo ($selectedClimate=='cold')?'selected':''; ?>>Cold / Snow</option>
@@ -246,8 +246,8 @@ html[data-theme="dark"] .input-group-icon .fa { color: var(--text-muted) !import
                 </div>
                 <div class="col-md-6">
                     <div class="form-group">
-                        <label><i class="fa fa-bed"></i> Accommodation Preference</label>
-                        <select name="accommodation" class="form-control">
+                        <label for="fld_accommodation"><i class="fa fa-bed"></i> Accommodation Preference</label>
+                        <select name="accommodation" class="form-control" id="fld_accommodation">
                             <option value="any">No preference</option>
                             <option value="budget" <?php echo (isset($_POST['accommodation'])&&$_POST['accommodation']=='budget')?'selected':''; ?>>Budget</option>
                             <option value="mid-range" <?php echo (isset($_POST['accommodation'])&&$_POST['accommodation']=='mid-range')?'selected':''; ?>>Mid-range</option>
@@ -257,20 +257,20 @@ html[data-theme="dark"] .input-group-icon .fa { color: var(--text-muted) !import
                 </div>
                 <div class="col-md-6">
                     <div class="form-group">
-                        <label><i class="fa fa-star-o"></i> Activities You Enjoy (optional)</label>
-                        <input type="text" name="activities" class="form-control" placeholder="e.g. hiking, museums, beach relaxation" value="<?php echo isset($_POST['activities'])?htmlentities($_POST['activities']):''; ?>">
+                        <label for="fld_activities"><i class="fa fa-star-o"></i> Activities You Enjoy (optional)</label>
+                        <input id="fld_activities" type="text" name="activities" class="form-control" placeholder="e.g. hiking, museums, beach relaxation" value="<?php echo isset($_POST['activities'])?htmlentities($_POST['activities']):''; ?>">
                     </div>
                 </div>
                 <div class="col-md-6">
                     <div class="form-group">
-                        <label><i class="fa fa-cutlery"></i> Dietary / Food Preference (optional)</label>
+                        <label for="fld_food"><i class="fa fa-cutlery"></i> Dietary / Food Preference (optional)</label>
                         <?php
                         // NEW (Round 77, master prompt item 23 -- Personalization): prefills
                         // from the saved profile like Travel Type/Climate above, still fully
                         // editable per request -- same pattern, not a new one.
                         $selectedFood = $_POST['food_preference'] ?? ($savedProfile['food_preference'] ?? '') ?: '';
                         ?>
-                        <select name="food_preference" class="form-control">
+                        <select name="food_preference" class="form-control" id="fld_food">
                             <option value="">No preference</option>
                             <option value="no_restriction" <?php echo ($selectedFood=='no_restriction')?'selected':''; ?>>No restriction</option>
                             <option value="vegetarian" <?php echo ($selectedFood=='vegetarian')?'selected':''; ?>>Vegetarian</option>
@@ -333,7 +333,7 @@ html[data-theme="dark"] .input-group-icon .fa { color: var(--text-muted) !import
                     // the "why" text it's rating. See js/ai-feedback.js.
                     $pkgIdForFeedback = (int)($pkg['package_id'] ?? 0);
                     ?>
-                    <div class="tms-ai-feedback" style="margin:2px 0 8px;font-size:12px;color:#999;">
+                    <div class="tms-ai-feedback" style="margin:2px 0 8px;font-size:12px;color:var(--text-muted);">
                         Helpful?
                         <button type="button" onclick="tmsSendAiFeedback('recommend', <?php echo $pkgIdForFeedback; ?>, 1, this)" style="border:none;background:none;color:#27ae60;cursor:pointer;padding:2px 6px;" title="Yes, helpful"><i class="fa fa-thumbs-up"></i></button>
                         <button type="button" onclick="tmsSendAiFeedback('recommend', <?php echo $pkgIdForFeedback; ?>, -1, this)" style="border:none;background:none;color:#c0392b;cursor:pointer;padding:2px 6px;" title="No, not helpful"><i class="fa fa-thumbs-down"></i></button>
@@ -353,10 +353,10 @@ html[data-theme="dark"] .input-group-icon .fa { color: var(--text-muted) !import
                     <?php if (!empty($pkg['warnings']) && is_array($pkg['warnings'])): foreach ($pkg['warnings'] as $w): ?>
                     <p style="font-size:12px;color:#c0392b;"><i class="fa fa-exclamation-triangle"></i> <?php echo htmlentities($w); ?></p>
                     <?php endforeach; endif; ?>
-                    <p class="price-tag"><?php echo tms_currency($pkg['price'] ?? 0); ?> <small style="font-size:12px;color:#999">/ person</small></p>
+                    <p class="price-tag"><?php echo tms_currency($pkg['price'] ?? 0); ?> <small style="font-size:12px;color:var(--text-muted)">/ person</small></p>
                     <p style="font-size:12px;color:#27ae60;font-weight:600">Total for <?php echo (int)$travelers; ?> traveler(s): <?php echo tms_currency($pkg['estimated_total_cost'] ?? (($pkg['price'] ?? 0) * $travelers)); ?></p>
                     <?php if (!empty($pkg['cost_savings_tip'])): ?>
-                    <p style="font-size:12px;color:#888;"><i class="fa fa-piggy-bank"></i> <?php echo htmlentities($pkg['cost_savings_tip']); ?></p>
+                    <p style="font-size:12px;color:var(--text-muted);"><i class="fa fa-piggy-bank"></i> <?php echo htmlentities($pkg['cost_savings_tip']); ?></p>
                     <?php endif; ?>
                     <a href="<?php echo htmlentities($pkg['package_url'] ?? ('package-details.php?pkgid=' . (int)($pkg['package_id'] ?? 0))); ?>" class="btn-view">View & Book <i class="fa fa-arrow-right"></i></a>
                 </div>

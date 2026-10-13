@@ -334,8 +334,8 @@ html[data-theme="dark"] .summary-row.total { color: var(--text) !important; }
     <form method="post">
       <?php tms_csrf_field(); ?>
       <div class="form-group" style="margin-top:16px;">
-        <label style="font-weight:600;font-size:13px;"><?php echo tms_t('label_mobile_number','Mobile Number'); ?> <small style="color:var(--text-muted);"><?php echo tms_t('dest_mobile_optional_hint','(optional, for booking contact)'); ?></small></label>
-        <input type="tel" name="mobile" class="form-control" placeholder="e.g. 017XXXXXXXX" maxlength="20">
+        <label style="font-weight:600;font-size:13px;" for="fld_mobile"><?php echo tms_t('label_mobile_number','Mobile Number'); ?> <small style="color:var(--text-muted);"><?php echo tms_t('dest_mobile_optional_hint','(optional, for booking contact)'); ?></small></label>
+        <input type="tel" name="mobile" class="form-control" placeholder="e.g. 017XXXXXXXX" maxlength="20" id="fld_mobile">
       </div>
       <div class="form-group" style="margin-top:14px;">
         <label style="display:flex;gap:10px;align-items:flex-start;font-weight:500;font-size:13.5px;cursor:pointer;">

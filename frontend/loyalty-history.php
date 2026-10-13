@@ -60,7 +60,7 @@ $history = $hist->fetchAll(PDO::FETCH_OBJ);
 <div class="container" style="padding-bottom:50px;">
   <div class="info-card">
     <?php if (empty($history)): ?>
-      <p style="color:#999;text-align:center;padding:30px;">No points activity yet. Book a tour, write a review, or refer a friend to start earning!</p>
+      <p style="color:var(--text-muted);text-align:center;padding:30px;">No points activity yet. Book a tour, write a review, or refer a friend to start earning!</p>
     <?php else: ?>
     <div class="table-responsive"><table class="table table-striped">
       <thead><tr><th>Date</th><th>Description</th><th style="text-align:right;">Points</th></tr></thead>

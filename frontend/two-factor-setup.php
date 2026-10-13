@@ -179,7 +179,7 @@ $qrUrl  = $otpUri ? tms_totp_qr_url($otpUri) : '';
                         Couldn't load the QR image — use the manual entry key below instead.
                     </p>
                 </div>
-                <p style="font-size:12px;color:#94a3b8;margin-bottom:4px;">Or enter this key manually:</p>
+                <p style="font-size:12px;color:var(--text-muted);margin-bottom:4px;">Or enter this key manually:</p>
                 <div class="manual-key"><?php echo htmlspecialchars($pendingSecret, ENT_QUOTES, 'UTF-8'); ?></div>
 
                 <form method="post" style="margin-top:16px;">
@@ -199,7 +199,7 @@ $qrUrl  = $otpUri ? tms_totp_qr_url($otpUri) : '';
                 <p style="font-size:13.5px;color:#64748b;margin-bottom:20px;">You'll be asked for a code from your authenticator app every time you sign in.</p>
 
                 <h4><i class="fa fa-ban" style="color:#dc2626;"></i> Disable Two-Factor Authentication</h4>
-                <p style="font-size:13px;color:#94a3b8;margin-bottom:14px;">Requires your current password and a valid code, since this reduces your account's security.</p>
+                <p style="font-size:13px;color:var(--text-muted);margin-bottom:14px;">Requires your current password and a valid code, since this reduces your account's security.</p>
                 <form method="post">
                     <?php tms_csrf_field(); ?>
                     <div class="form-row">

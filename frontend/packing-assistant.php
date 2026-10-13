@@ -62,13 +62,13 @@ tms_require_user(); // Batch 1 (landing/auth gating): whole app now requires log
 }
 .pack-item:hover { border-color:#134e5e; background:#f0faf5; }
 .pack-item.checked { background:#f0fff4; border-color:#48bb78; }
-.pack-item.checked .item-name { text-decoration:line-through; color:#a0aec0; }
+.pack-item.checked .item-name { text-decoration:line-through; color:var(--text-muted); }
 .item-checkbox { width:18px; height:18px; border:2px solid #cbd5e0; border-radius:4px; flex-shrink:0; display:flex; align-items:center; justify-content:center; transition:.2s; }
 .pack-item.checked .item-checkbox { background:#48bb78; border-color:#48bb78; }
 .pack-item.checked .item-checkbox::after { content:'✓'; color:#fff; font-size:11px; font-weight:800; }
 .item-info { flex:1; }
 .item-name { font-size:13px; font-weight:600; color:#2d3748; }
-.item-qty  { font-size:11px; color:#718096; }
+.item-qty  { font-size:11px; color:var(--text-muted); }
 .priority-badge { font-size:10px; padding:2px 6px; border-radius:10px; flex-shrink:0; }
 .priority-badge.must   { background:#fed7d7; color:#c53030; }
 .priority-badge.should { background:#fefcbf; color:#744210; }
@@ -151,14 +151,14 @@ tms_require_user(); // Batch 1 (landing/auth gating): whole app now requires log
     <div class="loading-wrap" id="loadingWrap">
         <div class="loading-spin"></div>
         <h5 style="font-weight:800;color:#1a202c;">Building your packing list…</h5>
-        <p style="color:#718096;" id="loadMsg">Checking destination weather and activities</p>
+        <p style="color:var(--text-muted);" id="loadMsg">Checking destination weather and activities</p>
     </div>
 
     <!-- Checklist -->
     <div class="checklist-wrap" id="checklistWrap">
         <div class="checklist-header">
             <h2 id="checklistTitle">Your AI Packing List</h2>
-            <p style="color:#718096;" id="checklistSubtitle"></p>
+            <p style="color:var(--text-muted);" id="checklistSubtitle"></p>
         </div>
 
         <!-- Progress -->
@@ -261,7 +261,7 @@ function renderChecklist(data, dest) {
             const p   = item.priority || 'should';
             const pLabel = { must:'Must Have', should:'Recommended', nice:'Nice to Have' }[p] || p;
             // Destination-specific may have 'reason'
-            const reasonHtml = item.reason ? `<div style="font-size:11px;color:#718096;margin-top:2px;">${esc(item.reason)}</div>` : '';
+            const reasonHtml = item.reason ? `<div style="font-size:11px;color:var(--text-muted);margin-top:2px;">${esc(item.reason)}</div>` : '';
             return `<div class="pack-item" id="item_${id}" onclick="toggleItem('${id}')">
                 <div class="item-checkbox" id="chk_${id}"></div>
                 <div class="item-info">
@@ -278,7 +278,7 @@ function renderChecklist(data, dest) {
             <div class="cat-title">
                 <div class="cat-icon ${cfg.cls}">${cfg.icon}</div>
                 ${cfg.label}
-                <span style="margin-left:auto;font-size:12px;font-weight:400;color:#718096;">${items.length} items</span>
+                <span style="margin-left:auto;font-size:12px;font-weight:400;color:var(--text-muted);">${items.length} items</span>
             </div>
             <div class="item-grid">${itemsHtml}</div>
         </div>`);

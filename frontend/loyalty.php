@@ -137,7 +137,7 @@ $leaderboard = $achievementEngine->getLeaderboard(10);
         <div class="progress" style="margin-top:8px;">
           <div class="progress-bar-loyalty" style="width:<?= min(100, $loyalty->Points/5) ?>%"></div>
         </div>
-        <small style="color:#888;">Need <?= 500 - $loyalty->Points ?> more points to redeem</small>
+        <small style="color:var(--text-muted);">Need <?= 500 - $loyalty->Points ?> more points to redeem</small>
       <?php endif; ?>
     </div>
   </div>
@@ -163,7 +163,7 @@ $leaderboard = $achievementEngine->getLeaderboard(10);
         <a href="loyalty-history.php" style="font-size:12.5px;font-weight:600;color:var(--secondary);">View Full History →</a>
       </h5>
       <?php if (count($history) === 0): ?>
-        <p style="color:#999;text-align:center;padding:20px;">No points activity yet. Book a tour to start earning!</p>
+        <p style="color:var(--text-muted);text-align:center;padding:20px;">No points activity yet. Book a tour to start earning!</p>
       <?php else: ?>
       <div class="table-responsive"><table class="table table-striped" style="margin-top:10px;">
         <thead><tr><th>Date</th><th>Description</th><th>Points</th></tr></thead>
@@ -172,7 +172,7 @@ $leaderboard = $achievementEngine->getLeaderboard(10);
         <tr>
           <td><?= date('d M Y', strtotime($h->CreatedAt)) ?></td>
           <td><?= htmlspecialchars($h->Description) ?></td>
-          <td><span style="color:<?= $h->Points > 0 ? 'green' : 'red' ?>;font-weight:700;"><?= ($h->Points > 0 ? '+' : '') . $h->Points ?> pts</span></td>
+          <td><span style="color:<?= $h->Points > 0 ? '#0B6B2E' : '#B3302B' ?>;font-weight:700;"><?= ($h->Points > 0 ? '+' : '') . $h->Points ?> pts</span></td>
         </tr>
         <?php endforeach; ?>
         </tbody>
@@ -187,14 +187,14 @@ $leaderboard = $achievementEngine->getLeaderboard(10);
   <h5><i class="fa fa-trophy"></i> Achievements</h5>
   <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:14px;margin-top:14px;">
     <?php foreach ($myAchievements as $a): ?>
-    <div style="text-align:center;padding:16px 10px;border-radius:10px;background:<?= $a['unlocked'] ? '#f8fafc' : '#f1f5f9' ?>;opacity:<?= $a['unlocked'] ? '1' : '0.45' ?>;">
+    <div style="text-align:center;padding:16px 10px;border-radius:10px;background:var(--white);border:1px solid <?= $a['unlocked'] ? 'var(--primary)' : 'var(--border,#d7e0db)' ?>;">
       <div style="width:44px;height:44px;border-radius:50%;background:<?= $a['unlocked'] ? $a['color'] : '#94a3b8' ?>;color:#fff;display:flex;align-items:center;justify-content:center;margin:0 auto 8px;font-size:18px;">
         <i class="fa fa-<?= $a['icon'] ?>"></i>
       </div>
-      <div style="font-size:12.5px;font-weight:700;color:#1f2937;"><?= htmlspecialchars($a['name']) ?></div>
-      <div style="font-size:11px;color:#94a3b8;margin-top:3px;"><?= htmlspecialchars($a['description']) ?></div>
+      <div style="font-size:12.5px;font-weight:700;color:var(--text);"><?= htmlspecialchars($a['name']) ?></div>
+      <div style="font-size:11px;color:var(--text-muted);margin-top:3px;"><?= htmlspecialchars($a['description']) ?></div>
       <?php if ($a['unlocked']): ?>
-        <div style="font-size:10px;color:#059669;margin-top:4px;"><i class="fa fa-check"></i> <?= date('d M Y', strtotime($a['unlocked_at'])) ?></div>
+        <div style="font-size:10px;color:var(--text);margin-top:4px;"><i class="fa fa-check"></i> <?= date('d M Y', strtotime($a['unlocked_at'])) ?></div>
       <?php endif; ?>
     </div>
     <?php endforeach; ?>

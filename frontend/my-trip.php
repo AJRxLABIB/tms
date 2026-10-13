@@ -200,8 +200,8 @@ html[data-theme="dark"] .mt-fact-row{color:var(--text-muted) !important;}
 .mt-day h5{margin:0 0 6px;font-weight:700;}
 .mt-sched-item{font-size:13px;color:#555;margin-bottom:5px;}
 html[data-theme="dark"] .mt-sched-item{color:var(--text-muted) !important;}
-.mt-ai-disclosure{font-size:12px;color:#888;background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:10px 14px;margin-bottom:16px;}
-.mt-empty{text-align:center;padding:40px 20px;color:#aaa;}
+.mt-ai-disclosure{font-size:12px;color:var(--text-muted);background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:10px 14px;margin-bottom:16px;}
+.mt-empty{text-align:center;padding:40px 20px;color:var(--text-muted);}
 .mt-empty i{font-size:44px;display:block;margin-bottom:14px;color:#ddd;}
 .mt-generate-btn{background:var(--secondary);color:#fff;border:none;border-radius:8px;padding:10px 22px;font-weight:700;font-size:14px;cursor:pointer;}
 .mt-generate-btn:disabled{opacity:.6;cursor:not-allowed;}
@@ -214,7 +214,7 @@ html[data-theme="dark"] .mt-sched-item{color:var(--text-muted) !important;}
 <div class="container" style="padding:80px 0;text-align:center;">
     <i class="fa fa-exclamation-circle" style="font-size:56px;color:#ddd;"></i>
     <h3 style="margin-top:16px;"><?php echo htmlspecialchars(tms_t('heading_trip_not_found','Trip not found'), ENT_QUOTES, 'UTF-8'); ?></h3>
-    <p style="color:#888;"><?php echo htmlspecialchars(tms_t('msg_trip_not_found_subtitle',"We couldn't find that booking on your account."), ENT_QUOTES, 'UTF-8'); ?></p>
+    <p style="color:var(--text-muted);"><?php echo htmlspecialchars(tms_t('msg_trip_not_found_subtitle',"We couldn't find that booking on your account."), ENT_QUOTES, 'UTF-8'); ?></p>
     <a href="tour-history.php" class="btn btn-primary" style="margin-top:10px;"><?php echo htmlspecialchars(tms_t('btn_back_to_my_bookings','Back to My Bookings'), ENT_QUOTES, 'UTF-8'); ?></a>
 </div>
 <?php else: ?>
@@ -267,7 +267,7 @@ html[data-theme="dark"] .mt-sched-item{color:var(--text-muted) !important;}
                     <i class="fa fa-arrow-right"></i> <?php echo htmlspecialchars(tms_t('readiness_action_' . ($m['key'] ?? ''), $m['action_label']), ENT_QUOTES, 'UTF-8'); ?>
                 </a>
                 <?php else: ?>
-                <span style="font-size:12px;color:#94a3b8;padding:5px 12px;"><?php echo htmlspecialchars(tms_t('readiness_action_' . ($m['key'] ?? ''), $m['action_label']), ENT_QUOTES, 'UTF-8'); ?></span>
+                <span style="font-size:12px;color:var(--text-muted);padding:5px 12px;"><?php echo htmlspecialchars(tms_t('readiness_action_' . ($m['key'] ?? ''), $m['action_label']), ENT_QUOTES, 'UTF-8'); ?></span>
                 <?php endif; ?>
             <?php endforeach; ?>
         </div>
@@ -348,7 +348,7 @@ html[data-theme="dark"] .mt-sched-item{color:var(--text-muted) !important;}
                     // than signal for a single AI generation call). See
                     // js/ai-feedback.js.
                     ?>
-                    <div class="tms-ai-feedback" style="margin-top:6px;font-size:12px;color:#999;">
+                    <div class="tms-ai-feedback" style="margin-top:6px;font-size:12px;color:var(--text-muted);">
                         <?php echo htmlspecialchars(tms_t('msg_was_itinerary_helpful','Was this itinerary helpful?'), ENT_QUOTES, 'UTF-8'); ?>
                         <button type="button" onclick="tmsSendAiFeedback('itinerary', <?php echo (int)$trip->BookingId; ?>, 1, this)" style="border:none;background:none;color:#27ae60;cursor:pointer;padding:2px 6px;" title="<?php echo htmlspecialchars(tms_t('title_feedback_yes_helpful','Yes, helpful'), ENT_QUOTES, 'UTF-8'); ?>"><i class="fa fa-thumbs-up"></i></button>
                         <button type="button" onclick="tmsSendAiFeedback('itinerary', <?php echo (int)$trip->BookingId; ?>, -1, this)" style="border:none;background:none;color:#c0392b;cursor:pointer;padding:2px 6px;" title="<?php echo htmlspecialchars(tms_t('title_feedback_no_helpful','No, not helpful'), ENT_QUOTES, 'UTF-8'); ?>"><i class="fa fa-thumbs-down"></i></button>
@@ -365,7 +365,7 @@ html[data-theme="dark"] .mt-sched-item{color:var(--text-muted) !important;}
                 ?>
                 <div class="mt-card" id="mtWeatherReplanCard" style="margin-top:16px;">
                     <h4><i class="fa fa-cloud"></i> Weather Impact Check</h4>
-                    <p style="font-size:13px;color:#888;margin-bottom:12px;">
+                    <p style="font-size:13px;color:var(--text-muted);margin-bottom:12px;">
                         <?php echo htmlspecialchars(tms_t('dest_weather_replan_intro',"Checks the real forecast against your saved itinerary and flags any day that might need a change. Nothing changes automatically — you review and approve any suggested update yourself before it's saved."), ENT_QUOTES, 'UTF-8'); ?></p>
                     <button type="button" class="mt-generate-btn" id="mtWeatherCheckBtn" onclick="mtCheckWeatherReplan()">
                         <i class="fa fa-cloud"></i> <?php echo htmlspecialchars(tms_t('btn_check_weather_impact','Check Weather Impact on My Itinerary'), ENT_QUOTES, 'UTF-8'); ?>
@@ -381,7 +381,7 @@ html[data-theme="dark"] .mt-sched-item{color:var(--text-muted) !important;}
                         <button type="button" class="mt-generate-btn" id="mtGenerateBtn" onclick="mtGenerateItinerary()">
                             <i class="fa fa-magic"></i> <?php echo htmlspecialchars(tms_t('btn_generate_ai_itinerary','Generate an AI Itinerary'), ENT_QUOTES, 'UTF-8'); ?>
                         </button>
-                        <p style="font-size:12px;color:#aaa;margin-top:10px;"><?php echo htmlspecialchars(tms_t('dest_itinerary_generation_hint','Uses your real trip dates and destination. Takes about 15–30 seconds.'), ENT_QUOTES, 'UTF-8'); ?></p>
+                        <p style="font-size:12px;color:var(--text-muted);margin-top:10px;"><?php echo htmlspecialchars(tms_t('dest_itinerary_generation_hint','Uses your real trip dates and destination. Takes about 15–30 seconds.'), ENT_QUOTES, 'UTF-8'); ?></p>
                         <?php endif; ?>
                     </div>
                 <?php endif; ?>
@@ -474,7 +474,7 @@ html[data-theme="dark"] .mt-sched-item{color:var(--text-muted) !important;}
             <?php if ($offlineKitItems): ?>
             <div class="mt-card" id="mtOfflineCard">
                 <h4><i class="fa fa-wifi"></i> <?php echo htmlspecialchars(tms_t('heading_save_trip_offline','Save This Trip for Offline'), ENT_QUOTES, 'UTF-8'); ?></h4>
-                <p style="font-size:13px;color:#888;margin-bottom:12px;">
+                <p style="font-size:13px;color:var(--text-muted);margin-bottom:12px;">
                     <?php echo htmlspecialchars(tms_t('dest_offline_intro','Stores these real pages on this device so you can still open them with no signal:'), ENT_QUOTES, 'UTF-8'); ?>
                 </p>
                 <ul style="font-size:13px;color:#555;margin:0 0 14px;padding-left:20px;">
@@ -485,8 +485,8 @@ html[data-theme="dark"] .mt-sched-item{color:var(--text-muted) !important;}
                 <button type="button" class="mt-generate-btn" id="mtOfflineBtn" onclick="mtSaveOffline()">
                     <i class="fa fa-download"></i> <?php echo htmlspecialchars(tms_t('btn_save_for_offline','Save for Offline'), ENT_QUOTES, 'UTF-8'); ?>
                 </button>
-                <div id="mtOfflineStatus" style="font-size:12.5px;color:#888;margin-top:10px;"></div>
-                <p style="font-size:11.5px;color:#aaa;margin-top:10px;">
+                <div id="mtOfflineStatus" style="font-size:12.5px;color:var(--text-muted);margin-top:10px;"></div>
+                <p style="font-size:11.5px;color:var(--text-muted);margin-top:10px;">
                     <?php echo htmlspecialchars(tms_t('dest_offline_disclaimer',"Live features (payment, weather, AI Copilot, live chat) still need a connection and won't work offline -- only the pages above are saved as a snapshot of what they show right now."), ENT_QUOTES, 'UTF-8'); ?></p>
             </div>
             <?php endif; ?>
@@ -494,7 +494,7 @@ html[data-theme="dark"] .mt-sched-item{color:var(--text-muted) !important;}
             <?php if (($trip->PaymentStatus ?? 'unpaid') === 'unpaid' && $trip->status != 2): ?>
             <div class="mt-card">
                 <h4><i class="fa fa-credit-card"></i> <?php echo htmlspecialchars(tms_t('heading_payment','Payment'), ENT_QUOTES, 'UTF-8'); ?></h4>
-                <p style="font-size:13px;color:#888;"><?php echo htmlspecialchars(tms_t('msg_trip_not_paid',"This trip hasn't been paid for yet."), ENT_QUOTES, 'UTF-8'); ?></p>
+                <p style="font-size:13px;color:var(--text-muted);"><?php echo htmlspecialchars(tms_t('msg_trip_not_paid',"This trip hasn't been paid for yet."), ENT_QUOTES, 'UTF-8'); ?></p>
                 <form method="POST" action="pay-now.php">
                     <?php tms_csrf_field(); ?>
                     <input type="hidden" name="booking_id" value="<?php echo (int)$trip->BookingId; ?>">
@@ -586,7 +586,7 @@ function mtCheckWeatherReplan() {
             }
             var data = res.data;
             if (data.no_forecast_available) {
-                resultBox.innerHTML = '<p style="font-size:13px;color:#888;"><?php echo addslashes(tms_t('msg_no_forecast_available','No live forecast available yet for these dates (forecasts only cover about a week out) — check back closer to your trip.')); ?></p>';
+                resultBox.innerHTML = '<p style="font-size:13px;color:var(--text-muted);"><?php echo addslashes(tms_t('msg_no_forecast_available','No live forecast available yet for these dates (forecasts only cover about a week out) — check back closer to your trip.')); ?></p>';
             } else if (!data.flagged_days || data.flagged_days.length === 0) {
                 resultBox.innerHTML = '<p style="font-size:13px;color:#27ae60;"><i class="fa fa-check-circle"></i> <?php echo addslashes(tms_t('msg_no_weather_concerns','No weather concerns found for your itinerary right now.')); ?></p>';
             } else {

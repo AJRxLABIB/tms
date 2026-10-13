@@ -222,7 +222,7 @@ $docIcons = ['passport'=>'book','visa'=>'id-card','insurance'=>'shield','id'=>'i
         <div class="form-group">
           <label for="wallet_expiry_date"><?php echo tms_t('label_expiry_date_optional','Expiry date (optional)'); ?></label>
           <input type="date" id="wallet_expiry_date" name="expiry_date" class="form-control">
-          <small style="color:#9ca3af;"><?php echo tms_t('dest_expiry_reminder_note', "We'll remind you before this expires."); ?></small>
+          <small style="color:var(--text-muted);"><?php echo tms_t('dest_expiry_reminder_note', "We'll remind you before this expires."); ?></small>
         </div>
         <div class="form-group">
           <label for="wallet_notes"><?php echo tms_t('label_notes_optional','Notes (optional)'); ?></label>
@@ -237,13 +237,13 @@ $docIcons = ['passport'=>'book','visa'=>'id-card','insurance'=>'shield','id'=>'i
     <div class="wallet-card">
       <h4><i class="fa fa-folder"></i> <?php echo tms_t('heading_my_documents','My Documents'); ?></h4>
       <?php if (empty($documents)): ?>
-        <div style="color:#9ca3af;font-size:13px;"><?php echo tms_t('msg_no_documents_yet','No documents uploaded yet.'); ?></div>
+        <div style="color:var(--text-muted);font-size:13px;"><?php echo tms_t('msg_no_documents_yet','No documents uploaded yet.'); ?></div>
       <?php else: foreach ($documents as $d): ?>
         <div class="doc-row">
           <div class="doc-icon"><i class="fa fa-<?= $docIcons[$d->DocType] ?? 'file' ?>"></i></div>
           <div style="flex:1;">
             <div style="font-size:13px;font-weight:600;"><?= htmlspecialchars(isset(DOC_TYPES[$d->DocType]) ? tms_t('doctype_' . $d->DocType, DOC_TYPES[$d->DocType]) : tms_t('label_document_word','Document')) ?></div>
-            <div style="font-size:11px;color:#9ca3af;"><?= htmlspecialchars($d->OriginalFilename) ?> &middot; <?= date('d M Y', strtotime($d->UploadedAt)) ?><?= $d->Notes ? ' &middot; ' . htmlspecialchars($d->Notes) : '' ?></div>
+            <div style="font-size:11px;color:var(--text-muted);"><?= htmlspecialchars($d->OriginalFilename) ?> &middot; <?= date('d M Y', strtotime($d->UploadedAt)) ?><?= $d->Notes ? ' &middot; ' . htmlspecialchars($d->Notes) : '' ?></div>
             <?php if (!empty($d->ExpiryDate)):
               $daysLeft = (int)floor((strtotime($d->ExpiryDate) - strtotime(date('Y-m-d'))) / 86400);
               $expColor = $daysLeft < 0 ? '#e74c3c' : ($daysLeft <= 30 ? '#e67e22' : '#9ca3af');
@@ -271,13 +271,13 @@ $docIcons = ['passport'=>'book','visa'=>'id-card','insurance'=>'shield','id'=>'i
 <div class="wallet-card">
   <h4><i class="fa fa-ticket"></i> <?php echo tms_t('heading_my_tickets','My Tickets'); ?></h4>
   <?php if (empty($tickets)): ?>
-    <div style="color:#9ca3af;font-size:13px;"><?php echo tms_t('msg_no_confirmed_bookings','No confirmed bookings yet.'); ?></div>
+    <div style="color:var(--text-muted);font-size:13px;"><?php echo tms_t('msg_no_confirmed_bookings','No confirmed bookings yet.'); ?></div>
   <?php else: foreach ($tickets as $t): ?>
     <div class="ticket-row">
       <div class="doc-icon" style="background:#f0fdf4;color:#059669;"><i class="fa fa-check"></i></div>
       <div style="flex:1;">
         <div style="font-size:13px;font-weight:600;"><?= htmlspecialchars($t->PackageName) ?></div>
-        <div style="font-size:11px;color:#9ca3af;"><?= htmlspecialchars($t->PackageLocation) ?><?= $t->FromDate ? ' &middot; ' . htmlspecialchars($t->FromDate) : '' ?></div>
+        <div style="font-size:11px;color:var(--text-muted);"><?= htmlspecialchars($t->PackageLocation) ?><?= $t->FromDate ? ' &middot; ' . htmlspecialchars($t->FromDate) : '' ?></div>
       </div>
       <a href="ticket.php?bkid=<?= (int)$t->BookingId ?>" class="btn btn-xs btn-primary" target="_blank"><i class="fa fa-download"></i> <?php echo tms_t('btn_view_ticket','View Ticket'); ?></a>
     </div>

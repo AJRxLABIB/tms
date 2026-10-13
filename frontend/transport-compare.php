@@ -83,7 +83,7 @@ function tms_transport_duration_text(int $minutes): string {
 .tc-btn { background: linear-gradient(135deg,#176B50,#104B3A); color:#fff; border:none; border-radius:8px; padding:12px 35px; font-weight:700; cursor:pointer; width:100%; margin-top:10px; }
 .tc-summary { display:flex; flex-wrap:wrap; gap:12px; margin-bottom:25px; }
 .tc-summary-card { flex:1; min-width:170px; background:var(--white); border-radius:10px; padding:16px; box-shadow:0 3px 14px rgba(0,0,0,.07); text-align:center; }
-.tc-summary-card .lbl { font-size:11px; color:#999; text-transform:uppercase; letter-spacing:.5px; }
+.tc-summary-card .lbl { font-size:11px; color:var(--text-muted); text-transform:uppercase; letter-spacing:.5px; }
 .tc-summary-card .val { font-size:1.05em; font-weight:700; color:#333; margin-top:6px; }
 .tc-table-wrap { overflow-x:auto; background:var(--white); border-radius:12px; box-shadow:0 3px 16px rgba(0,0,0,.08); }
 .tc-table { width:100%; border-collapse:collapse; min-width:820px; }
@@ -94,7 +94,7 @@ function tms_transport_duration_text(int $minutes): string {
 .tc-tier .dot { display:inline-block; width:7px; height:7px; border-radius:50%; background:#e0e0e0; margin-right:2px; }
 .tc-tier .dot.on { background:#176B50; }
 .tc-badge-real { background:#d4edda; color:#155724; padding:2px 8px; border-radius:10px; font-size:10.5px; font-weight:700; }
-.tc-badge-est { background:#fff3cd; color:#8a6d00; padding:2px 8px; border-radius:10px; font-size:10.5px; font-weight:700; }
+.tc-badge-est { background:#fff3cd; color:#735A00; padding:2px 8px; border-radius:10px; font-size:10.5px; font-weight:700; }
 html[data-theme="dark"] .tc-summary-card .val,
 html[data-theme="dark"] .tc-table th { color: var(--text) !important; }
 </style>
@@ -171,14 +171,14 @@ html[data-theme="dark"] .tc-table th { color: var(--text) !important; }
                             <i class="fa <?php echo htmlspecialchars($modeMeta[$mode]['icon'] ?? 'fa-circle', ENT_QUOTES, 'UTF-8'); ?>"></i>
                             <?php echo htmlspecialchars($modeMeta[$mode]['label'] ?? $mode, ENT_QUOTES, 'UTF-8'); ?>
                         <?php else: ?>
-                            <span style="color:#aaa;">N/A</span>
+                            <span style="color:var(--text-muted);">N/A</span>
                         <?php endif; ?>
                     </div>
                 </div>
                 <?php endforeach; ?>
             </div>
 
-            <p style="text-align:center;color:#888;margin-bottom:16px;">
+            <p style="text-align:center;color:var(--text-muted);margin-bottom:16px;">
                 <?php echo htmlspecialchars($result['origin'], ENT_QUOTES, 'UTF-8'); ?> → <?php echo htmlspecialchars($result['destination'], ENT_QUOTES, 'UTF-8'); ?>
                 — <strong><?php echo htmlspecialchars((string)$result['distance_km'], ENT_QUOTES, 'UTF-8'); ?> km</strong> (straight-line)
             </p>
@@ -227,7 +227,7 @@ html[data-theme="dark"] .tc-table th { color: var(--text) !important; }
                             </td>
                             <td>
                                 <?php if ($row['emission_grams_per_km'] === null): ?>
-                                    <span style="color:#aaa;font-size:12px;">Not tracked</span>
+                                    <span style="color:var(--text-muted);font-size:12px;">Not tracked</span>
                                 <?php elseif ($row['emission_grams_per_km'] === 0): ?>
                                     <span style="color:#27ae60;font-weight:600;">Zero</span>
                                 <?php else: ?>

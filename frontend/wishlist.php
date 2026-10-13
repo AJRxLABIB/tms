@@ -66,7 +66,7 @@ $wishes = $q->fetchAll(PDO::FETCH_OBJ);
 .wish-card img{width:100%;height:180px;object-fit:cover;}
 .wish-card-body{padding:16px;}
 .wish-card-body h4{margin:0 0 6px;font-size:16px;font-weight:700;color:#333;}
-.wish-card-body .loc{color:#888;font-size:13px;margin-bottom:8px;}
+.wish-card-body .loc{color:var(--text-muted);font-size:13px;margin-bottom:8px;}
 html[data-theme="dark"] .wish-card-body h4 { color: var(--text) !important; }
 html[data-theme="dark"] .wish-card-body .loc { color: var(--text-muted) !important; }
 .wish-card-body .price{color:var(--secondary);font-weight:700;font-size:18px;}
@@ -89,7 +89,7 @@ html[data-theme="dark"] .wish-card-body .loc { color: var(--text-muted) !importa
 <div class="empty-state">
   <i class="fa fa-heart-o"></i>
   <h3>Your wishlist is empty</h3>
-  <p style="color:#888;">Browse tour packages and click the heart icon to save them here.</p>
+  <p style="color:var(--text-muted);">Browse tour packages and click the heart icon to save them here.</p>
   <a href="package-list.php" class="btn btn-primary btn-lg" style="margin-top:10px;">Browse Packages</a>
 </div>
 <?php else: ?>
@@ -104,7 +104,7 @@ html[data-theme="dark"] .wish-card-body .loc { color: var(--text-muted) !importa
     <div class="wish-card-body">
       <h4><?= htmlspecialchars($p->PackageName,ENT_QUOTES,'UTF-8') ?></h4>
       <div class="loc"><i class="fa fa-map-marker"></i> <?= htmlspecialchars($p->PackageLocation,ENT_QUOTES,'UTF-8') ?></div>
-      <div class="price"><?= tms_currency((float)$p->PackagePrice) ?> <small style="color:#aaa;font-weight:400;font-size:13px;">/ person</small></div>
+      <div class="price"><?= tms_currency((float)$p->PackagePrice) ?> <small style="color:var(--text-muted);font-weight:400;font-size:13px;">/ person</small></div>
       <?php if (!empty($p->PriceAtAdd) && (float)$p->PackagePrice < (float)$p->PriceAtAdd): ?>
         <?php $dropPct = round((($p->PriceAtAdd - $p->PackagePrice) / $p->PriceAtAdd) * 100); ?>
         <div class="price-drop-badge">

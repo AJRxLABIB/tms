@@ -107,7 +107,7 @@ if(!empty($_SESSION['login'])) {
 .form-control:focus { border-color:#11998e; box-shadow:none; outline:none; }
 .option-cards { display:flex; flex-wrap:wrap; gap:10px; }
 .option-card { border:2px solid #e0e0e0; border-radius:8px; padding:12px 18px; cursor:pointer; transition:0.2s; font-size:14px; }
-.option-card:hover, .option-card.selected { border-color:#11998e; background:#e8fdf5; color:#11998e; font-weight:600; }
+.option-card:hover, .option-card.selected { border-color:#11998e; background:#e8fdf5; color:#0B5E55; font-weight:600; }
 .option-card i { margin-right:6px; }
 .activity-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(150px,1fr)); gap:10px; }
 .activity-item { border:2px solid #e0e0e0; border-radius:8px; padding:12px; text-align:center; cursor:pointer; transition:0.2s; }
@@ -269,7 +269,7 @@ html[data-theme="dark"] .ai-tip-list { color: var(--text-muted) !important; }
         <!-- Step 3: Activities -->
         <div class="step-card wow fadeInUp">
             <h4><span class="step-num">3</span> Preferred Activities</h4>
-            <p style="color:#777;font-size:13px;margin-bottom:15px;">Select all that interest you:</p>
+            <p style="color:var(--text-muted);font-size:13px;margin-bottom:15px;">Select all that interest you:</p>
             <div class="activity-grid">
                 <?php
                 $activities = [
@@ -291,7 +291,7 @@ html[data-theme="dark"] .ai-tip-list { color: var(--text-muted) !important; }
         <!-- Step 3.5: AI Itinerary Preview -->
         <div class="step-card wow fadeInUp">
             <h4><span class="step-num" style="background:linear-gradient(135deg,#176B50,#104B3A)"><i class="fa fa-magic" style="font-size:13px;"></i></span> AI Itinerary Preview</h4>
-            <p style="color:#777;font-size:13px;margin-bottom:15px;">
+            <p style="color:var(--text-muted);font-size:13px;margin-bottom:15px;">
                 See a complete AI-generated day-by-day plan — itinerary, costs, hotel &amp; restaurant picks, and safety tips —
                 before you submit your request. This is optional and doesn't affect your booking.
             </p>
@@ -508,19 +508,19 @@ function renderItinerary(itin) {
             html += '<div class="ai-day-head" onclick="toggleAiDay(this)"><span><i class="fa fa-chevron-right" style="font-size:11px;margin-right:6px;"></i> Day ' + esc(day.day) + ': ' + esc(day.title) + '</span>' +
                     (day.daily_budget ? '<span style="color:#176B50;font-weight:700;">৳' + Number(day.daily_budget).toLocaleString() + '</span>' : '') + '</div>';
             html += '<div class="ai-day-body' + (idx === 0 ? ' open' : '') + '">';
-            if (day.weather_note) html += '<p style="font-size:13px;color:#777;"><i class="fa fa-cloud"></i> ' + esc(day.weather_note) + '</p>';
+            if (day.weather_note) html += '<p style="font-size:13px;color:var(--text-muted);"><i class="fa fa-cloud"></i> ' + esc(day.weather_note) + '</p>';
             if (Array.isArray(day.schedule)) {
                 day.schedule.forEach(function(s) {
                     html += '<div class="ai-sched-row"><span class="ai-sched-time">' + esc(s.time) + '</span><span><strong>' + esc(s.activity) + '</strong> — ' + esc(s.location) +
                             (s.cost ? ' <span style="color:#27ae60;">(৳' + Number(s.cost).toLocaleString() + ')</span>' : '') +
-                            (s.notes ? '<br><span style="color:#999;font-size:12px;">' + esc(s.notes) + '</span>' : '') + '</span></div>';
+                            (s.notes ? '<br><span style="color:var(--text-muted);font-size:12px;">' + esc(s.notes) + '</span>' : '') + '</span></div>';
                 });
             }
             if (day.meal_suggestions) {
                 html += '<p style="margin-top:10px;font-size:13px;"><i class="fa fa-cutlery" style="color:#f0ad4e;"></i> ' +
                     ['breakfast','lunch','dinner'].map(function(m){ return day.meal_suggestions[m] ? esc(m.charAt(0).toUpperCase()+m.slice(1)) + ': ' + esc(day.meal_suggestions[m]) : ''; }).filter(Boolean).join(' &nbsp;·&nbsp; ') + '</p>';
             }
-            if (day.pro_tip) html += '<p style="font-size:12.5px;color:#888;margin-top:8px;"><i class="fa fa-lightbulb-o"></i> ' + esc(day.pro_tip) + '</p>';
+            if (day.pro_tip) html += '<p style="font-size:12.5px;color:var(--text-muted);margin-top:8px;"><i class="fa fa-lightbulb-o"></i> ' + esc(day.pro_tip) + '</p>';
             html += '</div></div>';
         });
     }
@@ -570,7 +570,7 @@ function renderItinerary(itin) {
     });
 
     if (itin.ai_notes) {
-        html += '<p style="margin-top:16px;font-size:12.5px;color:#999;border-top:1px solid #eee;padding-top:12px;"><i class="fa fa-info-circle"></i> ' + esc(itin.ai_notes) + '</p>';
+        html += '<p style="margin-top:16px;font-size:12.5px;color:var(--text-muted);border-top:1px solid #eee;padding-top:12px;"><i class="fa fa-info-circle"></i> ' + esc(itin.ai_notes) + '</p>';
     }
 
     resultBox.innerHTML = html;

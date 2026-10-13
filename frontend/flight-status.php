@@ -31,7 +31,7 @@ tms_require_user(); // Batch 1 (landing/auth gating): whole app now requires log
 .stat-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:14px;margin-top:16px;}
 .stat-box{background:#f8fafc;border-radius:10px;padding:14px;text-align:center;}
 .stat-box .val{font-size:20px;font-weight:800;color:#1f2937;}
-.stat-box .lbl{font-size:11px;color:#94a3b8;text-transform:uppercase;letter-spacing:.4px;margin-top:2px;}
+.stat-box .lbl{font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.4px;margin-top:2px;}
 </style>
 </head><body>
 <?php include('backend/header.php'); ?>
@@ -79,7 +79,7 @@ async function trackFlight(e) {
 
   btn.disabled = true;
   btn.innerHTML = '<i class="fa fa-spinner fa-spin"></i> Searching...';
-  resultBox.innerHTML = '<div style="margin-top:16px;color:#94a3b8;font-size:13px;"><i class="fa fa-circle-o-notch fa-spin"></i> Checking live aircraft positions...</div>';
+  resultBox.innerHTML = '<div style="margin-top:16px;color:var(--text-muted);font-size:13px;"><i class="fa fa-circle-o-notch fa-spin"></i> Checking live aircraft positions...</div>';
   document.getElementById('flightMap').style.display = 'none';
 
   try {

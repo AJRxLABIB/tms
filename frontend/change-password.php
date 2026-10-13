@@ -102,7 +102,7 @@ if (isset($_POST['submit5'])) {
                 <b>New Password</b>
                 <input type="password" name="newpassword" id="newpassword" class="form-control" placeholder="At least 6 characters" required autocomplete="new-password" oninput="checkStrength(this.value)">
                 <div id="strengthBar" class="pwd-strength" style="width:0;background:#ddd;"></div>
-                <small id="strengthText" style="color:#888;font-size:12px;"></small>
+                <small id="strengthText" style="color:var(--text-muted);font-size:12px;"></small>
             </div>
             <div class="form-group">
                 <b>Confirm New Password</b>

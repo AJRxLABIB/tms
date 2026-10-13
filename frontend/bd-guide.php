@@ -75,7 +75,7 @@ tms_seo_meta([
 .bdg-card h3 i { color:#006a4e; margin-right:6px; }
 .bdg-card .bdg-row { margin-bottom:10px; font-size:13.5px; color:var(--text); line-height:1.55; }
 .bdg-card .bdg-row .bdg-lbl { display:block; font-size:10.5px; text-transform:uppercase; letter-spacing:.5px; color:var(--text-muted); font-weight:700; margin-bottom:2px; }
-.bdg-note { background:#fffbeb; border:1px solid #fde68a; color:#8a6d00; border-radius:8px; padding:10px 12px; font-size:12.5px; margin-bottom:10px; }
+.bdg-note { background:#fffbeb; border:1px solid #fde68a; color:#735A00; border-radius:8px; padding:10px 12px; font-size:12.5px; margin-bottom:10px; }
 html[data-theme="dark"] .bdg-note { background:#2a2400; border-color:#5c4a00; color:#ffd76a; }
 .bdg-sources { font-size:11px; color:var(--text-light); margin-top:auto; padding-top:10px; border-top:1px solid #eef1f3; }
 .bdg-sources a { color:var(--text-light); text-decoration:underline; }

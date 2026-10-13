@@ -564,17 +564,17 @@ if ($pkg) {
                     </script>
                     <?php endif; ?>
                     <?php if ($galleryHasStockPhotos): ?>
-                    <div class="pkg-gallery-stock-note" style="font-size:11.5px;color:#94a3b8;padding:6px 2px 0;">
+                    <div class="pkg-gallery-stock-note" style="font-size:11.5px;color:var(--text-muted);padding:6px 2px 0;">
                         <i class="fa fa-info-circle"></i> Some photos are representative stock images of this destination, not exclusive property photos.
                     </div>
                     <?php endif; ?>
                     <div class="pkg-body">
-                        <p style="font-size:12px;color:#aaa;margin:0;">#PKG-<?php echo (int)$pkg->PackageId; ?></p>
+                        <p style="font-size:12px;color:var(--text-muted);margin:0;">#PKG-<?php echo (int)$pkg->PackageId; ?></p>
                         <h2><?php echo htmlspecialchars($pkgNameT ?? $pkg->PackageName,ENT_QUOTES,'UTF-8'); ?></h2>
                         <?php if (!empty($pkg->AvgRating) && $pkg->AvgRating > 0): ?>
                         <div style="color:var(--brass);font-size:16px;margin-bottom:8px;">
                             <?php for ($i=1;$i<=5;$i++) echo $i<=round($pkg->AvgRating)?'★':'☆'; ?>
-                            <span style="font-size:13px;color:#888;"><?php echo number_format($pkg->AvgRating,1); ?> / 5</span>
+                            <span style="font-size:13px;color:var(--text-muted);"><?php echo number_format($pkg->AvgRating,1); ?> / 5</span>
                         </div>
                         <?php endif; ?>
                         <?php if ($matchScore && $matchScore['overall_match'] !== null): ?>
@@ -593,10 +593,10 @@ if ($pkg) {
                                 </li>
                                 <?php endforeach; ?>
                             </ul>
-                            <p style="font-size:11px;color:#94a3b8;margin:8px 0 0;">Computed from real platform data (price, live weather forecast, seat availability, ratings, distance) -- not an AI guess.</p>
+                            <p style="font-size:11px;color:var(--text-muted);margin:8px 0 0;">Computed from real platform data (price, live weather forecast, seat availability, ratings, distance) -- not an AI guess.</p>
                         </div>
                         <?php elseif ($matchScore && !empty($matchScore['note'])): ?>
-                        <div style="font-size:12px;color:#94a3b8;margin-bottom:12px;"><i class="fa fa-info-circle"></i> <?php echo htmlspecialchars($matchScore['note'],ENT_QUOTES,'UTF-8'); ?></div>
+                        <div style="font-size:12px;color:var(--text-muted);margin-bottom:12px;"><i class="fa fa-info-circle"></i> <?php echo htmlspecialchars($matchScore['note'],ENT_QUOTES,'UTF-8'); ?></div>
                         <?php endif; ?>
                         <div class="meta-row">
                             <span><i class="fa fa-tag"></i> <?php echo htmlspecialchars($pkg->PackageType,ENT_QUOTES,'UTF-8'); ?></span>
@@ -791,7 +791,7 @@ if ($pkg) {
                         <div style="font-weight:600;color:#333;cursor:pointer;display:flex;justify-content:space-between;align-items:center;"
                              onclick="var a=document.getElementById('pkgFaqA<?php echo $fi; ?>');a.style.display=a.style.display==='block'?'none':'block';this.querySelector('i').classList.toggle('fa-chevron-down');this.querySelector('i').classList.toggle('fa-chevron-up');">
                             <span><?php echo htmlspecialchars($faq['q'],ENT_QUOTES,'UTF-8'); ?></span>
-                            <i class="fa fa-chevron-down" style="font-size:12px;color:#999;"></i>
+                            <i class="fa fa-chevron-down" style="font-size:12px;color:var(--text-muted);"></i>
                         </div>
                         <div id="pkgFaqA<?php echo $fi; ?>" style="display:none;font-size:13.5px;color:#666;margin-top:8px;line-height:1.6;">
                             <?php echo htmlspecialchars($faq['a'],ENT_QUOTES,'UTF-8'); ?>
@@ -929,7 +929,7 @@ if ($pkg) {
                 <?php if(!empty($pkg->MapLat) && !empty($pkg->MapLng) && defined('GOOGLE_MAPS_API_KEY') && GOOGLE_MAPS_API_KEY !== '' && $tmsStreetViewOk): ?>
                 <div class="pkg-card wow fadeInUp" style="padding:24px;">
                     <h4 style="font-weight:700;margin-bottom:4px;"><i class="fa fa-street-view" style="color:#1F8A66"></i> Virtual Preview</h4>
-                    <p style="font-size:12.5px;color:#94a3b8;margin-bottom:14px;">Real 360° street-level imagery of this destination — drag to look around.</p>
+                    <p style="font-size:12.5px;color:var(--text-muted);margin-bottom:14px;">Real 360° street-level imagery of this destination — drag to look around.</p>
                     <div style="border-radius:var(--radius-sm);overflow:hidden;box-shadow:var(--shadow-sm);">
                         <iframe
                             width="100%" height="320" style="border:0;display:block;" loading="lazy"
@@ -948,7 +948,7 @@ if ($pkg) {
                 <?php if(!empty($pkg->MapLat) && !empty($pkg->MapLng)): ?>
                 <div class="pkg-card wow fadeInUp" style="padding:24px;">
                     <h4 style="font-weight:700;margin-bottom:4px;"><i class="fa fa-map-marker" style="color:var(--primary)"></i> Nearby Essentials</h4>
-                    <p style="font-size:12.5px;color:#94a3b8;margin-bottom:14px;">Live data around this destination — hotels, food, and emergency services.</p>
+                    <p style="font-size:12.5px;color:var(--text-muted);margin-bottom:14px;">Live data around this destination — hotels, food, and emergency services.</p>
                     <div id="nearbyMap" style="height:280px;border-radius:var(--radius-sm);margin-bottom:14px;background:#eef2f5;"></div>
                     <div id="nearbyTabs" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px;">
                         <button type="button" class="nearby-tab active" data-cat="hotel"><i class="fa fa-bed"></i> Hotels</button>
@@ -958,7 +958,7 @@ if ($pkg) {
                         <button type="button" class="nearby-tab" data-cat="police"><i class="fa fa-shield"></i> Police</button>
                     </div>
                     <div id="nearbyList" style="font-size:13px;color:#666;">
-                        <div style="text-align:center;padding:16px;color:#aaa;"><i class="fa fa-spinner fa-spin"></i> Loading hotels nearby…</div>
+                        <div style="text-align:center;padding:16px;color:var(--text-muted);"><i class="fa fa-spinner fa-spin"></i> Loading hotels nearby…</div>
                     </div>
                 </div>
                 <style>
@@ -969,7 +969,7 @@ if ($pkg) {
                 .nearby-item:hover{background:var(--bg);padding-left:6px;padding-right:6px;}
                 .nearby-item:last-child{border-bottom:none;}
                 .nearby-item .name{font-weight:600;color:#333;font-size:13.5px;}
-                .nearby-item .addr{font-size:11.5px;color:#94a3b8;margin-top:2px;}
+                .nearby-item .addr{font-size:11.5px;color:var(--text-muted);margin-top:2px;}
                 .nearby-item .dist{font-family:var(--font-mono);font-size:11.5px;color:var(--secondary);font-weight:700;white-space:nowrap;}
 html[data-theme="dark"] .pkg-body h2,
 html[data-theme="dark"] .nearby-item .name { color: var(--text) !important; }
@@ -985,7 +985,7 @@ html[data-theme="dark"] .meta-row { color: var(--text-muted) !important; }
                 #placeDetailsModal{background:#fff;border-radius:16px;max-width:420px;width:100%;max-height:85vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.3);}
                 .pd-head{padding:20px 22px 14px;border-bottom:1px solid #f0f0f0;position:relative;}
                 .pd-head h3{margin:0 18px 0 0;font-size:17px;font-weight:700;color:var(--text);}
-                .pd-close{position:absolute;top:16px;right:18px;background:none;border:none;font-size:20px;color:#94a3b8;cursor:pointer;line-height:1;}
+                .pd-close{position:absolute;top:16px;right:18px;background:none;border:none;font-size:20px;color:var(--text-muted);cursor:pointer;line-height:1;}
                 .pd-close:hover{color:#333;}
                 .pd-body{padding:16px 22px 22px;}
                 .pd-row{display:flex;gap:10px;padding:8px 0;border-bottom:1px solid #f8fafc;font-size:13px;}
@@ -1090,7 +1090,7 @@ html[data-theme="dark"] .meta-row { color: var(--text-muted) !important; }
                     // stylesheet.
                     function openPlaceDetails(p, category) {
                         document.getElementById('pdName').textContent = p.name || 'Place';
-                        document.getElementById('pdBody').innerHTML = '<div style="text-align:center;padding:20px;color:#aaa;"><i class="fa fa-spinner fa-spin"></i> Loading details…</div>';
+                        document.getElementById('pdBody').innerHTML = '<div style="text-align:center;padding:20px;color:var(--text-muted);"><i class="fa fa-spinner fa-spin"></i> Loading details…</div>';
                         document.getElementById('placeDetailsOverlay').classList.add('open');
 
                         var qs = new URLSearchParams({
@@ -1191,7 +1191,7 @@ html[data-theme="dark"] .meta-row { color: var(--text-muted) !important; }
                     });
 
                     function loadCategory(cat, label){
-                        document.getElementById('nearbyList').innerHTML = '<div style="text-align:center;padding:16px;color:#aaa;"><i class="fa fa-spinner fa-spin"></i> Loading ' + label + ' nearby…</div>';
+                        document.getElementById('nearbyList').innerHTML = '<div style="text-align:center;padding:16px;color:var(--text-muted);"><i class="fa fa-spinner fa-spin"></i> Loading ' + label + ' nearby…</div>';
                         clearMarkers();
                         fetch('api/explore.php?action=places&lat=' + lat + '&lng=' + lng + '&category=' + cat)
                             .then(function(r){ return r.json(); })
@@ -1213,7 +1213,7 @@ html[data-theme="dark"] .meta-row { color: var(--text-muted) !important; }
                                 }
                                 var results = (res.data && res.data.places) ? res.data.places : [];
                                 if (!results.length) {
-                                    document.getElementById('nearbyList').innerHTML = '<div style="text-align:center;padding:16px;color:#aaa;">No ' + label + ' found within a few kilometres of this destination.</div>';
+                                    document.getElementById('nearbyList').innerHTML = '<div style="text-align:center;padding:16px;color:var(--text-muted);">No ' + label + ' found within a few kilometres of this destination.</div>';
                                     return;
                                 }
                                 var listEl = document.getElementById('nearbyList');
@@ -1336,7 +1336,7 @@ html[data-theme="dark"] .meta-row { color: var(--text-muted) !important; }
                             <i class="fa fa-bolt"></i> <?php echo htmlspecialchars($pkgPricing['label'], ENT_QUOTES, 'UTF-8'); ?>
                         </div>
                         <?php else: ?>
-                        <div id="tmsPriceBadge" style="margin-top:6px;font-size:11.5px;color:#94a3b8;"></div>
+                        <div id="tmsPriceBadge" style="margin-top:6px;font-size:11.5px;color:var(--text-muted);"></div>
                         <?php endif; ?>
                         <div style="margin-top:4px;font-size:10.5px;color:#b0b7c3;">Dynamic pricing — updates once you pick travel dates below.</div>
                         <?php if (count($priceHistory) >= 2):
@@ -1371,7 +1371,7 @@ html[data-theme="dark"] .meta-row { color: var(--text-muted) !important; }
                         <form method="post">
                             <?php tms_csrf_field(); ?>
                             <div class="form-group">
-                                <label style="font-weight:600;font-size:13px;">Departure Date</label>
+                                <label style="font-weight:600;font-size:13px;" for="datepicker">Departure Date</label>
                                 <?php /* FIX (Round 14): these were bare text boxes with a
                                          "dd-mm-yyyy" placeholder and NO datepicker — js/jquery-ui.js
                                          ships in the repo but no page ever loads it, and nothing
@@ -1384,8 +1384,8 @@ html[data-theme="dark"] .meta-row { color: var(--text-muted) !important; }
                                        id="datepicker" min="<?php echo date('Y-m-d', strtotime('+1 day')); ?>" required>
                             </div>
                             <div class="form-group">
-                                <label style="font-weight:600;font-size:13px;">Return Date</label>
-                                <input type="date" name="todate" class="form-control date"
+                                <label for="fld_todate" style="font-weight:600;font-size:13px;">Return Date</label>
+                                <input id="fld_todate" type="date" name="todate" class="form-control date"
                                        id="datepicker1" min="<?php echo date('Y-m-d', strtotime('+1 day')); ?>" required>
                             </div>
                             <script>
@@ -1406,23 +1406,23 @@ html[data-theme="dark"] .meta-row { color: var(--text-muted) !important; }
                             });
                             </script>
                             <div class="form-group">
-                                <label style="font-weight:600;font-size:13px;">Number of Travelers</label>
+                                <label style="font-weight:600;font-size:13px;" for="personsInput">Number of Travelers</label>
                                 <input type="number" name="persons" id="personsInput" class="form-control" value="1" min="1" max="20" required>
                             </div>
                             <div class="form-group">
-                                <label style="font-weight:600;font-size:13px;">Mobile Number <small style="color:#aaa;">(optional)</small></label>
-                                <input type="tel" name="mobile" class="form-control" placeholder="e.g. 017XXXXXXXX" maxlength="20">
+                                <label style="font-weight:600;font-size:13px;" for="fld_mobile">Mobile Number <small style="color:var(--text-muted);">(optional)</small></label>
+                                <input type="tel" name="mobile" class="form-control" placeholder="e.g. 017XXXXXXXX" maxlength="20" id="fld_mobile">
                             </div>
                             <?php if (!empty($packageAddons)): ?>
                             <div class="form-group">
-                                <label style="font-weight:600;font-size:13px;">Add-ons <small style="color:#aaa;">(optional — works with either button below)</small></label>
+                                <label style="font-weight:600;font-size:13px;">Add-ons <small style="color:var(--text-muted);">(optional — works with either button below)</small></label>
                                 <div style="border:1px solid #eee;border-radius:8px;padding:10px 12px;">
                                     <?php foreach ($packageAddons as $ao): ?>
                                     <div style="display:flex;align-items:center;gap:8px;padding:6px 0;<?php echo $ao !== end($packageAddons) ? 'border-bottom:1px solid #f2f2f2;' : ''; ?>">
                                         <input type="checkbox" name="addons[]" value="<?php echo (int)$ao->AddOnId; ?>" id="addon-<?php echo (int)$ao->AddOnId; ?>">
                                         <label for="addon-<?php echo (int)$ao->AddOnId; ?>" style="flex:1;margin:0;font-weight:400;font-size:13.5px;cursor:pointer;">
                                             <?php echo htmlspecialchars($ao->Name, ENT_QUOTES, 'UTF-8'); ?>
-                                            <?php if (!empty($ao->Description)): ?><br><small style="color:#94a3b8;"><?php echo htmlspecialchars($ao->Description, ENT_QUOTES, 'UTF-8'); ?></small><?php endif; ?>
+                                            <?php if (!empty($ao->Description)): ?><br><small style="color:var(--text-muted);"><?php echo htmlspecialchars($ao->Description, ENT_QUOTES, 'UTF-8'); ?></small><?php endif; ?>
                                         </label>
                                         <span style="font-weight:600;font-size:13px;white-space:nowrap;"><?php echo tms_currency((float)$ao->Price); ?></span>
                                         <input type="number" name="addon_qty[<?php echo (int)$ao->AddOnId; ?>]" value="1" min="1" max="20" class="form-control" style="width:60px;padding:4px 6px;">
@@ -1432,7 +1432,7 @@ html[data-theme="dark"] .meta-row { color: var(--text-muted) !important; }
                             </div>
                             <?php endif; ?>
                             <div class="form-group">
-                                <label style="font-weight:600;font-size:13px;">Coupon Code <small style="color:#aaa;">(optional)</small></label>
+                                <label style="font-weight:600;font-size:13px;" for="couponCode">Coupon Code <small style="color:var(--text-muted);">(optional)</small></label>
                                 <div style="display:flex;gap:8px;">
                                     <input type="text" name="couponCode" id="couponCode" placeholder="e.g. WELCOME10" class="form-control" style="flex:1;">
                                     <button type="button" onclick="checkCoupon()" class="btn btn-info" style="white-space:nowrap;">Check</button>
@@ -1440,9 +1440,9 @@ html[data-theme="dark"] .meta-row { color: var(--text-muted) !important; }
                                 <div id="couponResult" style="margin-top:5px;font-size:13px;"></div>
                             </div>
                             <div class="form-group">
-                                <label style="font-weight:600;font-size:13px;">Special Requests</label>
+                                <label style="font-weight:600;font-size:13px;" for="fld_comment">Special Requests</label>
                                 <input type="text" name="comment" class="form-control"
-                                       placeholder="Any special request (optional)" maxlength="500">
+                                       placeholder="Any special request (optional)" maxlength="500" id="fld_comment">
                             </div>
 
                             <?php if (!empty($_SESSION['login'])): ?>
@@ -1479,7 +1479,7 @@ html[data-theme="dark"] .meta-row { color: var(--text-muted) !important; }
         <?php else: ?>
             <div style="text-align:center;padding:60px 20px;">
                 <i class="fa fa-exclamation-triangle" style="font-size:60px;color:#ddd;display:block;margin-bottom:20px;"></i>
-                <h3 style="color:#aaa;">Package not found</h3>
+                <h3 style="color:var(--text-muted);">Package not found</h3>
                 <a href="package-list.php" class="btn btn-primary" style="margin-top:10px;">Browse All Packages</a>
             </div>
         <?php endif; ?>
@@ -1587,7 +1587,7 @@ function checkCoupon() {
                             : '';
                         badgeEl.style.cssText = res.is_adjusted
                             ? 'margin-top:6px;font-size:11.5px;font-weight:600;color:#f97316;background:#fff7ed;display:inline-block;padding:3px 10px;border-radius:20px;cursor:help;'
-                            : 'margin-top:6px;font-size:11.5px;color:#94a3b8;';
+                            : 'margin-top:6px;font-size:11.5px;color:var(--text-muted);';
                         if (res.is_adjusted && Array.isArray(res.breakdown) && res.breakdown.length) {
                             badgeEl.title = res.breakdown.map(function (b) {
                                 return b.label + ': +' + b.pct + '%';
@@ -1627,7 +1627,7 @@ function checkCoupon() {
             html += (p.data_source === 'historical_bookings') ? ' (based on ' + p.total_bookings_analysed + ' real bookings)' : ' (general estimate)';
             html += ':</strong> ' + p.ai_narrative;
             if (p.busiest_months && p.busiest_months.length) {
-                html += '<br><span style="font-size:12px;color:#a0aec0;">Busiest: ' + p.busiest_months.join(', ') + ' &middot; Quietest: ' + p.quietest_months.join(', ') + '</span>';
+                html += '<br><span style="font-size:12px;color:var(--text-muted);">Busiest: ' + p.busiest_months.join(', ') + ' &middot; Quietest: ' + p.quietest_months.join(', ') + '</span>';
             }
             box.innerHTML = html;
             box.style.display = 'block';

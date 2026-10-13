@@ -93,7 +93,7 @@ if (isset($_POST['submit1'])) {
 .enquiry-card .form-control:focus{border-color:var(--secondary);box-shadow:none;outline:none;}
 .btn-enquiry{background:var(--secondary);color:#fff;border:none;border-radius:7px;padding:12px 32px;font-weight:700;font-size:15px;cursor:pointer;transition:.2s;width:100%;margin-top:6px;}
 .btn-enquiry:hover{background:#2d6a97;}
-.char-counter{font-size:12px;color:#aaa;float:right;margin-top:2px;}
+.char-counter{font-size:12px;color:var(--text-muted);float:right;margin-top:2px;}
 html[data-theme="dark"] .enquiry-card .form-group label { color: var(--text-muted) !important; }
 html[data-theme="dark"] .char-counter { color: var(--text-light) !important; }
 </style>

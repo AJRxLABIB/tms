@@ -164,13 +164,13 @@ $categoryColors = ['accommodation'=>'#3b82f6','food'=>'#f59e0b','transport'=>'#1
       <?php endif; ?>
       <div style="margin-top:14px;">
       <?php if (empty($breakdown['by_category'])): ?>
-        <div style="color:#9ca3af;font-size:13px;"><?php echo tms_t('msg_no_expenses_logged','No expenses logged yet.'); ?></div>
+        <div style="color:var(--text-muted);font-size:13px;"><?php echo tms_t('msg_no_expenses_logged','No expenses logged yet.'); ?></div>
       <?php else: foreach ($breakdown['by_category'] as $cat => $data): ?>
         <div class="cat-row">
           <div class="cat-icon" style="background:<?= $categoryColors[$cat] ?? '#6b7280' ?>;"><i class="fa fa-<?= $categoryIcons[$cat] ?? 'circle' ?>"></i></div>
           <div style="flex:1;">
             <div style="font-size:13px;font-weight:600;text-transform:capitalize;"><?= htmlspecialchars(tms_t('cat_' . $cat, ucfirst($cat))) ?></div>
-            <div style="font-size:11.5px;color:#9ca3af;"><?= $data['count'] ?> <?php echo tms_t('label_expense_count_suffix','expense(s)'); ?></div>
+            <div style="font-size:11.5px;color:var(--text-muted);"><?= $data['count'] ?> <?php echo tms_t('label_expense_count_suffix','expense(s)'); ?></div>
           </div>
           <div style="font-weight:700;font-size:13.5px;"><?= tms_currency($data['total']) ?></div>
         </div>
@@ -183,13 +183,13 @@ $categoryColors = ['accommodation'=>'#3b82f6','food'=>'#f59e0b','transport'=>'#1
     <div class="exp-card">
       <h4><i class="fa fa-list"></i> <?php echo tms_t('heading_recent_expenses','Recent Expenses'); ?></h4>
       <?php if (empty($expenses)): ?>
-        <div style="color:#9ca3af;font-size:13px;"><?php echo tms_t('msg_nothing_logged_yet', 'Nothing logged yet — add your first expense.'); ?></div>
+        <div style="color:var(--text-muted);font-size:13px;"><?php echo tms_t('msg_nothing_logged_yet', 'Nothing logged yet — add your first expense.'); ?></div>
       <?php else: foreach (array_slice($expenses, 0, 10) as $e): ?>
         <div class="exp-list-row">
           <div class="cat-icon" style="background:<?= $categoryColors[$e->Category] ?? '#6b7280' ?>;"><i class="fa fa-<?= $categoryIcons[$e->Category] ?? 'circle' ?>"></i></div>
           <div style="flex:1;">
             <div style="font-size:13px;font-weight:600;"><?= htmlspecialchars($e->Description ?: tms_t('cat_' . $e->Category, ucfirst($e->Category))) ?></div>
-            <div style="font-size:11px;color:#9ca3af;"><?= htmlspecialchars($e->ExpenseDate) ?></div>
+            <div style="font-size:11px;color:var(--text-muted);"><?= htmlspecialchars($e->ExpenseDate) ?></div>
           </div>
           <div style="font-weight:700;font-size:13px;"><?= tms_currency($e->Amount) ?></div>
           <form method="post" style="display:inline;margin:0;">

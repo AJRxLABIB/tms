@@ -204,7 +204,7 @@ $preselectType = $filterType ?: 'package';
 .review-card:hover{box-shadow:0 8px 30px rgba(0,0,0,.12);}
 .reviewer-avatar{width:48px;height:48px;border-radius:50%;background:linear-gradient(135deg,#f093fb,#f5576c);display:flex;align-items:center;justify-content:center;color:#fff;font-size:18px;font-weight:700;flex-shrink:0;}
 .reviewer-info h5{font-size:15px;font-weight:700;color:#333;margin:0;}
-.reviewer-info p{font-size:12px;color:#aaa;margin:0;}
+.reviewer-info p{font-size:12px;color:var(--text-muted);margin:0;}
 .review-stars{color:#f0ad4e;font-size:18px;}
 .review-text{color:#555;font-size:14px;line-height:1.6;margin:12px 0 0;}
 .review-image{border-radius:8px;max-height:200px;object-fit:cover;margin-top:12px;cursor:pointer;}
@@ -345,7 +345,7 @@ html[data-theme="dark"] .review-text { color: var(--text-muted) !important; }
                         <textarea name="reviewtext" id="reviewTextField" class="form-control" rows="4" placeholder="Share your experience…" required maxlength="2000"></textarea>
                     </div>
                     <div class="form-group">
-                        <label for="reviewImageField">Upload Photo <small style="color:#aaa;">(optional, max 5 MB)</small></label>
+                        <label for="reviewImageField">Upload Photo <small style="color:var(--text-muted);">(optional, max 5 MB)</small></label>
                         <input type="file" name="reviewimage" id="reviewImageField" class="form-control" accept="image/*">
                     </div>
                     <button type="submit" name="submitreview" class="btn-review">
@@ -368,7 +368,7 @@ html[data-theme="dark"] .review-text { color: var(--text-muted) !important; }
                 <?php else: ?>
                 <div style="text-align:center;padding:20px;">
                     <i class="fa fa-lock" style="font-size:40px;color:#ddd;display:block;margin-bottom:15px;"></i>
-                    <p style="color:#777;margin-bottom:15px;">Please sign in to write a review</p>
+                    <p style="color:var(--text-muted);margin-bottom:15px;">Please sign in to write a review</p>
                     <a href="#" data-toggle="modal" data-target="#myModal4"
                        class="btn-review" style="text-decoration:none;display:inline-block;padding:10px 25px;">Sign In</a>
                 </div>
@@ -404,7 +404,7 @@ html[data-theme="dark"] .review-text { color: var(--text-muted) !important; }
                         <?php endforeach; ?>
                     </optgroup>
                 </select>
-                <span style="color:#aaa;font-size:14px;"><?php echo count($reviews); ?> review(s)</span>
+                <span style="color:var(--text-muted);font-size:14px;"><?php echo count($reviews); ?> review(s)</span>
             </div>
 
             <?php if (count($reviews) > 0): ?>
@@ -425,7 +425,7 @@ html[data-theme="dark"] .review-text { color: var(--text-muted) !important; }
                         </div>
                         <div class="review-stars">
                             <?php for ($i=1;$i<=5;$i++) echo $i<=$rev->Rating?'★':'☆'; ?>
-                            <span style="color:#aaa;font-size:13px;">&nbsp;<?php echo (int)$rev->Rating; ?>.0</span>
+                            <span style="color:var(--text-muted);font-size:13px;">&nbsp;<?php echo (int)$rev->Rating; ?>.0</span>
                         </div>
                         <p class="review-text"><?php echo nl2br(htmlspecialchars($rev->ReviewText, ENT_QUOTES,'UTF-8')); ?></p>
                         <?php if ($rev->ReviewImage): ?>
@@ -440,8 +440,8 @@ html[data-theme="dark"] .review-text { color: var(--text-muted) !important; }
             <?php else: ?>
             <div style="text-align:center;padding:60px 20px;">
                 <i class="fa fa-comment-o" style="font-size:60px;color:#ddd;display:block;margin-bottom:20px;"></i>
-                <h4 style="color:#aaa;">No reviews yet</h4>
-                <p style="color:#bbb;">Be the first to share your experience!</p>
+                <h4 style="color:var(--text-muted);">No reviews yet</h4>
+                <p style="color:var(--text-muted);">Be the first to share your experience!</p>
             </div>
             <?php endif; ?>
         </div>

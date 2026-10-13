@@ -98,7 +98,7 @@ html[data-theme="dark"] .bar-label { color: var(--text-muted) !important; }
 .btn-save:hover { opacity:0.9; color:#fff; }
 .saved-plan { background:#f8f9fa; border-radius:8px; padding:15px; margin-bottom:10px; border:1px solid #e0e0e0; }
 .saved-plan h5 { color:#134e5e; font-weight:700; margin:0 0 5px; font-size:14px; }
-.saved-plan p { font-size:13px; color:#777; margin:0; }
+.saved-plan p { font-size:13px; color:var(--text-muted); margin:0; }
 .budget-status { padding:10px 15px; border-radius:8px; font-weight:700; font-size:14px; margin-top:15px; text-align:center; }
 .status-ok { background:#d4edda; color:#155724; }
 .status-warn { background:#fff3cd; color:#856404; }
@@ -243,7 +243,7 @@ html[data-theme="dark"] .bar-label { color: var(--text-muted) !important; }
                 <h5><?php echo htmlentities($plan->PlanName); ?></h5>
                 <p><i class="fa fa-map-marker"></i> <?php echo htmlentities($plan->Destination); ?></p>
                 <p>Total: <strong><?php echo TMS_BASE_SYMBOL . ' ' . number_format((float)$plan->TotalBudget); ?></strong> | <?php echo $plan->Duration; ?> days | <?php echo $plan->Travelers; ?> travelers</p>
-                <p style="font-size:11px;color:#aaa;"><?php echo $plan->CreatedAt; ?></p>
+                <p style="font-size:11px;color:var(--text-muted);"><?php echo $plan->CreatedAt; ?></p>
             </div>
         </div>
         <?php endforeach; ?>

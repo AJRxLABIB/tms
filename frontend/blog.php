@@ -78,7 +78,7 @@ tms_seo_meta([
 .blog-card img{width:100%;height:200px;object-fit:cover;}
 .blog-body{padding:18px;}
 .blog-body h4{font-size:17px;font-weight:700;color:#222;margin:0 0 8px;}
-.blog-meta{color:#aaa;font-size:12px;margin-bottom:10px;}
+.blog-meta{color:var(--text-muted);font-size:12px;margin-bottom:10px;}
 html[data-theme="dark"] .blog-meta { color: var(--text-light) !important; }
 html[data-theme="dark"] .blog-body p { color: var(--text-muted) !important; }
 .blog-body p{color:#666;font-size:14px;line-height:1.7;}
@@ -92,7 +92,7 @@ html[data-theme="dark"] .blog-body p { color: var(--text-muted) !important; }
       <h2 style="margin:0;"><i class="fa fa-pencil"></i> <?php echo tms_t('heading_travel_blog','Travel Blog &amp; Tips'); ?></h2>
       <form method="get" style="display:flex;gap:8px;">
         <input type="text" name="search" value="<?= htmlspecialchars($search) ?>" placeholder="<?php echo tms_t('placeholder_search_articles','Search articles...'); ?>" class="form-control" style="width:220px;">
-        <button class="btn btn-light"><i class="fa fa-search"></i></button>
+        <button class="btn btn-light" aria-label="<?= htmlspecialchars(tms_t("btn_search","Search"), ENT_QUOTES, "UTF-8") ?>"><i class="fa fa-search" aria-hidden="true"></i></button>
       </form>
     </div>
   </div>
@@ -103,7 +103,7 @@ html[data-theme="dark"] .blog-body p { color: var(--text-muted) !important; }
     ['label' => 'Blog'],
 ]); ?>
 <?php if (count($posts) === 0): ?>
-  <div style="text-align:center;padding:60px 0;color:#aaa;">
+  <div style="text-align:center;padding:60px 0;color:var(--text-muted);">
     <i class="fa fa-pencil-square-o" style="font-size:56px;"></i>
     <h3 style="margin-top:16px;"><?php echo tms_t('msg_no_articles_yet','No articles yet'); ?></h3>
     <p><?php echo tms_t('dest_no_articles_subtitle','Check back soon for travel tips and destination guides.'); ?></p>

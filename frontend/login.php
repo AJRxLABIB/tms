@@ -201,9 +201,9 @@ $showingTwoFactorPrompt = !empty($_SESSION['u2fa_pending']);
     .form-group{margin-bottom:15px;}
     .form-group label{font-size:11px;font-weight:700;color:#4a5568;text-transform:uppercase;letter-spacing:.5px;margin-bottom:5px;display:block;}
     .input-icon{position:relative;}
-    .input-icon .fi{position:absolute;left:12px;top:50%;transform:translateY(-50%);color:#a0aec0;font-size:13px;pointer-events:none;}
+    .input-icon .fi{position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--text-muted);font-size:13px;pointer-events:none;}
     .input-icon input{padding-left:34px;}
-    .input-icon .eye-btn{position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:none;color:#a0aec0;cursor:pointer;padding:0;font-size:13px;}
+    .input-icon .eye-btn{position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:none;color:var(--text-muted);cursor:pointer;padding:0;font-size:13px;}
     .form-control{width:100%;border:2px solid #e2e8f0;border-radius:8px;height:44px;font-size:14px;transition:.2s;}
     .form-control:focus{border-color:#176B50;box-shadow:0 0 0 3px rgba(23,107,80,.15);outline:none;}
     .btn-login{background:linear-gradient(135deg,#176B50,#104B3A);color:#fff;border:none;border-radius:8px;height:46px;font-size:15px;font-weight:700;width:100%;transition:.2s;cursor:pointer;}
@@ -211,9 +211,9 @@ $showingTwoFactorPrompt = !empty($_SESSION['u2fa_pending']);
     .btn-login:disabled{opacity:.7;transform:none;}
     .alert{border-radius:8px;font-size:13px;padding:11px 14px;border:none;margin-bottom:16px;}
     .alert-danger{background:#fff5f5;color:#c53030;}
-    .bottom-links{text-align:center;margin-top:18px;font-size:13px;color:#718096;}
+    .bottom-links{text-align:center;margin-top:18px;font-size:13px;color:var(--text-muted);}
     .bottom-links a{color:#176B50;font-weight:700;text-decoration:none;}
-    .divider{display:flex;align-items:center;gap:12px;margin:18px 0;color:#cbd5e0;font-size:12px;}
+    .divider{display:flex;align-items:center;gap:12px;margin:18px 0;color:#5F6D65;font-size:12px;}
     .divider::before,.divider::after{content:'';flex:1;height:1px;background:#e2e8f0;}
   </style>
 </head>
@@ -240,7 +240,7 @@ $showingTwoFactorPrompt = !empty($_SESSION['u2fa_pending']);
            Mirrors admin/index.php's own 2FA-prompt template. -->
       <form method="POST" action="login.php" id="twoFactorForm">
         <?php tms_csrf_field(); ?>
-        <p style="font-size:13px;color:#718096;margin-bottom:16px;">
+        <p style="font-size:13px;color:var(--text-muted);margin-bottom:16px;">
           <i class="fa fa-shield"></i> Enter the 6-digit code from your authenticator app.
         </p>
         <div class="form-group">

@@ -86,7 +86,7 @@ foreach ($items as $it) {
 .cart-item img{width:100px;height:80px;object-fit:cover;border-radius:8px;flex-shrink:0;}
 .cart-item .info{flex:1;}
 .cart-item .info h5{margin:0 0 4px;font-weight:700;}
-.cart-item .info .meta{font-size:12.5px;color:#888;}
+.cart-item .info .meta{font-size:12.5px;color:var(--text-muted);}
 .cart-item .price{font-weight:800;color:var(--secondary);font-size:16px;white-space:nowrap;}
 .cart-remove{color:#e74c3c;background:none;border:none;font-size:16px;cursor:pointer;padding:6px;}
 .summary-box{background:var(--white);border-radius:12px;padding:24px;box-shadow:0 3px 15px rgba(0,0,0,0.08);position:sticky;top:20px;}
@@ -117,7 +117,7 @@ html[data-theme="dark"] .summary-row.total { color: var(--text) !important; }
   <div class="empty-cart">
     <i class="fa fa-shopping-cart"></i>
     <h4><?php echo tms_t('msg_cart_empty','Your cart is empty'); ?></h4>
-    <p style="color:#94a3b8;margin-bottom:18px;"><?php echo tms_t('dest_cart_empty_subtitle','Browse packages and add a few to compare before booking all at once.'); ?></p>
+    <p style="color:var(--text-muted);margin-bottom:18px;"><?php echo tms_t('dest_cart_empty_subtitle','Browse packages and add a few to compare before booking all at once.'); ?></p>
     <a href="package-list.php" class="btn-checkout" style="display:inline-block;width:auto;padding:12px 30px;text-decoration:none;"><?php echo tms_t('btn_browse_packages','Browse Packages'); ?></a>
   </div>
 <?php else: ?>
