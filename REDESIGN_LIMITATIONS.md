@@ -84,4 +84,4 @@ real payment.
 Built and tested (72 service-level checks, a real browser run of the portal and the customer blackout rule, axe clean on the portal). See `SUPPLIERS.md`. Not done: automated payouts (settlements are bookkeeping only), supplier email verification / CAPTCHA / password reset, supplier document upload, Bengali for the supplier portal, and a run on this Windows/XAMPP install.
 
 ## Unverifiable features: foundation only
-Live disruption alerts, sustainability scores, visa/entry rules and real-time routing need real data sources or licences. They are intentionally not simulated anywhere in the site; where the assistant is asked, it should say it cannot confirm and point to the official source.
+Live disruption alerts, sustainability scores, visa/entry rules and real-time routing need real data sources or licences, so none is simulated. Built as a foundation only: staff-entered, sourced and dated travel notices (`TRAVEL_NOTICES.md`, `/travel-notices.php`, 27 tests, browser-checked). Still not built: any live feed, any sustainability score, real-time routing, and the AI assistant does not read the notices yet, so it must not be relied on for entry rules.

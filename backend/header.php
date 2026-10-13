@@ -326,6 +326,13 @@ $currentPage = basename($_SERVER['PHP_SELF']);
                                     <span>Emergency contacts & tips</span>
                                 </div>
                             </a>
+                            <a href="travel-notices.php" class="tms-mega-item">
+                                <div class="tms-mega-icon icon-safety"><i class="fa fa-info-circle"></i></div>
+                                <div class="tms-mega-label">
+                                    <strong>Travel Notices</strong>
+                                    <span>Entry rules & advisories, with sources</span>
+                                </div>
+                            </a>
                         </div>
                     </div>
                     <div style="border-top:1px solid #f0f4f8;margin-top:16px;padding-top:14px;display:flex;gap:10px;flex-wrap:wrap;">

@@ -106,6 +106,7 @@
       <?php endif; ?>
       <?php if ($canSee(['operations', 'manager'])): ?>
         <?php navItem('manage-emergency.php','phone','Emergency Contacts',$cur); ?>
+        <?php navItem('manage-travel-notices.php','info-circle','Travel Notices',$cur); ?>
         <?php navItem('activity-log.php','history','Activity Log',$cur); ?>
         <?php navItem('system-health.php','heartbeat','System Health',$cur); ?>
       <?php endif; ?>

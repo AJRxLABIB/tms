@@ -1370,6 +1370,13 @@ html[data-theme="dark"] .meta-row { color: var(--text-muted) !important; }
                         </div>
                     </div>
 
+                    <?php require_once 'backend/services/TravelNoticeService.php'; $tnList = (!empty($pkg->Country)) ? TravelNoticeService::visible($dbh, (string)$pkg->Country) : []; if ($tnList): ?>
+                    <div class="pkg-card" style="padding:18px;" role="note">
+                        <h5 style="font-weight:700;margin:0 0 8px;"><i class="fa fa-info-circle" aria-hidden="true"></i> Travel notices for <?php echo htmlspecialchars((string)$pkg->Country, ENT_QUOTES, 'UTF-8'); ?></h5>
+                        <?php foreach (array_slice($tnList, 0, 3) as $tn): ?><p style="font-size:13px;margin:0 0 6px;"><b><?php echo htmlspecialchars($tn['Title'], ENT_QUOTES, 'UTF-8'); ?></b> <span style="color:var(--text-muted)">(checked <?php echo htmlspecialchars($tn['VerifiedOn'], ENT_QUOTES, 'UTF-8'); ?><?php echo $tn['stale'] ? ', may be out of date' : ''; ?>)</span></p><?php endforeach; ?>
+                        <a href="travel-notices.php?country=<?php echo urlencode((string)$pkg->Country); ?>" style="font-size:13px;text-decoration:underline;">See sources and details</a>
+                    </div>
+                    <?php endif; ?>
                     <div class="pkg-card" style="padding:24px;">
                         <h5 style="font-weight:700;margin-bottom:18px;"><i class="fa fa-calendar-check-o" style="color:var(--secondary)"></i> <?php echo tms_t('heading_book_package','Book This Package'); ?></h5>
                         <form method="post">

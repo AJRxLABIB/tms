@@ -51,6 +51,7 @@ function e($v){ return htmlspecialchars((string)$v, ENT_QUOTES, 'UTF-8'); }
 .sx-note{width:100%;min-width:150px;padding:6px 8px;border:1px solid #cbd5cf;border-radius:6px;font-size:13px;margin-bottom:6px}
 .sx-pill{display:inline-block;padding:2px 9px;border-radius:999px;font-size:12px;font-weight:700;background:#E6EFE9;color:#104B3A}
 .sx-pill.pending{background:#FFF3D6;color:#7A4F0E}.sx-pill.suspended,.sx-pill.rejected{background:#fee2e2;color:#991b1b}
+html[data-theme="dark"] .nx-neutral,html[data-theme="dark"] .sx-neutral{background:#24332B;color:#EAF1EC}html[data-theme="dark"] .nx-ok,html[data-theme="dark"] .sx-ok{background:#14321F;color:#9AE6BC}html[data-theme="dark"] .nx-bad,html[data-theme="dark"] .sx-bad{background:#3A1414;color:#FCA5A5}
 .sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
 </style>
 </head>

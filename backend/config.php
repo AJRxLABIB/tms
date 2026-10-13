@@ -264,9 +264,9 @@ if (!in_array(strtolower((string)tms_env('TMS_FORCE_SCHEMA_CHECK', '')), ['1', '
     } catch (Throwable $e) { $tmsSchemaOk = false; } // table not created yet
 }
 if ($tmsSchemaOk) {
-    foreach (['tms_db_init', 'tms_ai_tables', 'tms_explore_tables', 'tms_api_tables', 'tms_marketplace_tables', 'tms_supplier_tables'] as $_k) { $_SESSION[$_k] = true; }
+    foreach (['tms_db_init', 'tms_ai_tables', 'tms_explore_tables', 'tms_api_tables', 'tms_marketplace_tables', 'tms_supplier_tables', 'tms_notice_tables'] as $_k) { $_SESSION[$_k] = true; }
 } else {
-    foreach (['tms_db_init', 'tms_ai_tables', 'tms_explore_tables', 'tms_api_tables', 'tms_marketplace_tables', 'tms_supplier_tables'] as $_k) { unset($_SESSION[$_k]); }
+    foreach (['tms_db_init', 'tms_ai_tables', 'tms_explore_tables', 'tms_api_tables', 'tms_marketplace_tables', 'tms_supplier_tables', 'tms_notice_tables'] as $_k) { unset($_SESSION[$_k]); }
 }
 
 // ─── Core table setup (CREATE TABLE IF NOT EXISTS calls — safe/idempotent,
@@ -303,6 +303,12 @@ if (empty($_SESSION['tms_supplier_tables'])) {
     require_once __DIR__ . '/services/SupplierService.php';
     SupplierService::migrate($dbh);
     $_SESSION['tms_supplier_tables'] = true;
+}
+// Travel notices (admin-entered, sourced; see TRAVEL_NOTICES.md).
+if (empty($_SESSION['tms_notice_tables'])) {
+    require_once __DIR__ . '/services/TravelNoticeService.php';
+    TravelNoticeService::migrate($dbh);
+    $_SESSION['tms_notice_tables'] = true;
 }
 
 // ─── Schema-drift repair (NOT session-gated — see note below) ─────────────────
