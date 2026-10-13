@@ -76,7 +76,7 @@ function tms_transport_duration_text(int $minutes): string {
 <script src="js/bootstrap.min.js" defer></script>
 <script src="js/wow.min.js" defer></script>
 <style>
-.tc-hero { background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%); padding: 60px 0; text-align:center; color:#fff; }
+.tc-hero { background: linear-gradient(135deg, #0E2A21 0%, #104B3A 55%, #176B50 100%); padding: 60px 0; text-align:center; color:#fff; }
 .tc-hero h1 { font-size: 2.3em; margin-bottom:10px; }
 .tc-form-card { background:var(--white); border-radius:12px; box-shadow:0 8px 30px rgba(0,0,0,0.1); padding:30px; margin: -30px auto 30px; max-width:800px; position:relative; z-index:10; }
 .tc-form-card .form-control { border:2px solid #e8ecf0; border-radius:8px; padding:10px 14px; }

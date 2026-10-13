@@ -125,7 +125,7 @@ if (!isset($_POST['recommend']) && !empty($_SESSION['login'])) {
 <script src="js/wow.min.js" defer></script>
 <script src="<?php echo tms_asset_ver('js/ai-feedback.js'); ?>" defer></script>
 <style>
-.ai-hero { background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%); padding: 60px 0; text-align:center; color:#fff; }
+.ai-hero { background: linear-gradient(135deg, #0E2A21 0%, #104B3A 55%, #176B50 100%); padding: 60px 0; text-align:center; color:#fff; }
 .ai-hero h1 { font-size: 2.5em; margin-bottom:10px; }
 .ai-hero p { font-size: 1.1em; opacity:0.85; }
 .ai-badge { background: linear-gradient(135deg,#176B50,#104B3A); color:#fff; padding:4px 12px; border-radius:20px; font-size:12px; font-weight:700; display:inline-block; margin-bottom:20px; }

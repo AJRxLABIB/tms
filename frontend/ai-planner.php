@@ -38,7 +38,7 @@ include('backend/config.php');
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <style>
 .planner-hero {
-    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+    background: linear-gradient(135deg, #0E2A21 0%, #104B3A 55%, #176B50 100%);
     padding: 70px 0 50px; text-align: center; color: #fff;
     position: relative; overflow: hidden;
 }
@@ -46,29 +46,30 @@ include('backend/config.php');
     content: '';
     position: absolute; bottom: -2px; left: 0; right: 0;
     height: 60px;
-    background: linear-gradient(to bottom right, transparent 49%, #f8fafc 50%);
+    background: linear-gradient(to bottom right, transparent 49%, var(--bg) 50%);
 }
 .planner-hero h1 { font-size: 2.5rem; font-weight: 800; margin-bottom: 12px; }
-.planner-hero h1 span { color: #63b3ed; }
-.planner-hero p { color: rgba(255,255,255,.7); font-size: 1.05rem; }
+.planner-hero h1 span { color: #7ED6B2; }
+.planner-hero p { color: rgba(255,255,255,.85); font-size: 1.05rem; }
 
 /* Form */
 .planner-card {
-    background: #fff; border-radius: 20px; padding: 36px;
+    background: var(--white); border-radius: 20px; padding: 36px;
     box-shadow: 0 10px 40px rgba(0,0,0,.1);
     margin-top: -20px; margin-bottom: 40px;
 }
-.field-label { font-size: 12px; font-weight: 700; color: #4a5568; text-transform: uppercase; letter-spacing: .5px; margin-bottom: 6px; display: block; }
+.field-label { font-size: 12px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: .5px; margin-bottom: 6px; display: block; }
 .field-input, .field-select, .field-textarea {
-    width: 100%; padding: 11px 14px; border: 2px solid #e2e8f0;
-    border-radius: 10px; font-size: 14px; outline: none;
-    background: #f8fafc; transition: .2s;
+    width: 100%; padding: 11px 14px; border: 2px solid var(--border);
+    border-radius: 10px; font-size: 14px; outline: none; color: var(--text);
+    background: var(--bg); transition: .2s;
 }
 .field-input:focus, .field-select:focus, .field-textarea:focus {
-    border-color: #176B50; background: #fff;
+    border-color: #176B50; background: var(--white);
     box-shadow: 0 0 0 3px rgba(23,107,80,.1);
 }
 .field-textarea { min-height: 80px; resize: vertical; }
+.field-input, .field-select { height: 46px; }
 
 .btn-generate {
     background: linear-gradient(135deg, #176B50, #104B3A);
@@ -91,24 +92,24 @@ include('backend/config.php');
 .itin-meta-item { display: flex; align-items: center; gap: 6px; }
 
 .cost-grid {
-    display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(118px, 1fr));
     gap: 12px; margin-bottom: 28px;
 }
 .cost-box {
-    background: #fff; border-radius: 12px; padding: 16px;
-    border: 1px solid #e2e8f0; text-align: center;
+    background: var(--white); border-radius: 12px; padding: 16px;
+    border: 1px solid var(--border); text-align: center;
 }
-.cost-box .amount { font-size: 1.2rem; font-weight: 800; color: #1a202c; }
+.cost-box .amount { font-size: 1.2rem; font-weight: 800; color: var(--text); }
 .cost-box .label  { font-size: 11px; color:var(--text-muted); text-transform: uppercase; letter-spacing: .5px; }
 
 .day-card {
-    background: #fff; border-radius: 16px;
+    background: var(--white); border-radius: 16px;
     box-shadow: 0 4px 16px rgba(0,0,0,.07);
     margin-bottom: 20px; overflow: hidden;
-    border: 1px solid #f0f0f0;
+    border: 1px solid var(--border);
 }
 .day-header {
-    background: linear-gradient(135deg, #f8fafc, #edf2f7);
+    background: var(--bg-dark);
     padding: 18px 24px; display: flex; align-items: center;
     justify-content: space-between; cursor: pointer;
 }
@@ -117,59 +118,59 @@ include('backend/config.php');
     color: #fff; border-radius: 8px; padding: 4px 12px;
     font-size: 13px; font-weight: 800; margin-right: 12px;
 }
-.day-title { font-size: 1rem; font-weight: 700; color: #1a202c; }
-.day-budget-chip { background: #ebf8ff; color: #2c5282; border-radius: 20px; padding: 4px 12px; font-size: 12px; font-weight: 600; }
+.day-title { font-size: 1rem; font-weight: 700; color: var(--text); }
+.day-budget-chip { background: #E7F5EE; color: #0E3B2D; border-radius: 20px; padding: 4px 12px; font-size: 12px; font-weight: 600; }
 .day-weather-note { font-size: 12px; color:var(--text-muted); margin-left: auto; padding-right: 16px; }
 
 .day-body { padding: 0 24px 20px; }
 .schedule-item {
     display: flex; gap: 16px; padding: 14px 0;
-    border-bottom: 1px dashed #f0f0f0;
+    border-bottom: 1px dashed var(--border);
 }
 .schedule-item:last-child { border-bottom: none; }
-.schedule-time { width: 56px; font-size: 12px; font-weight: 700; color: #176B50; flex-shrink: 0; padding-top: 2px; }
+.schedule-time { width: 56px; font-size: 12px; font-weight: 700; color: var(--secondary); flex-shrink: 0; padding-top: 2px; }
 .schedule-icon {
     width: 36px; height: 36px; border-radius: 8px; flex-shrink: 0;
     display: flex; align-items: center; justify-content: center; font-size: 14px;
 }
-.schedule-icon.sightseeing { background: #ebf8ff; color: #2c5282; }
+.schedule-icon.sightseeing { background: #E7F5EE; color: #0E3B2D; }
 .schedule-icon.meal        { background: #fffbeb; color: #92400e; }
 .schedule-icon.transport   { background: #f0fff4; color: #276749; }
-.schedule-icon.accommodation{ background: #faf5ff; color: #104B3A; }
+.schedule-icon.accommodation{ background: #E7F5EE; color: #104B3A; }
 .schedule-icon.activity    { background: #fff5f5; color: #c53030; }
 .schedule-content { flex: 1; }
-.schedule-activity { font-size: 14px; font-weight: 700; color: #1a202c; margin-bottom: 2px; }
-.schedule-location { font-size: 12px; color: #176B50; margin-bottom: 4px; }
+.schedule-activity { font-size: 14px; font-weight: 700; color: var(--text); margin-bottom: 2px; }
+.schedule-location { font-size: 12px; color: var(--secondary); margin-bottom: 4px; }
 .schedule-meta { display: flex; gap: 12px; font-size: 11px; color:var(--text-muted); }
-.schedule-notes { font-size: 12px; color: #4a5568; margin-top: 4px; font-style: italic; }
+.schedule-notes { font-size: 12px; color: var(--text-muted); margin-top: 4px; font-style: italic; }
 
 .day-meals {
-    background: #fffbeb; border-radius: 10px; padding: 12px 16px;
+    background: var(--warning-bg); color: var(--warning-text); border-radius: 10px; padding: 12px 16px;
     margin-top: 12px; font-size: 13px;
 }
 .day-pro-tip {
-    background: linear-gradient(135deg, #ebf8ff, #e9d8fd);
+    background: #E7F5EE;
     border-radius: 10px; padding: 12px 16px;
-    font-size: 13px; color: #1a202c; margin-top: 10px;
+    font-size: 13px; color: #0E3B2D; margin-top: 10px;
     display: flex; align-items: flex-start; gap: 8px;
 }
 
 /* Extras */
 .extras-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 28px; }
-.extras-card { background: #fff; border-radius: 16px; padding: 20px; box-shadow: 0 4px 16px rgba(0,0,0,.06); }
-.extras-title { font-size: 14px; font-weight: 800; color: #1a202c; margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }
-.extras-title i { color: #176B50; }
-.extras-item { font-size: 13px; color: #4a5568; padding: 6px 0; border-bottom: 1px solid #f8f8f8; display: flex; align-items: center; gap: 8px; }
+.extras-card { background: var(--white); border: 1px solid var(--border); border-radius: 16px; padding: 20px; box-shadow: 0 4px 16px rgba(0,0,0,.06); }
+.extras-title { font-size: 14px; font-weight: 800; color: var(--text); margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }
+.extras-title i { color: var(--secondary); }
+.extras-item { font-size: 13px; color: var(--text-muted); padding: 6px 0; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 8px; }
 .extras-item:last-child { border-bottom: none; }
 
 .btn-download {
-    background: #fff; border: 2px solid #176B50; color: #176B50;
+    background: var(--white); border: 2px solid var(--secondary); color: var(--secondary);
     border-radius: 10px; padding: 10px 20px; font-size: 13px; font-weight: 700;
     cursor: pointer; transition: .2s; display: inline-flex; align-items: center; gap: 8px;
 }
-.btn-download:hover { background: #176B50; color: #fff; }
+.btn-download:hover { background: #176B50; border-color: #176B50; color: #fff; }
 .btn-regen {
-    background: linear-gradient(135deg, #48bb78, #38a169); color: #fff;
+    background: #176B50; color: #fff;
     border: none; border-radius: 10px; padding: 10px 20px; font-size: 13px; font-weight: 700;
     cursor: pointer; transition: .2s; display: inline-flex; align-items: center; gap: 8px; margin-left: 10px;
 }
@@ -178,13 +179,22 @@ include('backend/config.php');
 /* Thinking */
 .ai-thinking { text-align: center; padding: 60px 20px; display: none; }
 .ai-spinner {
-    width: 60px; height: 60px; border: 4px solid #e2e8f0;
+    width: 60px; height: 60px; border: 4px solid var(--border);
     border-top-color: #176B50; border-radius: 50%;
     animation: spin 1s linear infinite; margin: 0 auto 20px;
 }
 @keyframes spin { to{transform:rotate(360deg)} }
 
 @media(max-width:768px) { .extras-grid { grid-template-columns: 1fr; } .itin-meta { gap:12px; } }
+
+/* Bootstrap-3 grid has no col-12/g-3: lay the form out with CSS grid */
+.planner-card .row::before, .planner-card .row::after { display: none !important; content: none; }
+.planner-card .row { display: grid; grid-template-columns: repeat(12, 1fr); gap: 16px; margin: 0; }
+.planner-card .row > [class*="col-"] { float: none; width: auto; padding: 0; min-width: 0; }
+.planner-card .col-md-6 { grid-column: span 6; } .planner-card .col-md-4 { grid-column: span 4; }
+.planner-card .col-md-3 { grid-column: span 3; } .planner-card .col-md-2 { grid-column: span 2; }
+.planner-card .col-12 { grid-column: 1 / -1; }
+@media (max-width: 768px) { .planner-card { padding: 22px 18px; } .planner-card .row > [class*="col-"] { grid-column: 1 / -1; } }
 </style>
 </head>
 <body>
@@ -201,7 +211,7 @@ include('backend/config.php');
 <div class="container" style="max-width:860px; margin-top:40px; padding-bottom:60px;">
     <!-- Form -->
     <div class="planner-card">
-        <h5 style="font-weight:800;color:#1a202c;margin-bottom:24px;"><i class="fa fa-magic" style="color:#176B50;"></i> Plan My Trip</h5>
+        <h5 style="font-weight:800;color:var(--text);margin-bottom:24px;"><i class="fa fa-magic" style="color:#176B50;"></i> Plan My Trip</h5>
         <?php
         // FIX (Round 110, live CRITICAL bug found during the AI-upgrade audit):
         // this page has never rendered a CSRF token, and api/ai.php's
@@ -301,7 +311,7 @@ include('backend/config.php');
     <!-- Thinking -->
     <div class="ai-thinking" id="thinkingDiv">
         <div class="ai-spinner"></div>
-        <h4 style="font-weight:800;color:#1a202c;">AI is crafting your itinerary…</h4>
+        <h4 style="font-weight:800;color:var(--text);">AI is crafting your itinerary…</h4>
         <p id="thinkingMsg" style="color:var(--text-muted);">Analyzing destination and optimizing your schedule</p>
     </div>
 
@@ -480,7 +490,7 @@ function renderItinerary(itin) {
     </div>
 
     <!-- Days -->
-    <h5 style="font-weight:800;color:#1a202c;margin-bottom:16px;"><i class="fa fa-list-alt" style="color:#176B50;"></i> Day-by-Day Itinerary</h5>`;
+    <h5 style="font-weight:800;color:var(--text);margin-bottom:16px;"><i class="fa fa-list-alt" style="color:#176B50;"></i> Day-by-Day Itinerary</h5>`;
 
     days.forEach((day, i) => {
         const schedule = (day.schedule || []);

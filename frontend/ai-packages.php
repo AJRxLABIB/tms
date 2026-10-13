@@ -36,14 +36,14 @@ if (!empty($_SESSION['login'])) {
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <style>
-.pkg-hero{background:linear-gradient(135deg,#0a1628 0%,#1e3a5f 50%,#0d2137 100%);padding:80px 0 60px;text-align:center;color:#fff;position:relative;overflow:hidden}
-.pkg-hero::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse at 20% 50%,rgba(99,179,237,.12) 0,transparent 60%),radial-gradient(ellipse at 80% 20%,rgba(167,139,250,.1) 0,transparent 50%)}
+.pkg-hero{background:linear-gradient(135deg,#0E2A21 0%,#104B3A 55%,#176B50 100%);padding:80px 0 60px;text-align:center;color:#fff;position:relative;overflow:hidden}
+.pkg-hero::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse at 20% 50%,rgba(126,214,178,.14) 0,transparent 60%),radial-gradient(ellipse at 80% 20%,rgba(167,139,250,.1) 0,transparent 50%)}
 .pkg-hero-content{position:relative;z-index:1}
-.pkg-badge{display:inline-flex;align-items:center;gap:8px;background:rgba(99,179,237,.12);border:1px solid rgba(99,179,237,.25);border-radius:50px;padding:7px 18px;font-size:12px;color:#63b3ed;margin-bottom:20px}
+.pkg-badge{display:inline-flex;align-items:center;gap:8px;background:rgba(126,214,178,.14);border:1px solid rgba(126,214,178,.3);border-radius:50px;padding:7px 18px;font-size:12px;color:#B8E4C9;margin-bottom:20px}
 .pkg-badge .dot{width:6px;height:6px;background:#48bb78;border-radius:50%;animation:pulse 2s infinite}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
 .pkg-hero h1{font-size:2.6rem;font-weight:900;line-height:1.2;margin-bottom:14px}
-.pkg-hero h1 span{background:linear-gradient(135deg,#63b3ed,#7FD6AE);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.pkg-hero h1 span{background:linear-gradient(135deg,#7ED6B2,#B8E4C9);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
 .pkg-hero p{color:rgba(255,255,255,.65);font-size:1.05rem;max-width:540px;margin:0 auto}
 
 /* Form */
@@ -95,7 +95,7 @@ if (!empty($_SESSION['login'])) {
 /* Accommodation */
 .acc-card{background:#f8fafc;border-radius:14px;padding:18px;border:1px solid #e2e8f0}
 .acc-name{font-size:15px;font-weight:700;color:#1a202c}
-.acc-type{display:inline-block;background:#ebf8ff;color:#2c5282;border-radius:20px;padding:3px 10px;font-size:11px;font-weight:700;margin-bottom:8px}
+.acc-type{display:inline-block;background:#E7F5EE;color:#0E3B2D;border-radius:20px;padding:3px 10px;font-size:11px;font-weight:700;margin-bottom:8px}
 .acc-features{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
 .acc-feature{background:#fff;border:1px solid #e2e8f0;border-radius:20px;padding:3px 10px;font-size:11px;color:#4a5568}
 
@@ -395,7 +395,7 @@ function renderPackage(pkg) {
     <div class="pkg-section">
       <div class="pkg-section-title"><i class="fa fa-star"></i> Trip Highlights</div>
       <div style="display:flex;flex-wrap:wrap;gap:8px;">
-        ${highlights.map(h => `<span style="background:#ebf8ff;color:#2c5282;border-radius:20px;padding:5px 14px;font-size:12px;font-weight:600;">✓ ${esc(h)}</span>`).join('')}
+        ${highlights.map(h => `<span style="background:#E7F5EE;color:#0E3B2D;border-radius:20px;padding:5px 14px;font-size:12px;font-weight:600;">✓ ${esc(h)}</span>`).join('')}
       </div>
       <div class="ai-reasoning">💡 ${esc(pkg.ai_reasoning || '')}</div>
     </div>
