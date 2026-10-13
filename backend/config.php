@@ -46,6 +46,10 @@ define('OPENAI_API_KEY',  tms_env('OPENAI_API_KEY', ''));
 define('OPENAI_MODEL',    tms_env('OPENAI_MODEL', 'gpt-4o-mini'));
 define('OPENAI_BASE_URL', rtrim((string) tms_env('OPENAI_BASE_URL', 'https://api.openai.com/v1'), '/'));
 
+// Self-hosted inference (AI_PROVIDER=ollama). Keep the runtime on localhost/private network.
+define('OLLAMA_BASE_URL', rtrim((string) tms_env('OLLAMA_BASE_URL', 'http://127.0.0.1:11434'), '/'));
+define('OLLAMA_MODEL',    tms_env('OLLAMA_MODEL', 'qwen2.5:3b-instruct'));
+
 define('AI_MAX_TOKENS',   (int) tms_env('AI_MAX_TOKENS', 32768));
 define('AI_CACHE_TTL',    (int) tms_env('AI_CACHE_TTL', 3600));   // Cache AI responses for 1 hour
 define('AI_RATE_LIMIT',   (int) tms_env('AI_RATE_LIMIT', 30));    // Max AI calls per user per hour

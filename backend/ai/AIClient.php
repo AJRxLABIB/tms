@@ -25,6 +25,7 @@ require_once __DIR__ . '/../CacheService.php';
 require_once __DIR__ . '/providers/AIProviderInterface.php';
 require_once __DIR__ . '/providers/GeminiProvider.php';
 require_once __DIR__ . '/providers/OpenAIProvider.php';
+require_once __DIR__ . '/providers/OllamaProvider.php';
 
 class AIClient {
 
@@ -74,8 +75,15 @@ class AIClient {
             );
         }
 
+        if ($wanted === 'ollama') {
+            return new OllamaProvider(
+                defined('OLLAMA_MODEL')    ? OLLAMA_MODEL    : '',
+                defined('OLLAMA_BASE_URL') ? OLLAMA_BASE_URL : 'http://127.0.0.1:11434'
+            );
+        }
+
         if ($wanted !== 'gemini' && $wanted !== '') {
-            error_log("[TMS AI] AI_PROVIDER='{$wanted}' is not recognized (expected 'gemini' or 'openai') -- using Gemini.");
+            error_log("[TMS AI] AI_PROVIDER='{$wanted}' is not recognized (expected 'gemini', 'openai' or 'ollama') -- using Gemini.");
         }
 
         // Round 113: dropped a fallback to ANTHROPIC_API_KEY that lived here --
