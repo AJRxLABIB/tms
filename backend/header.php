@@ -668,12 +668,7 @@ html[data-theme="dark"] {
     --danger-text: #FCA5A5;
 }
 html[data-theme="dark"] body {
-    background:
-        linear-gradient(rgba(16,21,28,0.93), rgba(16,21,28,0.96)),
-        url('images/7.jpg');
-    background-size: auto, cover;
-    background-position: center, center;
-    background-attachment: scroll, fixed;
+    background: var(--bg);
     color: var(--text);
 }
 /* .tms-section-title (css/modern-theme.css) is used for section headings

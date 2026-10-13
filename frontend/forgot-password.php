@@ -201,9 +201,9 @@ if (isset($_POST['submit_reset'])) {
 .errorWrap{padding:10px;margin:0 0 20px;background:var(--white);border-left:4px solid #dd3d36;box-shadow:0 1px 1px rgba(0,0,0,.1);}
 .succWrap {padding:10px;margin:0 0 20px;background:var(--white);border-left:4px solid #5cb85c;box-shadow:0 1px 1px rgba(0,0,0,.1);}
 .recover-box{max-width:440px;background:var(--white);border-radius:12px;box-shadow:0 4px 20px rgba(0,0,0,.09);padding:32px;margin:0 auto;}
-.recover-box h4{font-size:1.05em;font-weight:700;color:#444;margin-bottom:20px;}
+.recover-box h4{font-size:1.05em;font-weight:700;color:var(--text);margin-bottom:20px;}
 .recover-box .form-group{margin-bottom:16px;}
-.recover-box label{font-weight:600;color:#555;font-size:13px;margin-bottom:4px;display:block;}
+.recover-box label{font-weight:600;color:var(--text-muted);font-size:13px;margin-bottom:4px;display:block;}
 .recover-box .form-control{border:2px solid #e0e0e0;border-radius:7px;height:42px;font-size:14px;}
 .recover-box .form-control:focus{border-color:var(--secondary);box-shadow:none;outline:none;}
 .btn-recover{background:var(--secondary);color:#fff;border:none;border-radius:7px;padding:11px 30px;font-weight:700;font-size:14px;cursor:pointer;transition:.2s;}
