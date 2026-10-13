@@ -12,14 +12,13 @@ tms_admin_require_role($dbh, ['superadmin', 'package_manager']);
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>TMS | Popular Destinations</title>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Plus+Jakarta+Sans:wght@600;700;800&display=swap" rel="stylesheet">
 <link href="css/font-awesome.css" rel="stylesheet">
 <link href="css/bootstrap.min.css" rel="stylesheet">
 <link href="<?php echo tms_asset_ver('css/admin-v6.css'); ?>" rel="stylesheet">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 <style>
 .page-title-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;flex-wrap:wrap;gap:12px;}
-.page-title-row h2{font-family:'Plus Jakarta Sans',sans-serif;font-size:22px;font-weight:800;color:#0f172a;margin:0;}
+.page-title-row h2{font-family:'Inter',sans-serif;font-size:22px;font-weight:800;color:#0f172a;margin:0;}
 </style>
 </head>
 <body>
@@ -72,7 +71,7 @@ $mapBookedPlaces = array_values(array_filter($mostBookedPlaces, fn($r) => !empty
 
 <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:20px;">
   <div style="background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:20px;">
-    <h3 style="font-size:15px;font-weight:700;margin-bottom:6px;"><i class="fa fa-search" style="color:#7c3aed;margin-right:8px;"></i>Most Explored</h3>
+    <h3 style="font-size:15px;font-weight:700;margin-bottom:6px;"><i class="fa fa-search" style="color:#1F8A66;margin-right:8px;"></i>Most Explored</h3>
     <div style="font-size:11.5px;color:#94a3b8;margin-bottom:14px;">From Explore page AI lookups</div>
     <div class="table-responsive"><table class="tms-table" style="font-size:12px;">
       <thead><tr><th>#</th><th>Destination</th><th>Lookups</th></tr></thead>

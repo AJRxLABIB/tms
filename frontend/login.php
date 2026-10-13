@@ -173,7 +173,7 @@ $showingTwoFactorPrompt = !empty($_SESSION['u2fa_pending']);
 <html lang="<?php echo htmlspecialchars(tms_active_language(), ENT_QUOTES, 'UTF-8'); ?>">
 <head>
 <link rel="manifest" href="manifest.json">
-<meta name="theme-color" content="#0B2B3C">
+<meta name="theme-color" content="#104B3A">
 <link rel="apple-touch-icon" href="images/icon-192.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -188,7 +188,6 @@ $showingTwoFactorPrompt = !empty($_SESSION['u2fa_pending']);
   <link rel="stylesheet" href="<?php echo tms_asset_ver('css/modern-theme.css'); ?>">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700;9..144,800&family=Manrope:wght@400;500;600;700;800&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
   <?php endif; ?>
   <style>
     body{background:linear-gradient(135deg,rgba(15,32,39,0.82),rgba(32,58,67,0.82),rgba(44,83,100,0.82)),url('images/c1.jpg');background-size:cover;background-position:center;min-height:100vh;display:flex;align-items:center;justify-content:center;font-family:'Segoe UI',sans-serif;padding:20px 0;}

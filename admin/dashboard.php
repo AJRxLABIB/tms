@@ -46,8 +46,6 @@ $pageTitle = 'Dashboard';
 <title>TMS | Dashboard</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Plus+Jakarta+Sans:wght@600;700;800&display=swap" onload="this.onload=null;this.rel='stylesheet'">
-<noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Plus+Jakarta+Sans:wght@600;700;800&display=swap" rel="stylesheet"></noscript>
 <link href="css/font-awesome.min2.css" rel="stylesheet">
 <link href="css/bootstrap.min.css" rel="stylesheet">
 <link href="<?php echo tms_asset_ver('css/admin-v6.css'); ?>" rel="stylesheet">
@@ -219,7 +217,7 @@ $pageTitle = 'Dashboard';
 
       <!-- Booking status donut -->
       <div class="card">
-        <div class="card-header"><h3><i class="fa fa-pie-chart" style="color:#7c3aed;margin-right:8px;"></i> Booking Status</h3></h3></div>
+        <div class="card-header"><h3><i class="fa fa-pie-chart" style="color:#1F8A66;margin-right:8px;"></i> Booking Status</h3></h3></div>
         <div class="card-body" style="padding:16px;">
           <canvas id="statusChart" height="180" style="display:none;" role="img" aria-label="Booking status: <?= $confirmedCount ?> confirmed, <?= $pending ?> pending, <?= $cancelledCount ?> cancelled"></canvas>
           <div id="statusChartEmpty" style="text-align:center;padding:40px;color:#94a3b8;display:none;">

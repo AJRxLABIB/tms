@@ -181,8 +181,6 @@ $showingTwoFactorPrompt = !empty($_SESSION['a2fa_pending']);
 <title>TMS | Admin Login</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Plus+Jakarta+Sans:wght@700;800&display=swap" onload="this.onload=null;this.rel='stylesheet'">
-<noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Plus+Jakarta+Sans:wght@700;800&display=swap" rel="stylesheet"></noscript>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;}
 body{font-family:'Inter',sans-serif;min-height:100vh;display:flex;background:#0f172a;overflow:hidden;}
@@ -204,10 +202,10 @@ body{font-family:'Inter',sans-serif;min-height:100vh;display:flex;background:#0f
 .login-brand{position:relative;z-index:1;text-align:center;margin-bottom:48px;}
 .brand-icon{
   width:72px;height:72px;border-radius:20px;margin:0 auto 20px;
-  background:linear-gradient(135deg,#1d4ed8,#7c3aed);
+  background:linear-gradient(135deg,#1d4ed8,#1F8A66);
   display:flex;align-items:center;justify-content:center;font-size:32px;color:#fff;
 }
-.brand-title{font-family:'Plus Jakarta Sans',sans-serif;font-size:28px;font-weight:800;color:#fff;margin-bottom:8px;}
+.brand-title{font-family:'Inter',sans-serif;font-size:28px;font-weight:800;color:#fff;margin-bottom:8px;}
 .brand-sub{font-size:14px;color:#94a3b8;}
 .login-features{position:relative;z-index:1;display:flex;flex-direction:column;gap:16px;width:100%;max-width:320px;}
 .feat-item{display:flex;align-items:center;gap:12px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.08);border-radius:12px;padding:14px 16px;}
@@ -219,7 +217,7 @@ body{font-family:'Inter',sans-serif;min-height:100vh;display:flex;background:#0f
   background:#fff;padding:60px 48px;
 }
 .login-form{width:100%;max-width:360px;}
-.form-title{font-family:'Plus Jakarta Sans',sans-serif;font-size:26px;font-weight:800;color:#0f172a;margin-bottom:6px;}
+.form-title{font-family:'Inter',sans-serif;font-size:26px;font-weight:800;color:#0f172a;margin-bottom:6px;}
 .form-sub{font-size:14px;color:#64748b;margin-bottom:36px;}
 .form-label{display:block;font-size:13px;font-weight:500;color:#475569;margin-bottom:7px;}
 .form-input{
@@ -233,7 +231,7 @@ body{font-family:'Inter',sans-serif;min-height:100vh;display:flex;background:#0f
 .field-group{margin-bottom:18px;}
 .btn-login{
   width:100%;padding:13px;border:none;border-radius:10px;
-  background:linear-gradient(135deg,#1d4ed8,#7c3aed);color:#fff;
+  background:linear-gradient(135deg,#1d4ed8,#1F8A66);color:#fff;
   font-size:15px;font-weight:600;font-family:'Inter',sans-serif;
   cursor:pointer;transition:all 0.2s;margin-top:6px;
   box-shadow:0 4px 14px rgba(29,78,216,0.35);

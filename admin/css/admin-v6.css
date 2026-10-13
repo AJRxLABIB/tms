@@ -1,3 +1,4 @@
+@font-face{font-family:'Inter';font-style:normal;font-weight:100 900;font-display:swap;src:url('../../fonts/inter/inter-latin-wght-normal.woff2') format('woff2');unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD;}
 /* ================================================================
    TMS Admin v6 — Complete Design System
    Dark sidebar + clean white content area
@@ -14,18 +15,18 @@
   --sidebar-w: 260px;
   --sidebar-collapsed-w: 70px;
   --header-h: 64px;
-  --sidebar-bg: #0B2B3C;
-  --sidebar-hover: #163F54;
-  --sidebar-active: #0FA3A3;
+  --sidebar-bg: #104B3A;
+  --sidebar-hover: #1F5C48;
+  --sidebar-active: #176B50;
   --sidebar-text: #9DB4BE;
   --sidebar-text-active: #ffffff;
-  --sidebar-border: #163F54;
+  --sidebar-border: #1F5C48;
   --topbar-bg: #ffffff;
-  --content-bg: #F4FAFC;
+  --content-bg: #F7F8F5;
   --card-bg: #ffffff;
   --card-radius: 14px;
-  --card-shadow: 0 1px 3px rgba(11,43,60,0.06), 0 4px 16px rgba(11,43,60,0.06);
-  --primary: #0FA3A3;
+  --card-shadow: 0 1px 3px rgba(16,75,58,0.06), 0 4px 16px rgba(16,75,58,0.06);
+  --primary: #176B50;
   --primary-light: #DFF6F6;
   --success: #059669;
   --success-light: #d1fae5;
@@ -33,9 +34,9 @@
   --warning-light: #fef3c7;
   --danger: #dc2626;
   --danger-light: #fee2e2;
-  --purple: #7c3aed;
+  --purple: #1F8A66;
   --purple-light: #ede9fe;
-  --text-primary: #0F2430;
+  --text-primary: #17231E;
   --text-secondary: #5D7481;
   --text-muted: #97ABB6;
   --border: #e2e8f0;
@@ -84,14 +85,14 @@ html, body {
 }
 .sidebar-logo .logo-icon {
   width: 36px; height: 36px;
-  background: linear-gradient(135deg, #0FA3A3, #7c3aed);
+  background: linear-gradient(135deg, #176B50, #1F8A66);
   border-radius: 10px;
   display: flex; align-items: center; justify-content: center;
   flex-shrink: 0;
   font-size: 18px; color: #fff;
 }
 .sidebar-logo .logo-text {
-  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-family: 'Inter', sans-serif;
   font-size: 16px; font-weight: 800;
   color: #fff; white-space: nowrap;
   letter-spacing: -0.3px;
@@ -105,7 +106,7 @@ html, body {
   overflow-x: hidden;
   padding: 12px 0;
   scrollbar-width: thin;
-  scrollbar-color: #163F54 transparent;
+  scrollbar-color: #1F5C48 transparent;
 }
 .sidebar-nav::-webkit-scrollbar { width: 3px; }
 .sidebar-nav::-webkit-scrollbar-track { background: transparent; }
@@ -204,7 +205,7 @@ html, body {
   position: sticky; top: 0; z-index: 900;
   transition: box-shadow .25s ease;
 }
-.tms-topbar.scrolled { box-shadow: 0 4px 20px rgba(11,43,60,0.08); }
+.tms-topbar.scrolled { box-shadow: 0 4px 20px rgba(16,75,58,0.08); }
 .topbar-toggle {
   width: 36px; height: 36px;
   border-radius: 10px; border: 1px solid var(--border);
@@ -231,7 +232,7 @@ html, body {
 }
 .topbar-avatar {
   width: 30px; height: 30px; border-radius: 8px;
-  background: linear-gradient(135deg, #0FA3A3, #7c3aed);
+  background: linear-gradient(135deg, #176B50, #1F8A66);
   display: flex; align-items: center; justify-content: center;
   color: #fff; font-size: 13px; font-weight: 700;
 }
@@ -252,7 +253,7 @@ html, body {
   flex-wrap: wrap; gap: 12px;
 }
 .page-header h1 {
-  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-family: 'Inter', sans-serif;
   font-size: 22px; font-weight: 700; color: var(--text-primary);
   margin-bottom: 2px;
 }
@@ -294,7 +295,7 @@ html, body {
 .stat-trend.up { background: var(--success-light); color: var(--success); }
 .stat-trend.neutral { background: var(--primary-light); color: var(--primary); }
 .stat-card-value {
-  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-family: 'Inter', sans-serif;
   font-size: 30px; font-weight: 800; color: var(--text-primary);
   line-height: 1;
 }

@@ -47,13 +47,12 @@ $todayDay = $isCurrentViewMonth ? (int)(new DateTime())->format('j') : 0;
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>TMS | Booking Calendar</title>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Plus+Jakarta+Sans:wght@600;700;800&display=swap" rel="stylesheet">
 <link href="css/font-awesome.css" rel="stylesheet">
 <link href="css/bootstrap.min.css" rel="stylesheet">
 <link href="<?php echo tms_asset_ver('css/admin-v6.css'); ?>" rel="stylesheet">
 <style>
 .page-title-row { display:flex; align-items:center; justify-content:space-between; margin-bottom:22px; flex-wrap:wrap; gap:12px; }
-.page-title-row h2 { font-family:'Plus Jakarta Sans',sans-serif; font-size:22px; font-weight:800; color:#0f172a; margin:0; }
+.page-title-row h2 { font-family:'Inter',sans-serif; font-size:22px; font-weight:800; color:#0f172a; margin:0; }
 .month-nav { display:flex; align-items:center; gap:14px; background:#fff; border:1px solid #e2e8f0; border-radius:10px; padding:8px 14px; }
 .month-nav a { color:#1d4ed8; text-decoration:none; font-size:14px; }
 .month-nav .cur { font-weight:700; font-size:14.5px; color:#0f172a; min-width:150px; text-align:center; }

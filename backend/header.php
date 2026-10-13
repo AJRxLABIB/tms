@@ -514,7 +514,7 @@ $currentPage = basename($_SERVER['PHP_SELF']);
     padding: 12px 14px 12px 40px;
     border: 2px solid #e8ecf0;
     border-radius: 10px;
-    font-family: 'Poppins', sans-serif;
+    font-family: var(--font-body);
     font-size: 14px;
     outline: none;
     transition: border-color 0.2s;
@@ -528,7 +528,7 @@ $currentPage = basename($_SERVER['PHP_SELF']);
     color: #fff;
     border: none;
     border-radius: 12px;
-    font-family: 'Poppins', sans-serif;
+    font-family: var(--font-body);
     font-size: 15px;
     font-weight: 700;
     cursor: pointer;
@@ -633,12 +633,19 @@ html[data-theme="dark"] .tms-theme-knob { transform: translateX(32px); color: #4
    on the browser's own auto-dark-mode inversion, which is what was producing
    unreadable text before (see chat notes). */
 html[data-theme="dark"] {
-    --bg: #10151c;
-    --bg-dark: #171e28;
-    --white: #1b222c;
-    --text: #eef2f7;
-    --text-muted: #b7c1cf;
-    --text-light: #8b96a6;
+    --bg: #0F1612;
+    --bg-dark: #141D18;
+    --white: #18211C;
+    --text: #EAF1EC;
+    --text-muted: #AAB8AF;
+    --text-light: #AAB8AF;
+    /* brand greens re-tuned for dark surfaces (links 7.9:1 on --white) */
+    --secondary: #5CC79C;
+    --secondary-light: #7ED6B2;
+    --accent: #1B7F5F;
+    --accent-dark: #176B50;
+    --mint-ink: #B8E4C9;
+    --brass: #E0A93B;
     --shadow-sm: 0 2px 8px rgba(0,0,0,0.35);
     --shadow-md: 0 8px 30px rgba(0,0,0,0.45);
     --shadow-lg: 0 20px 60px rgba(0,0,0,0.55);
@@ -650,7 +657,7 @@ html[data-theme="dark"] {
        tint + pale ink (readable on the dark --white surface) -- kept as
        genuinely distinct hues per status, not just one gray, so a status
        badge still differs by color (not just position/label) in dark mode. */
-    --border: #2b3542;
+    --border: #2A362F;
     --success: #4ADE80;
     --success-bg: #14321F;
     --success-text: #86EFAC;
@@ -1134,7 +1141,7 @@ window.onload = function(){ openModal('signupModal'); };
     display: flex; align-items: flex-start; gap: 10px;
     background: #fff; color: #1a2535; border-radius: 10px;
     box-shadow: 0 10px 30px rgba(0,0,0,0.18); padding: 13px 14px;
-    font-family: 'Poppins', sans-serif; font-size: 13.5px; line-height: 1.4;
+    font-family: var(--font-body); font-size: 13.5px; line-height: 1.4;
     border-left: 4px solid var(--primary, #0F4C81);
     animation: tmsToastIn 0.25s ease-out;
 }
@@ -1161,7 +1168,7 @@ window.onload = function(){ openModal('signupModal'); };
     font-size: 15px; line-height: 1;
 }
 .tms-toast .tms-toast-close:hover, .tms-toast .tms-toast-close:focus-visible { opacity: 0.8; }
-.tms-toast .tms-toast-close:focus-visible { outline: 2px solid var(--accent, #FF6B45); outline-offset: 1px; border-radius: 4px; }
+.tms-toast .tms-toast-close:focus-visible { outline: 2px solid var(--accent, #176B50); outline-offset: 1px; border-radius: 4px; }
 @keyframes tmsToastIn { from { opacity: 0; transform: translateX(30px); } to { opacity: 1; transform: translateX(0); } }
 @keyframes tmsToastOut { from { opacity: 1; } to { opacity: 0; transform: translateX(30px); } }
 html[data-theme="dark"] .tms-toast { background: #1a2535; color: #e2e8f0; }

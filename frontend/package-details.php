@@ -392,7 +392,7 @@ if (!empty($pkg) && $totalReviewCount >= 3) {
 <html lang="<?php echo htmlspecialchars(tms_active_language(), ENT_QUOTES, 'UTF-8'); ?>">
 <head>
 <link rel="manifest" href="manifest.json">
-<meta name="theme-color" content="#0B2B3C">
+<meta name="theme-color" content="#104B3A">
 <link rel="apple-touch-icon" href="images/icon-192.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -464,7 +464,6 @@ if ($pkg) {
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700;9..144,800&family=Manrope:wght@400;500;600;700;800&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
 <script src="js/jquery-1.12.0.min.js" defer></script>
 <script src="js/bootstrap.min.js" defer></script>
 <link href="css/animate.css" rel="stylesheet" media="all">
@@ -929,7 +928,7 @@ if ($pkg) {
                 ?>
                 <?php if(!empty($pkg->MapLat) && !empty($pkg->MapLng) && defined('GOOGLE_MAPS_API_KEY') && GOOGLE_MAPS_API_KEY !== '' && $tmsStreetViewOk): ?>
                 <div class="pkg-card wow fadeInUp" style="padding:24px;">
-                    <h4 style="font-weight:700;margin-bottom:4px;"><i class="fa fa-street-view" style="color:#7c3aed"></i> Virtual Preview</h4>
+                    <h4 style="font-weight:700;margin-bottom:4px;"><i class="fa fa-street-view" style="color:#1F8A66"></i> Virtual Preview</h4>
                     <p style="font-size:12.5px;color:#94a3b8;margin-bottom:14px;">Real 360° street-level imagery of this destination — drag to look around.</p>
                     <div style="border-radius:var(--radius-sm);overflow:hidden;box-shadow:var(--shadow-sm);">
                         <iframe
@@ -981,7 +980,7 @@ html[data-theme="dark"] .meta-row { color: var(--text-muted) !important; }
                    for smaller places) are honestly labeled "Not listed" rather
                    than invented, and a real map link is always offered so the
                    visitor can dig further on an authoritative source. */
-                #placeDetailsOverlay{display:none;position:fixed;inset:0;background:rgba(11,43,60,0.55);z-index:10000;align-items:center;justify-content:center;padding:20px;}
+                #placeDetailsOverlay{display:none;position:fixed;inset:0;background:rgba(16,75,58,0.55);z-index:10000;align-items:center;justify-content:center;padding:20px;}
                 #placeDetailsOverlay.open{display:flex;}
                 #placeDetailsModal{background:#fff;border-radius:16px;max-width:420px;width:100%;max-height:85vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.3);}
                 .pd-head{padding:20px 22px 14px;border-bottom:1px solid #f0f0f0;position:relative;}

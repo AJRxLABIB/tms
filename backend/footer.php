@@ -93,10 +93,10 @@
                     </option>
                     <?php endforeach; ?>
                 </select>
-                <button type="button" id="tmsInstallBtnFooter" style="display:none;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.2);color:rgba(255,255,255,0.85);padding:6px 14px;border-radius:20px;font-size:12px;cursor:pointer;font-family:'Poppins',sans-serif;">
+                <button type="button" id="tmsInstallBtnFooter" style="display:none;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.2);color:rgba(255,255,255,0.85);padding:6px 14px;border-radius:20px;font-size:12px;cursor:pointer;font-family:var(--font-body);">
                     <i class="fa fa-download"></i> Install App
                 </button>
-                <button id="darkModeBtn" onclick="tmsToggleTheme()" style="background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.2);color:rgba(255,255,255,0.7);padding:6px 14px;border-radius:20px;font-size:12px;cursor:pointer;font-family:'Poppins',sans-serif;">
+                <button id="darkModeBtn" onclick="tmsToggleTheme()" style="background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.2);color:rgba(255,255,255,0.7);padding:6px 14px;border-radius:20px;font-size:12px;cursor:pointer;font-family:var(--font-body);">
                     <i class="fa fa-moon-o" id="darkIcon"></i> <span id="darkLabel">Dark Mode</span>
                 </button>
             </div>

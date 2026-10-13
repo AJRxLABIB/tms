@@ -12,13 +12,12 @@ tms_admin_require_role($dbh, ['superadmin', 'operations', 'finance']);
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>TMS | User Analytics</title>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Plus+Jakarta+Sans:wght@600;700;800&display=swap" rel="stylesheet">
 <link href="css/font-awesome.css" rel="stylesheet">
 <link href="css/bootstrap.min.css" rel="stylesheet">
 <link href="<?php echo tms_asset_ver('css/admin-v6.css'); ?>" rel="stylesheet">
 <style>
 .page-title-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;flex-wrap:wrap;gap:12px;}
-.page-title-row h2{font-family:'Plus Jakarta Sans',sans-serif;font-size:22px;font-weight:800;color:#0f172a;margin:0;}
+.page-title-row h2{font-family:'Inter',sans-serif;font-size:22px;font-weight:800;color:#0f172a;margin:0;}
 </style>
 </head>
 <body>
@@ -81,7 +80,7 @@ $mostActive = safe_q($dbh, "SELECT b.UserEmail, COALESCE(u.FullName, b.UserEmail
     <div style="font-size:12px;color:#64748b;margin-top:4px;">Users w/ ≥1 Booking</div>
   </div>
   <div style="background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:20px;">
-    <div style="font-size:26px;font-weight:800;color:#7c3aed;"><?=$avgBookings?></div>
+    <div style="font-size:26px;font-weight:800;color:#1F8A66;"><?=$avgBookings?></div>
     <div style="font-size:12px;color:#64748b;margin-top:4px;">Avg. Bookings / User</div>
   </div>
 </div>

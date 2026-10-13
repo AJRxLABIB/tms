@@ -360,7 +360,6 @@ if ($_GET['action'] === 'get_insights') {
 <link href="<?php echo tms_asset_ver('../css/modern-theme.css'); ?>" rel="stylesheet">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&family=Playfair+Display:wght@700;800&display=swap" rel="stylesheet">
 <style>
 body { background:#f0f4f8; }
 .admin-header { background:linear-gradient(135deg,#1a1a2e,#16213e); padding:20px 30px; display:flex; align-items:center; justify-content:space-between; }

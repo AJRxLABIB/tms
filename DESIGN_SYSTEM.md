@@ -1,5 +1,19 @@
 # Design system
 
+> **v7 update (Oct 2026): "Forest" identity replaces "Boarding Pass".**
+> Tokens in `css/modern-theme.css` `:root` (and the dark overrides in
+> `backend/header.php`) now use deep forest green `#176B50`, warm white `#F7F8F5`,
+> charcoal `#17231E`, mint `#B8E4C9`. Font is self-hosted **Inter**
+> (`fonts/inter/`, SIL OFL licence included); Bengali uses the OS font fallback.
+> Google Fonts links were removed from all pages. Measured contrast (WCAG):
+> text 15.2:1, muted text 5.1:1, links/primary 6.05:1; the two old light-mode
+> failures (teal links 2.94:1, `--text-light` 2.3:1) are fixed. `--text-light`
+> now equals `--text-muted` (the third text tier was dropped to pass AA).
+> Sections below that describe Fraunces/Manrope/teal are historical.
+> Not yet done: per-page component restyling, aria-invalid on forms, and a
+> real-browser check of every page (only a static component preview was rendered).
+
+
 ## Status today (be honest about this, per the project's own Rule 77)
 
 TMS already has a real, working design system — it just wasn't written
