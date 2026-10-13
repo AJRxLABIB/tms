@@ -763,10 +763,10 @@ class ExploreService {
         $data['emergency_contacts'] = $this->lookupEmergencyContacts($country);
 
         try {
-            $expires = date('Y-m-d H:i:s', time() + EXPLORE_CACHE_TTL_INFO);
+            $expires = (int)EXPLORE_CACHE_TTL_INFO; // seconds; expiry is computed by the DB clock below (PHP/MySQL timezone skew safe)
             $stmt = $this->db->prepare(
                 "INSERT INTO tbl_explore_destinations (place_key, display_name, country, lat, lng, info_json, expires_at)
-                 VALUES (?,?,?,?,?,?,?)
+                 VALUES (?,?,?,?,?,?,DATE_ADD(NOW(), INTERVAL ? SECOND))
                  ON DUPLICATE KEY UPDATE info_json=VALUES(info_json), expires_at=VALUES(expires_at)"
             );
             $stmt->execute([$placeKey, $name, $country, $lat, $lng, json_encode($data, JSON_UNESCAPED_UNICODE), $expires]);

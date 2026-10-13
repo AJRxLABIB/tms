@@ -88,12 +88,17 @@ class CacheService {
         }
         if (!$this->db) return;
         try {
-            $expires = date('Y-m-d H:i:s', time() + $ttlSeconds);
+            // Expiry is computed by the DATABASE clock (NOW()), the same clock get()
+            // compares against. It used to be built from PHP's date()/time(), so
+            // whenever PHP's timezone differed from MySQL's (common on XAMPP:
+            // PHP "Europe/Berlin" or UTC vs MySQL local time) entries were born
+            // already expired -- or lived hours too long -- and the cache silently
+            // never worked.
             $stmt = $this->db->prepare("
-                INSERT INTO tblcache (cache_key, cache_value, expires_at) VALUES (?, ?, ?)
+                INSERT INTO tblcache (cache_key, cache_value, expires_at) VALUES (?, ?, DATE_ADD(NOW(), INTERVAL ? SECOND))
                 ON DUPLICATE KEY UPDATE cache_value = VALUES(cache_value), expires_at = VALUES(expires_at)
             ");
-            $stmt->execute([$key, json_encode($value, JSON_UNESCAPED_UNICODE), $expires]);
+            $stmt->execute([$key, json_encode($value, JSON_UNESCAPED_UNICODE), max(1, $ttlSeconds)]);
         } catch (Exception $e) {
             error_log('[TMS CacheService] set() failed: ' . $e->getMessage());
             // fail-soft: a cache write failure should never break the calling feature

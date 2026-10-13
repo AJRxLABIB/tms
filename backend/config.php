@@ -244,6 +244,28 @@ if (!empty($_GET['ref']) && preg_match('/^[A-Za-z0-9]{4,20}$/', $_GET['ref'])) {
     $_COOKIE['tms_ref'] = $_GET['ref']; // available immediately on this same request too
 }
 
+// ─── PERF: schema fingerprint gate ───────────────────────────────────────────
+// Every request used to run the schema-drift repair and the package seed/price
+// backfill (hundreds of queries: ~400 per-package SELECTs plus information_schema
+// lookups), and every NEW session (every crawler hit) re-ran all CREATE TABLE
+// migrations. Now one SELECT compares a fingerprint of this file + the seed file
+// with the value stored after the last successful run. Unchanged -> skip all of
+// it. Any edit to config.php (i.e. a new migration) changes the fingerprint, so
+// migrations still apply automatically after a deploy. Set
+// TMS_FORCE_SCHEMA_CHECK=1 in .env to force a re-check on every request.
+$tmsSchemaFp = md5((string)@md5_file(__FILE__) . '|' . (string)@filesize(__DIR__ . '/../data/packages_seed.json') . '|schema-v1');
+$tmsSchemaOk = false;
+if (!in_array(strtolower((string)tms_env('TMS_FORCE_SCHEMA_CHECK', '')), ['1', 'true', 'yes', 'on'], true)) {
+    try {
+        $tmsSchemaOk = hash_equals($tmsSchemaFp, (string)$dbh->query("SELECT v FROM tbl_app_meta WHERE k = 'schema_fingerprint'")->fetchColumn());
+    } catch (Throwable $e) { $tmsSchemaOk = false; } // table not created yet
+}
+if ($tmsSchemaOk) {
+    foreach (['tms_db_init', 'tms_ai_tables', 'tms_explore_tables', 'tms_api_tables', 'tms_marketplace_tables'] as $_k) { $_SESSION[$_k] = true; }
+} else {
+    foreach (['tms_db_init', 'tms_ai_tables', 'tms_explore_tables', 'tms_api_tables', 'tms_marketplace_tables'] as $_k) { unset($_SESSION[$_k]); }
+}
+
 // ─── Core table setup (CREATE TABLE IF NOT EXISTS calls — safe/idempotent,
 //     so gating them once-per-session is just a perf optimisation) ─────────────
 if (empty($_SESSION['tms_db_init'])) {
@@ -296,7 +318,13 @@ if (empty($_SESSION['tms_marketplace_tables'])) {
 // a single cheap information_schema lookup on every request (a few ms) and
 // only issue ALTER TABLE when a column is actually missing, so this is fully
 // self-healing regardless of session/deploy history.
-_tms_repair_schema_drift($dbh);
+if (!$tmsSchemaOk) {
+    _tms_repair_schema_drift($dbh);
+    try {
+        $dbh->exec("CREATE TABLE IF NOT EXISTS tbl_app_meta (k VARCHAR(60) NOT NULL PRIMARY KEY, v VARCHAR(120) NOT NULL, updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+        $dbh->prepare("INSERT INTO tbl_app_meta (k, v) VALUES ('schema_fingerprint', ?) ON DUPLICATE KEY UPDATE v = VALUES(v)")->execute([$tmsSchemaFp]);
+    } catch (Throwable $e) { error_log('[TMS Schema] could not store schema fingerprint: ' . $e->getMessage()); }
+}
 
 require_once __DIR__ . '/log-activity.php';
 require_once __DIR__ . '/system-events.php';
