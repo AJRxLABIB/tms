@@ -47,13 +47,57 @@ final class ToolRouter
         return $calls;
     }
 
-    /** Run the plan and render a compact, untrusted-wrapped FACTS block + citations. */
-    /** @param string[] $exclude lower-case terms the user asked never to be shown (TravelMemory 'destination_avoid'); applied in code, not by the model */
-    public static function run(ToolRegistry $reg, array $calls, array $ctx, array $exclude = []): array
+    /** Hard bounds for one assistant turn (also the answer to "can it loop?": no). */
+    public const MAX_STEPS = 4;
+    public const DEADLINE_SEC = 8.0;
+
+    /**
+     * Dependent follow-up steps, decided by CODE from a completed step's result (never by the model).
+     * Only fires for a catalogue search that returned real packages, and only for read-only tools.
+     * @return array<int,array{tool:string,args:array}>
+     */
+    public static function followUps(string $message, array $call, array $data, array $done): array
     {
-        $blocks = []; $cites = [];
-        foreach ($calls as $c) {
+        if ($call['tool'] !== 'search_packages' || !is_array($data) || !$data || !isset($data[0]['id'])) return [];
+        $top = $data[0]; $out = [];
+        $d = BanglaNormalizer::digits(mb_strtolower($message, 'UTF-8'));
+        $has = fn(string $t) => in_array($t, array_column($done, 'tool'), true);
+        $cost = preg_match('/\b(total cost|how much|can (?:we|i) afford|afford|cost for|price for|within (?:my )?budget)\b|মোট খরচ|খরচ কত|কত পড়বে|কত লাগবে|বাজেটে হবে/u', $d);
+        if ($cost && !$has('calculate_trip_budget')) {
+            $trav = 1;
+            if (preg_match('/(?:family of|group of|for|party of)\s*(\d{1,2})\b|(\d{1,2})\s*(?:people|persons?|travell?ers|adults|of us|জন)/u', $d, $t)) $trav = (int)($t[1] !== '' ? $t[1] : $t[2]);
+            $a = ['travelers' => max(1, min(50, $trav)), 'package_id' => (int)$top['id']];
+            if (($b = BanglaNormalizer::budgetCeiling($message)) !== null && $b <= 1000000000) $a['budget_bdt'] = $b;
+            $out[] = ['tool' => 'calculate_trip_budget', 'args' => $a];
+        }
+        $safety = preg_match('/\b(visa|passport|advisory|safe to (?:travel|visit)|is it safe|strike|hartal|disruption)\b|ভিসা|পাসপোর্ট|হরতাল|নিরাপদ/u', mb_strtolower($message, 'UTF-8'));
+        if ($safety && !$has('get_travel_notices') && !empty($top['country']) && is_string($top['country'])) {
+            $out[] = ['tool' => 'get_travel_notices', 'args' => ['query' => mb_substr($message, 0, 200), 'country' => mb_substr($top['country'], 0, 100)]];
+        }
+        return $out;
+    }
+
+    /**
+     * Run the plan and render a compact, untrusted-wrapped FACTS block + citations.
+     * Bounded multi-step: at most MAX_STEPS tool calls and DEADLINE_SEC seconds per turn, identical calls are never repeated,
+     * and follow-ups come only from followUps() (read-only tools). Returns a 'trace' for audit/analytics.
+     * @param string[] $exclude lower-case terms the user asked never to be shown (TravelMemory 'destination_avoid'); applied in code, not by the model
+     */
+    public static function run(ToolRegistry $reg, array $calls, array $ctx, array $exclude = [], ?string $message = null, int $maxSteps = self::MAX_STEPS, float $deadlineSec = self::DEADLINE_SEC): array
+    {
+        $blocks = []; $cites = []; $queue = $calls; $done = []; $seen = []; $trace = [];
+        $t0 = microtime(true); $limited = null;
+        while ($queue) {
+            if (count($done) >= $maxSteps) { $limited = 'step_limit'; break; }
+            if (microtime(true) - $t0 > $deadlineSec) { $limited = 'deadline'; break; }
+            $c = array_shift($queue);
+            $key = $c['tool'] . '|' . json_encode($c['args']);
+            if (isset($seen[$key])) continue;
+            $seen[$key] = true;
+            $s0 = microtime(true);
             $r = $reg->execute($c['tool'], $c['args'], $ctx);
+            $done[] = $c;
+            $trace[] = ['step' => count($done), 'tool' => $c['tool'], 'ok' => (bool)$r['ok'], 'ms' => (int)round((microtime(true) - $s0) * 1000), 'follow_up' => count($done) > count($calls)];
             if (!$r['ok']) { $blocks[] = $c['tool'] . ': unavailable (' . $r['error'] . ')'; continue; }
             if ($exclude && $c['tool'] === 'search_packages' && is_array($r['data'])) {
                 $before = count($r['data']);
@@ -65,12 +109,14 @@ final class ToolRouter
                 if (count($r['data']) < $before) $blocks[] = 'note: ' . ($before - count($r['data'])) . ' matching package(s) were hidden because the user asked not to be shown them; do not mention or suggest them.';
             }
             $blocks[] = $c['tool'] . ': ' . json_encode($r['data'], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+            if ($message !== null) foreach (self::followUps($message, $c, $r['data'], $done) as $f) $queue[] = $f;
             $walk = function ($v) use (&$walk, &$cites) {
                 if (is_array($v)) { if (isset($v['citation']['id'])) $cites[$v['citation']['id']] = $v['citation']; foreach ($v as $x) $walk($x); }
             };
             $walk($r['data']);
         }
         require_once __DIR__ . '/InjectionGuard.php';
-        return ['facts' => InjectionGuard::wrapUntrusted('RETRIEVED FACTS', implode("\n", $blocks)), 'citations' => array_values($cites)];
+        if ($limited) $blocks[] = 'note: the lookup was stopped early (' . $limited . '); answer only from the facts above and say anything else could not be checked.';
+        return ['facts' => InjectionGuard::wrapUntrusted('RETRIEVED FACTS', implode("\n", $blocks)), 'citations' => array_values($cites), 'trace' => $trace, 'stopped' => $limited];
     }
 }

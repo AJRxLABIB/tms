@@ -36,9 +36,13 @@ provider calls (Gemini / OpenAI / Ollama) have NOT been tested; the sandbox had 
 - `TripBudget` tool (`calculate_trip_budget`): lines labelled catalogue / user_estimate / assumption, uncounted costs listed, verdict limited to "within_budget_for_known_costs" / "over_budget".
 - Admin AI dashboard: provider health panel (breaker state, calls, success %, avg/p95).
 
+## 3b. Stage 2 delivered: bounded multi-step tool use
+
+`ToolRouter::run` now executes dependent steps: after a catalogue search that returns real packages, code (not the model) may add a budget step for the top result (cost intent) or a travel-notice step for its country (visa/safety intent). Hard bounds: 4 steps and 8 s per turn, identical calls never repeated, read-only tools only, early stops are disclosed to the model, and the avoid-list is applied before any follow-up. A per-step `trace` (tool, ok, ms, follow_up) is returned for audit/analytics. Still rule-based: there is no LLM planner, by design (small local models are unreliable at it).
+
 ## 4. Verification actually run (sandbox: PHP 8.3, MariaDB, stubbed HTTP transport)
 
-engine 84/84, resilience 27/27, memory HTTP 18/18, eval 63/63, rerank 11/11, Ollama unit, autopilot 40/40 + 19/19, payments 18/18, suppliers 72/72, notices 32/32, security 26/26, `tests/run.php` 20/20, e2e 14/14. axe WCAG A/AA clean on `ai-memory.php` (desktop/mobile, light/dark) and the dashboard panel (light/dark).
+engine 92/92, resilience 27/27, memory HTTP 18/18, eval 63/63, rerank 11/11, Ollama unit, autopilot 40/40 + 19/19, payments 18/18, suppliers 72/72, notices 32/32, security 26/26, `tests/run.php` 20/20, e2e 14/14. axe WCAG A/AA clean on `ai-memory.php` (desktop/mobile, light/dark) and the dashboard panel (light/dark).
 
 ## 5. NOT verified
 
@@ -46,7 +50,7 @@ Real provider calls and answer quality; failover against a real outage; Apache/X
 
 ## 6. Not implemented yet (do not assume these exist)
 
-Unified orchestrator and bounded multi-step tasks; persistent embeddings with hybrid fusion and citation verification; weather-aware replanning beyond Autopilot; routing/geographic intelligence; booking-preparation tools; multimodal/OCR; per-task model routing; cache isolation measurement; richer admin control centre; evaluation trend tracking with regression gating; analytics; conversation-summary memory (deliberately omitted).
+LLM-driven planning and multi-step tasks beyond the two rule-based follow-ups above; persistent embeddings with hybrid fusion and citation verification; weather-aware replanning beyond Autopilot; routing/geographic intelligence; booking-preparation tools; multimodal/OCR; per-task model routing; cache isolation measurement; richer admin control centre; evaluation trend tracking with regression gating; analytics; conversation-summary memory (deliberately omitted).
 
 ## 7. Rollback
 

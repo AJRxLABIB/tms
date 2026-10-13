@@ -165,6 +165,24 @@ t('storage outage: relevant()/all() degrade to empty instead of throwing', (func
     finally { $dbh->exec('RENAME TABLE tbl_ai_user_memory_off TO tbl_ai_user_memory'); }
     return $ok; })());
 
+// ── Bounded multi-step orchestration (ToolRouter::run follow-ups) ──
+$msg = 'How much would a trip for 3 people to a tea hill cost? budget 60k';
+$o = ToolRouter::run($reg2, ToolRouter::plan($msg, []), [], [], $msg);
+$tools = array_column($o['trace'], 'tool');
+t('multi-step: search then dependent budget for the TOP result (no package page)', $tools === ['search_packages', 'calculate_trip_budget'] && $o['trace'][1]['follow_up'] === true);
+t('multi-step: budget used the catalogue price of the found package, quoted from the tool', (function () use ($o, $reg2) { $top = $reg2->execute('search_packages', ['query' => 'tea hill', 'limit' => 5], [])['data'][0]['title']; return preg_match('/calculate_trip_budget: .*"package":"' . preg_quote($top, '/') . '"/u', $o['facts']) === 1; })());
+$o2 = ToolRouter::run($reg2, ToolRouter::plan('tea packages', []), [], [], 'tea packages');
+t('multi-step: no cost intent -> no follow-up (one step only)', count($o2['trace']) === 1);
+$o3 = ToolRouter::run($reg2, ToolRouter::plan($msg, []), [], [], $msg, 1);
+t('step cap honoured and disclosed to the model', count($o3['trace']) === 1 && $o3['stopped'] === 'step_limit' && str_contains($o3['facts'], 'stopped early'));
+$o4 = ToolRouter::run($reg2, ToolRouter::plan($msg, []), [], [], $msg, 4, -1.0);
+t('deadline honoured (no tool runs once exceeded)', $o4['trace'] === [] && $o4['stopped'] === 'deadline');
+$dup = ToolRouter::run($reg2, [['tool' => 'search_packages', 'args' => ['query' => 'tea', 'limit' => 5]], ['tool' => 'search_packages', 'args' => ['query' => 'tea', 'limit' => 5]]], [], [], null);
+t('identical calls are never repeated', count($dup['trace']) === 1);
+$ob = ToolRouter::run($reg2, ToolRouter::plan('how much for 2 people? tea', []), [], ['sylhet', 'bandarban'], 'how much for 2 people? tea');
+t('avoid list also stops a follow-up budget from being built on a hidden package', !array_filter($ob['trace'], fn($x) => $x['tool'] === 'calculate_trip_budget'));
+t('follow-ups are read-only tools only', (function () use ($reg2) { foreach (['how much for 2 people visa safe'] as $m) { $o = ToolRouter::run($reg2, ToolRouter::plan($m, []), [], [], $m); foreach ($o['trace'] as $x) if (!preg_match('/^(search_|get_|calculate_|my_)/', $x['tool'])) return false; } return true; })());
+
 $clean(); foreach ([$A, $B] as $e) $dbh->prepare('DELETE FROM tblusers WHERE EmailId=?')->execute([$e]);
 $dbh->exec("DELETE FROM tblusers WHERE EmailId LIKE 'deleted-user-%@deleted.invalid' AND FullName='Deleted User' AND id=$uid");
 $dbh->exec("DELETE FROM tbl_ai_telemetry WHERE user_email IN ('$A','$B','guest') AND feature='site_assistant'");
