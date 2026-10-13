@@ -186,17 +186,17 @@ $showingTwoFactorPrompt = !empty($_SESSION['a2fa_pending']);
 body{font-family:'Inter',sans-serif;min-height:100vh;display:flex;background:#17231E;overflow:hidden;}
 .login-left{
   flex:1;display:flex;flex-direction:column;justify-content:center;align-items:center;padding:60px 40px;
-  background:linear-gradient(135deg,#17231E 0%,#1e3a5f 50%,#1e293b 100%);
+  background:linear-gradient(135deg,#17231E 0%,#104B3A 55%,#0E3B2D 100%);
   position:relative;overflow:hidden;
 }
 .login-left::before{
   content:'';position:absolute;width:600px;height:600px;border-radius:50%;
-  background:radial-gradient(circle,rgba(29,78,216,0.15),transparent 70%);
+  background:radial-gradient(circle,rgba(31,138,102,0.25),transparent 70%);
   top:-100px;left:-100px;
 }
 .login-left::after{
   content:'';position:absolute;width:400px;height:400px;border-radius:50%;
-  background:radial-gradient(circle,rgba(124,58,237,0.12),transparent 70%);
+  background:radial-gradient(circle,rgba(184,228,201,0.10),transparent 70%);
   bottom:-50px;right:-50px;
 }
 .login-brand{position:relative;z-index:1;text-align:center;margin-bottom:48px;}
