@@ -644,7 +644,6 @@ html[data-theme="dark"] {
     --secondary-light: #7ED6B2;
     --accent: #1B7F5F;
     --accent-dark: #176B50;
-    --mint-ink: #B8E4C9;
     --brass: #E0A93B;
     --shadow-sm: 0 2px 8px rgba(0,0,0,0.35);
     --shadow-md: 0 8px 30px rgba(0,0,0,0.45);

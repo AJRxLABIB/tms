@@ -35,14 +35,12 @@ tms_seo_meta([
 ]);
 ?>
 <link rel="manifest" href="manifest.json">
-<meta name="theme-color" content="#0F4C81">
+<meta name="theme-color" content="#104B3A">
 
 <link href="css/bootstrap.min2.css" rel="stylesheet">
 <link href="css/font-awesome.min2.css" rel="stylesheet">
 <link href="css/animate.css" rel="stylesheet">
 <link href="<?php echo tms_asset_ver('css/modern-theme.css'); ?>" rel="stylesheet">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 
 <script src="js/jquery-1.12.0.min.js" defer></script>
 <script src="js/bootstrap.min.js" defer></script>
@@ -88,6 +86,39 @@ tms_seo_meta([
 [data-theme="dark"] .tms-landing-why { background:var(--bg-dark,#0f1720); }
 [data-theme="dark"] .tms-landing-why-card,
 [data-theme="dark"] .tms-faq-item { background:var(--card-bg,#1a2330); }
+
+/* ── v7 homepage: search panel, featured packages, hero photo ── */
+.tms-hero.lp-has-photo .tms-hero-bg { background-image: var(--lp-hero-img); background-size: cover; background-position: center; }
+.tms-hero.lp-has-photo .tms-hero-bg::after { display:none; }
+.tms-hero-scroll { display:none; }
+.lp-search { display:flex; gap:12px; align-items:flex-end; flex-wrap:wrap; background:var(--white); color:var(--text);
+  border-radius:var(--radius-lg); padding:16px; margin:28px 0 8px; box-shadow:var(--shadow-lg); max-width:920px; text-align:left; }
+.lp-field { display:flex; flex-direction:column; gap:4px; min-width:150px; flex:1 1 150px; }
+.lp-field-grow { flex:2 1 240px; }
+.lp-field label { font-size:12px; font-weight:600; color:var(--text-muted); }
+.lp-field input, .lp-field select { height:44px; border:1px solid var(--border); border-radius:var(--radius-sm); padding:0 12px;
+  background:var(--bg); color:var(--text); font:inherit; font-size:15px; width:100%; }
+.lp-field input:focus-visible, .lp-field select:focus-visible { outline:2px solid var(--accent); outline-offset:1px; }
+.lp-search-btn { height:44px; padding:0 22px; border:0; border-radius:var(--radius-sm); background:var(--accent); color:#fff; font:600 15px var(--font-body); cursor:pointer; transition:var(--transition); flex:0 0 auto; }
+.lp-search-btn:hover { background:var(--accent-dark); }
+.lp-search-btn:focus-visible { outline:2px solid var(--mint); outline-offset:2px; }
+.lp-pkg-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:24px; }
+.lp-pkg { display:block; background:var(--white); border:1px solid var(--border); border-radius:var(--radius-md); overflow:hidden; box-shadow:var(--shadow-sm); transition:var(--transition); color:inherit; }
+.lp-pkg:hover { transform:translateY(-3px); box-shadow:var(--shadow-md); }
+.lp-pkg:focus-visible { outline:2px solid var(--accent); outline-offset:2px; }
+.lp-pkg-img { position:relative; aspect-ratio:16/10; background:var(--bg-dark); overflow:hidden; }
+.lp-pkg-img img { width:100%; height:100%; object-fit:cover; display:block; }
+.lp-chip { position:absolute; left:12px; top:12px; background:var(--mint); color:var(--mint-ink); font-size:12px; font-weight:600; padding:4px 10px; border-radius:99px; }
+.lp-pkg-body { padding:16px 18px 18px; }
+.lp-pkg-body h3 { font-size:17px; margin:0 0 6px; color:var(--text); }
+.lp-loc { color:var(--text-muted); font-size:13.5px; margin:0 0 10px; }
+.lp-price { margin:0; font-weight:700; font-size:18px; color:var(--text); font-variant-numeric:tabular-nums; }
+.lp-price span { font-weight:500; font-size:12.5px; color:var(--text-muted); margin-right:4px; }
+.lp-link-btn { display:inline-block; font-weight:600; color:var(--secondary); padding:10px 18px; border:1px solid var(--secondary); border-radius:var(--radius-sm); }
+.lp-link-btn:hover { background:var(--secondary); color:#fff; }
+@media (max-width:900px){ .lp-pkg-grid { grid-template-columns:repeat(2,1fr); } }
+@media (max-width:560px){ .lp-pkg-grid { grid-template-columns:1fr; } .lp-search { padding:14px; } .lp-search-btn { width:100%; } }
+@media (prefers-reduced-motion: reduce){ .lp-pkg, .lp-search-btn { transition:none; } .lp-pkg:hover { transform:none; } }
 </style>
 </head>
 <body>
@@ -108,13 +139,47 @@ tms_seo_meta([
 // wrong (LTR) layout direction, while every other page on the site
 // (reached through backend/header.php) got it right. Fixed by pointing at
 // this file's real sibling instead.
+// ── Real homepage data (v7) ─────────────────────────────────────────────
+// Every number/quote shown below comes from the database. Anything that
+// can't be loaded is simply not rendered -- no placeholder or invented values.
+$lp = ['pkgs' => 0, 'dests' => 0, 'hotels' => 0, 'reviews' => 0, 'avg' => null,
+       'featured' => [], 'quotes' => [], 'types' => []];
+$lp_e = static function ($v): string { return htmlspecialchars((string)$v, ENT_QUOTES, 'UTF-8'); };
+try {
+    if (isset($dbh) && $dbh instanceof PDO) {
+        $r = $dbh->query("SELECT COUNT(*) AS c, COUNT(DISTINCT NULLIF(TRIM(PackageLocation),'')) AS d
+                          FROM tbltourpackages WHERE Status=1")->fetch(PDO::FETCH_ASSOC);
+        $lp['pkgs']  = (int)($r['c'] ?? 0);
+        $lp['dests'] = (int)($r['d'] ?? 0);
+        $r = $dbh->query("SELECT COUNT(*) AS c, AVG(Rating) AS a FROM tblreviews
+                          WHERE Status=1 AND Rating BETWEEN 1 AND 5")->fetch(PDO::FETCH_ASSOC);
+        $lp['reviews'] = (int)($r['c'] ?? 0);
+        $lp['avg']     = $lp['reviews'] > 0 ? round((float)$r['a'], 1) : null;
+        $lp['featured'] = $dbh->query("SELECT PackageId, PackageName, PackageType, PackageLocation, PackagePrice, PackageImage
+                          FROM tbltourpackages WHERE Status=1
+                          ORDER BY (PackageImage IS NOT NULL AND PackageImage <> '') DESC, Creationdate DESC
+                          LIMIT 6")->fetchAll(PDO::FETCH_ASSOC);
+        $lp['quotes'] = $dbh->query("SELECT r.Rating, r.ReviewText, r.UserName, p.PackageId, p.PackageName
+                          FROM tblreviews r JOIN tbltourpackages p ON p.PackageId = r.PackageId
+                          WHERE r.Status=1 AND r.Rating >= 4 AND CHAR_LENGTH(r.ReviewText) >= 40
+                          ORDER BY r.PostingDate DESC LIMIT 3")->fetchAll(PDO::FETCH_ASSOC);
+        $lp['types'] = $dbh->query("SELECT DISTINCT PackageType FROM tbltourpackages
+                          WHERE Status=1 AND PackageType IS NOT NULL AND PackageType <> '' ORDER BY PackageType")->fetchAll(PDO::FETCH_COLUMN);
+        try { $lp['hotels'] = (int)$dbh->query("SELECT COUNT(*) FROM tblhotels")->fetchColumn(); } catch (Throwable $e) { $lp['hotels'] = 0; }
+    }
+} catch (Throwable $e) {
+    error_log('[TMS landing] data load failed: ' . $e->getMessage());
+}
+// Hero photo: only used if the site owner has added a licensed image at
+// images/hero/hero.jpg (see images/hero/README.txt). Otherwise a plain gradient.
+$lp_hero_photo = is_file(dirname(__DIR__) . '/images/hero/hero.jpg') ? 'images/hero/hero.jpg' : '';
 include('backend/header.php');
 ?>
 
 <!-- ══════════════════════════════════════════════════════════════
      HERO — what this system is
 ══════════════════════════════════════════════════════════════ -->
-<section class="tms-hero">
+<section class="tms-hero<?php echo $lp_hero_photo ? ' lp-has-photo' : ''; ?>"<?php echo $lp_hero_photo ? ' style="--lp-hero-img:url(\'' . $lp_e($lp_hero_photo) . '\')"' : ''; ?>>
     <div class="tms-hero-bg"></div>
     <div class="tms-hero-overlay"></div>
     <div class="tms-hero-content">
@@ -139,15 +204,75 @@ include('backend/header.php');
             </a>
         </div>
 
+        <form class="lp-search wow fadeInUp" data-wow-delay=".35s" action="package-list.php" method="get" role="search" aria-label="Search tour packages">
+            <div class="lp-field lp-field-grow">
+                <label for="lpWhere">Destination or keyword</label>
+                <input id="lpWhere" type="search" name="search" maxlength="100" placeholder="e.g. Cox's Bazar, Sylhet, beach" autocomplete="off">
+            </div>
+            <div class="lp-field">
+                <label for="lpType">Package type</label>
+                <select id="lpType" name="type">
+                    <option value="">Any type</option>
+                    <?php foreach ($lp['types'] as $t): ?>
+                    <option value="<?php echo $lp_e($t); ?>"><?php echo $lp_e($t); ?></option>
+                    <?php endforeach; ?>
+                </select>
+            </div>
+            <div class="lp-field">
+                <label for="lpDur">Duration</label>
+                <select id="lpDur" name="dur">
+                    <option value="">Any length</option>
+                    <option value="1-3">1&ndash;3 days</option>
+                    <option value="4-6">4&ndash;6 days</option>
+                    <option value="7-30">7+ days</option>
+                </select>
+            </div>
+            <button type="submit" class="lp-search-btn"><i class="fa fa-search" aria-hidden="true"></i> Search packages</button>
+        </form>
+
+        <?php if ($lp['pkgs'] > 0): ?>
         <div class="tms-hero-stats wow fadeInUp" data-wow-delay=".5s">
-            <div class="tms-hero-stat"><div class="num" data-counter="3200">0</div><div class="lbl">Bookings</div></div>
-            <div class="tms-hero-stat"><div class="num" data-counter="1900">0</div><div class="lbl">Travelers</div></div>
-            <div class="tms-hero-stat"><div class="num" data-counter="400">0</div><div class="lbl">Tour Packages</div></div>
-            <div class="tms-hero-stat"><div class="num" data-counter="50">0</div><div class="lbl">Destinations</div></div>
+            <div class="tms-hero-stat"><div class="num" data-counter="<?php echo (int)$lp['pkgs']; ?>">0</div><div class="lbl">Tour packages</div></div>
+            <?php if ($lp['dests'] > 0): ?><div class="tms-hero-stat"><div class="num" data-counter="<?php echo (int)$lp['dests']; ?>">0</div><div class="lbl">Destinations</div></div><?php endif; ?>
+            <?php if ($lp['hotels'] > 0): ?><div class="tms-hero-stat"><div class="num" data-counter="<?php echo (int)$lp['hotels']; ?>">0</div><div class="lbl">Hotels</div></div><?php endif; ?>
+            <?php if ($lp['reviews'] > 0): ?><div class="tms-hero-stat"><div class="num"><?php echo number_format($lp['avg'], 1); ?></div><div class="lbl">Avg. rating (<?php echo (int)$lp['reviews']; ?> reviews)</div></div><?php endif; ?>
         </div>
+        <?php endif; ?>
     </div>
     <div class="tms-hero-scroll"><div class="scroll-dot"></div>Scroll Down</div>
 </section>
+
+<?php if (!empty($lp['featured'])): ?>
+<!-- FEATURED PACKAGES (real inventory) -->
+<section class="tms-section" id="featured-packages">
+    <div class="tms-container">
+        <div class="tms-section-header">
+            <div class="tms-section-tag"><i class="fa fa-suitcase"></i> Tour packages</div>
+            <h2 class="tms-section-title">Latest packages</h2>
+            <p class="tms-section-sub">Live listings from our catalogue. Prices and availability are confirmed at checkout.</p>
+        </div>
+        <div class="lp-pkg-grid">
+            <?php foreach ($lp['featured'] as $pk): ?>
+            <a class="lp-pkg" href="package-details.php?pkgid=<?php echo (int)$pk['PackageId']; ?>">
+                <div class="lp-pkg-img">
+                    <img loading="lazy" width="640" height="400"
+                         src="<?php echo $lp_e(tms_package_image_src($pk['PackageImage'] ?? '')); ?>"
+                         onerror="this.onerror=null;this.src='images/no-image-placeholder.jpg'"
+                         alt="<?php echo $lp_e($pk['PackageName']); ?>">
+                    <?php if (!empty($pk['PackageType'])): ?><span class="lp-chip"><?php echo $lp_e($pk['PackageType']); ?></span><?php endif; ?>
+                </div>
+                <div class="lp-pkg-body">
+                    <h3><?php echo $lp_e($pk['PackageName']); ?></h3>
+                    <p class="lp-loc"><i class="fa fa-map-marker" aria-hidden="true"></i> <?php echo $lp_e($pk['PackageLocation']); ?></p>
+                    <p class="lp-price"><span>From</span> <?php echo $lp_e(tms_currency((float)$pk['PackagePrice'])); ?></p>
+                </div>
+            </a>
+            <?php endforeach; ?>
+        </div>
+        <p style="text-align:center;margin-top:28px;"><a class="lp-link-btn" href="package-list.php">Browse all packages <i class="fa fa-arrow-right" aria-hidden="true"></i></a></p>
+    </div>
+</section>
+<?php endif; ?>
 
 <!-- ══════════════════════════════════════════════════════════════
      WHAT IS THIS SYSTEM
@@ -249,43 +374,31 @@ include('backend/header.php');
 <!-- ══════════════════════════════════════════════════════════════
      TESTIMONIALS
 ══════════════════════════════════════════════════════════════ -->
+<?php if (!empty($lp['quotes'])): ?>
 <section class="tms-section">
     <div class="tms-container">
-        <div class="tms-section-header wow fadeInUp" data-wow-delay=".1s">
-            <div class="tms-section-tag"><i class="fa fa-quote-left"></i> Testimonials</div>
-            <h2 class="tms-section-title">What Travelers Say</h2>
+        <div class="tms-section-header">
+            <div class="tms-section-tag"><i class="fa fa-quote-left"></i> Reviews</div>
+            <h2 class="tms-section-title">What travelers say</h2>
+            <p class="tms-section-sub">Recent verified reviews from our packages.</p>
         </div>
-        <!-- RESPONSIVE FIX (Round 54, master prompt item 61): this was a
-             hand-rolled inline style duplicating .tms-reviews-grid's desktop
-             layout (3 columns) but with none of that class's existing
-             mobile collapse (modern-theme.css already has
-             ".tms-reviews-grid { grid-template-columns: 1fr; }" at
-             max-width:768px) -- inline styles can't be overridden by that
-             media query, so this section stayed a fixed 3-column grid at
-             every width and visibly overflowed the viewport at 320-414px
-             (found by actually measuring layout at each breakpoint, not by
-             eyeballing a screenshot). Using the existing class instead of a
-             one-off inline style fixes it and matches how every other grid
-             on this page already works. -->
         <div class="tms-reviews-grid">
-            <div class="tms-review-card wow fadeInUp" data-wow-delay=".1s">
-                <div style="color:var(--accent);margin-bottom:12px;"><i class="fa fa-star"></i><i class="fa fa-star"></i><i class="fa fa-star"></i><i class="fa fa-star"></i><i class="fa fa-star"></i></div>
-                <p style="color:var(--text-muted);font-size:14px;line-height:1.7;">"The AI planner built a full itinerary for Cox's Bazar in seconds — saved me hours of research."</p>
-                <div style="font-weight:700;color:var(--text);margin-top:10px;">— Farhana R.</div>
-            </div>
-            <div class="tms-review-card wow fadeInUp" data-wow-delay=".15s">
-                <div style="color:var(--accent);margin-bottom:12px;"><i class="fa fa-star"></i><i class="fa fa-star"></i><i class="fa fa-star"></i><i class="fa fa-star"></i><i class="fa fa-star"></i></div>
-                <p style="color:var(--text-muted);font-size:14px;line-height:1.7;">"Seeing prices update instantly in my own currency made comparing packages so much easier."</p>
-                <div style="font-weight:700;color:var(--text);margin-top:10px;">— Michael T.</div>
-            </div>
-            <div class="tms-review-card wow fadeInUp" data-wow-delay=".2s">
-                <div style="color:var(--accent);margin-bottom:12px;"><i class="fa fa-star"></i><i class="fa fa-star"></i><i class="fa fa-star"></i><i class="fa fa-star"></i><i class="fa fa-star"></i></div>
-                <p style="color:var(--text-muted);font-size:14px;line-height:1.7;">"Having weather, maps, and booking in one dashboard made this the easiest trip I've ever planned."</p>
-                <div style="font-weight:700;color:var(--text);margin-top:10px;">— Anika S.</div>
-            </div>
+            <?php foreach ($lp['quotes'] as $q): ?>
+            <figure class="tms-review-card" style="margin:0;">
+                <div style="color:var(--brass);margin-bottom:12px;" role="img" aria-label="<?php echo (int)$q['Rating']; ?> out of 5 stars">
+                    <?php for ($i = 1; $i <= 5; $i++): ?><i class="fa fa-star<?php echo $i <= (int)$q['Rating'] ? '' : '-o'; ?>" aria-hidden="true"></i><?php endfor; ?>
+                </div>
+                <blockquote style="margin:0;border:0;padding:0;font-size:14px;line-height:1.7;color:var(--text-muted);">&ldquo;<?php echo $lp_e(mb_strimwidth(trim((string)$q['ReviewText']), 0, 220, '…', 'UTF-8')); ?>&rdquo;</blockquote>
+                <figcaption style="margin-top:10px;font-weight:700;color:var(--text);">
+                    <?php echo $lp_e($q['UserName'] !== null && $q['UserName'] !== '' ? $q['UserName'] : 'Traveler'); ?>
+                    <a href="package-details.php?pkgid=<?php echo (int)$q['PackageId']; ?>" style="display:block;font-weight:500;font-size:13px;"><?php echo $lp_e($q['PackageName']); ?></a>
+                </figcaption>
+            </figure>
+            <?php endforeach; ?>
         </div>
     </div>
 </section>
+<?php endif; ?>
 
 <!-- ══════════════════════════════════════════════════════════════
      FAQ
