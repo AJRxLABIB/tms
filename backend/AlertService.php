@@ -10,6 +10,20 @@
  * Uses the existing tms_notify() (see includes/config.php) so alerts show
  * up in the same notification center as everything else — this is
  * deliberately not a parallel/new notification channel.
+ *
+ * REAL GAP CLOSED (item 29, Notification Center -- found while auditing
+ * "only a single on/off flag, not per-channel preferences"): both alert
+ * types are one-shot and time-sensitive by design, yet until now only ever
+ * fired the in-app bell notification -- a customer who wasn't actively on
+ * the site when their price/availability condition was met would simply
+ * never find out, which defeats the entire point of asking to be alerted.
+ * This now also sends an email, reusing the exact same NotificationsEnabled
+ * preference and default-on-NULL convention already established by
+ * manage-bookings.php's tms_notify_booking_owner() -- not a new preference,
+ * not a new channel, just applying the existing one where it was actually
+ * missing. In-app notification is unconditional either way, same reasoning
+ * as tms_notify_booking_owner(): losing your only record is worse than the
+ * preference intends.
  */
 
 function tms_create_price_alert(PDO $dbh, string $email, int $packageId, float $targetPrice): bool
@@ -47,8 +61,10 @@ function tms_check_and_fire_alerts(PDO $dbh): array
 
     // ── Price alerts ──────────────────────────────────────────────────
     $alerts = $dbh->query(
-        "SELECT a.id, a.UserEmail, a.PackageId, a.TargetPrice, p.PackageName, p.PackagePrice
+        "SELECT a.id, a.UserEmail, a.PackageId, a.TargetPrice, p.PackageName, p.PackagePrice,
+                u.FullName, u.NotificationsEnabled
          FROM tbl_price_alerts a JOIN tbltourpackages p ON p.PackageId = a.PackageId
+         LEFT JOIN tblusers u ON u.EmailId = a.UserEmail
          WHERE a.IsActive = 1"
     )->fetchAll(PDO::FETCH_OBJ);
 
@@ -59,12 +75,17 @@ function tms_check_and_fire_alerts(PDO $dbh): array
         // notify someone about a price they wouldn't actually get.
         $current = tms_dynamic_price($dbh, (int)$a->PackageId, (float)$a->PackagePrice)['final'];
         if ($current <= (float)$a->TargetPrice) {
-            tms_notify(
-                $dbh,
-                $a->UserEmail,
-                "Price drop! \"{$a->PackageName}\" is now " . tms_currency((float)$current) . " (your target was " . tms_currency((float)$a->TargetPrice) . ").",
-                'package-details.php?pkgid=' . (int)$a->PackageId
-            );
+            $message = "Price drop! \"{$a->PackageName}\" is now " . tms_currency((float)$current) . " (your target was " . tms_currency((float)$a->TargetPrice) . ").";
+            tms_notify($dbh, $a->UserEmail, $message, 'package-details.php?pkgid=' . (int)$a->PackageId);
+            $wantsEmail = $a->NotificationsEnabled === null || (int)$a->NotificationsEnabled === 1;
+            if ($wantsEmail) {
+                tms_send_email(
+                    $a->UserEmail,
+                    $a->FullName ?: $a->UserEmail,
+                    'Price drop alert: ' . $a->PackageName,
+                    tms_email_template('Price Drop Alert', '<p>' . htmlspecialchars($message, ENT_QUOTES, 'UTF-8') . '</p>')
+                );
+            }
             $dbh->prepare("UPDATE tbl_price_alerts SET IsActive=0, NotifiedAt=NOW() WHERE id=:id")
                 ->execute([':id' => $a->id]);
             $firedPrice++;
@@ -73,8 +94,10 @@ function tms_check_and_fire_alerts(PDO $dbh): array
 
     // ── Availability alerts ──────────────────────────────────────────
     $availAlerts = $dbh->query(
-        "SELECT a.id, a.UserEmail, a.PackageId, p.PackageName
+        "SELECT a.id, a.UserEmail, a.PackageId, p.PackageName,
+                u.FullName, u.NotificationsEnabled
          FROM tbl_availability_alerts a JOIN tbltourpackages p ON p.PackageId = a.PackageId
+         LEFT JOIN tblusers u ON u.EmailId = a.UserEmail
          WHERE a.IsActive = 1"
     )->fetchAll(PDO::FETCH_OBJ);
 
@@ -84,12 +107,17 @@ function tms_check_and_fire_alerts(PDO $dbh): array
         // actually "unavailable" in a way this alert type applies to.
         if ($seats === null) continue;
         if ($seats > 0) {
-            tms_notify(
-                $dbh,
-                $a->UserEmail,
-                "\"{$a->PackageName}\" is available again ({$seats} seat" . ($seats === 1 ? '' : 's') . " left).",
-                'package-details.php?pkgid=' . (int)$a->PackageId
-            );
+            $message = "\"{$a->PackageName}\" is available again ({$seats} seat" . ($seats === 1 ? '' : 's') . " left).";
+            tms_notify($dbh, $a->UserEmail, $message, 'package-details.php?pkgid=' . (int)$a->PackageId);
+            $wantsEmail = $a->NotificationsEnabled === null || (int)$a->NotificationsEnabled === 1;
+            if ($wantsEmail) {
+                tms_send_email(
+                    $a->UserEmail,
+                    $a->FullName ?: $a->UserEmail,
+                    'Available again: ' . $a->PackageName,
+                    tms_email_template('Availability Alert', '<p>' . htmlspecialchars($message, ENT_QUOTES, 'UTF-8') . '</p>')
+                );
+            }
             $dbh->prepare("UPDATE tbl_availability_alerts SET IsActive=0, NotifiedAt=NOW() WHERE id=:id")
                 ->execute([':id' => $a->id]);
             $firedAvailability++;

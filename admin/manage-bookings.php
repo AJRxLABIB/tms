@@ -7,6 +7,7 @@ include('includes/config.php');
 require_once(__DIR__ . '/../backend/payments/PaymentProviderInterface.php');
 require_once(__DIR__ . '/../backend/payments/SandboxProvider.php');
 require_once(__DIR__ . '/../backend/payments/PaymentService.php');
+require_once(__DIR__ . '/../backend/services/BookingStateMachine.php');
 tms_require_admin();
 // SECURITY FIX (Round 75, master prompt item 46 -- RBAC): this page performs
 // real state-changing actions (confirm/cancel/delete a booking, approve/
@@ -82,18 +83,39 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'], $_POST['id'
     $bid = (int)$_POST['id'];
     switch ($_POST['action']) {
         case 'confirm':
-            $dbh->prepare("UPDATE tblbooking SET status=1 WHERE BookingId=:id")->execute([':id'=>$bid]);
-            $ref = 'BK'.str_pad($bid,3,'0',STR_PAD_LEFT);
-            tms_notify_booking_owner(
-                $dbh, $bid, "Great news! Your booking #$ref has been confirmed.",
-                "Your booking #$ref is confirmed! ✈",
-                "<p>Great news — your booking <strong>#$ref</strong> has been confirmed by our team.</p>
-                 <p>You can view your itinerary and download your e-ticket anytime from <strong>My Bookings</strong>.</p>"
-            );
-            $msg = "Booking #BK".str_pad($bid,3,'0',STR_PAD_LEFT)." confirmed.";
-            $msgType = 'success';
-            // Audit log coverage (Round 52).
-            tms_log_activity($dbh, $_SESSION['alogin'], 'Booking Confirmed', "BookingId=$bid");
+            // GUARD (new "TMS V2" prompt -- booking state machine): nothing
+            // previously stopped this action from "confirming" an
+            // already-cancelled booking, silently resurrecting it (status
+            // 2 -> 1) with no trace -- a real bug class, not a hypothetical
+            // one, since this switch has never checked a booking's current
+            // status before acting. BookingStateMachine::canTransitionStatus
+            // encodes exactly the same 0->1 / 1->2 lifecycle every other
+            // real write site in this codebase already follows (see
+            // backend/services/BookingStateMachine.php), so this only ever
+            // rejects a transition nothing here has ever legitimately made.
+            $curStatusStmt = $dbh->prepare("SELECT status FROM tblbooking WHERE BookingId=:id");
+            $curStatusStmt->execute([':id'=>$bid]);
+            $curStatus = $curStatusStmt->fetchColumn();
+            if ($curStatus === false) {
+                $msg = "Booking #BK$bid not found.";
+                $msgType = 'error';
+            } elseif (!BookingStateMachine::canTransitionStatus((int)$curStatus, 1)) {
+                $msg = "Booking #BK$bid is cancelled and can no longer be confirmed.";
+                $msgType = 'error';
+            } else {
+                $dbh->prepare("UPDATE tblbooking SET status=1 WHERE BookingId=:id")->execute([':id'=>$bid]);
+                $ref = 'BK'.str_pad($bid,3,'0',STR_PAD_LEFT);
+                tms_notify_booking_owner(
+                    $dbh, $bid, "Great news! Your booking #$ref has been confirmed.",
+                    "Your booking #$ref is confirmed! ✈",
+                    "<p>Great news — your booking <strong>#$ref</strong> has been confirmed by our team.</p>
+                     <p>You can view your itinerary and download your e-ticket anytime from <strong>My Bookings</strong>.</p>"
+                );
+                $msg = "Booking #BK".str_pad($bid,3,'0',STR_PAD_LEFT)." confirmed.";
+                $msgType = 'success';
+                // Audit log coverage (Round 52).
+                tms_log_activity($dbh, $_SESSION['alogin'], 'Booking Confirmed', "BookingId=$bid");
+            }
             break;
         case 'cancel':
             $dbh->prepare("UPDATE tblbooking SET status=2 WHERE BookingId=:id")->execute([':id'=>$bid]);
@@ -173,6 +195,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'], $_POST['id'
             $prevRefundStmt = $dbh->prepare("SELECT RefundStatus FROM tblbooking WHERE BookingId=:id");
             $prevRefundStmt->execute([':id'=>$bid]);
             $prevRefundStatus = (string)$prevRefundStmt->fetchColumn();
+            // GUARD (new "TMS V2" prompt -- booking state machine): this
+            // action had no check that a refund was ever actually
+            // requested, so a stray/duplicate click could mark
+            // RefundStatus='processed' on a booking with no refund
+            // request on file at all, corrupting the same audit trail the
+            // Round 96 fix just above this was written to protect.
+            if (!BookingStateMachine::canTransitionRefundStatus($prevRefundStatus, 'processed')) {
+                $msg = "Booking #BK$bid has no pending refund request to process.";
+                $msgType = 'error';
+                break;
+            }
             $dbh->prepare("UPDATE tblbooking SET RefundStatus='processed' WHERE BookingId=:id")->execute([':id'=>$bid]);
             // Keeps tblpayments/tblpayment_refunds truthful when this booking
             // was actually paid through payment.php's sandbox flow; a no-op
@@ -194,6 +227,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'], $_POST['id'
             $prevRefundStmt = $dbh->prepare("SELECT RefundStatus FROM tblbooking WHERE BookingId=:id");
             $prevRefundStmt->execute([':id'=>$bid]);
             $prevRefundStatus = (string)$prevRefundStmt->fetchColumn();
+            // GUARD (new "TMS V2" prompt -- booking state machine): same
+            // reasoning as refund_processed above -- don't let this mark a
+            // refund 'rejected' when none was ever requested.
+            if (!BookingStateMachine::canTransitionRefundStatus($prevRefundStatus, 'rejected')) {
+                $msg = "Booking #BK$bid has no pending refund request to decline.";
+                $msgType = 'error';
+                break;
+            }
             $dbh->prepare("UPDATE tblbooking SET RefundStatus='rejected', RefundNote=:n WHERE BookingId=:id")->execute([':n'=>$note, ':id'=>$bid]);
             $paymentService->markRefundRejected($bid, $note);
             $ref = 'BK'.str_pad($bid,3,'0',STR_PAD_LEFT);

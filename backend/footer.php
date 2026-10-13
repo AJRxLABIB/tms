@@ -1,3 +1,4 @@
+</main>
 <!-- TMS Modern Footer Partial (used by inner pages) -->
 <!-- ════════════════ FOOTER ════════════════ -->
 <footer class="tms-footer">
@@ -275,5 +276,18 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 });
 </script>
-<?php include('includes/chatbot.php'); ?>
+<?php
+// Round 115 architecture cleanup: this used to say 'includes/chatbot.php'
+// -- a leftover from before the Round 49 restructure, same class of bug as
+// the includes/header.php/includes/footer.php one already fixed in
+// backend/landing.php. Since this footer is include()'d from every
+// frontend/*.php page (all reached through their root-shim, so PHP's
+// working directory is the project root), the bare path was resolving to
+// the stale project-root includes/chatbot.php on every single page site-
+// wide instead of this file's own live sibling, backend/chatbot.php.
+// The two were still byte-identical at the time of this fix, so nothing
+// visibly changed -- but a future edit to backend/chatbot.php would have
+// silently never reached a real visitor. Now points at the real sibling.
+include('backend/chatbot.php');
+?>
 <?php /* Human "Chat with our team" widget removed per user request — Contact page covers this */ ?>

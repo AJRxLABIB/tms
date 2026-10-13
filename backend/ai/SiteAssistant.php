@@ -36,14 +36,18 @@ class SiteAssistant {
      *                         [['role'=>'user'|'assistant','content'=>'...'], ...]
      *                         Capped to the last few turns by the caller.
      * @param string $email    Signed-in user's email, or 'guest'.
+     * @param string $language The visitor's active site language (tms_active_language()
+     *                         code, e.g. 'bn', 'ar'), so the assistant's reply matches
+     *                         whatever language they already switched the site to,
+     *                         instead of always answering in English regardless of it.
      * @return array           ['success'=>bool, 'reply'=>string, 'suggestions'=>string[], 'error'=>string]
      */
-    public function reply(string $message, array $history, string $email = 'guest', string $pageContext = ''): array {
+    public function reply(string $message, array $history, string $email = 'guest', string $pageContext = '', string $language = 'en'): array {
         // FIX (Round 113, F15 -- AI-upgrade priority): $history being empty
         // is this call's only signal that this is turn 1 of a fresh
         // conversation -- see buildSystemPrompt()'s new $firstTurn param for
         // why that matters for token cost.
-        $system = $this->buildSystemPrompt($email, empty($history));
+        $system = $this->buildSystemPrompt($email, empty($history), $language);
         if ($pageContext !== '') {
             // Where the visitor actually is. Supplied by the widget, so it is
             // reference data, never an instruction — the prompt says as much.
@@ -104,10 +108,37 @@ class SiteAssistant {
             ), fn($s) => $s !== ''));
             $suggestions = array_slice($suggestions, 0, 4);
 
-            return ['reply' => $data['reply'], 'suggestions' => $suggestions];
+            return ['reply' => $this->stripDuplicatedEnvelope($data['reply']), 'suggestions' => $suggestions];
         }
 
-        return ['reply' => $reply, 'suggestions' => $this->extractSuggestions($reply)];
+        return ['reply' => $this->stripDuplicatedEnvelope($reply), 'suggestions' => $this->extractSuggestions($reply)];
+    }
+
+    /**
+     * FIX (found via live multi-turn chat testing this round -- not a
+     * pre-existing known bug, caught by actually exercising the widget
+     * rather than trusting the JSON-envelope contract blindly): the model
+     * occasionally emits a syntactically valid {"reply":...,"suggestions":...}
+     * envelope whose OWN "reply" string value has a second, escaped
+     * {"reply":...} blob appended inside it -- i.e. it duplicates itself
+     * inside its own field rather than actually breaking JSON validity, so
+     * AIClient::parseJson() has no way to detect anything wrong. The visitor
+     * would see their answer followed by a wall of raw, un-rendered JSON
+     * text. This can't be prevented from the prompt with certainty (it's a
+     * model output-compliance slip, not a parsing bug), so it's handled
+     * defensively here: if the reply text contains a literal embedded
+     * envelope marker, keep only the clean prose that precedes it -- every
+     * observed case had a complete, coherent answer before the duplicate
+     * began.
+     */
+    private function stripDuplicatedEnvelope(string $text): string {
+        foreach (['{"reply"', '{\"reply\"'] as $marker) {
+            $pos = strpos($text, $marker);
+            if ($pos !== false && $pos > 0) {
+                return rtrim(substr($text, 0, $pos));
+            }
+        }
+        return $text;
     }
 
     /** Best-effort keyword-based quick replies for the rare non-compliant
@@ -129,7 +160,7 @@ class SiteAssistant {
         return array_slice(array_unique($suggestions), 0, 4);
     }
 
-    private function buildSystemPrompt(string $email, bool $firstTurn = true): string {
+    private function buildSystemPrompt(string $email, bool $firstTurn = true, string $language = 'en'): string {
         // FIX (Round 113, F15 -- AI-upgrade priority): buildSystemPrompt()
         // is rebuilt from scratch and resent as INPUT TOKENS on every single
         // chat turn (see reply() above -- there's no server-side "system
@@ -157,10 +188,29 @@ class SiteAssistant {
             ? $this->getTripBriefing($email)
             : "The visitor is browsing as a guest (not signed in). Suggest creating an account only when it's genuinely relevant.";
 
+        // FIX (Round 117 -- live user report): the widget's static chrome
+        // (header/placeholder/etc., see backend/chatbot.php) already followed
+        // the site's active language via tms_t(), but this system prompt never
+        // mentioned language at all, so Gemini always defaulted to English --
+        // a visitor who switched the whole site to Bengali and then asked the
+        // chatbot a question still got an English answer. $language is
+        // tms_active_language()'s code, passed in from api/ai.php's
+        // handleChatbot(). Uses the exact same code->name map already
+        // established for AI-driven translation elsewhere (see
+        // backend/i18n.php's tms_translate_batch()) so the two stay consistent.
+        $langNames = ['bn'=>'Bengali','hi'=>'Hindi','ar'=>'Arabic','fr'=>'French','zh'=>'Simplified Chinese','es'=>'Spanish','de'=>'German'];
+        $languageNote = (isset($langNames[$language]))
+            ? "Respond in {$langNames[$language]}, since that is the language the visitor has selected for the whole site. "
+              . "If the visitor's own message is written in a different language, answer in that language instead -- "
+              . "always match the visitor, using their site-selected language as the default when their message doesn't make it obvious."
+            : "Respond in English by default, but if the visitor's own message is written in another language, answer in that language instead.";
+
         return <<<SYSTEM
 You are the TMS Travel Assistant — a friendly, knowledgeable front-desk AI for
 TMS (Tourism Management System), a Bangladesh-based travel booking platform.
 All prices on the site are in Bangladeshi Taka (৳), never dollars.
+
+LANGUAGE: {$languageNote}
 
 {$loginNote}
 
@@ -221,6 +271,10 @@ Rules for "suggestions":
   pages listed above (e.g. "Show Packages", "Check Weather").
 - They must be genuinely relevant to what YOU just said in "reply" — never
   generic filler, never a restatement of the visitor's own message.
+- Phrase every suggestion in the same language as "reply" (per the LANGUAGE
+  instruction above), even when it corresponds to one of the English-named
+  site pages above -- translate the concept naturally rather than leaving an
+  English label sitting inside an otherwise-translated conversation.
 - If nothing sensible follows on, return an empty array rather than padding it.
 SYSTEM;
     }

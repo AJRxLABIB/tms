@@ -1,5 +1,5 @@
 <!-- TMS AI Chatbot Widget -->
-<!-- Include this file on any page: include('includes/chatbot.php'); -->
+<!-- Include this file on any page: include('backend/chatbot.php'); -->
 <style>
 /* ═══════════════ AI ROBOT ASSISTANT (replaces the old chat-bubble icon) ═══════════════ */
 @keyframes tmsRobotEntrance {
@@ -62,7 +62,7 @@
 </style>
 
 <!-- Chatbot Button — animated AI robot assistant -->
-<button id="tmsChatToggle" onclick="toggleChat()" title="Chat with TMS AI Assistant" aria-label="Open AI travel assistant">
+<button id="tmsChatToggle" onclick="TmsChatWidget.toggleChat()" title="<?php echo htmlspecialchars(tms_t('chatbot_widget_title', 'Chat with TMS AI Assistant'), ENT_QUOTES, 'UTF-8'); ?>" aria-label="<?php echo htmlspecialchars(tms_t('chatbot_widget_aria', 'Open AI travel assistant'), ENT_QUOTES, 'UTF-8'); ?>">
     <div class="tms-robot-glow" style="background: radial-gradient(circle, rgba(102,126,234,0.35), transparent 70%);"></div>
     <div class="tms-robot-body">
         <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
@@ -161,26 +161,27 @@
     <div class="chat-header">
         <div class="chat-avatar">🤖</div>
         <div class="chat-header-info">
-            <h5>TMS Travel Assistant</h5>
-            <p>🟢 Online — here to help</p>
+            <h5><?php echo htmlspecialchars(tms_t('chatbot_title', 'TMS Travel Assistant'), ENT_QUOTES, 'UTF-8'); ?></h5>
+            <p>🟢 <?php echo htmlspecialchars(tms_t('chatbot_subtitle', 'Online — here to help'), ENT_QUOTES, 'UTF-8'); ?></p>
         </div>
-        <button class="chat-voice-toggle" id="chatVoiceToggle" style="display:none;" title="Toggle spoken replies" aria-label="Toggle spoken replies"><i class="fa fa-volume-off"></i></button>
-        <button class="chat-close" onclick="toggleChat()"><i class="fa fa-times"></i></button>
+        <button class="chat-voice-toggle" id="chatVoiceToggle" style="display:none;" title="<?php echo htmlspecialchars(tms_t('chatbot_voice_toggle_title', 'Toggle spoken replies'), ENT_QUOTES, 'UTF-8'); ?>" aria-label="<?php echo htmlspecialchars(tms_t('chatbot_voice_toggle_title', 'Toggle spoken replies'), ENT_QUOTES, 'UTF-8'); ?>"><i class="fa fa-volume-off"></i></button>
+        <button class="chat-close" onclick="TmsChatWidget.toggleChat()"><i class="fa fa-times"></i></button>
     </div>
 
-    <div class="chat-messages" id="chatMessages" role="log" aria-live="polite" aria-atomic="false">
+    <div class="chat-messages" id="tmsWidgetChatMessages" role="log" aria-live="polite" aria-atomic="false">
         <!-- Initial message added by JS -->
     </div>
 
     <div class="chat-input-area">
-        <input type="text" class="chat-input" id="chatInput" placeholder="Ask me anything about tours..."
-           autocomplete="off" onkeydown="if(event.key==='Enter' && !event.isComposing){event.preventDefault();sendMessage();}">
-        <button class="chat-mic" id="chatMicBtn" style="display:none;" onclick="toggleListening()" title="Speak your question" aria-label="Speak your question"><i class="fa fa-microphone"></i></button>
-        <button class="chat-send" onclick="sendMessage()"><i class="fa fa-paper-plane"></i></button>
+        <input type="text" class="chat-input" id="tmsWidgetChatInput" placeholder="<?php echo htmlspecialchars(tms_t('chatbot_placeholder', 'Ask me anything about tours...'), ENT_QUOTES, 'UTF-8'); ?>"
+           autocomplete="off" onkeydown="if(event.key==='Enter' && !event.isComposing){event.preventDefault();TmsChatWidget.sendMessage();}">
+        <button class="chat-mic" id="chatMicBtn" style="display:none;" onclick="TmsChatWidget.toggleListening()" title="<?php echo htmlspecialchars(tms_t('chatbot_mic_title', 'Speak your question'), ENT_QUOTES, 'UTF-8'); ?>" aria-label="<?php echo htmlspecialchars(tms_t('chatbot_mic_title', 'Speak your question'), ENT_QUOTES, 'UTF-8'); ?>"><i class="fa fa-microphone"></i></button>
+        <button class="chat-send" onclick="TmsChatWidget.sendMessage()"><i class="fa fa-paper-plane"></i></button>
     </div>
 </div>
 
 <script>
+(function() {
 var chatOpen = false;
 // Round 14: `isTyping` was declared here and never read or written again, while
 // nothing actually prevented concurrent sends — hammering Enter fired N
@@ -191,6 +192,56 @@ var chatBusy = false;
 var userName = '<?php echo isset($_SESSION['login']) ? htmlspecialchars($_SESSION["login"], ENT_QUOTES) : ""; ?>';
 var CHAT_CSRF = '<?php echo tms_csrf_token(); ?>';
 var CHAT_PAGE_CONTEXT = document.title || '';
+
+<?php
+// FIX (Round 117 continuation -- live user report, part 2): the AI-generated
+// replies now respect the site's active language (see SiteAssistant.php),
+// but the widget's OWN static strings that never touch the AI at all -- the
+// initial greeting shown the moment the panel opens, and every quick-reply
+// chip label (both the fixed ones and the ones attached to canned KB
+// fallback answers) -- were still hardcoded English, which is exactly what
+// the user's screenshot showed. Rather than hand-writing ~40 more dictionary
+// entries per language into backend/i18n.php's static $TMS_TRANSLATIONS
+// (this is UI chrome, not a handful of nav labels), this reuses the SAME
+// AI-translate-and-cache mechanism package-list.php and page.php already use
+// for exactly this "many short strings, can't hand-write 8 languages"
+// situation (tms_translate_batch() in backend/i18n.php) -- one batched,
+// cached call per language, English is skipped entirely (zero extra cost for
+// the common case), and it safely falls back to the original English text if
+// translation ever fails. The *content* of the ~20 long canned KB paragraph
+// answers is deliberately NOT included here -- that's the larger,
+// higher-risk, needs-native-review translation effort flagged in
+// CHANGELOG.md's Round 117 entry; this covers only short display labels.
+$tmsChatI18nCanonical = [
+    "Hello! 👋 Welcome back to TMS!\n\nHow can I help you plan your next adventure?",
+    "Hello! 👋 Welcome to TMS Travel Assistant!\n\nI can help you with:\n• Finding the perfect tour package\n• Booking guidance\n• Weather & safety info\n• Budget planning",
+    'Show Packages','AI Recommender','AI Recommend','Budget Help','Safety Info','Budget Planner',
+    'Best Destinations','Best Packages','Book a Tour','Book Now','Browse Packages','Build Custom Trip',
+    'Change Language','Cheap Packages','Check Weather','Contact Support','Contact Us','Couple Tours',
+    'Custom Trip','Emergency Contacts','Emergency','FAQ','Family Packages','Family Tours','Goodbye',
+    'My Bookings','Plan My Trip','Read Reviews','Safety Tips','Send Enquiry','Sign Up','Solo Travel',
+    'Standard Packages','Top Rated','Travel Insurance','View Map','Write Review','Try that again',
+];
+$tmsChatI18n = [];
+if (function_exists('tms_active_language') && tms_active_language() !== 'en' && function_exists('tms_translate_batch')) {
+    try {
+        $keyed = array_combine($tmsChatI18nCanonical, $tmsChatI18nCanonical);
+        $tmsChatI18n = tms_translate_batch($keyed, tms_active_language(), $dbh);
+    } catch (Throwable $e) {
+        error_log('[TMS] chatbot widget-label translation failed: ' . $e->getMessage());
+        $tmsChatI18n = [];
+    }
+}
+?>
+// Canonical-English -> active-language display text for the widget's own
+// static labels (greeting + quick-reply chips). Missing/untranslated entries
+// simply fall back to the canonical English text client-side (see
+// tmsChatLabel() below) -- this object is allowed to be empty (English site,
+// or translation temporarily unavailable) without breaking anything.
+var TMS_CHAT_I18N = <?php echo json_encode($tmsChatI18n, JSON_UNESCAPED_UNICODE); ?>;
+function tmsChatLabel(canonical) {
+    return (TMS_CHAT_I18N && TMS_CHAT_I18N[canonical]) ? TMS_CHAT_I18N[canonical] : canonical;
+}
 
 <?php
 // LIVE BUG FIX (customer-facing audit): every visitor currently sees this
@@ -277,14 +328,14 @@ function toggleChat() {
     document.getElementById('tmsChatPanel').classList.toggle('open', chatOpen);
     if(chatOpen) {
         document.querySelector('#tmsChatToggle .notif').style.display = 'none';
-        if(document.getElementById('chatMessages').children.length === 0) initChat();
-        document.getElementById('chatInput').focus();
+        if(document.getElementById('tmsWidgetChatMessages').children.length === 0) initChat();
+        document.getElementById('tmsWidgetChatInput').focus();
     }
 }
 
 function initChat() {
-    var greet = userName ? "Hello! 👋 Welcome back to TMS!\n\nHow can I help you plan your next adventure?" : "Hello! 👋 Welcome to TMS Travel Assistant!\n\nI can help you with:\n• Finding the perfect tour package\n• Booking guidance\n• Weather & safety info\n• Budget planning";
-    addMessage('bot', greet, ['Show Packages','AI Recommender','Budget Help','Safety Info']);
+    var greetCanonical = userName ? "Hello! 👋 Welcome back to TMS!\n\nHow can I help you plan your next adventure?" : "Hello! 👋 Welcome to TMS Travel Assistant!\n\nI can help you with:\n• Finding the perfect tour package\n• Booking guidance\n• Weather & safety info\n• Budget planning";
+    addMessage('bot', tmsChatLabel(greetCanonical), ['Show Packages','AI Recommender','Budget Help','Safety Info']);
 }
 
 // SECURITY FIX (Round 14): both the visitor's own text and the model's reply
@@ -322,7 +373,7 @@ function chatFormat(text) {
 }
 
 function addMessage(type, text, quickReplies) {
-    var msgs = document.getElementById('chatMessages');
+    var msgs = document.getElementById('tmsWidgetChatMessages');
     var div = document.createElement('div');
     div.className = 'msg msg-' + type;
 
@@ -335,12 +386,19 @@ function addMessage(type, text, quickReplies) {
     if(quickReplies && quickReplies.length > 0) {
         html += '<div class="quick-replies">';
         quickReplies.forEach(function(qr) {
-            var label = chatEscape(qr);
+            // FIX (Round 117 continuation): the VISIBLE label follows the
+            // active language (tmsChatLabel()); the canonical English `qr`
+            // itself is left untouched in data-qr so quickLinks routing, the
+            // local KB fallback's pattern matching, and analytics tracking
+            // all keep working exactly as before regardless of language.
+            var displayText = tmsChatLabel(qr);
+            var label = chatEscape(displayText);
             var arg = encodeURIComponent(qr);
+            var displayArg = encodeURIComponent(displayText);
             if(quickLinks[qr]) {
-                html += '<a href="' + chatEscape(quickLinks[qr]) + '" class="qr-btn" data-qr="' + arg + '">' + label + '</a>';
+                html += '<a href="' + chatEscape(quickLinks[qr]) + '" class="qr-btn" data-qr="' + arg + '" data-qr-label="' + displayArg + '">' + label + '</a>';
             } else {
-                html += '<button type="button" class="qr-btn" data-qr="' + arg + '" data-qr-send="1">' + label + '</button>';
+                html += '<button type="button" class="qr-btn" data-qr="' + arg + '" data-qr-label="' + displayArg + '" data-qr-send="1">' + label + '</button>';
             }
         });
         html += '</div>';
@@ -356,17 +414,18 @@ function addMessage(type, text, quickReplies) {
 document.addEventListener('click', function (e) {
     var btn = e.target.closest ? e.target.closest('[data-qr]') : null;
     if (!btn) return;
-    var label = decodeURIComponent(btn.getAttribute('data-qr'));
+    var canonical = decodeURIComponent(btn.getAttribute('data-qr'));
+    var display = btn.hasAttribute('data-qr-label') ? decodeURIComponent(btn.getAttribute('data-qr-label')) : canonical;
     if (btn.hasAttribute('data-qr-send')) {
         e.preventDefault();
-        handleQuickReply(label);
+        handleQuickReply(display, canonical);
     } else {
-        tmsTrackQuickReply(label);
+        tmsTrackQuickReply(canonical);
     }
 });
 
 function showTyping() {
-    var msgs = document.getElementById('chatMessages');
+    var msgs = document.getElementById('tmsWidgetChatMessages');
     var div = document.createElement('div');
     div.className = 'typing-indicator msg msg-bot';
     div.id = 'typingIndicator';
@@ -440,13 +499,14 @@ function askAI(text) {
 function setChatBusy(busy) {
     chatBusy = busy;
     var send = document.querySelector('.chat-send');
-    var input = document.getElementById('chatInput');
+    var input = document.getElementById('tmsWidgetChatInput');
     if (send)  { send.disabled = busy; send.style.opacity = busy ? '0.5' : ''; }
     if (input) { input.disabled = busy; }
     if (!busy && input) { input.focus(); }
 }
 
-function respondTo(text, appendUserTurn) {
+function respondTo(text, appendUserTurn, matchText) {
+    matchText = matchText || text;
     setChatBusy(true);
     showTyping();
     askAI(text).then(function(result) {
@@ -466,7 +526,10 @@ function respondTo(text, appendUserTurn) {
         // Fallback: the original local rule-based responder — but the visitor is
         // now TOLD it's a standard answer, instead of a weaker reply being
         // presented as if the assistant had considered their question.
-        var resp = getResponse(text);
+        // Uses matchText (the canonical English form) rather than the
+        // possibly-translated `text`, since every pattern in the local kb[]
+        // array below is written in English.
+        var resp = getResponse(matchText);
         var note;
         if (result.reason === 'network') {
             note = "\n\n_(I couldn't reach the assistant just now, so that's a standard answer. Check your connection and try again.)_";
@@ -484,7 +547,7 @@ var lastUserMessage = '';
 
 function sendMessage() {
     if (chatBusy) return; // one request in flight at a time
-    var input = document.getElementById('chatInput');
+    var input = document.getElementById('tmsWidgetChatInput');
     var text = input.value.trim();
     if(!text) return;
     input.value = '';
@@ -493,17 +556,18 @@ function sendMessage() {
     respondTo(text, true);
 }
 
-function handleQuickReply(text) {
+function handleQuickReply(displayText, matchText) {
     if (chatBusy) return;
-    if (text === 'Try that again') {
+    matchText = matchText || displayText;
+    if (matchText === 'Try that again') {
         if (!lastUserMessage) return;
         respondTo(lastUserMessage, false);
         return;
     }
-    tmsTrackQuickReply(text);
-    lastUserMessage = text;
-    addMessage('user', text, []);
-    respondTo(text, true);
+    tmsTrackQuickReply(matchText);
+    lastUserMessage = displayText;
+    addMessage('user', displayText, []);
+    respondTo(displayText, true, matchText);
 }
 
 function tmsTrackQuickReply(label) {
@@ -529,7 +593,7 @@ setTimeout(function() {
 // Voice support (Section 15 audit — "Voice support (if available)")
 //
 // Same browser-native Web Speech API approach already proven in
-// ai-copilot.php: SpeechRecognition fills the existing chatInput and reuses
+// ai-copilot.php: SpeechRecognition fills the existing tmsWidgetChatInput and reuses
 // sendMessage() as-is (no separate code path for voice vs typed messages),
 // SpeechSynthesis speaks bot replies aloud when enabled. 100% client-side,
 // no server changes, no new cost. Both controls stay hidden (display:none,
@@ -566,7 +630,7 @@ if (ChatSpeechRecognitionAPI) {
     };
     chatRecognition.onresult = function(event) {
         var transcript = event.results[0][0].transcript;
-        document.getElementById('chatInput').value = transcript;
+        document.getElementById('tmsWidgetChatInput').value = transcript;
         sendMessage();
     };
 }
@@ -668,4 +732,11 @@ function speakChatReply(text) {
     utterance.pitch = 1.0;
     window.speechSynthesis.speak(utterance);
 }
+
+// The only 3 functions invoked from inline HTML attributes above
+// (onclick=/onkeydown=) -- exposed on a single namespaced object instead of
+// as bare globals, which is what caused this widget to silently break on
+// frontend/ai-copilot.php (see the fix note at the top of this IIFE).
+window.TmsChatWidget = { toggleChat: toggleChat, sendMessage: sendMessage, toggleListening: toggleListening };
+})();
 </script>

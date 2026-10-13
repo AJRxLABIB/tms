@@ -23,6 +23,26 @@ try {
     $featuredPkgs = array_slice($pool, 0, 8);
 } catch(Exception $e) {}
 
+// PERSONALIZATION (Round 115 continuation, "TMS V2" prompt -- confirmed
+// real gap: this homepage always showed the same random pool to every
+// logged-in user, with zero use of the booking-history/wishlist/
+// recently-viewed signal already tracked elsewhere in the app). Purely
+// additive -- $featuredPkgs above and its section below are completely
+// unchanged, still rendered for every user; this only adds a second,
+// personalized section that appears ABOVE it when real signal exists.
+// See backend/services/PersonalizedHomepage.php for why this is
+// deterministic SQL, not an AI call, on every homepage pageview.
+require_once 'backend/services/PersonalizedHomepage.php';
+$recommended = ['packages' => [], 'reason' => 'none'];
+try {
+    $recommended = PersonalizedHomepage::forUser($dbh, $_SESSION['login'], 8);
+} catch (Exception $e) {}
+$recommendedReasonLabel = [
+    'booking_history'  => tms_t('home_sub_recommended_booking', 'Because you\'ve booked trips like this before'),
+    'wishlist'         => tms_t('home_sub_recommended_wishlist', 'Based on packages in your wishlist'),
+    'recently_viewed'  => tms_t('home_sub_recommended_viewed', 'Based on packages you recently viewed'),
+][$recommended['reason']] ?? '';
+
 // Fetch blog posts
 $blogPosts = [];
 try {
@@ -48,6 +68,11 @@ try {
 <meta name="description" content="Discover the world with TMS - your premium travel partner. Book tour packages, explore destinations, and plan your perfect trip.">
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#0F4C81">
+<link rel="apple-touch-icon" href="images/icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="TMS">
+<meta name="mobile-web-app-capable" content="yes">
 
 <!-- Bootstrap -->
 <link href="css/bootstrap.min2.css" rel="stylesheet">
@@ -211,15 +236,92 @@ try {
     </div>
 </div>
 
+<?php if (!empty($recommended['packages'])): ?>
+<!-- ══════════════════════════════════════════════════════════════
+     RECOMMENDED FOR YOU (Round 115 continuation -- real signal only,
+     see backend/services/PersonalizedHomepage.php; never shown unless
+     $recommended['packages'] is genuinely non-empty)
+══════════════════════════════════════════════════════════════ -->
+<section class="tms-section">
+    <div class="tms-container">
+        <div class="tms-section-header wow fadeInUp" data-wow-delay=".1s">
+            <div class="tms-section-tag"><i class="fa fa-magic"></i> <?php echo tms_t('home_tag_recommended', 'For You'); ?></div>
+            <h2 class="tms-section-title"><?php echo tms_t('home_title_recommended', 'Recommended for You'); ?></h2>
+            <p class="tms-section-sub"><?php echo htmlspecialchars($recommendedReasonLabel); ?></p>
+        </div>
+        <div class="tms-pkg-grid">
+        <?php $recIdx = 0; foreach ($recommended['packages'] as $pkg):
+            $fallback = tms_destination_image(
+                (string)($pkg->PackageName ?? ''),
+                (string)($pkg->PackageLocation ?? ''),
+                (string)($pkg->PackageType ?? ''),
+                (int)$pkg->PackageId
+            );
+            $recIdx++;
+        ?>
+        <div class="tms-pkg-card wow fadeInUp" data-wow-delay="<?php echo (.1 + ($recIdx * 0.05)); ?>s">
+            <div class="tms-pkg-img">
+                <img loading="lazy"
+                     src="<?php echo htmlspecialchars(tms_package_image_src($pkg->PackageImage)); ?>"
+                     <?php echo tms_responsive_img_attrs(tms_package_image_src($pkg->PackageImage)); ?>
+                     onerror="this.src='<?php echo $fallback; ?>'"
+                     alt="<?php echo htmlspecialchars($pkg->PackageName); ?>">
+                <?php if(!empty($pkg->PackageType)): ?>
+                <span class="tms-pkg-badge"><?php echo htmlspecialchars($pkg->PackageType); ?></span>
+                <?php endif; ?>
+                <div class="tms-pkg-wishlist" onclick="addToWishlist(<?php echo $pkg->PackageId; ?>, this)" title="Add to Wishlist">
+                    <i class="fa fa-heart-o"></i>
+                </div>
+                <?php if(!empty($pkg->PackageDuration) || (!empty($pkg->AvgRating) && $pkg->AvgRating > 0)): ?>
+                <div class="tms-pkg-quickglance">
+                    <?php if(!empty($pkg->PackageDuration)): ?>
+                    <span><i class="fa fa-clock-o"></i><?php echo htmlspecialchars($pkg->PackageDuration); ?></span>
+                    <?php endif; ?>
+                    <?php if(!empty($pkg->AvgRating) && $pkg->AvgRating > 0): ?>
+                    <span><i class="fa fa-star"></i><?php echo number_format($pkg->AvgRating,1); ?> rating</span>
+                    <?php endif; ?>
+                </div>
+                <?php endif; ?>
+            </div>
+            <div class="tms-pkg-body">
+                <div class="tms-pkg-location">
+                    <i class="fa fa-map-marker"></i>
+                    <?php echo htmlspecialchars($pkg->PackageLocation ?? 'Various Locations'); ?>
+                </div>
+                <h4><?php echo htmlspecialchars($pkg->PackageName); ?></h4>
+                <div class="tms-pkg-meta">
+                    <?php if(!empty($pkg->PackageDuration)): ?>
+                    <span><i class="fa fa-clock-o"></i> <?php echo htmlspecialchars($pkg->PackageDuration); ?></span>
+                    <?php endif; ?>
+                    <?php if(!empty($pkg->AvgRating) && $pkg->AvgRating > 0): ?>
+                    <span><i class="fa fa-star" style="color:var(--accent)"></i> <?php echo number_format($pkg->AvgRating,1); ?></span>
+                    <?php endif; ?>
+                </div>
+                <div class="tms-pkg-footer">
+                    <div class="tms-pkg-price">
+                        <small>From </small><?php echo tms_currency($pkg->PackagePrice); ?>
+                    </div>
+                    <a href="package-details.php?pkgid=<?php echo $pkg->PackageId; ?>" class="btn-pkg">
+                        View Details
+                    </a>
+                </div>
+            </div>
+        </div>
+        <?php endforeach; ?>
+        </div>
+    </div>
+</section>
+<?php endif; ?>
+
 <!-- ══════════════════════════════════════════════════════════════
      FEATURED PACKAGES
 ══════════════════════════════════════════════════════════════ -->
 <section class="tms-section">
     <div class="tms-container">
         <div class="tms-section-header wow fadeInUp" data-wow-delay=".1s">
-            <div class="tms-section-tag"><i class="fa fa-star"></i> Featured</div>
-            <h2 class="tms-section-title">Popular Tour Packages</h2>
-            <p class="tms-section-sub">Handpicked travel experiences crafted for every kind of adventurer</p>
+            <div class="tms-section-tag"><i class="fa fa-star"></i> <?php echo tms_t('home_tag_featured', 'Featured'); ?></div>
+            <h2 class="tms-section-title"><?php echo tms_t('home_title_featured', 'Popular Tour Packages'); ?></h2>
+            <p class="tms-section-sub"><?php echo tms_t('home_sub_featured', 'Handpicked travel experiences crafted for every kind of adventurer'); ?></p>
         </div>
         <div class="tms-pkg-grid">
         <?php
@@ -321,9 +423,9 @@ try {
 <section class="tms-section tms-section-alt">
     <div class="tms-container">
         <div class="tms-section-header wow fadeInUp" data-wow-delay=".1s">
-            <div class="tms-section-tag"><i class="fa fa-globe"></i> Explore</div>
-            <h2 class="tms-section-title">Popular Destinations</h2>
-            <p class="tms-section-sub">From tropical beaches to mountain peaks — find your perfect escape</p>
+            <div class="tms-section-tag"><i class="fa fa-globe"></i> <?php echo tms_t('nav_explore', 'Explore'); ?></div>
+            <h2 class="tms-section-title"><?php echo tms_t('heading_popular_destinations', 'Popular Destinations'); ?></h2>
+            <p class="tms-section-sub"><?php echo tms_t('home_sub_destinations', 'From tropical beaches to mountain peaks — find your perfect escape'); ?></p>
         </div>
         <div class="tms-dest-grid">
             <a href="package-list.php?location=paris" class="tms-dest-card wow fadeInLeft" data-wow-delay=".1s">
@@ -411,9 +513,9 @@ try {
 <section class="tms-section">
     <div class="tms-container">
         <div class="tms-section-header wow fadeInUp" data-wow-delay=".1s">
-            <div class="tms-section-tag"><i class="fa fa-magic"></i> AI-Powered</div>
-            <h2 class="tms-section-title">Smart Travel Features</h2>
-            <p class="tms-section-sub">Cutting-edge tools to make your travel planning effortless and intelligent</p>
+            <div class="tms-section-tag"><i class="fa fa-magic"></i> <?php echo tms_t('home_tag_ai', 'AI-Powered'); ?></div>
+            <h2 class="tms-section-title"><?php echo tms_t('home_title_ai', 'Smart Travel Features'); ?></h2>
+            <p class="tms-section-sub"><?php echo tms_t('home_sub_ai', 'Cutting-edge tools to make your travel planning effortless and intelligent'); ?></p>
         </div>
         <div class="tms-features-grid">
             <a href="ai-recommend.php" class="tms-feature-card wow fadeInUp" data-wow-delay=".1s" style="text-decoration:none;">
@@ -458,6 +560,13 @@ try {
                 <p>Design your perfect trip from scratch. Choose destinations, dates, activities, and accommodation your way.</p>
                 <span>Build Trip <i class="fa fa-arrow-right"></i></span>
             </a>
+            <!-- Round 115, Phase G (Bangladesh Travel Intelligence) -->
+            <a href="bd-guide.php" class="tms-feature-card wow fadeInUp" data-wow-delay=".4s" style="text-decoration:none;">
+                <div class="tms-feature-card-icon icon-bd"><i class="fa fa-map-marker"></i></div>
+                <h4>Bangladesh Travel Guide</h4>
+                <p>A researched guide to 12 Bangladesh destinations -- Cox's Bazar, Sundarbans, Sajek Valley and more -- with how to get there and live weather.</p>
+                <span>See the Guide <i class="fa fa-arrow-right"></i></span>
+            </a>
         </div>
     </div>
 </section>
@@ -468,9 +577,9 @@ try {
 <section class="tms-section tms-section-alt">
     <div class="tms-container">
         <div class="tms-section-header wow fadeInUp" data-wow-delay=".1s">
-            <div class="tms-section-tag"><i class="fa fa-star"></i> Testimonials</div>
-            <h2 class="tms-section-title">What Travelers Say</h2>
-            <p class="tms-section-sub">Real experiences from real adventurers who explored the world with TMS</p>
+            <div class="tms-section-tag"><i class="fa fa-star"></i> <?php echo tms_t('home_tag_testimonials', 'Testimonials'); ?></div>
+            <h2 class="tms-section-title"><?php echo tms_t('home_title_testimonials', 'What Travelers Say'); ?></h2>
+            <p class="tms-section-sub"><?php echo tms_t('home_sub_testimonials', 'Real experiences from real adventurers who explored the world with TMS'); ?></p>
         </div>
         <div class="tms-reviews-grid">
         <?php if(!empty($reviews)): foreach($reviews as $rev): ?>
@@ -523,9 +632,9 @@ try {
 <section class="tms-section">
     <div class="tms-container">
         <div class="tms-section-header wow fadeInUp" data-wow-delay=".1s">
-            <div class="tms-section-tag"><i class="fa fa-rss"></i> Blog</div>
-            <h2 class="tms-section-title">Travel Inspiration</h2>
-            <p class="tms-section-sub">Tips, guides, and stories from our travel experts and community</p>
+            <div class="tms-section-tag"><i class="fa fa-rss"></i> <?php echo tms_t('nav_blog', 'Blog'); ?></div>
+            <h2 class="tms-section-title"><?php echo tms_t('home_title_blog', 'Travel Inspiration'); ?></h2>
+            <p class="tms-section-sub"><?php echo tms_t('home_sub_blog', 'Tips, guides, and stories from our travel experts and community'); ?></p>
         </div>
         <div class="tms-blog-grid">
         <?php

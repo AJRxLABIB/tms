@@ -9,8 +9,15 @@ include('backend/config.php');
 require_once dirname(__DIR__) . '/backend/TransportComparator.php';
 
 $result = null;
-$origin = '';
-$destination = '';
+// Round 115, Phase G (Bangladesh Travel Intelligence): pre-fill the form
+// from a GET link -- e.g. bd-guide.php's "Compare Transport from Dhaka"
+// button links here as ?origin=..&destination=.. -- without touching the
+// POST logic at all. These are only the pre-submission defaults shown in
+// the two text fields; submitting the form still goes through the exact
+// same tms_csrf_validate()/$_POST['compare_transport'] branch below, which
+// overwrites both with the posted values as before.
+$origin = trim($_GET['origin'] ?? '');
+$destination = trim($_GET['destination'] ?? '');
 if (isset($_POST['compare_transport'])) {
     tms_csrf_validate();
     $origin = trim($_POST['origin'] ?? '');
@@ -51,11 +58,15 @@ function tms_transport_duration_text(int $minutes): string {
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#0B2B3C">
 <link rel="apple-touch-icon" href="images/icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="TMS">
+<meta name="mobile-web-app-capable" content="yes">
 <title>TMS | Transport Compare</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
 <link href="css/bootstrap.min2.css" rel='stylesheet' type='text/css' />
-<link href="css/style.min.css" rel='stylesheet' type='text/css' />
+<link href="<?php echo tms_asset_ver('css/style.min.css'); ?>" rel='stylesheet' type='text/css' />
 <link href="css/font-awesome.min2.css" rel="stylesheet">
 <link href="<?php echo tms_asset_ver('css/modern-theme.css'); ?>" rel="stylesheet">
 <link rel="preconnect" href="https://fonts.googleapis.com">

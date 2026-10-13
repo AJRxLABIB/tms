@@ -19,6 +19,39 @@ const CACHE = 'tms-cache-v1';
 const TRIPKIT_CACHE = 'tms-tripkit';
 const PRECACHE = ['/', '/tms/', '/tms/index.php', '/tms/css/style.min.css', '/tms/offline.html'];
 
+// REAL GAP FOUND AND CLOSED (Phase H continuation -- auditing what
+// TRIPKIT_CACHE actually guarantees, not just what pages it lists): the
+// whole point of TRIPKIT_CACHE being "never evicted" is that a saved trip
+// survives exactly the moment it matters -- storage pressure on a phone
+// with no signal, days into a trip to somewhere like Sajek Valley or the
+// Sundarbans (see bd-guide.php). But TMS_CACHE_TRIP below only ever cached
+// the HTML of the 5 saved page URLs themselves -- every CSS/JS/font asset
+// those pages actually need to render (bootstrap, font-awesome incl. its
+// icon font files, the shared design tokens, jquery, wow.js for
+// emergency.php, qrcode.js for ticket.php's QR code, ai-feedback.js for
+// my-trip.php) only ever lived in the generic, evictable CACHE. If the
+// browser evicted that generic cache under storage pressure -- which is
+// precisely the scenario this feature exists to survive -- a traveler's
+// "saved for offline" itinerary/ticket/emergency/documents/packing pages
+// would still open, but as broken, unstyled HTML with missing icons, right
+// when they're relying on it most. Verified by checking each of the 5
+// TripKit pages' actual <link>/<script> tags: none of these assets were in
+// PRECACHE either, so nothing already covered them under TRIPKIT_CACHE.
+const TRIPKIT_STATIC_ASSETS = [
+  '/tms/css/bootstrap.min2.css',
+  '/tms/css/font-awesome.min2.css',
+  '/tms/css/style.min.css',
+  '/tms/css/animate.css',
+  '/tms/css/modern-theme.css',
+  '/tms/js/jquery-1.12.0.min.js',
+  '/tms/js/bootstrap.min.js',
+  '/tms/js/wow.min.js',
+  '/tms/js/qrcode.js',
+  '/tms/js/ai-feedback.js',
+  '/tms/fonts/fa-solid-900.woff2',
+  '/tms/fonts/fa-regular-400.woff2',
+];
+
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(PRECACHE).catch(()=>{})));
   self.skipWaiting();
@@ -111,7 +144,23 @@ self.addEventListener('message', event => {
           results.push({ url, ok: false, error: String(err) });
         }
       }
+      // Reply to the page immediately with only the per-page results --
+      // mtSaveOffline() on my-trip.php compares okCount against the exact
+      // number of pages it asked for, so mixing the static-asset caching
+      // below into this same `results` array would break that "N of N
+      // pages saved" check (Rule 2: don't disturb working, tested UI logic
+      // for an unrelated addition). The static assets are cached silently,
+      // best-effort, after the reply -- their success/failure is never
+      // user-visible because a partial CSS/font miss still leaves a
+      // readable (if less polished) offline page, unlike a missing page
+      // entirely.
       if (port) port.postMessage({ type: 'TMS_CACHE_TRIP_RESULT', results });
+      await Promise.allSettled(TRIPKIT_STATIC_ASSETS.map(async (url) => {
+        try {
+          const res = await fetch(url, { credentials: 'include', cache: 'reload' });
+          if (res && res.status === 200) await cache.put(url, res.clone());
+        } catch (err) { /* best-effort -- never block or fail the trip save */ }
+      }));
     })());
     return;
   }

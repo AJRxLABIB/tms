@@ -93,6 +93,10 @@ function destUrl(array $overrides = []): string {
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#0B2B3C">
 <link rel="apple-touch-icon" href="images/icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="TMS">
+<meta name="mobile-web-app-capable" content="yes">
 <title>TMS | Explore Destinations</title>
 <?php
 // NEW (Round 20, spec item 53 — SEO): canonical intentionally always points
@@ -115,7 +119,7 @@ tms_seo_meta([
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
 <link href="css/bootstrap.min2.css" rel='stylesheet' type='text/css' />
-<link href="css/style.min.css" rel='stylesheet' type='text/css' />
+<link href="<?php echo tms_asset_ver('css/style.min.css'); ?>" rel='stylesheet' type='text/css' />
 <link href="css/font-awesome.min2.css" rel="stylesheet">
 <link href="<?php echo tms_asset_ver('css/modern-theme.css'); ?>" rel="stylesheet">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -179,8 +183,8 @@ html[data-theme="dark"] .no-results { color: var(--text-light) !important; }
 
 <div class="banner-3">
     <div class="container">
-        <h1 class="wow zoomIn animated" data-wow-delay=".1s">Explore Destinations</h1>
-        <p style="color:#eaf2fb;">Browse by country, region and category — Bangladesh destinations shown first</p>
+        <h1 class="wow zoomIn animated" data-wow-delay=".1s"><?php echo tms_t('dest_hero_title','Explore Destinations'); ?></h1>
+        <p style="color:#eaf2fb;"><?php echo tms_t('dest_hero_subtitle','Browse by country, region and category — Bangladesh destinations shown first'); ?></p>
     </div>
 </div>
 
@@ -196,9 +200,9 @@ html[data-theme="dark"] .no-results { color: var(--text-light) !important; }
             <form method="get" action="destinations.php" id="destForm">
                 <div class="row" style="display:flex;align-items:flex-end;flex-wrap:wrap;gap:10px;">
                     <div style="flex:1;min-width:160px;">
-                        <label for="destCountry"><i class="fa fa-flag"></i> Country</label>
+                        <label for="destCountry"><i class="fa fa-flag"></i> <?php echo tms_t('label_country','Country'); ?></label>
                         <select name="country" id="destCountry" class="form-control" onchange="document.getElementById('region_hidden').value='';this.form.submit()">
-                            <option value="">All Countries</option>
+                            <option value=""><?php echo tms_t('dest_all_countries','All Countries'); ?></option>
                             <?php foreach ($countries as $c): ?>
                             <option value="<?php echo htmlspecialchars($c, ENT_QUOTES, 'UTF-8'); ?>" <?php echo $country===$c?'selected':''; ?>>
                                 <?php echo htmlspecialchars($c, ENT_QUOTES, 'UTF-8'); ?><?php echo $c==='Bangladesh'?' ⭐':''; ?>
@@ -207,9 +211,9 @@ html[data-theme="dark"] .no-results { color: var(--text-light) !important; }
                         </select>
                     </div>
                     <div style="flex:1;min-width:160px;">
-                        <label for="region_hidden"><i class="fa fa-map"></i> State / Division</label>
+                        <label for="region_hidden"><i class="fa fa-map"></i> <?php echo tms_t('label_region','State / Division'); ?></label>
                         <select name="region" id="region_hidden" class="form-control" onchange="this.form.submit()" <?php echo $country===''?'disabled':''; ?>>
-                            <option value="">All Regions</option>
+                            <option value=""><?php echo tms_t('dest_all_regions','All Regions'); ?></option>
                             <?php foreach ($regions as $r): ?>
                             <option value="<?php echo htmlspecialchars($r, ENT_QUOTES, 'UTF-8'); ?>" <?php echo $region===$r?'selected':''; ?>>
                                 <?php echo htmlspecialchars($r, ENT_QUOTES, 'UTF-8'); ?>
@@ -218,14 +222,14 @@ html[data-theme="dark"] .no-results { color: var(--text-light) !important; }
                         </select>
                     </div>
                     <div style="flex:2;min-width:220px;">
-                        <label for="destSearch"><i class="fa fa-search"></i> Search Destination</label>
-                        <input type="text" name="search" id="destSearch" class="form-control" placeholder="Try 'beach', 'Cox's Bazar', 'Paris'…"
+                        <label for="destSearch"><i class="fa fa-search"></i> <?php echo tms_t('label_search_destination','Search Destination'); ?></label>
+                        <input type="text" name="search" id="destSearch" class="form-control" placeholder="<?php echo htmlspecialchars(tms_t('dest_search_placeholder',"Try 'beach', 'Cox's Bazar', 'Paris'…"), ENT_QUOTES, 'UTF-8'); ?>"
                                value="<?php echo htmlspecialchars($search, ENT_QUOTES, 'UTF-8'); ?>">
                     </div>
                     <input type="hidden" name="category" value="<?php echo htmlspecialchars($category, ENT_QUOTES, 'UTF-8'); ?>">
                     <div style="display:flex;gap:8px;">
-                        <button type="submit" class="btn-search"><i class="fa fa-search"></i> Search</button>
-                        <a href="destinations.php" class="btn-reset">Reset</a>
+                        <button type="submit" class="btn-search"><i class="fa fa-search"></i> <?php echo tms_t('btn_search','Search'); ?></button>
+                        <a href="destinations.php" class="btn-reset"><?php echo tms_t('btn_reset','Reset'); ?></a>
                     </div>
                 </div>
             </form>
@@ -233,7 +237,7 @@ html[data-theme="dark"] .no-results { color: var(--text-light) !important; }
 
         <!-- ── Category filter pills ── -->
         <div class="cat-pills wow fadeIn">
-            <a href="<?php echo destUrl(['category'=>'','page'=>1]); ?>" class="cat-pill <?php echo $category===''?'active':''; ?>">All Categories</a>
+            <a href="<?php echo destUrl(['category'=>'','page'=>1]); ?>" class="cat-pill <?php echo $category===''?'active':''; ?>"><?php echo tms_t('dest_all_categories','All Categories'); ?></a>
             <?php foreach ($categories as $cat): ?>
             <a href="<?php echo destUrl(['category'=>$cat,'page'=>1]); ?>" class="cat-pill <?php echo $category===$cat?'active':''; ?>">
                 <?php echo htmlspecialchars($cat, ENT_QUOTES, 'UTF-8'); ?>
@@ -244,7 +248,7 @@ html[data-theme="dark"] .no-results { color: var(--text-light) !important; }
         <?php if (!$hasFilters): ?>
 
             <?php if (!empty($featured)): ?>
-            <div class="dest-section-title"><i class="fa fa-certificate" style="color:#f0ad4e"></i> Featured Destinations</div>
+            <div class="dest-section-title"><i class="fa fa-certificate" style="color:#f0ad4e"></i> <?php echo tms_t('heading_featured_destinations','Featured Destinations'); ?></div>
             <div class="dest-scroll wow fadeInUp">
                 <?php foreach ($featured as $f): ?>
                 <a href="package-details.php?pkgid=<?php echo (int)$f->PackageId; ?>" class="dest-card">
@@ -278,7 +282,7 @@ html[data-theme="dark"] .no-results { color: var(--text-light) !important; }
             <?php endif; ?>
 
             <?php if (!empty($recent)): ?>
-            <div class="dest-section-title"><i class="fa fa-history" style="color:var(--secondary)"></i> Recently Viewed</div>
+            <div class="dest-section-title"><i class="fa fa-history" style="color:var(--secondary)"></i> <?php echo tms_t('heading_recently_viewed','Recently Viewed'); ?></div>
             <div class="dest-scroll wow fadeInUp">
                 <?php foreach ($recent as $rv): ?>
                 <a href="package-details.php?pkgid=<?php echo (int)$rv->PackageId; ?>" class="dest-card">
@@ -294,15 +298,15 @@ html[data-theme="dark"] .no-results { color: var(--text-light) !important; }
             </div>
             <?php endif; ?>
 
-            <div class="dest-section-title"><i class="fa fa-globe" style="color:#27ae60"></i> All Destinations</div>
+            <div class="dest-section-title"><i class="fa fa-globe" style="color:#27ae60"></i> <?php echo tms_t('heading_all_destinations','All Destinations'); ?></div>
         <?php else: ?>
-            <div class="dest-section-title"><i class="fa fa-search" style="color:#27ae60"></i> Search Results</div>
+            <div class="dest-section-title"><i class="fa fa-search" style="color:#27ae60"></i> <?php echo tms_t('heading_search_results','Search Results'); ?></div>
         <?php endif; ?>
 
         <!-- ── Results grid ── -->
         <div class="results-info">
-            <strong><?php echo $totalRows; ?></strong> destination<?php echo $totalRows!==1?'s':''; ?> found
-            &nbsp;·&nbsp; Page <?php echo $page; ?> of <?php echo max(1,$totalPages); ?>
+            <strong><?php echo $totalRows; ?></strong> <?php echo tms_t('label_destinations_found','destinations found'); ?>
+            &nbsp;·&nbsp; <?php echo tms_t('label_page','Page'); ?> <?php echo $page; ?> <?php echo tms_t('label_of_pagination','of'); ?> <?php echo max(1,$totalPages); ?>
         </div>
 
         <?php if (count($results) > 0): ?>
@@ -320,7 +324,7 @@ html[data-theme="dark"] .no-results { color: var(--text-light) !important; }
                         <div style="display:flex;justify-content:space-between;align-items:center;">
                             <span class="price"><?php echo tms_currency((float)$r->PackagePrice); ?></span>
                             <a href="package-details.php?pkgid=<?php echo (int)$r->PackageId; ?>" style="font-size:12px;color:var(--secondary);font-weight:600;">
-                                View <i class="fa fa-arrow-right"></i>
+                                <?php echo tms_t('btn_view_details','View Details'); ?> <i class="fa fa-arrow-right"></i>
                             </a>
                         </div>
                     </div>
@@ -332,11 +336,11 @@ html[data-theme="dark"] .no-results { color: var(--text-light) !important; }
         <?php if ($totalPages > 1): ?>
         <div style="text-align:center;margin:20px 0 10px;">
             <ul class="pagination">
-                <?php if ($page > 1): ?><li><a href="<?php echo destUrl(['page'=>$page-1]); ?>">&lsaquo; Prev</a></li><?php endif; ?>
+                <?php if ($page > 1): ?><li><a href="<?php echo destUrl(['page'=>$page-1]); ?>">&lsaquo; <?php echo tms_t('pagination_prev','Prev'); ?></a></li><?php endif; ?>
                 <?php for ($p=max(1,$page-2); $p<=min($totalPages,$page+2); $p++): ?>
                     <li class="<?php echo $p===$page?'active':''; ?>"><a href="<?php echo destUrl(['page'=>$p]); ?>"><?php echo $p; ?></a></li>
                 <?php endfor; ?>
-                <?php if ($page < $totalPages): ?><li><a href="<?php echo destUrl(['page'=>$page+1]); ?>">Next &rsaquo;</a></li><?php endif; ?>
+                <?php if ($page < $totalPages): ?><li><a href="<?php echo destUrl(['page'=>$page+1]); ?>"><?php echo tms_t('pagination_next','Next'); ?> &rsaquo;</a></li><?php endif; ?>
             </ul>
         </div>
         <?php endif; ?>
@@ -344,8 +348,8 @@ html[data-theme="dark"] .no-results { color: var(--text-light) !important; }
         <?php else: ?>
         <div class="no-results">
             <i class="fa fa-map-o"></i>
-            <p>No destinations match your filters.</p>
-            <a href="destinations.php">View all destinations</a>
+            <p><?php echo tms_t('dest_no_match','No destinations match your filters.'); ?></p>
+            <a href="destinations.php"><?php echo tms_t('link_view_all_destinations','View all destinations'); ?></a>
         </div>
         <?php endif; ?>
 

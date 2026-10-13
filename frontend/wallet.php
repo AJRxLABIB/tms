@@ -98,7 +98,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['upload_doc'])) {
             // reason (Rule 3: never pretend to protect something we didn't).
             $encKey = tms_wallet_encryption_key();
             if ($encKey === null) {
-                $error = 'Document uploads are temporarily unavailable — server-side encryption is not configured. Please contact the site operator.';
+                $error = tms_t('msg_wallet_encryption_unavailable', 'Document uploads are temporarily unavailable — server-side encryption is not configured. Please contact the site operator.');
             } else {
                 $plaintext = file_get_contents($tmpPath);
                 $blob = $plaintext === false ? false : tms_wallet_encrypt_bytes($plaintext, $encKey);
@@ -160,8 +160,12 @@ $docIcons = ['passport'=>'book','visa'=>'id-card','insurance'=>'shield','id'=>'i
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#0B2B3C">
 <link rel="apple-touch-icon" href="images/icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="TMS">
+<meta name="mobile-web-app-capable" content="yes">
 <link href="css/bootstrap.min2.css" rel='stylesheet'/>
-<link href="css/style.min.css" rel='stylesheet'/>
+<link href="<?php echo tms_asset_ver('css/style.min.css'); ?>" rel='stylesheet'/>
 <link href="css/font-awesome.min2.css" rel="stylesheet">
 <link href="<?php echo tms_asset_ver('css/modern-theme.css'); ?>" rel="stylesheet">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -186,8 +190,8 @@ $docIcons = ['passport'=>'book','visa'=>'id-card','insurance'=>'shield','id'=>'i
 </head><body>
 <?php include('backend/header.php'); ?>
 <div class="page-title">
-  <div class="container"><h2 style="margin:0;"><i class="fa fa-briefcase"></i> Travel Wallet</h2>
-  <p style="margin:6px 0 0;opacity:.9;font-size:13.5px;">Your tickets and travel documents, all in one secure place.</p></div>
+  <div class="container"><h2 style="margin:0;"><i class="fa fa-briefcase"></i> <?php echo tms_t('heading_travel_wallet','Travel Wallet'); ?></h2>
+  <p style="margin:6px 0 0;opacity:.9;font-size:13.5px;"><?php echo tms_t('dest_wallet_subtitle', 'Your tickets and travel documents, all in one secure place.'); ?></p></div>
 </div>
 <div class="container" style="padding-bottom:50px;">
 <?php if ($msg): ?><div class="alert alert-success"><?= htmlspecialchars($msg) ?></div><?php endif; ?>
@@ -195,51 +199,51 @@ $docIcons = ['passport'=>'book','visa'=>'id-card','insurance'=>'shield','id'=>'i
 
 <div class="security-note">
   <i class="fa fa-lock" style="margin-top:2px;"></i>
-  <span>Uploaded documents are stored securely and are only ever accessible from your own account — there's no public link to any file you upload.</span>
+  <span><?php echo tms_t('dest_wallet_security_note', "Uploaded documents are stored securely and are only ever accessible from your own account — there's no public link to any file you upload."); ?></span>
 </div>
 
 <div class="row">
   <div class="col-md-5">
     <div class="wallet-card">
-      <h4><i class="fa fa-upload"></i> Add a Document</h4>
+      <h4><i class="fa fa-upload"></i> <?php echo tms_t('heading_add_document','Add a Document'); ?></h4>
       <form method="post" enctype="multipart/form-data">
         <?php tms_csrf_field(); ?>
         <div class="form-group">
-          <label for="wallet_doc_type">Document Type</label>
+          <label for="wallet_doc_type"><?php echo tms_t('label_document_type','Document Type'); ?></label>
           <select id="wallet_doc_type" name="doc_type" class="form-control">
             <?php foreach (DOC_TYPES as $key => $label): ?>
-            <option value="<?= $key ?>"><?= $label ?></option>
+            <option value="<?= $key ?>"><?= htmlspecialchars(tms_t('doctype_' . $key, $label), ENT_QUOTES, 'UTF-8') ?></option>
             <?php endforeach; ?>
           </select>
         </div>
         <div class="form-group">
-          <label for="wallet_document">File (JPG, PNG, or PDF — max 8MB)</label>
+          <label for="wallet_document"><?php echo tms_t('label_file_upload_hint','File (JPG, PNG, or PDF — max 8MB)'); ?></label>
           <input type="file" id="wallet_document" name="document" class="form-control" accept=".jpg,.jpeg,.png,.pdf" required>
         </div>
         <div class="form-group">
-          <label for="wallet_expiry_date">Expiry date (optional)</label>
+          <label for="wallet_expiry_date"><?php echo tms_t('label_expiry_date_optional','Expiry date (optional)'); ?></label>
           <input type="date" id="wallet_expiry_date" name="expiry_date" class="form-control">
-          <small style="color:#9ca3af;">We'll remind you before this expires.</small>
+          <small style="color:#9ca3af;"><?php echo tms_t('dest_expiry_reminder_note', "We'll remind you before this expires."); ?></small>
         </div>
         <div class="form-group">
-          <label for="wallet_notes">Notes (optional)</label>
-          <input type="text" id="wallet_notes" name="notes" class="form-control" maxlength="255" placeholder="e.g. Multi-entry visa">
+          <label for="wallet_notes"><?php echo tms_t('label_notes_optional','Notes (optional)'); ?></label>
+          <input type="text" id="wallet_notes" name="notes" class="form-control" maxlength="255" placeholder="<?php echo htmlspecialchars(tms_t('dest_notes_placeholder_visa','e.g. Multi-entry visa'), ENT_QUOTES, 'UTF-8'); ?>">
         </div>
-        <button type="submit" name="upload_doc" class="btn btn-primary btn-block"><i class="fa fa-lock"></i> Upload Securely</button>
+        <button type="submit" name="upload_doc" class="btn btn-primary btn-block"><i class="fa fa-lock"></i> <?php echo tms_t('btn_upload_securely','Upload Securely'); ?></button>
       </form>
     </div>
   </div>
 
   <div class="col-md-7">
     <div class="wallet-card">
-      <h4><i class="fa fa-folder"></i> My Documents</h4>
+      <h4><i class="fa fa-folder"></i> <?php echo tms_t('heading_my_documents','My Documents'); ?></h4>
       <?php if (empty($documents)): ?>
-        <div style="color:#9ca3af;font-size:13px;">No documents uploaded yet.</div>
+        <div style="color:#9ca3af;font-size:13px;"><?php echo tms_t('msg_no_documents_yet','No documents uploaded yet.'); ?></div>
       <?php else: foreach ($documents as $d): ?>
         <div class="doc-row">
           <div class="doc-icon"><i class="fa fa-<?= $docIcons[$d->DocType] ?? 'file' ?>"></i></div>
           <div style="flex:1;">
-            <div style="font-size:13px;font-weight:600;"><?= htmlspecialchars(DOC_TYPES[$d->DocType] ?? 'Document') ?></div>
+            <div style="font-size:13px;font-weight:600;"><?= htmlspecialchars(isset(DOC_TYPES[$d->DocType]) ? tms_t('doctype_' . $d->DocType, DOC_TYPES[$d->DocType]) : tms_t('label_document_word','Document')) ?></div>
             <div style="font-size:11px;color:#9ca3af;"><?= htmlspecialchars($d->OriginalFilename) ?> &middot; <?= date('d M Y', strtotime($d->UploadedAt)) ?><?= $d->Notes ? ' &middot; ' . htmlspecialchars($d->Notes) : '' ?></div>
             <?php if (!empty($d->ExpiryDate)):
               $daysLeft = (int)floor((strtotime($d->ExpiryDate) - strtotime(date('Y-m-d'))) / 86400);
@@ -247,15 +251,17 @@ $docIcons = ['passport'=>'book','visa'=>'id-card','insurance'=>'shield','id'=>'i
             ?>
             <div style="font-size:11px;color:<?= $expColor ?>;font-weight:<?= $daysLeft<=30?'700':'400' ?>;">
               <i class="fa fa-calendar"></i>
-              <?= $daysLeft < 0 ? 'Expired ' . date('d M Y', strtotime($d->ExpiryDate)) : 'Expires ' . date('d M Y', strtotime($d->ExpiryDate)) . " ({$daysLeft} days)" ?>
+              <?= $daysLeft < 0
+                    ? tms_t('label_expired_prefix','Expired') . ' ' . date('d M Y', strtotime($d->ExpiryDate))
+                    : tms_t('label_expires_prefix','Expires') . ' ' . date('d M Y', strtotime($d->ExpiryDate)) . " ({$daysLeft} " . tms_t('label_days_suffix','days') . ")" ?>
             </div>
             <?php endif; ?>
           </div>
-          <a href="wallet-document.php?id=<?= (int)$d->DocId ?>" class="btn btn-xs btn-default"><i class="fa fa-download"></i> Download</a>
+          <a href="wallet-document.php?id=<?= (int)$d->DocId ?>" class="btn btn-xs btn-default"><i class="fa fa-download"></i> <?php echo tms_t('btn_download','Download'); ?></a>
           <form method="post" style="display:inline;margin:0;">
             <?php tms_csrf_field(); ?>
             <input type="hidden" name="doc_id" value="<?= (int)$d->DocId ?>">
-            <button type="submit" name="delete_doc" class="btn btn-xs btn-link" style="color:#dc2626;" onclick="return confirm('Delete this document?')"><i class="fa fa-trash"></i></button>
+            <button type="submit" name="delete_doc" class="btn btn-xs btn-link" style="color:#dc2626;" onclick="return confirm('<?php echo addslashes(tms_t('msg_confirm_delete_document','Delete this document?')); ?>')"><i class="fa fa-trash"></i></button>
           </form>
         </div>
       <?php endforeach; endif; ?>
@@ -264,9 +270,9 @@ $docIcons = ['passport'=>'book','visa'=>'id-card','insurance'=>'shield','id'=>'i
 </div>
 
 <div class="wallet-card">
-  <h4><i class="fa fa-ticket"></i> My Tickets</h4>
+  <h4><i class="fa fa-ticket"></i> <?php echo tms_t('heading_my_tickets','My Tickets'); ?></h4>
   <?php if (empty($tickets)): ?>
-    <div style="color:#9ca3af;font-size:13px;">No confirmed bookings yet.</div>
+    <div style="color:#9ca3af;font-size:13px;"><?php echo tms_t('msg_no_confirmed_bookings','No confirmed bookings yet.'); ?></div>
   <?php else: foreach ($tickets as $t): ?>
     <div class="ticket-row">
       <div class="doc-icon" style="background:#f0fdf4;color:#059669;"><i class="fa fa-check"></i></div>
@@ -274,7 +280,7 @@ $docIcons = ['passport'=>'book','visa'=>'id-card','insurance'=>'shield','id'=>'i
         <div style="font-size:13px;font-weight:600;"><?= htmlspecialchars($t->PackageName) ?></div>
         <div style="font-size:11px;color:#9ca3af;"><?= htmlspecialchars($t->PackageLocation) ?><?= $t->FromDate ? ' &middot; ' . htmlspecialchars($t->FromDate) : '' ?></div>
       </div>
-      <a href="ticket.php?bkid=<?= (int)$t->BookingId ?>" class="btn btn-xs btn-primary" target="_blank"><i class="fa fa-download"></i> View Ticket</a>
+      <a href="ticket.php?bkid=<?= (int)$t->BookingId ?>" class="btn btn-xs btn-primary" target="_blank"><i class="fa fa-download"></i> <?php echo tms_t('btn_view_ticket','View Ticket'); ?></a>
     </div>
   <?php endforeach; endif; ?>
 </div>

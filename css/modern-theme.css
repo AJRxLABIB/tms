@@ -573,6 +573,7 @@ html[data-theme="dark"] .tms-notif-msg { color: #eef2f7; }
 .icon-wish { background: linear-gradient(135deg, #ff9a9e, #fecfef); color: #e91e63; }
 .icon-loyalty { background: linear-gradient(135deg, #f6d365, #fda085); color: #fff; }
 .icon-compare { background: linear-gradient(135deg, #0B2B3C, #0FA3A3); color: #fff; }
+.icon-bd { background: linear-gradient(135deg, #006A4E, #F42A41); color: #fff; } /* Round 115 Phase G: Bangladesh flag green/red, for the Bangladesh Travel Guide feature card */
 .tms-mega-label strong { display: block; font-size: 13.5px; font-weight: 600; }
 .tms-mega-label span { font-size: 11.5px; color: var(--text-muted); }
 .tms-mega-item:hover .tms-mega-label strong { color: var(--primary); }

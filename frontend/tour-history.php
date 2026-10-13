@@ -128,9 +128,9 @@ $uemail   = $_SESSION['login'];
 $bookings = $bookingRepo->findByUserEmail($uemail);
 
 $statusConfig = [
-    0 => ['label' => 'Pending',   'class' => 'warning'],
-    1 => ['label' => 'Confirmed', 'class' => 'success'],
-    2 => ['label' => 'Cancelled', 'class' => 'danger'],
+    0 => ['label' => tms_t('label_pending', 'Pending'),     'class' => 'warning'],
+    1 => ['label' => tms_t('step_confirmed', 'Confirmed'),  'class' => 'success'],
+    2 => ['label' => tms_t('label_cancelled', 'Cancelled'), 'class' => 'danger'],
 ];
 ?>
 <!DOCTYPE HTML>
@@ -139,11 +139,15 @@ $statusConfig = [
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#0B2B3C">
 <link rel="apple-touch-icon" href="images/icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="TMS">
+<meta name="mobile-web-app-capable" content="yes">
 <title>TMS | My Tour History</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
 <link href="css/bootstrap.min2.css" rel='stylesheet' type='text/css' />
-<link href="css/style.min.css" rel='stylesheet' type='text/css' />
+<link href="<?php echo tms_asset_ver('css/style.min.css'); ?>" rel='stylesheet' type='text/css' />
 <link href="css/font-awesome.min2.css" rel="stylesheet">
 <link href="<?php echo tms_asset_ver('css/modern-theme.css'); ?>" rel="stylesheet">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -200,9 +204,18 @@ html[data-theme="dark"] .history-body .detail-row { color: var(--text-muted) !im
 .bk-timeline .dot{width:9px;height:9px;border-radius:50%;background:currentColor;flex-shrink:0;}
 .bk-timeline .bar{width:26px;height:2px;background:#e5e9f0;}
 .refund-badge{display:inline-flex;align-items:center;gap:5px;font-size:11.5px;font-weight:600;padding:4px 10px;border-radius:14px;margin-top:6px;}
-.refund-requested{background:#fef3c7;color:#92400e;}
-.refund-processed{background:#d1fae5;color:#065f46;}
-.refund-rejected{background:#fee2e2;color:#991b1b;}
+/* Round 115, Phase I (UI polish / design-system consistency -- DESIGN_SYSTEM.md's
+   own "Known inconsistency" example is this exact block): modern-theme.css already
+   ships a status-badge triple (--success/--warning/--danger + their -bg/-text
+   pairs) for this light-chip-with-dark-text pattern, so these one-off hex values
+   are replaced with the existing tokens instead of a new/duplicate color scale.
+   --warning-bg (#FEF3C7) and --danger-bg (#FEE2E2) already matched byte-for-byte;
+   --success-bg (#DCFCE7) is a barely-perceptible shift from the old #d1fae5 in the
+   same pastel-green family. No shadow/radius/layout change in this pass -- see
+   DESIGN_SYSTEM.md for why that part is deliberately out of scope here. */
+.refund-requested{background:var(--warning-bg);color:var(--warning-text);}
+.refund-processed{background:var(--success-bg);color:var(--success-text);}
+.refund-rejected{background:var(--danger-bg);color:var(--danger-text);}
 .mod-badge{display:inline-flex;align-items:center;gap:5px;font-size:11.5px;font-weight:600;padding:4px 10px;border-radius:14px;margin-top:6px;background:#eff6ff;color:#1e40af;}
 .modify-btn{background:var(--white);color:var(--secondary);border:1.5px solid var(--secondary);border-radius:6px;padding:7px 18px;font-size:13px;font-weight:600;cursor:pointer;transition:.2s;}
 .modify-btn:hover{background:var(--secondary);color:#fff;}
@@ -222,9 +235,9 @@ html[data-theme="dark"] .history-body .detail-row { color: var(--text-muted) !im
     <h1 class="wow zoomIn animated" data-wow-delay=".1s"><?php echo tms_t('heading_booking_history','My Tour History'); ?></h1>
     <?php if (!empty($_SESSION['checkout_success'])): ?>
     <div class="tms-steps" style="margin-top:22px;">
-      <div class="tms-step done"><div class="tms-step-circle"><i class="fa fa-check"></i></div><div class="tms-step-label">Cart</div></div>
-      <div class="tms-step done"><div class="tms-step-circle"><i class="fa fa-check"></i></div><div class="tms-step-label">Checkout</div></div>
-      <div class="tms-step done active"><div class="tms-step-circle"><i class="fa fa-check"></i></div><div class="tms-step-label">Confirmed</div></div>
+      <div class="tms-step done"><div class="tms-step-circle"><i class="fa fa-check"></i></div><div class="tms-step-label"><?php echo tms_t('step_cart','Cart'); ?></div></div>
+      <div class="tms-step done"><div class="tms-step-circle"><i class="fa fa-check"></i></div><div class="tms-step-label"><?php echo tms_t('step_checkout','Checkout'); ?></div></div>
+      <div class="tms-step done active"><div class="tms-step-circle"><i class="fa fa-check"></i></div><div class="tms-step-label"><?php echo tms_t('step_confirmed','Confirmed'); ?></div></div>
     </div>
     <?php endif; ?>
     </div>
@@ -236,27 +249,27 @@ html[data-theme="dark"] .history-body .detail-row { color: var(--text-muted) !im
             <div class="succWrap" style="display:flex;align-items:center;gap:14px;">
                 <i class="fa fa-check-circle" style="font-size:26px;color:#27ae60;"></i>
                 <div>
-                    <strong>Booking request sent!</strong><br>
-                    <span style="font-weight:400;"><?php echo (int)$_SESSION['checkout_success']; ?> booking(s) created from your cart — they're pending confirmation from our team.</span>
+                    <strong><?php echo tms_t('heading_booking_request_sent','Booking request sent!'); ?></strong><br>
+                    <span style="font-weight:400;"><?php echo (int)$_SESSION['checkout_success']; ?> <?php echo tms_t('dest_bookings_created_suffix', "booking(s) created from your cart — they're pending confirmation from our team."); ?></span>
                 </div>
             </div>
             <?php unset($_SESSION['checkout_success']); ?>
         <?php endif; ?>
         <?php if ($error): ?>
-            <div class="errorWrap"><strong>ERROR:</strong> <?php echo htmlspecialchars($error, ENT_QUOTES,'UTF-8'); ?></div>
+            <div class="errorWrap"><strong><?php echo tms_t('label_error_colon','ERROR:'); ?></strong> <?php echo htmlspecialchars($error, ENT_QUOTES,'UTF-8'); ?></div>
         <?php elseif ($msg): ?>
-            <div class="succWrap"><strong>SUCCESS:</strong> <?php echo htmlspecialchars($msg, ENT_QUOTES,'UTF-8'); ?></div>
+            <div class="succWrap"><strong><?php echo tms_t('label_success_colon','SUCCESS:'); ?></strong> <?php echo htmlspecialchars($msg, ENT_QUOTES,'UTF-8'); ?></div>
         <?php endif; ?>
 
         <h3 class="wow fadeInDown animated" data-wow-delay=".1s" style="margin-bottom:24px;">
             <i class="fa fa-history" style="color:var(--secondary)"></i>
-            Your Bookings
-            <span style="font-size:14px;font-weight:400;color:#888;margin-left:8px;">(<?php echo count($bookings); ?> total)</span>
+            <?php echo tms_t('heading_your_bookings','Your Bookings'); ?>
+            <span style="font-size:14px;font-weight:400;color:#888;margin-left:8px;">(<?php echo count($bookings); ?> <?php echo tms_t('label_total_word','total'); ?>)</span>
         </h3>
 
         <?php if (count($bookings) > 0): ?>
             <?php foreach ($bookings as $b):
-                $sc = $statusConfig[$b->status] ?? ['label'=>'Unknown','class'=>'default'];
+                $sc = $statusConfig[$b->status] ?? ['label'=>tms_t('label_unknown','Unknown'),'class'=>'default'];
                 $canCancel = ($b->status != 2);
                 $fromDate  = new DateTime($b->FromDate);
                 $today     = new DateTime();
@@ -276,7 +289,7 @@ html[data-theme="dark"] .history-body .detail-row { color: var(--text-muted) !im
                         <span class="label label-<?php echo $sc['class']; ?>" style="font-size:12px;padding:5px 10px;">
                             <?php echo $sc['label'];
                                   if ($b->status == 2) {
-                                      echo $b->CancelledBy === 'a' ? ' (by Admin)' : ' (by You)';
+                                      echo ' ' . ($b->CancelledBy === 'a' ? tms_t('label_by_admin_paren','(by Admin)') : tms_t('label_by_you_paren','(by You)'));
                                   } ?>
                         </span>
                         <?php
@@ -287,37 +300,51 @@ html[data-theme="dark"] .history-body .detail-row { color: var(--text-muted) !im
                         // unpaid booking can still be paid now via the sandbox flow.
                         $payStatus = $b->PaymentStatus ?? 'unpaid';
                         $payBadge = ['unpaid'=>'default','pending'=>'warning','paid'=>'success','failed'=>'danger','refunded'=>'default','partially_refunded'=>'warning'][$payStatus] ?? 'default';
+                        // Round 116 (item 36 -- i18n): was ucfirst(str_replace('_',' ', $payStatus)),
+                        // which only ever produced the English word regardless of active language.
+                        // Explicit lookup so each PaymentStatus enum value gets a real translation;
+                        // ucfirst(...) is kept as the fallback for any future enum value that hasn't
+                        // been given a dedicated key yet, so nothing breaks silently.
+                        $payLabels = [
+                            'unpaid'              => tms_t('label_payment_unpaid', 'Unpaid'),
+                            'pending'             => tms_t('label_pending', 'Pending'),
+                            'paid'                => tms_t('label_payment_paid', 'Paid'),
+                            'failed'              => tms_t('label_payment_failed', 'Failed'),
+                            'refunded'            => tms_t('label_payment_refunded', 'Refunded'),
+                            'partially_refunded'  => tms_t('label_payment_partially_refunded', 'Partially refunded'),
+                        ];
+                        $payLabel = $payLabels[$payStatus] ?? ucfirst(str_replace('_',' ', $payStatus));
                         ?>
                         <span class="label label-<?php echo $payBadge; ?>" style="font-size:12px;padding:5px 10px;">
-                            <i class="fa fa-credit-card"></i> <?php echo ucfirst(str_replace('_',' ', $payStatus)); ?>
+                            <i class="fa fa-credit-card"></i> <?php echo $payLabel; ?>
                         </span>
                         <?php if ($payStatus === 'unpaid' && $b->status != 2): ?>
                         <form method="POST" action="pay-now.php" style="display:inline;margin:0;">
                             <?php tms_csrf_field(); ?>
                             <input type="hidden" name="booking_id" value="<?php echo (int)$b->BookingId; ?>">
                             <button type="submit" class="label label-primary" style="border:none;font-size:12px;padding:5px 10px;cursor:pointer;">
-                                <i class="fa fa-flask"></i> Pay Now (Sandbox)
+                                <i class="fa fa-flask"></i> <?php echo tms_t('btn_pay_now','Pay Now'); ?> <?php echo tms_t('label_sandbox_suffix','(Sandbox)'); ?>
                             </button>
                         </form>
                         <?php endif; ?>
-                        <small style="color:#aaa;">Booked: <?php echo htmlspecialchars($b->RegDate, ENT_QUOTES,'UTF-8'); ?></small>
+                        <small style="color:#aaa;"><?php echo tms_t('label_booked_colon','Booked:'); ?> <?php echo htmlspecialchars($b->RegDate, ENT_QUOTES,'UTF-8'); ?></small>
                     </div>
                 </div>
                 <div class="history-body">
                     <!-- Booking timeline -->
                     <div class="bk-timeline">
-                        <div class="step done"><span class="dot"></span> Requested</div>
+                        <div class="step done"><span class="dot"></span> <?php echo tms_t('label_requested','Requested'); ?></div>
                         <div class="bar"></div>
                         <?php if ($b->status == 2): ?>
-                        <div class="step bad"><span class="dot"></span> Cancelled</div>
+                        <div class="step bad"><span class="dot"></span> <?php echo tms_t('label_cancelled','Cancelled'); ?></div>
                         <?php if ($b->RefundStatus): ?>
                         <div class="bar"></div>
-                        <div class="step <?php echo $b->RefundStatus === 'processed' ? 'done' : 'current'; ?>"><span class="dot"></span> Refund <?php echo htmlspecialchars($b->RefundStatus, ENT_QUOTES,'UTF-8'); ?></div>
+                        <div class="step <?php echo $b->RefundStatus === 'processed' ? 'done' : 'current'; ?>"><span class="dot"></span> <?php echo tms_t('label_refund_prefix','Refund'); ?> <?php echo htmlspecialchars($b->RefundStatus, ENT_QUOTES,'UTF-8'); ?></div>
                         <?php endif; ?>
                         <?php else: ?>
-                        <div class="step <?php echo $b->status == 1 ? 'done' : 'current'; ?>"><span class="dot"></span> Confirmed</div>
+                        <div class="step <?php echo $b->status == 1 ? 'done' : 'current'; ?>"><span class="dot"></span> <?php echo tms_t('step_confirmed','Confirmed'); ?></div>
                         <div class="bar"></div>
-                        <div class="step <?php echo ($b->status == 1 && $fromDate <= $today) ? 'done' : ''; ?>"><span class="dot"></span> Completed</div>
+                        <div class="step <?php echo ($b->status == 1 && $fromDate <= $today) ? 'done' : ''; ?>"><span class="dot"></span> <?php echo tms_t('label_completed','Completed'); ?></div>
                         <?php endif; ?>
                     </div>
 
@@ -326,7 +353,7 @@ html[data-theme="dark"] .history-body .detail-row { color: var(--text-muted) !im
                             <div class="detail-row">
                                 <i class="fa fa-briefcase"></i>
                                 <div>
-                                    <strong>Package:</strong>
+                                    <strong><?php echo tms_t('label_package_word','Package'); ?>:</strong>
                                     <a href="package-details.php?pkgid=<?php echo (int)$b->PackageId; ?>">
                                         <?php echo htmlspecialchars($b->PackageName, ENT_QUOTES,'UTF-8'); ?>
                                     </a>
@@ -335,45 +362,45 @@ html[data-theme="dark"] .history-body .detail-row { color: var(--text-muted) !im
                             <div class="detail-row">
                                 <i class="fa fa-calendar"></i>
                                 <div>
-                                    <strong>From:</strong> <?php echo htmlspecialchars($b->FromDate, ENT_QUOTES,'UTF-8'); ?>
-                                    &nbsp;&nbsp;<strong>To:</strong> <?php echo htmlspecialchars($b->ToDate, ENT_QUOTES,'UTF-8'); ?>
+                                    <strong><?php echo tms_t('label_from','From'); ?>:</strong> <?php echo htmlspecialchars($b->FromDate, ENT_QUOTES,'UTF-8'); ?>
+                                    &nbsp;&nbsp;<strong><?php echo tms_t('label_to','To'); ?>:</strong> <?php echo htmlspecialchars($b->ToDate, ENT_QUOTES,'UTF-8'); ?>
                                     <?php if (!empty($b->NoOfPersons)): ?>
-                                    &nbsp;&nbsp;<strong>Travelers:</strong> <?php echo (int)$b->NoOfPersons; ?>
+                                    &nbsp;&nbsp;<strong><?php echo tms_t('label_travelers','Travelers'); ?>:</strong> <?php echo (int)$b->NoOfPersons; ?>
                                     <?php endif; ?>
                                 </div>
                             </div>
                             <?php if (!empty($b->TotalCost)): ?>
                             <div class="detail-row">
                                 <i class="fa fa-money"></i>
-                                <div><strong>Total:</strong> <?php echo tms_currency((float)$b->TotalCost); ?></div>
+                                <div><strong><?php echo tms_t('label_total','Total'); ?>:</strong> <?php echo tms_currency((float)$b->TotalCost); ?></div>
                             </div>
                             <?php endif; ?>
                             <?php if (!empty($b->Comment)): ?>
                             <div class="detail-row">
                                 <i class="fa fa-comment-o"></i>
-                                <div><strong>Note:</strong> <?php echo htmlspecialchars($b->Comment, ENT_QUOTES,'UTF-8'); ?></div>
+                                <div><strong><?php echo tms_t('label_note_word','Note'); ?>:</strong> <?php echo htmlspecialchars($b->Comment, ENT_QUOTES,'UTF-8'); ?></div>
                             </div>
                             <?php endif; ?>
                             <?php if ($b->status == 2 && !empty($b->UpdationDate)): ?>
                             <div class="detail-row">
                                 <i class="fa fa-clock-o"></i>
-                                <div><strong>Cancelled at:</strong> <?php echo htmlspecialchars($b->UpdationDate, ENT_QUOTES,'UTF-8'); ?></div>
+                                <div><strong><?php echo tms_t('label_cancelled_at','Cancelled at'); ?>:</strong> <?php echo htmlspecialchars($b->UpdationDate, ENT_QUOTES,'UTF-8'); ?></div>
                             </div>
                             <?php endif; ?>
 
                             <?php if ($b->RefundStatus): ?>
                             <span class="refund-badge refund-<?php echo htmlspecialchars($b->RefundStatus, ENT_QUOTES,'UTF-8'); ?>">
-                                <i class="fa fa-undo"></i> Refund <?php echo htmlspecialchars(ucfirst($b->RefundStatus), ENT_QUOTES,'UTF-8'); ?>
+                                <i class="fa fa-undo"></i> <?php echo tms_t('label_refund_prefix','Refund'); ?> <?php echo htmlspecialchars(ucfirst($b->RefundStatus), ENT_QUOTES,'UTF-8'); ?>
                             </span>
                             <?php if (!empty($b->RefundNote)): ?><div style="font-size:12px;color:#94a3b8;margin-top:3px;"><?php echo htmlspecialchars($b->RefundNote, ENT_QUOTES,'UTF-8'); ?></div><?php endif; ?>
                             <?php endif; ?>
 
                             <?php if ($b->ModificationStatus === 'pending'): ?>
                             <span class="mod-badge">
-                                <i class="fa fa-exchange"></i> Date change requested: <?php echo htmlspecialchars($b->RequestedFromDate, ENT_QUOTES,'UTF-8'); ?> &rarr; <?php echo htmlspecialchars($b->RequestedToDate, ENT_QUOTES,'UTF-8'); ?> (pending review)
+                                <i class="fa fa-exchange"></i> <?php echo tms_t('label_date_change_requested_colon','Date change requested:'); ?> <?php echo htmlspecialchars($b->RequestedFromDate, ENT_QUOTES,'UTF-8'); ?> &rarr; <?php echo htmlspecialchars($b->RequestedToDate, ENT_QUOTES,'UTF-8'); ?> <?php echo tms_t('label_pending_review_paren','(pending review)'); ?>
                             </span>
                             <?php elseif ($b->ModificationStatus === 'rejected'): ?>
-                            <div style="font-size:12px;color:#e74c3c;margin-top:4px;"><i class="fa fa-times-circle"></i> Last date-change request was declined<?php echo !empty($b->ModificationNote) ? ': '.htmlspecialchars($b->ModificationNote, ENT_QUOTES,'UTF-8') : '.'; ?></div>
+                            <div style="font-size:12px;color:#e74c3c;margin-top:4px;"><i class="fa fa-times-circle"></i> <?php echo tms_t('msg_last_mod_declined','Last date-change request was declined'); ?><?php echo !empty($b->ModificationNote) ? ': '.htmlspecialchars($b->ModificationNote, ENT_QUOTES,'UTF-8') : '.'; ?></div>
                             <?php endif; ?>
                         </div>
 
@@ -381,44 +408,52 @@ html[data-theme="dark"] .history-body .detail-row { color: var(--text-muted) !im
                         <div style="text-align:center;">
                             <div class="qr-thumb tms-qr" style="width:120px;height:120px;display:inline-flex;align-items:center;justify-content:center;background:var(--white);border:1px solid #e2e8f0;border-radius:8px;padding:6px;box-sizing:border-box;"
                                  data-qr-value="TMS-BK<?php echo (int)$b->BookingId; ?>-<?php echo htmlspecialchars($b->VerificationCode, ENT_QUOTES, 'UTF-8'); ?>"></div>
-                            <div style="font-size:10px;color:#aaa;margin-top:2px;">Scan to verify</div>
+                            <div style="font-size:10px;color:#aaa;margin-top:2px;"><?php echo tms_t('label_scan_to_verify','Scan to verify'); ?></div>
                         </div>
                         <?php endif; ?>
 
                         <div style="display:flex;align-items:flex-end;gap:8px;flex-wrap:wrap;">
                             <a href="my-trip.php?id=<?php echo (int)$b->BookingId; ?>" class="ticket-btn" style="background:#0f2027;color:#fff;border-color:#0f2027;">
-                                <i class="fa fa-compass"></i> My Trip
+                                <i class="fa fa-compass"></i> <?php echo tms_t('link_my_trip','My Trip'); ?>
                             </a>
                             <?php if ($b->status == 1): ?>
                             <a href="ticket.php?bkid=<?php echo (int)$b->BookingId; ?>" class="ticket-btn">
-                                <i class="fa fa-download"></i> Ticket
+                                <i class="fa fa-download"></i> <?php echo tms_t('link_ticket_word','Ticket'); ?>
                             </a>
                             <?php endif; ?>
                             <a href="expense-tracker.php?booking=<?php echo (int)$b->BookingId; ?>" class="ticket-btn" style="background:#eff6ff;color:#1e40af;border-color:#bfdbfe;">
-                                <i class="fa fa-money"></i> Expenses
+                                <i class="fa fa-money"></i> <?php echo tms_t('link_expenses','Expenses'); ?>
                             </a>
                             <a href="wallet.php" class="ticket-btn" style="background:#f0fdf4;color:#166534;border-color:#bbf7d0;">
-                                <i class="fa fa-briefcase"></i> Wallet
+                                <i class="fa fa-briefcase"></i> <?php echo tms_t('link_wallet','Wallet'); ?>
+                            </a>
+                            <!-- Round 115 continuation (master prompt item 10 -- Booking Engine
+                                 "support" sub-requirement): no per-booking contact/support link
+                                 existed anywhere before this; links to the existing public
+                                 enquiry.php with the subject pre-filled so the agent sees which
+                                 booking it's about without the customer having to type it. -->
+                            <a href="enquiry.php?subject=<?php echo urlencode('Booking #BK'.(int)$b->BookingId); ?>" class="ticket-btn" style="background:#fefce8;color:#854d0e;border-color:#fde68a;">
+                                <i class="fa fa-life-ring"></i> <?php echo tms_t('link_support','Support'); ?>
                             </a>
                             <?php if ($canModify): ?>
                             <button type="button" class="modify-btn" onclick="openModModal(<?php echo (int)$b->BookingId; ?>)">
-                                <i class="fa fa-exchange"></i> Change Dates
+                                <i class="fa fa-exchange"></i> <?php echo tms_t('btn_change_dates','Change Dates'); ?>
                             </button>
                             <?php endif; ?>
                             <?php if ($canCancel): ?>
-                            <form method="post" onsubmit="return confirm('Cancel booking #BK<?php echo (int)$b->BookingId; ?>?');">
+                            <form method="post" onsubmit="return confirm('<?php echo addslashes(tms_t('msg_confirm_cancel_booking_prefix','Cancel booking #BK')); ?><?php echo (int)$b->BookingId; ?><?php echo addslashes(tms_t('msg_confirm_cancel_booking_suffix','?')); ?>');">
                                 <?php tms_csrf_field(); ?>
                                 <input type="hidden" name="cancel_booking" value="1">
                                 <input type="hidden" name="bkid" value="<?php echo (int)$b->BookingId; ?>">
                                 <button type="submit" class="cancel-btn">
-                                    <i class="fa fa-times"></i> Cancel
+                                    <i class="fa fa-times"></i> <?php echo tms_t('btn_cancel','Cancel'); ?>
                                 </button>
                             </form>
                             <?php elseif ($b->status != 2): ?>
                             <button class="cancel-btn" disabled
-                                    title="Cannot cancel within 24 hours of departure"
+                                    title="<?php echo htmlspecialchars(tms_t('msg_cannot_cancel_24h','Cannot cancel within 24 hours of departure'), ENT_QUOTES,'UTF-8'); ?>"
                                     style="opacity:.5;cursor:not-allowed;">
-                                <i class="fa fa-times"></i> Cancel
+                                <i class="fa fa-times"></i> <?php echo tms_t('btn_cancel','Cancel'); ?>
                             </button>
                             <?php endif; ?>
                         </div>
@@ -429,10 +464,10 @@ html[data-theme="dark"] .history-body .detail-row { color: var(--text-muted) !im
         <?php else: ?>
             <div class="empty-state">
                 <i class="fa fa-plane"></i>
-                <h3>No bookings yet</h3>
-                <p>You haven't booked any tour packages.</p>
+                <h3><?php echo tms_t('heading_no_bookings_yet','No bookings yet'); ?></h3>
+                <p><?php echo tms_t('msg_no_bookings_subtitle', "You haven't booked any tour packages."); ?></p>
                 <a href="package-list.php" class="btn btn-primary" style="margin-top:10px;">
-                    <i class="fa fa-search"></i> Browse Packages
+                    <i class="fa fa-search"></i> <?php echo tms_t('btn_browse_packages','Browse Packages'); ?>
                 </a>
             </div>
         <?php endif; ?>
@@ -442,27 +477,26 @@ html[data-theme="dark"] .history-body .detail-row { color: var(--text-muted) !im
 <!-- Date-change request modal (shared across all cards; openModModal() fills in the booking id) -->
 <div class="mod-modal-overlay" id="modModalOverlay">
     <div class="mod-modal">
-        <h4><i class="fa fa-exchange" style="color:var(--secondary)"></i> Request Date Change</h4>
+        <h4><i class="fa fa-exchange" style="color:var(--secondary)"></i> <?php echo tms_t('heading_request_date_change','Request Date Change'); ?></h4>
         <form method="post">
             <?php tms_csrf_field(); ?>
             <input type="hidden" name="request_modification" value="1">
             <input type="hidden" name="bkid" id="modBkId">
             <div class="form-group">
-                <label for="thNewFromDate">New Departure Date</label>
+                <label for="thNewFromDate"><?php echo tms_t('label_new_departure_date','New Departure Date'); ?></label>
                 <?php /* Round 14: same bare-text-box problem as the booking form. */ ?>
                 <input type="date" name="new_fromdate" id="thNewFromDate" class="form-control" min="<?php echo date('Y-m-d', strtotime('+1 day')); ?>" required>
             </div>
             <div class="form-group">
-                <label for="thNewToDate">New Return Date</label>
+                <label for="thNewToDate"><?php echo tms_t('label_new_return_date','New Return Date'); ?></label>
                 <input type="date" name="new_todate" id="thNewToDate" class="form-control" min="<?php echo date('Y-m-d', strtotime('+1 day')); ?>" required>
             </div>
             <p style="font-size:12px;color:#94a3b8;margin-bottom:16px;">
-                This sends a request to our team — dates won't change until it's reviewed and approved,
-                since availability and pricing need a quick check first.
+                <?php echo tms_t('dest_date_change_instructions', "This sends a request to our team — dates won't change until it's reviewed and approved, since availability and pricing need a quick check first."); ?>
             </p>
             <div style="display:flex;gap:10px;">
-                <button type="button" onclick="closeModModal()" class="ticket-btn" style="flex:1;justify-content:center;">Cancel</button>
-                <button type="submit" class="modify-btn" style="flex:1;background:var(--secondary);color:#fff;">Submit Request</button>
+                <button type="button" onclick="closeModModal()" class="ticket-btn" style="flex:1;justify-content:center;"><?php echo tms_t('btn_cancel','Cancel'); ?></button>
+                <button type="submit" class="modify-btn" style="flex:1;background:var(--secondary);color:#fff;"><?php echo tms_t('btn_submit_request','Submit Request'); ?></button>
             </div>
         </form>
     </div>

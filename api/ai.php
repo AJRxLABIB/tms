@@ -17,6 +17,10 @@
  *   POST /api/ai.php?action=memory
  *   GET  /api/ai.php?action=copilot_history&booking_id=N
  *   POST /api/ai.php?action=nl_search
+ *   POST /api/ai.php?action=ai_feedback  (Round 115, item 14 -- thumbs up/down)
+ *   POST /api/ai.php?action=weather_replan_check    (Round 115, item 12)
+ *   POST /api/ai.php?action=weather_replan_preview  (Round 115, item 12)
+ *   POST /api/ai.php?action=weather_replan_apply    (Round 115, item 12)
  */
 
 session_start();
@@ -91,6 +95,10 @@ try {
         'track_quickreply'=> handleTrackQuickReply($dbh),
         'image_analyze'   => handleImageAnalyze($dbh, $userEmail),
         'nl_search'       => handleNlSearch($dbh, $userEmail),
+        'ai_feedback'     => handleFeedback($dbh, $userEmail),
+        'weather_replan_check'   => handleWeatherReplanCheck($dbh, $userEmail),
+        'weather_replan_preview' => handleWeatherReplanPreview($dbh, $userEmail),
+        'weather_replan_apply'   => handleWeatherReplanApply($dbh, $userEmail),
         default           => apiError(404, "Unknown action: $action"),
     };
 } catch (Throwable $e) {
@@ -260,8 +268,15 @@ function handleChatbot(PDO $dbh, string $email): void {
     // for a family?" on a package page got an answer with no idea what "this" is.
     $pageContext = mb_substr(trim((string)($_POST['page_context'] ?? '')), 0, 300);
 
+    // FIX (Round 117 -- live user report): pass the visitor's active site
+    // language through so the AI's own reply matches whatever they already
+    // switched the whole site to (see SiteAssistant::buildSystemPrompt()'s
+    // new $language param) -- previously only the widget's static chrome
+    // text respected the language switch, never the AI-generated answers.
+    $chatLanguage = function_exists('tms_active_language') ? tms_active_language() : 'en';
+
     $assistant = new SiteAssistant($dbh);
-    $result    = $assistant->reply($message, $history, $email, $pageContext);
+    $result    = $assistant->reply($message, $history, $email, $pageContext, $chatLanguage);
 
     if (!$result['success']) {
         // The frontend falls back to its local rule-based responder — and now
@@ -686,6 +701,135 @@ function handleNlSearch(PDO $dbh, string $email): void {
 // ══════════════════════════════════════════════════════════════════════════════
 // HELPERS
 // ══════════════════════════════════════════════════════════════════════════════
+
+/**
+ * Round 115, master prompt item 14 ("AI Feedback Loop"): a thumbs up/down
+ * + optional short reason for any AI-generated output, tied to the
+ * feature that produced it and a feature-specific context reference (a
+ * package id for a recommendation, a booking id for an itinerary, ...).
+ * Deliberately simple -- no new UI framework, no per-telemetry-row
+ * linkage (see 010_ai_feedback.sql's own comment for why) -- just enough
+ * to let a real satisfaction signal start accumulating per feature.
+ */
+function handleFeedback(PDO $dbh, string $email): void {
+    tms_csrf_validate();
+
+    if ($email === 'guest') {
+        apiError(401, 'Please sign in to leave feedback.');
+    }
+
+    $feature    = tms_clean($_POST['feature'] ?? '');
+    $rating     = (int)($_POST['rating'] ?? 0);
+    $contextRef = tms_clean($_POST['context_ref'] ?? '');
+    $reason     = tms_clean($_POST['reason'] ?? '');
+
+    if ($feature === '' || !in_array($rating, [1, -1], true)) {
+        apiError(400, 'Missing or invalid feedback.');
+    }
+
+    try {
+        $stmt = $dbh->prepare(
+            "INSERT INTO tbl_ai_feedback (user_email, feature, context_ref, rating, reason)
+             VALUES (:email, :feature, :ctx, :rating, :reason)"
+        );
+        $stmt->execute([
+            ':email'   => $email,
+            ':feature' => mb_substr($feature, 0, 60),
+            ':ctx'     => $contextRef !== '' ? mb_substr($contextRef, 0, 120) : null,
+            ':rating'  => $rating,
+            ':reason'  => $reason !== '' ? mb_substr($reason, 0, 255) : null,
+        ]);
+    } catch (Exception $e) {
+        error_log('[TMS AI Feedback] insert failed: ' . $e->getMessage());
+        apiError(500, 'Could not save feedback right now.');
+    }
+
+    apiSuccess(['saved' => true]);
+}
+
+/**
+ * Round 115, master prompt item 12 ("AI Dynamic Trip Replanning"). Three
+ * small, deliberately separate steps rather than one "smart" endpoint:
+ *   1. check   -- pure read-only detection, no AI call, safe to run anytime.
+ *   2. preview -- generates a proposed itinerary but does NOT save it.
+ *   3. apply   -- persists exactly the proposal the traveler already saw.
+ * This shape is what makes "the traveler must explicitly approve, and a
+ * confirmed booking is never auto-changed" true by construction rather
+ * than by a comment promising it: nothing is written to
+ * tbl_ai_itineraries (and tblbooking is never touched by any of these
+ * three) until step 3 runs, and step 3 only ever runs from an explicit
+ * button click on the exact proposal step 2 returned.
+ */
+function handleWeatherReplanCheck(PDO $dbh, string $email): void {
+    $bookingId = resolveOwnedBookingId($dbh, $email);
+    if ($bookingId < 1) {
+        apiError(403, 'This booking was not found on your account.');
+    }
+    $destination = tms_clean($_POST['destination'] ?? '');
+    $startDate   = tms_clean($_POST['start_date'] ?? '');
+    $duration    = max(1, min(30, (int)($_POST['duration'] ?? 3)));
+    if ($destination === '' || $startDate === '') {
+        apiError(400, 'Destination and start date are required.');
+    }
+
+    $planner = new ItineraryPlanner($dbh);
+    $result  = $planner->checkWeatherRisk($bookingId, $destination, $startDate, $duration);
+    apiSuccess($result);
+}
+
+function handleWeatherReplanPreview(PDO $dbh, string $email): void {
+    if (function_exists('set_time_limit')) { @set_time_limit(120); }
+    tms_csrf_validate();
+
+    $bookingId = resolveOwnedBookingId($dbh, $email);
+    if ($bookingId < 1) {
+        apiError(403, 'This booking was not found on your account.');
+    }
+
+    $tripData = buildTripDataFromPost();
+    if (empty($tripData['destination'])) {
+        apiError(400, 'Destination is required.');
+    }
+
+    $day        = (int)($_POST['flagged_day'] ?? 0);
+    $date       = tms_clean($_POST['flagged_date'] ?? '');
+    $rainChance = (int)($_POST['rain_chance'] ?? 0);
+    $feedback = ($day > 0 && $date !== '')
+        ? "Live weather forecast shows a {$rainChance}% chance of rain on Day {$day} ({$date}) of this trip. "
+          . "Please propose a weather-appropriate alternative specifically for that day (e.g. an indoor or "
+          . "cover-friendly option), and keep every other day as close to a normal itinerary for this trip as "
+          . "you reasonably can -- don't rewrite days that have no weather concern."
+        : 'Please review this itinerary against current weather conditions and suggest any needed adjustments.';
+
+    $planner   = new ItineraryPlanner($dbh);
+    $itinerary = $planner->regenerate($tripData, [$feedback], $email, $bookingId, false); // save=false: preview only
+
+    apiSuccess(['itinerary' => $itinerary, 'booking_id' => $bookingId]);
+}
+
+function handleWeatherReplanApply(PDO $dbh, string $email): void {
+    tms_csrf_validate();
+
+    $bookingId = resolveOwnedBookingId($dbh, $email);
+    if ($bookingId < 1) {
+        apiError(403, 'This booking was not found on your account.');
+    }
+
+    $itineraryJson = $_POST['itinerary'] ?? '';
+    $itinerary = is_string($itineraryJson) ? json_decode($itineraryJson, true) : null;
+    if (!is_array($itinerary) || empty($itinerary['days'])) {
+        apiError(400, 'No valid proposed itinerary was provided to apply.');
+    }
+
+    $tripData = buildTripDataFromPost();
+    $planner  = new ItineraryPlanner($dbh);
+    $ok       = $planner->saveApprovedItinerary($itinerary, $tripData, $email, $bookingId);
+
+    if (!$ok) {
+        apiError(500, 'Could not save the updated itinerary right now.');
+    }
+    apiSuccess(['saved' => true]);
+}
 
 function apiSuccess(array $data): void {
     echo json_encode(['success' => true, 'data' => $data, 'ts' => time()], JSON_UNESCAPED_UNICODE);

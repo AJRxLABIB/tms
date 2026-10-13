@@ -39,6 +39,10 @@ $posts = $q->fetchAll(PDO::FETCH_OBJ);
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#0B2B3C">
 <link rel="apple-touch-icon" href="images/icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="TMS">
+<meta name="mobile-web-app-capable" content="yes">
 <title>TMS | Travel Blog</title>
 <?php
 // SEO meta broadening (master prompt item 53, extending Round 20's work on
@@ -61,7 +65,7 @@ tms_seo_meta([
 ?>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <link href="css/bootstrap.min2.css" rel='stylesheet'/>
-<link href="css/style.min.css" rel='stylesheet'/>
+<link href="<?php echo tms_asset_ver('css/style.min.css'); ?>" rel='stylesheet'/>
 <link href="css/font-awesome.min2.css" rel="stylesheet">
 <link href="<?php echo tms_asset_ver('css/modern-theme.css'); ?>" rel="stylesheet">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -86,9 +90,9 @@ html[data-theme="dark"] .blog-body p { color: var(--text-muted) !important; }
 <div class="page-title">
   <div class="container">
     <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;">
-      <h2 style="margin:0;"><i class="fa fa-pencil"></i> Travel Blog &amp; Tips</h2>
+      <h2 style="margin:0;"><i class="fa fa-pencil"></i> <?php echo tms_t('heading_travel_blog','Travel Blog &amp; Tips'); ?></h2>
       <form method="get" style="display:flex;gap:8px;">
-        <input type="text" name="search" value="<?= htmlspecialchars($search) ?>" placeholder="Search articles..." class="form-control" style="width:220px;">
+        <input type="text" name="search" value="<?= htmlspecialchars($search) ?>" placeholder="<?php echo tms_t('placeholder_search_articles','Search articles...'); ?>" class="form-control" style="width:220px;">
         <button class="btn btn-light"><i class="fa fa-search"></i></button>
       </form>
     </div>
@@ -102,8 +106,8 @@ html[data-theme="dark"] .blog-body p { color: var(--text-muted) !important; }
 <?php if (count($posts) === 0): ?>
   <div style="text-align:center;padding:60px 0;color:#aaa;">
     <i class="fa fa-pencil-square-o" style="font-size:56px;"></i>
-    <h3 style="margin-top:16px;">No articles yet</h3>
-    <p>Check back soon for travel tips and destination guides.</p>
+    <h3 style="margin-top:16px;"><?php echo tms_t('msg_no_articles_yet','No articles yet'); ?></h3>
+    <p><?php echo tms_t('dest_no_articles_subtitle','Check back soon for travel tips and destination guides.'); ?></p>
   </div>
 <?php else: ?>
 <div class="row">
@@ -118,9 +122,9 @@ html[data-theme="dark"] .blog-body p { color: var(--text-muted) !important; }
     <div class="blog-body">
       <?php if ($p->Tag): ?><span class="blog-tag"><?= htmlspecialchars($p->Tag) ?></span><?php endif; ?>
       <h4><?= htmlspecialchars($p->Title) ?></h4>
-      <div class="blog-meta"><i class="fa fa-user"></i> <?= htmlspecialchars($p->AuthorName ?? 'Admin') ?> &nbsp;·&nbsp; <i class="fa fa-calendar"></i> <?= date('d M Y', strtotime($p->CreatedAt)) ?></div>
+      <div class="blog-meta"><i class="fa fa-user"></i> <?= htmlspecialchars($p->AuthorName ?? tms_t('default_author_admin','Admin')) ?> &nbsp;·&nbsp; <i class="fa fa-calendar"></i> <?= date('d M Y', strtotime($p->CreatedAt)) ?></div>
       <p><?= htmlspecialchars(substr(strip_tags($p->Content), 0, 140)) ?>...</p>
-      <a href="blog-post.php?id=<?= (int)$p->id ?>" class="btn btn-primary btn-sm" style="margin-top:6px;">Read More &rarr;</a>
+      <a href="blog-post.php?id=<?= (int)$p->id ?>" class="btn btn-primary btn-sm" style="margin-top:6px;"><?php echo tms_t('link_read_more','Read More &rarr;'); ?></a>
     </div>
   </div>
 </div>

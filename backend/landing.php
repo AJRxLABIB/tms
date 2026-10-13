@@ -19,7 +19,21 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>TMS | Smart AI-Powered Travel Marketplace</title>
-<meta name="description" content="TMS is an AI-powered travel marketplace — smart trip planning, live weather, multi-currency pricing, an AI travel assistant, and a marketplace of tour packages, all in one place. Sign up free to start planning.">
+<?php
+// NEW (Round 118, master prompt item 53 -- SEO): this is the site's real
+// public homepage -- frontend/index.php only ever renders this file for a
+// signed-out visitor (see the doc comment at the top of this file), so
+// index.php itself is never what a search crawler or a shared link sees,
+// and was never worth wiring. This page was missing canonical/OpenGraph
+// tags entirely (a hand-written <title>/<meta description> only) despite
+// being the single highest-SEO-value page on the whole site. No fabricated
+// data -- same 'no image unless a real one exists' convention already
+// used by every other tms_seo_meta() call site.
+tms_seo_meta([
+    'title'       => 'TMS | Smart AI-Powered Travel Marketplace',
+    'description' => 'TMS is an AI-powered travel marketplace — smart trip planning, live weather, multi-currency pricing, an AI travel assistant, and a marketplace of tour packages, all in one place. Sign up free to start planning.',
+]);
+?>
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#0F4C81">
 

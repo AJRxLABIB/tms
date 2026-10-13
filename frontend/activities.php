@@ -72,6 +72,10 @@ function activityPageUrl(int $p): string {
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#0B2B3C">
 <link rel="apple-touch-icon" href="images/icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="TMS">
+<meta name="mobile-web-app-capable" content="yes">
 <title>TMS | Activities</title>
 <?php
 // SEO meta broadening (master prompt item 53): same treatment as
@@ -90,7 +94,7 @@ tms_seo_meta([
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
 <link href="css/bootstrap.min2.css" rel='stylesheet' type='text/css' />
-<link href="css/style.min.css" rel='stylesheet' type='text/css' />
+<link href="<?php echo tms_asset_ver('css/style.min.css'); ?>" rel='stylesheet' type='text/css' />
 <link href="css/font-awesome.min2.css" rel="stylesheet">
 <link href="<?php echo tms_asset_ver('css/modern-theme.css'); ?>" rel="stylesheet">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -119,7 +123,7 @@ tms_seo_meta([
 
 <div class="banner-3">
     <div class="container">
-        <h1 class="wow zoomIn animated" data-wow-delay=".1s">TMS – Activities</h1>
+        <h1 class="wow zoomIn animated" data-wow-delay=".1s"><?php echo tms_t('heading_tms_activities','TMS – Activities'); ?></h1>
     </div>
 </div>
 
@@ -130,55 +134,55 @@ tms_seo_meta([
             ['label' => 'Activities'],
         ]); ?>
         <div class="tms-sample-banner wow fadeIn">
-            <i class="fa fa-info-circle"></i> These activity listings are <strong>sample/demo data</strong> for showcasing the TMS activities marketplace feature -- not a live, real-world booking inventory from an actual tour operator. Bookings you make are recorded for demonstration purposes.
+            <i class="fa fa-info-circle"></i> <?php echo tms_t('dest_activities_sample_banner','These activity listings are <strong>sample/demo data</strong> for showcasing the TMS activities marketplace feature -- not a live, real-world booking inventory from an actual tour operator. Bookings you make are recorded for demonstration purposes.'); ?>
         </div>
 
         <div class="pkg-toolbar wow fadeInDown" data-wow-delay=".1s">
             <form method="get" action="activities.php">
                 <div class="row" style="display:flex;align-items:flex-end;flex-wrap:wrap;gap:10px;">
                     <div class="col-md-4" style="flex:1;min-width:180px;">
-                        <label for="activitiesSearch" style="font-size:13px;font-weight:600;color:#555;margin-bottom:4px;"><i class="fa fa-search"></i> Search</label>
+                        <label for="activitiesSearch" style="font-size:13px;font-weight:600;color:#555;margin-bottom:4px;"><i class="fa fa-search"></i> <?php echo tms_t('btn_search','Search'); ?></label>
                         <input type="text" name="search" id="activitiesSearch" class="form-control" placeholder="Activity name, city, or country…"
                                value="<?php echo htmlspecialchars($search, ENT_QUOTES, 'UTF-8'); ?>">
                     </div>
                     <div class="col-md-3" style="flex:0 0 180px;">
-                        <label for="activitiesCity" style="font-size:13px;font-weight:600;color:#555;margin-bottom:4px;"><i class="fa fa-map-marker"></i> City</label>
+                        <label for="activitiesCity" style="font-size:13px;font-weight:600;color:#555;margin-bottom:4px;"><i class="fa fa-map-marker"></i> <?php echo tms_t('label_city','City'); ?></label>
                         <select name="city" id="activitiesCity" class="form-control">
-                            <option value="">All Cities</option>
+                            <option value=""><?php echo tms_t('dest_all_cities','All Cities'); ?></option>
                             <?php foreach ($cities as $c): ?>
                             <option value="<?php echo htmlspecialchars($c, ENT_QUOTES, 'UTF-8'); ?>" <?php echo $city===$c?'selected':''; ?>><?php echo htmlspecialchars($c, ENT_QUOTES, 'UTF-8'); ?></option>
                             <?php endforeach; ?>
                         </select>
                     </div>
                     <div class="col-md-2" style="flex:0 0 170px;">
-                        <label for="activitiesCategory" style="font-size:13px;font-weight:600;color:#555;margin-bottom:4px;"><i class="fa fa-tags"></i> Category</label>
+                        <label for="activitiesCategory" style="font-size:13px;font-weight:600;color:#555;margin-bottom:4px;"><i class="fa fa-tags"></i> <?php echo tms_t('label_category','Category'); ?></label>
                         <select name="category" id="activitiesCategory" class="form-control">
-                            <option value="">All Categories</option>
+                            <option value=""><?php echo tms_t('dest_all_categories','All Categories'); ?></option>
                             <?php foreach ($categories as $c): ?>
                             <option value="<?php echo htmlspecialchars($c, ENT_QUOTES, 'UTF-8'); ?>" <?php echo $category===$c?'selected':''; ?>><?php echo htmlspecialchars($c, ENT_QUOTES, 'UTF-8'); ?></option>
                             <?php endforeach; ?>
                         </select>
                     </div>
                     <div class="col-md-2" style="flex:0 0 170px;">
-                        <label for="activitiesSort" style="font-size:13px;font-weight:600;color:#555;margin-bottom:4px;"><i class="fa fa-sort"></i> Sort By</label>
+                        <label for="activitiesSort" style="font-size:13px;font-weight:600;color:#555;margin-bottom:4px;"><i class="fa fa-sort"></i> <?php echo tms_t('label_sort_by','Sort By'); ?></label>
                         <select name="sort" id="activitiesSort" class="form-control">
-                            <option value="default" <?php echo $sortBy==='default'?'selected':''; ?>>Newest First</option>
-                            <option value="price_asc" <?php echo $sortBy==='price_asc'?'selected':''; ?>>Price: Low → High</option>
-                            <option value="price_desc" <?php echo $sortBy==='price_desc'?'selected':''; ?>>Price: High → Low</option>
-                            <option value="rating" <?php echo $sortBy==='rating'?'selected':''; ?>>Top Rated</option>
+                            <option value="default" <?php echo $sortBy==='default'?'selected':''; ?>><?php echo tms_t('sort_newest','Newest First'); ?></option>
+                            <option value="price_asc" <?php echo $sortBy==='price_asc'?'selected':''; ?>><?php echo tms_t('sort_price_asc','Price: Low → High'); ?></option>
+                            <option value="price_desc" <?php echo $sortBy==='price_desc'?'selected':''; ?>><?php echo tms_t('sort_price_desc','Price: High → Low'); ?></option>
+                            <option value="rating" <?php echo $sortBy==='rating'?'selected':''; ?>><?php echo tms_t('sort_top_rated','Top Rated'); ?></option>
                         </select>
                     </div>
                     <div style="display:flex;gap:8px;">
-                        <button type="submit" class="btn-search"><i class="fa fa-search"></i> Search</button>
-                        <a href="activities.php" class="btn-reset">Reset</a>
+                        <button type="submit" class="btn-search"><i class="fa fa-search"></i> <?php echo tms_t('btn_search','Search'); ?></button>
+                        <a href="activities.php" class="btn-reset"><?php echo tms_t('btn_reset','Reset'); ?></a>
                     </div>
                 </div>
             </form>
         </div>
 
         <div class="results-info">
-            <strong><?php echo $totalRows; ?></strong> activit<?php echo $totalRows!==1?'ies':'y'; ?> found
-            &nbsp;·&nbsp; Page <?php echo $page; ?> of <?php echo max(1,$totalPages); ?>
+            <strong><?php echo $totalRows; ?></strong> <?php echo tms_t('label_activities_found','activities found'); ?>
+            &nbsp;·&nbsp; <?php echo tms_t('label_page','Page'); ?> <?php echo $page; ?> <?php echo tms_t('label_of_pagination','of'); ?> <?php echo max(1,$totalPages); ?>
         </div>
 
         <?php if (count($results) > 0): ?>
@@ -190,7 +194,7 @@ tms_seo_meta([
                      onerror="this.src='images/no-image-placeholder.jpg'" class="img-responsive" alt="<?php echo htmlspecialchars($a->ActivityName, ENT_QUOTES, 'UTF-8'); ?>">
             </div>
             <div class="col-md-6 room-midle">
-                <h4><?php echo htmlspecialchars($a->ActivityName, ENT_QUOTES, 'UTF-8'); ?> <span class="tms-sample-badge"><i class="fa fa-flask"></i> Sample</span></h4>
+                <h4><?php echo htmlspecialchars($a->ActivityName, ENT_QUOTES, 'UTF-8'); ?> <span class="tms-sample-badge"><i class="fa fa-flask"></i> <?php echo tms_t('badge_sample','Sample'); ?></span></h4>
                 <h6><i class="fa <?php echo $categoryIcons[$a->Category] ?? 'fa-star'; ?>" style="color:var(--secondary)"></i> <?php echo htmlspecialchars($a->Category ?? '', ENT_QUOTES, 'UTF-8'); ?> &nbsp;·&nbsp; <i class="fa fa-clock-o"></i> <?php echo rtrim(rtrim(number_format((float)$a->DurationHours,1),'0'),'.'); ?>h</h6>
                 <p><i class="fa fa-map-marker" style="color:#e74c3c"></i> <?php echo htmlspecialchars($a->City.', '.$a->Country, ENT_QUOTES, 'UTF-8'); ?></p>
                 <p><?php echo htmlspecialchars($a->Description ?? '', ENT_QUOTES, 'UTF-8'); ?></p>
@@ -200,7 +204,7 @@ tms_seo_meta([
             </div>
             <div class="col-md-3 room-right">
                 <h5><?php echo tms_currency((float)$a->PricePerPerson); ?><span style="font-size:11px;color:#999;font-weight:400;"> /person</span></h5>
-                <a href="activity-details.php?id=<?php echo (int)$a->ActivityId; ?>" class="view">View &amp; Book <i class="fa fa-arrow-right"></i></a>
+                <a href="activity-details.php?id=<?php echo (int)$a->ActivityId; ?>" class="view"><?php echo tms_t('btn_view_book','View &amp; Book'); ?> <i class="fa fa-arrow-right"></i></a>
             </div>
             <div class="clearfix"></div>
         </div>
@@ -221,8 +225,8 @@ tms_seo_meta([
         <?php else: ?>
         <div class="no-results">
             <i class="fa fa-map-signs"></i>
-            <h3>No activities found</h3>
-            <p>Try a different search or <a href="activities.php">view all activities</a>.</p>
+            <h3><?php echo tms_t('msg_no_activities_found','No activities found'); ?></h3>
+            <p><?php echo tms_t('msg_try_different_search_hotels','Try a different search or'); ?> <a href="activities.php"><?php echo tms_t('link_view_all_activities','view all activities'); ?></a>.</p>
         </div>
         <?php endif; ?>
     </div>

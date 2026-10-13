@@ -126,6 +126,27 @@ define('APP_ENV',     tms_env('APP_ENV', 'local'));
 define('APP_DEBUG',   (bool) tms_env('APP_DEBUG', true));
 define('APP_URL',     tms_env('APP_URL', 'http://localhost/tms'));
 
+// ─── Debug/error-display wiring (Round 115 security hardening) ────────────────
+// APP_DEBUG was previously DEFINED here but never actually CONSULTED anywhere
+// in the codebase (confirmed via a project-wide grep during the Round 115
+// audit) -- so setting it to false in a production .env silently did nothing.
+// This wires it to the one thing its own .env/.env.example comment already
+// documents: whether raw PHP errors/warnings get printed into the page (and
+// into JSON API responses, which breaks them). It only ever NARROWS exposure
+// -- APP_DEBUG=false forces error display off -- and when APP_DEBUG=true (as
+// this local environment's .env has it, correctly, for active development)
+// it deliberately leaves display_errors/display_startup_errors exactly as
+// php.ini already has them, so this change has zero effect on the current
+// local dev experience. Errors are still always logged server-side either
+// way (log_errors is forced on), and the fatal-error shutdown handler a few
+// lines below -- which already catches fatals and shows a friendly page --
+// is completely unaffected by this setting.
+if (!APP_DEBUG) {
+    ini_set('display_errors', '0');
+    ini_set('display_startup_errors', '0');
+    ini_set('log_errors', '1');
+}
+
 // ─── Security settings ────────────────────────────────────────────────────────
 define('PASSWORD_ALGO', PASSWORD_BCRYPT);
 define('PASSWORD_COST', 12);
@@ -875,6 +896,26 @@ function _tms_repair_schema_drift(PDO $dbh): void {
         $dbh->exec("CREATE INDEX idx_pkg_viewcount ON tbltourpackages(ViewCount)");
     } catch (Exception $e) { /* already exists — fine */ }
 
+    // "TMS V2" prompt -- AI Budget Autopilot: tracks the last time each
+    // booking was notified about approaching/exceeding its budget, so
+    // scripts/check_budget_overspend.php (a periodic script, same idiom as
+    // scripts/check_wallet_expiry.php -- Rule 73, no queue broker needed for
+    // this project's size) doesn't re-notify on every run. One row per
+    // booking, not per user, since the "budget" is the booking's own
+    // TotalCost (see backend/ai/ExpenseAnalyst::getBudgetComparison()).
+    try {
+        $dbh->exec("
+            CREATE TABLE IF NOT EXISTS tblbudget_alerts (
+                BookingId INT(11) NOT NULL,
+                LastNotifiedAt TIMESTAMP NULL DEFAULT NULL,
+                LastPercentUsed INT(11) DEFAULT NULL,
+                PRIMARY KEY (BookingId)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+        ");
+    } catch (Exception $e) {
+        error_log('[TMS] tblbudget_alerts migration failed: ' . $e->getMessage());
+    }
+
     // Now that the columns the seeder needs are guaranteed to exist, (re)try it.
     tms_seed_tourism_packages($dbh);
     tms_backfill_package_images($dbh);
@@ -1528,14 +1569,15 @@ function _tms_run_ai_migrations(PDO $dbh): void {
   PRIMARY KEY (`id`), INDEX idx_usage_email (`user_email`), INDEX idx_usage_time (`created_at`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4",
 
-"CREATE TABLE IF NOT EXISTS `tbl_ai_analytics` (
-  `id` int(11) NOT NULL AUTO_INCREMENT,
-  `metric_key` varchar(150) DEFAULT NULL,
-  `metric_value` longtext DEFAULT NULL,
-  `generated_at` timestamp NULL DEFAULT current_timestamp(),
-  `expires_at` datetime DEFAULT NULL,
-  PRIMARY KEY (`id`), UNIQUE KEY `uq_metric_key` (`metric_key`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4",
+// Round 115 database cleanup: tbl_ai_analytics (a metric_key/metric_value
+// cache table) removed from this self-healing list. Confirmed genuinely
+// dead first -- grepped the whole codebase for any INSERT/SELECT/UPDATE/
+// DELETE against it and found none; it had been self-documented as "its
+// own dead-schema cleanup candidate" since the Round 34 comment still on
+// tbl_ai_telemetry below. Leaving the CREATE TABLE IF NOT EXISTS here
+// would have silently recreated it forever, defeating the point of
+// dropping it -- see database/migrations/009_index_and_dead_table_cleanup.sql
+// for the actual DROP TABLE.
 
 "CREATE TABLE IF NOT EXISTS `tbl_ai_itineraries` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
@@ -3522,5 +3564,84 @@ function tms_get_fx_rates(?CacheService $tmsCache = null): array {
     if ($tmsCache) $tmsCache->set($cacheKey, $result, 12 * 3600);
     $memo = $result;
     return $result;
+}
+
+/**
+ * Round 115 continuation (master prompt item 37 -- Currency): captures
+ * the FX conversion actually shown to the customer at the moment a
+ * booking is created, when they had a non-BDT display currency selected
+ * (tms_active_currency()) -- source, rate, and timestamp, exactly as
+ * item 37 requires, persisted per booking rather than only ever used
+ * live for display (tms_currency() converts at whatever rate is live
+ * when a page is VIEWED, which drifts over time -- this is a fixed
+ * historical record of what the customer actually saw when they paid).
+ * Every price is still stored/charged in BDT (tblbooking.TotalCost,
+ * unchanged) -- this is purely an additional, informational record for
+ * their invoice and for support to reference later, never a second
+ * settlement currency. Returns all-null fields when the active currency
+ * is BDT (nothing to convert) or the FX feed is unavailable -- a
+ * third-party API being down must never block a booking.
+ */
+function tms_capture_booking_fx(float $bdtAmount): array {
+    $null = ['currency' => null, 'rate' => null, 'converted_amount' => null, 'source' => null, 'rate_timestamp' => null];
+    $code = tms_active_currency();
+    if ($code === 'BDT') { return $null; }
+
+    global $tmsCache;
+    $fx = tms_get_fx_rates($tmsCache instanceof CacheService ? $tmsCache : null);
+    if (!$fx['ok'] || empty($fx['rates'][$code])) { return $null; }
+
+    $rate = (float)$fx['rates'][$code];
+    return [
+        'currency'         => $code,
+        'rate'             => $rate,
+        'converted_amount' => round($bdtAmount * $rate, 2),
+        'source'           => 'open.er-api.com',
+        'rate_timestamp'   => $fx['updated'] ?? date('Y-m-d H:i:s'),
+    ];
+}
+
+/**
+ * tms_booking_fx_columns_exist() -- defensive guard (Rule 8): migration 013
+ * adds tblbooking.DisplayCurrency/DisplayAmount/FxRate/FxRateSource/
+ * FxRateTimestamp, but a deployment may not have run
+ * `php database/migrate.php` yet at the moment this code first goes live.
+ * Every INSERT/SELECT that touches those columns checks this first and
+ * degrades gracefully (booking still succeeds in BDT, ticket still
+ * displays, just without the FX snapshot) instead of throwing a fatal
+ * PDOException ("Unknown column") that would otherwise break checkout
+ * entirely until the migration runs. Result is cached per-request.
+ */
+function tms_booking_fx_columns_exist(PDO $dbh): bool {
+    static $exists = null;
+    if ($exists === null) {
+        try {
+            $dbh->query('SELECT DisplayCurrency, DisplayAmount, FxRate, FxRateSource, FxRateTimestamp FROM tblbooking LIMIT 0');
+            $exists = true;
+        } catch (Throwable $e) {
+            $exists = false;
+        }
+    }
+    return $exists;
+}
+
+/**
+ * tms_customer_2fa_columns_exist() -- same defensive guard (Rule 8) for
+ * migration 014 (tblusers.TwoFASecret/TwoFAEnabled). Until that migration
+ * runs, customer login silently behaves exactly as it did before this
+ * feature existed, instead of every login attempt throwing a fatal
+ * PDOException. Result is cached per-request.
+ */
+function tms_customer_2fa_columns_exist(PDO $dbh): bool {
+    static $exists = null;
+    if ($exists === null) {
+        try {
+            $dbh->query('SELECT TwoFASecret, TwoFAEnabled FROM tblusers LIMIT 0');
+            $exists = true;
+        } catch (Throwable $e) {
+            $exists = false;
+        }
+    }
+    return $exists;
 }
 

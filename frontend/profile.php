@@ -130,11 +130,15 @@ foreach ($bkQ->fetchAll(PDO::FETCH_OBJ) as $bk) {
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#0B2B3C">
 <link rel="apple-touch-icon" href="images/icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="TMS">
+<meta name="mobile-web-app-capable" content="yes">
 <title>TMS | My Profile</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
 <link href="css/bootstrap.min2.css" rel='stylesheet' type='text/css' />
-<link href="css/style.min.css" rel='stylesheet' type='text/css' />
+<link href="<?php echo tms_asset_ver('css/style.min.css'); ?>" rel='stylesheet' type='text/css' />
 <link href="css/font-awesome.min2.css" rel="stylesheet">
 <link href="<?php echo tms_asset_ver('css/modern-theme.css'); ?>" rel="stylesheet">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -220,6 +224,12 @@ html[data-theme="dark"] .quick-links a { color: var(--text-muted) !important; }
                 <div class="quick-links" style="margin-top:16px;">
                     <a href="tour-history.php"><i class="fa fa-history"></i> My Bookings</a>
                     <a href="change-password.php"><i class="fa fa-lock"></i> Change Password</a>
+                    <!-- FEATURE (Round 115 continuation, master prompt item 8 --
+                         Auth & Security Center): customer-facing 2FA's natural
+                         home is this existing account hub, next to Change
+                         Password, rather than a separate "Security Center"
+                         page duplicating what profile.php already is. -->
+                    <a href="two-factor-setup.php"><i class="fa fa-shield"></i> Two-Factor Authentication</a>
                     <a href="ai-recommend.php"><i class="fa fa-magic"></i> Get Recommendations</a>
                     <a href="package-list.php"><i class="fa fa-search"></i> Browse Packages</a>
                 </div>

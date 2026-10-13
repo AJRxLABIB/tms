@@ -1212,3 +1212,20 @@ function tmsToast(message, type) {
     setTimeout(remove, 5000);
 }
 </script>
+
+<!-- NEW (Round 118, master prompt item 32 -- Accessibility/WCAG 2.2 AA):
+     a project-wide audit found zero <main> landmark elements across all 61
+     full-page frontend files, despite a working skip-link (above, targeting
+     #tmsMainContent) whose destination wasn't actually a landmark a screen
+     reader could jump to via landmark navigation -- only a bare, empty div.
+     This <main> opens here (the true end of the shared header partial,
+     after all of its own nav/modal/toast markup) and is closed at the very
+     start of backend/footer.php, so it wraps exactly each individual
+     page's own body content -- never the shared nav, modals, or footer,
+     which correctly stay outside the main landmark. The 3 pages that
+     include this header but not the shared footer (login.php, register.php,
+     mark-notifications-read.php -- the last of these turned out not to
+     actually include this file at all) rely on the browser's standard
+     HTML5 auto-close of an unclosed <main> at </body>, which is valid,
+     unremarkable parsing behavior, not a defect. -->
+<main id="tmsPageMain">

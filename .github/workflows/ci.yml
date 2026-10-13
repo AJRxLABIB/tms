@@ -5,6 +5,14 @@ name: TMS CI
 # (no hosting credentials exist for this project yet, see HOSTING_GUIDE.md);
 # it only proves every PHP file still parses and the test suite still
 # passes before anything reaches a "develop"/"main" branch.
+#
+# Round 115 continuation (TMS V2 Phase 4, master prompt item 58 -- "zero
+# E2E tests" was a confirmed real gap): the last two steps below boot the
+# app with PHP's own built-in server and run tests/e2e/run_e2e.php against
+# it -- real HTTP requests over the real routes (registration, CSRF,
+# login, booking, cancellation), not the in-process calls tests/run.php
+# makes. See tests/e2e/run_e2e.php's own header comment for why this is
+# curl-based rather than a Node/Playwright browser suite.
 
 on:
   push:
@@ -37,7 +45,7 @@ jobs:
         uses: shivammathur/setup-php@v2
         with:
           php-version: '8.2'
-          extensions: pdo_mysql
+          extensions: pdo_mysql, curl
 
       - name: Lint every PHP file (php -l)
         run: |
@@ -64,3 +72,14 @@ jobs:
 
       - name: Run test suite
         run: php tests/run.php
+
+      - name: Start the app (PHP built-in server) for E2E testing
+        run: |
+          php -S 127.0.0.1:8000 &
+          for i in $(seq 1 20); do
+            curl -sf http://127.0.0.1:8000/index.php > /dev/null && break
+            sleep 0.5
+          done
+
+      - name: Run E2E test suite (real HTTP requests against the running app)
+        run: php tests/e2e/run_e2e.php

@@ -128,28 +128,71 @@ These are the pieces actually centralized in `css/modern-theme.css` today
 ## Known inconsistency (honest scope note, Rule 77)
 
 Not everything visual in this project draws from this file. A large
-number of pages — `frontend/tour-history.php` is a representative example,
-and it is far from the only one — define their own page-scoped classes in
-a local `<style>` block for things this system already has an answer for:
-custom card shadows/radii instead of `--shadow-sm`/`--radius-md`, one-off
-status badge colors (`.refund-badge.refund-requested { background:#fef3c7;
-color:#92400e; }`) instead of the `--warning`/`--warning-bg`/`--warning-text`
-triple, and bespoke modal/timeline styles that don't exist anywhere in
-`modern-theme.css` at all.
+number of pages define their own page-scoped classes in a local
+`<style>` block for things this system already has an answer for: custom
+card shadows/radii instead of `--shadow-sm`/`--radius-md`, one-off status
+badge colors instead of the `--success`/`--warning`/`--danger` (+
+`-bg`/`-text`) triples, and bespoke modal/timeline styles that don't exist
+anywhere in `modern-theme.css` at all.
 
-This document does not attempt to consolidate those page-local styles
-into `modern-theme.css` — doing that safely across dozens of live pages,
-each already visually correct and shipped, is a large, separate,
+`frontend/tour-history.php` was this document's original representative
+example, specifically its refund-status badge colors
+(`.refund-badge.refund-requested { background:#fef3c7; color:#92400e; }`
+and its `.refund-processed`/`.refund-rejected` siblings). Round 115
+(Phase I, master prompt item 34/35) consolidated exactly that one piece
+onto the existing tokens (`var(--warning-bg)`/`var(--warning-text)`, etc.)
+— chosen because two of the three backgrounds already matched the token
+values byte-for-byte, so the swap is a genuine like-for-like reuse rather
+than a value change. The rest of that same page's local `<style>` block —
+its own card shadow/radius (`12px` / `0 3px 16px rgba(0,0,0,.08)`, close
+to but not the same as `--radius-md`/`--shadow-md`), its cancel-button red
+(`#e74c3c`, used the same way on many other pages site-wide — a bigger,
+separate cleanup if ever done, not specific to this page), its
+booking-timeline styles, and its `.mod-badge` blue (no `--info`-style
+triple exists in the token set today to move it onto) — was deliberately
+left alone, both because DESIGN_SYSTEM.md's own guidance below says not
+to take that on as one big pass, and because none of those has an exact
+or near-exact existing token to move to without an actual visual change.
+
+**Second instance (Round 116 continuation):**
+`frontend/two-factor-setup.php`'s `.alert-success`/`.status-on` backgrounds
+(`#d1fae5`, the same barely-perceptible shift from `--success-bg` already
+accepted above) and `.alert-error`/`.status-off` backgrounds (`#fee2e2`/
+`#fef3c7`, byte-for-byte identical to `--danger-bg`/`--warning-bg`) are now
+`var()` references. The paired text colors (`#065f46`/`#991b1b`/`#92400e`)
+were checked individually against `--success-text`/`--danger-text`/
+`--warning-text` and are real, noticeably different shades in the same
+family — not close enough to consolidate without an actual visible
+change — so they were deliberately left as page-local values, unlike the
+backgrounds.
+
+**Important scope boundary this round found the hard way:** `admin/*.php`
+pages load `css/admin-v6.css`, not `css/modern-theme.css` — they do not
+have `--success-bg`/`--warning-bg`/`--danger-bg` (or any other token from
+this file) available at all. The identical-looking `.alert-error`/
+`.status-off` classes in `admin/two-factor-setup.php` were initially given
+the same token swap and it broke silently (`var()` resolving to nothing,
+badge background going transparent) — caught by live-testing before it
+shipped, then fully reverted. Any future consolidation pass must confirm
+a page actually loads this file before assuming its tokens are reachable;
+admin pages are a distinct token domain today, not an oversight to "just
+also fix."
+
+This document does not attempt to consolidate every page-local style into
+`modern-theme.css` in one pass — doing that safely across dozens of live
+pages, each already visually correct and shipped, is a large, separate,
 CSS-behavior-risking project of its own (Rule 1/2/73: no rewrites, never
 casually break something that already works, don't take on more than one
 round can actually verify). What this document does is give the next
 person touching any of those pages a concrete reference for "this already
 exists centrally, reuse it" instead of continuing to invent one-off hex
 values and radii per page. Consolidating an existing page onto these
-tokens, one page at a time, the same way `BookingRepository` was adopted by
-one call site rather than rewritten everywhere at once (see
-`backend/repositories/BookingRepository.php`), is the natural next step
-whenever one of those pages is touched for another reason anyway.
+tokens, one page (or even one component) at a time, the same way
+`BookingRepository` was adopted by one call site rather than rewritten
+everywhere at once (see `backend/repositories/BookingRepository.php`), is
+the natural next step whenever one of those pages is touched for another
+reason anyway — tour-history.php's refund badges above are the first
+concrete instance of that happening.
 
 ## Where it's loaded
 

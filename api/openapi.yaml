@@ -126,11 +126,11 @@ paths:
         '404': { description: Package not found, or unknown action }
         '429': { $ref: '#/components/responses/RateLimited' }
     post:
-      summary: Public write actions (check_email, login) and auth-required actions (logout, book, cancel_booking)
+      summary: Public write actions (check_email, login, refresh) and auth-required actions (logout, book, cancel_booking, revoke_session, revoke_all_sessions)
       parameters:
         - name: action
           in: query
-          schema: { type: string, enum: [check_email, login, logout, book, cancel_booking] }
+          schema: { type: string, enum: [check_email, login, refresh, logout, book, cancel_booking, revoke_session, revoke_all_sessions] }
       security:
         - bearerAuth: []
         - {}
@@ -145,6 +145,10 @@ paths:
                 email: { type: string, description: "login" }
                 password: { type: string, description: "login" }
                 device: { type: string, description: "login, optional device label" }
+                scope: { type: string, description: "login, optional -- comma/space-separated: profile:read, bookings:read, bookings:write. Omit for full access." }
+                refresh_token: { type: string, description: "refresh -- the refresh token issued by login or a previous refresh" }
+                session_id: { type: integer, description: "revoke_session -- the id from GET /sessions" }
+                keep_current: { type: boolean, description: "revoke_all_sessions, optional -- keep the session making this request active" }
                 package_id: { type: integer, description: "book" }
                 from_date: { type: string, format: date, description: "book, YYYY-MM-DD" }
                 to_date: { type: string, format: date, description: "book, YYYY-MM-DD" }
@@ -199,8 +203,70 @@ paths:
                         items: { $ref: '#/components/schemas/Booking' }
         '401': { $ref: '#/components/responses/Unauthorized' }
 
-  # NOTE: /me and /my_bookings above are documented as their own paths for
-  # readability; on the wire they are still ?action=me / ?action=my_bookings
-  # against the same "/" entry point as everything else — this file does
-  # not do real path-based routing (see api/v1/index.php's own comment for
-  # why that's a deliberate, documented choice, not an oversight).
+  /sessions:
+    get:
+      summary: List the current user's active API sessions/devices (Round 115 continuation)
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SuccessEnvelope' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+  /trip_readiness:
+    get:
+      summary: >
+        Trip Readiness Score for one of the caller's own bookings ("TMS V2"
+        prompt Phase 29 -- see TMS_V2_PHASE1_AUDIT.md Section E). Requires
+        the bookings:read scope.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: booking_id
+          in: query
+          required: true
+          schema: { type: integer }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SuccessEnvelope' }
+        '400': { description: booking_id missing }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { description: Token scope does not permit this action }
+        '404': { description: Booking not found (or not owned by the caller) }
+
+  /budget_status:
+    get:
+      summary: >
+        Real budget-vs-spend comparison (ExpenseAnalyst::getBudgetComparison)
+        plus the last AI Budget Autopilot alert, if any, for one of the
+        caller's own bookings ("TMS V2" prompt Phase 29). Requires the
+        bookings:read scope.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: booking_id
+          in: query
+          required: true
+          schema: { type: integer }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SuccessEnvelope' }
+        '400': { description: booking_id missing }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { description: Token scope does not permit this action }
+        '404': { description: Booking not found (or not owned by the caller) }
+
+  # NOTE: /me, /my_bookings, /sessions, /trip_readiness, and /budget_status above are documented as their
+  # own paths for readability; on the wire they are still ?action=me /
+  # ?action=my_bookings / ?action=sessions against the same "/" entry
+  # point as everything else, and refresh/revoke_session/
+  # revoke_all_sessions live in "/"'s own POST enum for the same reason
+  # logout/book/cancel_booking do — this file does not do real
+  # path-based routing (see api/v1/index.php's own comment for why
+  # that's a deliberate, documented choice, not an oversight).

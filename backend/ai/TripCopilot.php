@@ -407,7 +407,7 @@ SYSTEM;
             $suggestions = array_slice($suggestions, 0, 3);
 
             return [
-                'reply'       => $data['reply'],
+                'reply'       => $this->stripDuplicatedEnvelope($data['reply']),
                 'suggestions' => $suggestions,
                 'action'      => 'none', // reserved for future use; not consumed by the UI today (see api handler / ai-copilot.php)
             ];
@@ -418,10 +418,32 @@ SYSTEM;
         // so a non-compliant response still degrades to a usable reply with
         // best-effort keyword-based suggestions rather than breaking the chat.
         return [
-            'reply'       => $reply,
+            'reply'       => $this->stripDuplicatedEnvelope($reply),
             'suggestions' => $this->extractSuggestions($reply),
             'action'      => 'none',
         ];
+    }
+
+    /**
+     * FIX (Round 117 -- found via live testing of the sibling SiteAssistant
+     * chat widget, same underlying model/prompt pattern): the model can emit
+     * a syntactically valid {"reply":...,"suggestions":...} envelope whose
+     * own "reply" string value has a second, escaped envelope appended
+     * inside it -- duplicating itself inside its own field rather than
+     * breaking JSON validity, so parseJson() has no way to flag it. Kept
+     * identical to SiteAssistant::stripDuplicatedEnvelope() -- see that
+     * method's docblock for the full explanation. Applied here defensively
+     * even though it wasn't directly reproduced on this class in this round,
+     * since both classes share the exact same prompt/parse pattern.
+     */
+    private function stripDuplicatedEnvelope(string $text): string {
+        foreach (['{"reply"', '{\"reply\"'] as $marker) {
+            $pos = strpos($text, $marker);
+            if ($pos !== false && $pos > 0) {
+                return rtrim(substr($text, 0, $pos));
+            }
+        }
+        return $text;
     }
 
     private function extractSuggestions(string $reply): array {

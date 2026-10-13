@@ -167,11 +167,21 @@ if (isset($_POST['submit2']) || isset($_POST['addcart'])) {
 
                 $total = max(0, $subtotal - $discountAmt) + $addonTotal;
                 $verificationCode = strtoupper(bin2hex(random_bytes(5)));
+                // FEATURE (Round 115 continuation, master prompt item 37 --
+                // Currency): records what the customer was actually shown
+                // (source/rate/timestamp) if they had a non-BDT display
+                // currency selected -- see tms_capture_booking_fx()'s own
+                // docblock. TotalCost itself is untouched, still BDT.
+                $fx = tms_capture_booking_fx((float)$total);
+                // Defensive (Rule 8): migration 013 may not have run yet on
+                // this deployment -- never let a pending migration break
+                // this booking path.
+                $hasBookingFx = tms_booking_fx_columns_exist($dbh);
 
-                $sql = "INSERT INTO tblbooking(PackageId,UserEmail,FromDate,ToDate,Comment,status,NoOfPersons,MobileNumber,TotalCost,CouponCode,DiscountApplied,VerificationCode,BookingDate)
-                        VALUES(:pid,:email,:from,:to,:comment,0,:persons,:mobile,:total,:coupon,:discount,:vcode,:bdate)";
+                $sql = "INSERT INTO tblbooking(PackageId,UserEmail,FromDate,ToDate,Comment,status,NoOfPersons,MobileNumber,TotalCost,CouponCode,DiscountApplied,VerificationCode,BookingDate" . ($hasBookingFx ? ",DisplayCurrency,DisplayAmount,FxRate,FxRateSource,FxRateTimestamp" : "") . ")
+                        VALUES(:pid,:email,:from,:to,:comment,0,:persons,:mobile,:total,:coupon,:discount,:vcode,:bdate" . ($hasBookingFx ? ",:dcur,:damt,:frate,:fsrc,:fts" : "") . ")";
                 $q = $dbh->prepare($sql);
-                $q->execute([
+                $q->execute(array_merge([
                     ':pid'     => $pid,
                     ':email'   => $email,
                     ':from'    => $from->format('Y-m-d'),
@@ -186,7 +196,13 @@ if (isset($_POST['submit2']) || isset($_POST['addcart'])) {
                     // BUG FIX: see checkout.php's identical comment —
                     // BookingDate was never populated by any booking path.
                     ':bdate'   => $from->format('Y-m-d'),
-                ]);
+                ], $hasBookingFx ? [
+                    ':dcur'    => $fx['currency'],
+                    ':damt'    => $fx['converted_amount'],
+                    ':frate'   => $fx['rate'],
+                    ':fsrc'    => $fx['source'],
+                    ':fts'     => $fx['rate_timestamp'],
+                ] : []));
                 $newBkId = $dbh->lastInsertId();
                 if ($newBkId) {
                     // Snapshot each selected add-on's Name/Price at booking time
@@ -378,6 +394,10 @@ if (!empty($pkg) && $totalReviewCount >= 3) {
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#0B2B3C">
 <link rel="apple-touch-icon" href="images/icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="TMS">
+<meta name="mobile-web-app-capable" content="yes">
 <title>TMS | <?php echo $pkg ? htmlspecialchars($pkgNameT ?? $pkg->PackageName,ENT_QUOTES,'UTF-8') : 'Package Details'; ?></title>
 <?php
 // NEW (Round 20, spec item 53 — SEO): only emitted when a real package was
@@ -438,7 +458,7 @@ if ($pkg) {
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
 <link href="css/bootstrap.min2.css" rel='stylesheet'/>
-<link href="css/style.min.css" rel='stylesheet'/>
+<link href="<?php echo tms_asset_ver('css/style.min.css'); ?>" rel='stylesheet'/>
 <link href="css/font-awesome.min2.css" rel="stylesheet">
 <link href="<?php echo tms_asset_ver('css/modern-theme.css'); ?>" rel="stylesheet">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
@@ -1555,12 +1575,27 @@ function checkCoupon() {
                     priceEl.textContent = res.formatted_unit;
                     priceEl.dataset.bdt = res.unit_price;
                     if (badgeEl) {
+                        // TMS V2 Phase 8 (pricing transparency): the badge
+                        // itself still just shows the collapsed label,
+                        // exactly as before -- this only adds a `title`
+                        // tooltip with the itemized breakdown when the
+                        // server sent one, so hovering explains WHY the
+                        // price moved. Additive only: nothing here changes
+                        // for a response with no 'breakdown' key (older
+                        // cached JS, or a non-adjusted price).
                         badgeEl.innerHTML = res.is_adjusted
                             ? '<i class="fa fa-bolt"></i> ' + res.label
                             : '';
                         badgeEl.style.cssText = res.is_adjusted
-                            ? 'margin-top:6px;font-size:11.5px;font-weight:600;color:#f97316;background:#fff7ed;display:inline-block;padding:3px 10px;border-radius:20px;'
+                            ? 'margin-top:6px;font-size:11.5px;font-weight:600;color:#f97316;background:#fff7ed;display:inline-block;padding:3px 10px;border-radius:20px;cursor:help;'
                             : 'margin-top:6px;font-size:11.5px;color:#94a3b8;';
+                        if (res.is_adjusted && Array.isArray(res.breakdown) && res.breakdown.length) {
+                            badgeEl.title = res.breakdown.map(function (b) {
+                                return b.label + ': +' + b.pct + '%';
+                            }).join('\n');
+                        } else {
+                            badgeEl.removeAttribute('title');
+                        }
                     }
                 } catch (e) { /* leave last known price on screen */ }
             };

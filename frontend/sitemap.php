@@ -42,6 +42,7 @@ $staticPages = [
     ['blog.php', 'daily', 0.7],
     ['budget-planner.php', 'weekly', 0.5],
     ['transport-compare.php', 'weekly', 0.5],
+    ['bd-guide.php', 'monthly', 0.6],
     ['custom-trip.php', 'weekly', 0.5],
     ['ai-recommend.php', 'weekly', 0.6],
     ['ai-planner.php', 'weekly', 0.6],

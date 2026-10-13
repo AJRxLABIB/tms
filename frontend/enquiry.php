@@ -14,6 +14,14 @@ include('backend/config.php');
 $error = '';
 $msg   = '';
 
+// Round 115 continuation (master prompt item 10 -- Booking Engine "support"
+// sub-requirement): tour-history.php/my-trip.php link here with a
+// pre-filled subject (e.g. "Booking #BK123") so a support enquiry about a
+// specific booking doesn't start from a blank form. GET-only, never trusted
+// as-is for the DB write -- the POST handler above still re-validates
+// $_POST['subject'] independently, this only seeds the visible field value.
+$prefillSubject = tms_clean($_GET['subject'] ?? '');
+
 if (isset($_POST['submit1'])) {
     tms_csrf_validate();
 
@@ -58,11 +66,15 @@ if (isset($_POST['submit1'])) {
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#0B2B3C">
 <link rel="apple-touch-icon" href="images/icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="TMS">
+<meta name="mobile-web-app-capable" content="yes">
 <title>TMS | Enquiry</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
 <link href="css/bootstrap.min2.css" rel='stylesheet' type='text/css' />
-<link href="css/style.min.css" rel='stylesheet' type='text/css' />
+<link href="<?php echo tms_asset_ver('css/style.min.css'); ?>" rel='stylesheet' type='text/css' />
 <link href="css/font-awesome.min2.css" rel="stylesheet">
 <link href="<?php echo tms_asset_ver('css/modern-theme.css'); ?>" rel="stylesheet">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -133,7 +145,7 @@ html[data-theme="dark"] .char-counter { color: var(--text-light) !important; }
                     <label for="enquirySubjectField">Subject *</label>
                     <input type="text" name="subject" id="enquirySubjectField" class="form-control" placeholder="Brief subject"
                            required maxlength="200"
-                           value="<?php echo htmlspecialchars($_POST['subject'] ?? '', ENT_QUOTES,'UTF-8'); ?>">
+                           value="<?php echo htmlspecialchars($_POST['subject'] ?? $prefillSubject, ENT_QUOTES,'UTF-8'); ?>">
                 </div>
                 <div class="form-group">
                     <label for="descField">

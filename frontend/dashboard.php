@@ -23,7 +23,7 @@ $email = $_SESSION['login'];
 $user = $dbh->prepare("SELECT * FROM tblusers WHERE EmailId=:e LIMIT 1");
 $user->execute([':e' => $email]);
 $user = $user->fetch(PDO::FETCH_OBJ);
-$firstName = $user && $user->FullName ? trim(explode(' ', $user->FullName)[0]) : 'Traveler';
+$firstName = $user && $user->FullName ? trim(explode(' ', $user->FullName)[0]) : tms_t('dash_traveler_fallback_name', 'Traveler');
 $memberSince = $user && $user->RegDate ? date('F Y', strtotime($user->RegDate)) : null;
 
 // ─── Next trip: nearest upcoming confirmed booking ─────────────────────────
@@ -96,9 +96,9 @@ $recent->execute([':e' => $email]);
 $recent = $recent->fetchAll(PDO::FETCH_OBJ);
 
 $statusMeta = [
-    0 => ['label' => 'Pending',   'color' => '#d97706', 'bg' => '#fef3c7'],
-    1 => ['label' => 'Confirmed', 'color' => '#059669', 'bg' => '#d1fae5'],
-    2 => ['label' => 'Cancelled', 'color' => '#dc2626', 'bg' => '#fee2e2'],
+    0 => ['label' => tms_t('label_pending', 'Pending'),   'color' => '#d97706', 'bg' => '#fef3c7'],
+    1 => ['label' => tms_t('step_confirmed', 'Confirmed'), 'color' => '#059669', 'bg' => '#d1fae5'],
+    2 => ['label' => tms_t('label_cancelled', 'Cancelled'), 'color' => '#dc2626', 'bg' => '#fee2e2'],
 ];
 ?>
 <!DOCTYPE HTML><html lang="<?php echo htmlspecialchars(tms_active_language(), ENT_QUOTES, 'UTF-8'); ?>"><head>
@@ -107,8 +107,12 @@ $statusMeta = [
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#0B2B3C">
 <link rel="apple-touch-icon" href="images/icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="TMS">
+<meta name="mobile-web-app-capable" content="yes">
 <link href="css/bootstrap.min2.css" rel='stylesheet'/>
-<link href="css/style.min.css" rel='stylesheet'/>
+<link href="<?php echo tms_asset_ver('css/style.min.css'); ?>" rel='stylesheet'/>
 <link href="css/font-awesome.min2.css" rel="stylesheet">
 <link href="<?php echo tms_asset_ver('css/modern-theme.css'); ?>" rel="stylesheet">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -165,13 +169,13 @@ $statusMeta = [
 
 <div class="dash-hero">
   <div class="container">
-    <h1>Welcome back, <?php echo htmlspecialchars($firstName, ENT_QUOTES, 'UTF-8'); ?></h1>
-    <p><?php echo $memberSince ? 'Traveling with TMS since ' . htmlspecialchars($memberSince, ENT_QUOTES, 'UTF-8') : 'Your travel command center'; ?></p>
+    <h1><?php echo htmlspecialchars(tms_t('dash_welcome_back_prefix','Welcome back,'), ENT_QUOTES, 'UTF-8'); ?> <?php echo htmlspecialchars($firstName, ENT_QUOTES, 'UTF-8'); ?></h1>
+    <p><?php echo $memberSince ? htmlspecialchars(tms_t('dash_traveling_since_prefix','Traveling with TMS since'), ENT_QUOTES, 'UTF-8') . ' ' . htmlspecialchars($memberSince, ENT_QUOTES, 'UTF-8') : htmlspecialchars(tms_t('dash_command_center','Your travel command center'), ENT_QUOTES, 'UTF-8'); ?></p>
     <div class="dash-stats">
-      <div class="dash-stat"><div class="num"><?php echo $totalTrips; ?></div><div class="lbl">Trips taken</div></div>
-      <div class="dash-stat"><div class="num"><?php echo $loyaltyPoints; ?></div><div class="lbl">Loyalty points</div></div>
-      <div class="dash-stat"><div class="num"><?php echo $wishlistCount; ?></div><div class="lbl">Wishlisted</div></div>
-      <div class="dash-stat"><div class="num"><?php echo $documentCount; ?></div><div class="lbl">Wallet documents</div></div>
+      <div class="dash-stat"><div class="num"><?php echo $totalTrips; ?></div><div class="lbl"><?php echo htmlspecialchars(tms_t('dash_stat_trips_taken','Trips taken'), ENT_QUOTES, 'UTF-8'); ?></div></div>
+      <div class="dash-stat"><div class="num"><?php echo $loyaltyPoints; ?></div><div class="lbl"><?php echo htmlspecialchars(tms_t('dash_stat_loyalty_points','Loyalty points'), ENT_QUOTES, 'UTF-8'); ?></div></div>
+      <div class="dash-stat"><div class="num"><?php echo $wishlistCount; ?></div><div class="lbl"><?php echo htmlspecialchars(tms_t('dash_stat_wishlisted','Wishlisted'), ENT_QUOTES, 'UTF-8'); ?></div></div>
+      <div class="dash-stat"><div class="num"><?php echo $documentCount; ?></div><div class="lbl"><?php echo htmlspecialchars(tms_t('dash_stat_wallet_documents','Wallet documents'), ENT_QUOTES, 'UTF-8'); ?></div></div>
     </div>
   </div>
 </div>
@@ -182,26 +186,26 @@ $statusMeta = [
     <?php if ($nextTrip): ?>
     <div class="boarding-preview">
       <div class="content">
-        <div class="eyebrow">Your next trip</div>
+        <div class="eyebrow"><?php echo htmlspecialchars(tms_t('dash_your_next_trip','Your next trip'), ENT_QUOTES, 'UTF-8'); ?></div>
         <h3><?php echo htmlspecialchars($nextTrip->PackageName, ENT_QUOTES, 'UTF-8'); ?></h3>
         <div class="meta"><i class="fa fa-map-marker"></i> <?php echo htmlspecialchars($nextTrip->PackageLocation, ENT_QUOTES, 'UTF-8'); ?>
           &nbsp;·&nbsp; <i class="fa fa-calendar"></i> <?php echo htmlspecialchars($nextTrip->FromDate, ENT_QUOTES, 'UTF-8'); ?>
-          &nbsp;·&nbsp; <i class="fa fa-users"></i> <?php echo (int)$nextTrip->NoOfPersons; ?> traveler<?php echo (int)$nextTrip->NoOfPersons === 1 ? '' : 's'; ?></div>
+          &nbsp;·&nbsp; <i class="fa fa-users"></i> <?php echo (int)$nextTrip->NoOfPersons; ?> <?php echo htmlspecialchars((int)$nextTrip->NoOfPersons === 1 ? tms_t('label_traveler_word','traveler') : tms_t('label_travelers_word','travelers'), ENT_QUOTES, 'UTF-8'); ?></div>
       </div>
       <?php if ($daysToGo !== null): ?>
       <div class="countdown">
         <div class="n"><?php echo $daysToGo; ?></div>
-        <div class="l"><?php echo $daysToGo === 1 ? 'Day to go' : 'Days to go'; ?></div>
+        <div class="l"><?php echo htmlspecialchars($daysToGo === 1 ? tms_t('dash_day_to_go','Day to go') : tms_t('dash_days_to_go','Days to go'), ENT_QUOTES, 'UTF-8'); ?></div>
       </div>
       <?php endif; ?>
-      <div class="cta"><a href="ticket.php?bkid=<?php echo (int)$nextTrip->BookingId; ?>"><i class="fa fa-ticket"></i> View E-Ticket</a></div>
+      <div class="cta"><a href="ticket.php?bkid=<?php echo (int)$nextTrip->BookingId; ?>"><i class="fa fa-ticket"></i> <?php echo htmlspecialchars(tms_t('dash_view_eticket','View E-Ticket'), ENT_QUOTES, 'UTF-8'); ?></a></div>
     </div>
     <?php else: ?>
     <div class="no-trip">
       <i class="fa fa-compass"></i>
-      <h4 style="font-family:var(--font-display);color:var(--primary);margin:0 0 6px;">No upcoming trips yet</h4>
-      <p style="color:var(--text-muted);font-size:13.5px;margin:0;">Your next adventure is one search away.</p>
-      <a href="package-list.php"><i class="fa fa-suitcase"></i> Browse Packages</a>
+      <h4 style="font-family:var(--font-display);color:var(--primary);margin:0 0 6px;"><?php echo htmlspecialchars(tms_t('dash_no_upcoming_trips','No upcoming trips yet'), ENT_QUOTES, 'UTF-8'); ?></h4>
+      <p style="color:var(--text-muted);font-size:13.5px;margin:0;"><?php echo htmlspecialchars(tms_t('dash_next_adventure','Your next adventure is one search away.'), ENT_QUOTES, 'UTF-8'); ?></p>
+      <a href="package-list.php"><i class="fa fa-suitcase"></i> <?php echo htmlspecialchars(tms_t('btn_browse_packages','Browse Packages'), ENT_QUOTES, 'UTF-8'); ?></a>
     </div>
     <?php endif; ?>
 
@@ -211,44 +215,44 @@ $statusMeta = [
           <a href="tour-history.php" class="quick-tile" style="text-decoration:none;">
             <i class="fa fa-suitcase"></i>
             <div class="n"><?php echo $totalTrips + $pendingTrips; ?></div>
-            <div class="l">My Bookings<?php echo $pendingTrips ? " <span class=\"badge-alert\">$pendingTrips pending</span>" : ''; ?></div>
+            <div class="l"><?php echo htmlspecialchars(tms_t('heading_my_bookings','My Bookings'), ENT_QUOTES, 'UTF-8'); ?><?php echo $pendingTrips ? ' <span class="badge-alert">' . (int)$pendingTrips . ' ' . htmlspecialchars(tms_t('dash_pending_badge_suffix','pending'), ENT_QUOTES, 'UTF-8') . '</span>' : ''; ?></div>
           </a>
           <a href="loyalty.php" class="quick-tile" style="text-decoration:none;">
             <i class="fa fa-star"></i>
             <div class="n"><?php echo $loyaltyPoints; ?></div>
-            <div class="l">Loyalty Points</div>
+            <div class="l"><?php echo htmlspecialchars(tms_t('dash_tile_loyalty_points','Loyalty Points'), ENT_QUOTES, 'UTF-8'); ?></div>
           </a>
           <a href="wishlist.php" class="quick-tile" style="text-decoration:none;">
             <i class="fa fa-heart"></i>
             <div class="n"><?php echo $wishlistCount; ?></div>
-            <div class="l">Wishlist</div>
+            <div class="l"><?php echo htmlspecialchars(tms_t('nav_wishlist','Wishlist'), ENT_QUOTES, 'UTF-8'); ?></div>
           </a>
           <a href="wallet.php" class="quick-tile" style="text-decoration:none;">
             <i class="fa fa-briefcase"></i>
             <div class="n"><?php echo $documentCount; ?></div>
-            <div class="l">Travel Wallet</div>
+            <div class="l"><?php echo htmlspecialchars(tms_t('heading_travel_wallet','Travel Wallet'), ENT_QUOTES, 'UTF-8'); ?></div>
           </a>
           <a href="my-marketplace-bookings.php" class="quick-tile" style="text-decoration:none;">
             <i class="fa fa-hotel"></i>
             <div class="n"><?php echo $marketplaceBookings; ?></div>
-            <div class="l">Marketplace Bookings</div>
+            <div class="l"><?php echo htmlspecialchars(tms_t('dash_tile_marketplace_bookings','Marketplace Bookings'), ENT_QUOTES, 'UTF-8'); ?></div>
           </a>
           <a href="reviews.php" class="quick-tile" style="text-decoration:none;">
             <i class="fa fa-comment"></i>
             <div class="n"><?php echo $reviewCount; ?></div>
-            <div class="l">My Reviews</div>
+            <div class="l"><?php echo htmlspecialchars(tms_t('dash_tile_my_reviews','My Reviews'), ENT_QUOTES, 'UTF-8'); ?></div>
           </a>
           <a href="issuetickets.php" class="quick-tile" style="text-decoration:none;">
             <i class="fa fa-life-ring"></i>
             <div class="n"><?php echo $openTickets; ?></div>
-            <div class="l">Support<?php echo $openTickets ? ' <span class="badge-alert">open</span>' : ''; ?></div>
+            <div class="l"><?php echo htmlspecialchars(tms_t('link_support','Support'), ENT_QUOTES, 'UTF-8'); ?><?php echo $openTickets ? ' <span class="badge-alert">' . htmlspecialchars(tms_t('dash_open_badge','open'), ENT_QUOTES, 'UTF-8') . '</span>' : ''; ?></div>
           </a>
         </div>
 
         <div class="dash-card" style="margin-top:22px;">
-          <h4><i class="fa fa-history"></i> Recent Activity</h4>
+          <h4><i class="fa fa-history"></i> <?php echo htmlspecialchars(tms_t('dash_recent_activity','Recent Activity'), ENT_QUOTES, 'UTF-8'); ?></h4>
           <?php if (empty($recent)): ?>
-          <div style="color:var(--text-muted);font-size:13px;">No bookings yet — once you book a trip, it'll show up here.</div>
+          <div style="color:var(--text-muted);font-size:13px;"><?php echo htmlspecialchars(tms_t('dash_no_bookings_recent',"No bookings yet — once you book a trip, it'll show up here."), ENT_QUOTES, 'UTF-8'); ?></div>
           <?php else: foreach ($recent as $r): $sm = $statusMeta[(int)$r->status] ?? $statusMeta[0]; ?>
           <div class="recent-row">
             <div style="flex:1;">
@@ -263,12 +267,12 @@ $statusMeta = [
 
       <div class="col-md-4">
         <div class="dash-card">
-          <h4><i class="fa fa-bolt"></i> Quick Actions</h4>
+          <h4><i class="fa fa-bolt"></i> <?php echo htmlspecialchars(tms_t('dash_quick_actions','Quick Actions'), ENT_QUOTES, 'UTF-8'); ?></h4>
           <div style="display:flex;flex-direction:column;gap:10px;">
-            <a href="ai-planner.php" class="btn" style="background:var(--secondary);color:#fff;text-align:left;font-weight:600;font-size:13px;padding:11px 14px;border-radius:var(--radius-sm);"><i class="fa fa-magic"></i>&nbsp; Plan a trip with AI</a>
-            <a href="package-list.php" class="btn" style="background:var(--bg-dark);color:var(--text);text-align:left;font-weight:600;font-size:13px;padding:11px 14px;border-radius:var(--radius-sm);"><i class="fa fa-search"></i>&nbsp; Browse Packages</a>
-            <a href="profile.php" class="btn" style="background:var(--bg-dark);color:var(--text);text-align:left;font-weight:600;font-size:13px;padding:11px 14px;border-radius:var(--radius-sm);"><i class="fa fa-user"></i>&nbsp; Edit Profile</a>
-            <a href="issuetickets.php" class="btn" style="background:var(--bg-dark);color:var(--text);text-align:left;font-weight:600;font-size:13px;padding:11px 14px;border-radius:var(--radius-sm);"><i class="fa fa-life-ring"></i>&nbsp; Get Support</a>
+            <a href="ai-planner.php" class="btn" style="background:var(--secondary);color:#fff;text-align:left;font-weight:600;font-size:13px;padding:11px 14px;border-radius:var(--radius-sm);"><i class="fa fa-magic"></i>&nbsp; <?php echo htmlspecialchars(tms_t('dash_plan_trip_ai','Plan a trip with AI'), ENT_QUOTES, 'UTF-8'); ?></a>
+            <a href="package-list.php" class="btn" style="background:var(--bg-dark);color:var(--text);text-align:left;font-weight:600;font-size:13px;padding:11px 14px;border-radius:var(--radius-sm);"><i class="fa fa-search"></i>&nbsp; <?php echo htmlspecialchars(tms_t('btn_browse_packages','Browse Packages'), ENT_QUOTES, 'UTF-8'); ?></a>
+            <a href="profile.php" class="btn" style="background:var(--bg-dark);color:var(--text);text-align:left;font-weight:600;font-size:13px;padding:11px 14px;border-radius:var(--radius-sm);"><i class="fa fa-user"></i>&nbsp; <?php echo htmlspecialchars(tms_t('dash_edit_profile','Edit Profile'), ENT_QUOTES, 'UTF-8'); ?></a>
+            <a href="issuetickets.php" class="btn" style="background:var(--bg-dark);color:var(--text);text-align:left;font-weight:600;font-size:13px;padding:11px 14px;border-radius:var(--radius-sm);"><i class="fa fa-life-ring"></i>&nbsp; <?php echo htmlspecialchars(tms_t('dash_get_support','Get Support'), ENT_QUOTES, 'UTF-8'); ?></a>
           </div>
         </div>
       </div>

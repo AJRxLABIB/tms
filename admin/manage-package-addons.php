@@ -112,12 +112,12 @@ try {
   <h3 style="font-size:16px;font-weight:700;margin-bottom:14px;">Add New Add-on</h3>
   <form method="post" style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;">
   <?php tms_csrf_field(); ?>
-    <div><label style="font-size:12px;font-weight:500;color:#64748b;display:block;margin-bottom:4px;">Name</label>
-    <input type="text" name="name" placeholder="e.g. Airport Pickup" maxlength="150" style="padding:8px 12px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:13px;" required></div>
-    <div><label style="font-size:12px;font-weight:500;color:#64748b;display:block;margin-bottom:4px;">Description</label>
-    <input type="text" name="description" placeholder="Optional details" maxlength="500" style="padding:8px 12px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:13px;width:260px;"></div>
-    <div><label style="font-size:12px;font-weight:500;color:#64748b;display:block;margin-bottom:4px;">Price (৳)</label>
-    <input type="number" name="price" placeholder="500" min="0" style="padding:8px 12px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:13px;width:110px;" required></div>
+    <div><label for="addonNameField" style="font-size:12px;font-weight:500;color:#64748b;display:block;margin-bottom:4px;">Name</label>
+    <input type="text" id="addonNameField" name="name" placeholder="e.g. Airport Pickup" maxlength="150" style="padding:8px 12px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:13px;" required></div>
+    <div><label for="addonDescriptionField" style="font-size:12px;font-weight:500;color:#64748b;display:block;margin-bottom:4px;">Description</label>
+    <input type="text" id="addonDescriptionField" name="description" placeholder="Optional details" maxlength="500" style="padding:8px 12px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:13px;width:260px;"></div>
+    <div><label for="addonPriceField" style="font-size:12px;font-weight:500;color:#64748b;display:block;margin-bottom:4px;">Price (৳)</label>
+    <input type="number" id="addonPriceField" name="price" placeholder="500" min="0" style="padding:8px 12px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:13px;width:110px;" required></div>
     <button type="submit" name="add_addon" class="btn-v6 primary"><i class="fa fa-plus"></i> Add Add-on</button>
   </form>
 </div>

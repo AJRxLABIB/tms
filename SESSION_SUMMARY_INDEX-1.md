@@ -9115,3 +9115,832 @@ a UI treatment for the new `verified`/`source` flags on hotel/restaurant
 picks (the data exists on every recommendation now, but how to visually
 distinguish "confirmed real" from "AI suggestion" is a design call
 better made with the user's input than guessed at here).
+
+## Round 117 — Admin CRUD accessibility completion + a live user-reported chatbot bug + two more bugs found while verifying the fix
+
+Picked up the last 6 files of the admin-CRUD label-association accessibility
+sweep (task #53/#54): `add-blog.php`, `edit-blog.php`, `add-package.php`
+(16 labels, including a `role="group"`+`aria-labelledby` treatment for the
+Map Coordinates lat/lng pair, same pattern as `reviews.php`'s star-rating
+group from an earlier round), `edit-package.php` (17), `admin/index.php`
+(login + 2FA forms, verified live by logging out first, no password ever
+typed per the standing security constraint), and
+`manage-package-addons.php`. Live-verified via `input.labels.length` in
+the actual DOM, not markup inspection alone.
+
+**Then a real, live user-reported bug came in mid-round**, with screenshot
+evidence: switching the site language to Bangla left the AI chat widget's
+UI chrome and its actual Gemini-generated replies in English. Root-caused
+to two separate gaps: (1) the widget's static chrome (title, subtitle,
+placeholder, mic/voice button labels) was hardcoded English, never
+touched `tms_t()`; (2) `SiteAssistant::buildSystemPrompt()` never told
+Gemini which language to answer in at all. Fixed both — 7 new i18n keys
+added to `backend/i18n.php` across all 8 languages, and a
+`$language` parameter threaded through
+`SiteAssistant::reply()`/`buildSystemPrompt()`/`api/ai.php`'s
+`handleChatbot()` so the model is explicitly told the visitor's
+site-selected language (while still matching a visitor who types in a
+*different* language than the site default). The user then sent a
+follow-up screenshot: the initial greeting message and the 4 quick-reply
+chips were still English after this first fix. Real, incomplete-fix
+feedback, not a new bug — those strings live in `chatbot.php`'s own JS,
+generated client-side, not passed through `tms_t()` at all. Fixed via
+`tms_translate_batch()` (the existing AI-translate-and-cache mechanism
+already used by `package-list.php`/`page.php`) building a
+`TMS_CHAT_I18N` lookup table, with the underlying canonical English
+string still used for routing/matching/click-tracking under a translated
+display layer.
+
+**Two more real bugs found during this round's own live testing (not
+user-reported):**
+
+1. **Gemini occasionally duplicated its own JSON envelope** into the
+   visible chat reply text — reproduced reliably with "what documents do
+   I need for a visa?". Root cause was the model itself, not the parser
+   (`AIClient::parseJson()` already does a strict whole-string decode).
+   Fixed with a new `stripDuplicatedEnvelope()` defensive truncation in
+   `SiteAssistant.php`, applied proactively to `TripCopilot.php` too since
+   it shares the identical `parseStructuredReply()` pattern.
+
+2. **The floating chat widget was silently dead on `ai-copilot.php`.**
+   Found while live-verifying fix #1 there with a session-simulated real
+   customer (real confirmed booking, no password typed). That page
+   declares its own global `chatInput`/`chatMessages` ids and
+   `sendMessage()`/`toggleListening()`/`showTyping()`/`hideTyping()`
+   functions — identical to the widget's — and since the page's own
+   script loads after the widget's (via `footer.php`), it silently
+   overwrote the widget's definitions. Confirmed live: typing into the
+   widget's own input and clicking send did nothing. Fixed by
+   IIFE-wrapping `chatbot.php`'s entire script and renaming its two
+   colliding ids (`tmsWidgetChatInput`/`tmsWidgetChatMessages`), exposing
+   only the 3 functions inline HTML actually needs on a namespaced
+   `window.TmsChatWidget` object. Grepped the whole project first to
+   confirm `ai-copilot.php` was the only other file affected.
+
+**Files touched:** the 6 admin CRUD files above; `backend/i18n.php`;
+`backend/chatbot.php`; `backend/ai/SiteAssistant.php`;
+`backend/ai/TripCopilot.php` (defensive parity fix only); `api/ai.php`.
+Full per-file/per-line detail is in `CHANGELOG.md`'s Round 117 entries
+rather than repeated here.
+
+**Implementation status:** complete for all of the above.
+**Testing status: live-verified**, including the specific reproduction
+steps for both self-discovered bugs and the exact screenshots the user
+sent for the language bug.
+
+## Round 118 — Travel Modes (item 67) verified and reconciled; asset cache-busting + SEO meta gaps closed
+
+Continued the open backlog per the user's "ok. now continue to improve."
+Two pieces of work, both investigate-then-fix rather than build-from-
+nothing:
+
+**Travel Modes (item 67):** delegated a read-only subagent to assess
+whether this feature (referenced in code, depth never verified) was real
+or cosmetic, then spot-checked its specific file:line claims directly
+before acting on them (Rule 4 — never trust a subagent's report blind).
+Confirmed: `TravelRecommender::applyTravelModeAdjustment()`
+(`backend/ai/TravelRecommender.php:453-491`) genuinely re-weights scores
+using real columns (`PackageDuration`/`HotelRating`/`MealPlan`) for
+family/couple/business/solo, and `accessible` deliberately discloses a
+warning instead of fabricating a score (Rule 3) since no per-package
+accessibility column exists. `tbl_user_profile.travel_mode` is a real,
+end-to-end-wired preference. Confirmed real, pre-existing gap: the admin
+Package Type dropdown has no Solo/Business/Accessible option at all, so
+those modes can only re-weight existing inventory, never filter to
+audience-tagged packages. Decision (Rule 73): a working feature with
+known, honest, non-fabricated limits doesn't need new code right now —
+building speculative catalog-tagging for audience types with zero actual
+inventory would be exactly the overengineering Rule 73 warns against. No
+code changes; `MASTER_PROMPT_STATUS.md` item 67 updated to reflect the
+verified state.
+
+**Asset cache-busting (item 49) + SEO meta (item 53):** grepped the whole
+project rather than trusting task #47's own framing. Cache-busting:
+`tms_asset_ver()` already covered `modern-theme.css` (95 files) but never
+`css/style.min.css` (49 files — the site's primary stylesheet),
+`css/explore.css`, `js/ai-feedback.js`, or `js/explore.js`. Fixed all 56
+references across 50 files. SEO: `tms_seo_meta()` was already on 8 pages
+from earlier rounds (destinations/hotels/activities/blog/package-details
+— the task's own framing was stale here), but the real, higher-value gap
+was three genuinely-public pages with *zero* SEO meta: `backend/
+landing.php` (the actual public homepage — `frontend/index.php` only
+ever renders for signed-in users and is never what a crawler sees),
+`frontend/package-list.php` (explicitly public/sitemap-listed per its own
+code comment), and `frontend/bd-guide.php`. Wired all three following the
+existing convention. Caught and fixed a real PHP parse error (a
+string-concatenation mistake in the `package-list.php` edit) via live-
+loading the page before calling the work done — the raw parse error was
+visible on-screen, fixed with proper string concatenation, re-verified.
+
+**Files touched:** 50 files for cache-busting; `backend/landing.php`,
+`frontend/package-list.php`, `frontend/bd-guide.php` for SEO;
+`MASTER_PROMPT_STATUS.md` items 49/53/67. Full detail in `CHANGELOG.md`'s
+Round 118 entries.
+
+**Implementation status:** complete for the scoped gaps above — not a
+claim that every one of the ~60 remaining unwired pages now has SEO meta
+(most are account/checkout/utility pages that shouldn't be indexed
+anyway; deliberately left alone per Rule 73).
+**Testing status: live-verified**, including a real bug (the parse error)
+caught before being reported as done, and a live filtered-search case
+(`package-list.php?search=beach`) confirming the title/description/
+canonical all behave correctly with real, non-fabricated data (a live
+package count, not a hardcoded number).
+
+### Round 118 continued: six never-audited master-prompt items investigated; a real accessibility gap fixed
+
+With the known backlog cleared, picked the 6 master-prompt items that had
+never been individually audited anywhere in this engagement — absent
+entirely from `MASTER_PROMPT_STATUS.md`: Destination System (6), Package
+System (7), Flight System (15), Accessibility beyond form labels (32),
+Pre/During/Post-Trip UX (68), Post-Trip Intelligence (69). Delegated one
+read-only subagent per item in parallel, then spot-checked the highest-
+stakes claims directly before acting on them (Rule 4) — confirmed
+`FlightTracker.php`'s real OpenSky API call, confirmed zero `<main>`
+landmarks and zero `aria-invalid` attributes project-wide via direct
+grep, and confirmed `tblbudgetplans` genuinely has no `BookingId` column.
+
+**Findings (full detail in `MASTER_PROMPT_STATUS.md`):** Destination
+System has no real `destinations` table at all — it's 3 disconnected
+systems, with most "practical"/financial data for arbitrary destinations
+LLM-generated and not labeled as such. Package System's relational core
+is solid (add-ons especially) but Booking Policy and Age Policy don't
+exist at all, and `PackageMeta` is an unqueryable JSON blob holding
+Activities — a direct violation of the spec's own stated anti-pattern.
+Flight System is genuinely honest: a real live-position API call with
+explicit on-page disclosure of what it can't show, no fabrication found.
+Accessibility: keyboard nav/focus/reduced-motion/chat-widget screen-reader
+support are all solid; zero `<main>` landmarks and zero `aria-invalid`
+were real, confirmed gaps; color contrast has never been audited at all.
+Pre/During/Post-Trip UX: 20 of 21 spec sub-items are real and reachable
+from `my-trip.php`'s phase hub — the one gap (visa) is the already-known
+deliberate exclusion. Post-Trip Intelligence: the spec's own headline
+"planned vs actual, saved X" example doesn't exist anywhere; a thinner,
+different running comparison exists elsewhere instead.
+
+**Fixed:** added a real `<main>` landmark, without touching all 61
+individual frontend pages — opened `<main id="tmsPageMain">` at the true
+end of the shared `backend/header.php` partial and closed it at the very
+start of `backend/footer.php`, wrapping exactly each page's own content
+without touching the shared nav/modals/footer. Live-verified on 4 diverse
+pages: exactly one `<main>` per page, correct nesting, zero regression.
+
+**Deliberately not built, flagged to the user instead:** everything else
+these audits surfaced is either a real product-scope question (a real
+destinations table? Booking/Age Policy fields? labeling AI-generated
+destination data as such?) or a larger engineering lift (per-field
+`aria-invalid` wiring across every form, a real contrast pass, linking
+budget plans to bookings) — deferred to the user's own prioritization
+rather than built blind under an open-ended continuation instruction.
+
+**Files touched:** `backend/header.php`, `backend/footer.php`;
+`MASTER_PROMPT_STATUS.md` (6 new entries). Full detail in `CHANGELOG.md`.
+
+**Implementation status:** the `<main>` fix is complete; everything else
+this round is investigation/documentation.
+**Testing status: live-verified** for the `<main>` fix; every other
+finding verified by direct file:line inspection (Rule 4).
+
+### Round 118 continued: explore-view.php honesty disclosure, a real color-contrast audit, destinations.php fully wired for i18n
+
+Three more pieces of forward progress, each picked because it was a
+consistency/compliance fix rather than a new product decision (the
+genuine open decisions from the earlier audits stayed logged as tasks,
+not built blind).
+
+**Explore Mode honesty fix:** the Destination System audit found
+`explore-view.php`'s AI-generated Overview tab (history, best-time,
+local culture, estimated costs) had no disclosure that it's AI-generated
+rather than sourced — unlike `bd-guide.php`'s own established disclosure
+convention for its 12 curated Bangladesh guides. Added the same
+`.tms-sample-banner` disclosure above the Overview tab. Live-verified:
+banner shows immediately during load and persists correctly alongside
+the real rendered AI content afterward.
+
+**Color-contrast audit, actually run:** an earlier round had honestly
+flagged this as never attempted. Computed real WCAG contrast ratios
+(the standard relative-luminance formula) for every color-token pair in
+`css/modern-theme.css`'s `:root` and `backend/header.php`'s dark-mode
+overrides. Dark mode: 10/10 pairs pass. Light mode: 2 real failures —
+`--secondary` (the teal brand accent), used pervasively as link-text and
+white-on-teal button text across dozens of files, measures 2.94-3.09:1
+(fails AA's 4.5:1); `--text-light`, used for dates/citations/N-A cells
+in ~6 files, measures 2.26-2.38:1 (fails even AA-large). Checked for a
+quick fix: a darkened `--text-light` that clears 4.5:1 turns out nearly
+identical to the existing `--text-muted`, collapsing the design's 3rd
+text tier — a real design tradeoff, not a free fix, so logged as a
+decision rather than changed unilaterally.
+
+**destinations.php fully wired for i18n:** this main-nav, high-traffic
+public page was only nominally on the "14/74 files wired" list — just
+one of its many strings actually called `tms_t()`. Added 19 new
+dictionary keys × 8 languages (152 translated strings) covering the
+hero text, all filter labels/dropdowns, section headings, the live
+results-count line, pagination, and the empty-state message, reusing 3
+existing keys where they already fit. Live-verified in 3 languages:
+Bengali (full page incl. the live "413 destinations found · Page 1 of
+35" count), English (including a filtered `?search=beach&page=2` case),
+and Arabic (RTL layout unaffected).
+
+**Files touched:** `frontend/explore-view.php`; `backend/i18n.php`,
+`frontend/destinations.php`; `MASTER_PROMPT_STATUS.md` (items 6, 32, 36
+updated with these findings). Full detail in `CHANGELOG.md`.
+
+**Testing status: live-verified** for both shipped fixes (disclosure
+banner, destinations.php i18n) across multiple languages/cases; the
+contrast audit is a computed finding, not a live-clicked change, since
+nothing was altered.
+
+### Round 118 continued: package-list.php fully wired for i18n
+
+**package-list.php fully wired for i18n:** continuing the same item-36
+backlog as destinations.php above, wired the single highest-traffic
+public page in the catalog (413 real packages, 69 pages) which had only
+2 `tms_t()` calls despite two earlier passes this round for
+cache-busting and SEO. Added 28 new dictionary keys × 8 languages (224
+translated strings) covering the page heading, the "All Packages" chip,
+the natural-language search box, the Search/Type/Duration/Sort-By filter
+labels and every option value, the List/Map toggle, all 4 pagination
+tooltip titles, and the empty-state message. Reused 4 existing keys
+(`btn_search`, `btn_reset`, and the `label_page`/`label_of_pagination`
+pair just added for destinations.php) rather than duplicating.
+Deliberately left untranslated, same judgment as destinations.php: the
+NL-search box's JS status messages, the dynamic (real-data) filter
+chips, and the multi-clause filtered-results sentence — too many
+conditional segments to machine-translate safely without a real
+templating system. `frontend/package-list.php` now has 35 `tms_t()`
+call sites, up from 12.
+
+Live-verified in 3 languages plus a filtered case: Bengali (full page
+against the real 413-package catalog, plus a genuine zero-result search
+showing the translated empty state and "Page 1 of 1"), Arabic (page 3 —
+all 4 pagination tooltips, sort options, view-toggle buttons), and
+English (`?type=Beach&sort=price_asc` — filter/sort selections persist
+correctly, fallback strings unchanged).
+
+**Files touched:** `backend/i18n.php`, `frontend/package-list.php`;
+`MASTER_PROMPT_STATUS.md` (item 36 counts updated). Full detail in
+`CHANGELOG.md`.
+
+**Testing status: live-verified** across English, Bengali, and Arabic,
+including a zero-result search case and a filtered+sorted case.
+
+### Round 118 continued: bd-guide.php wired for i18n
+
+**bd-guide.php wired for i18n:** continuing item 36, wired the Bangladesh
+Travel Guide page (zero `tms_t()` calls previously). Unlike
+destinations.php/package-list.php, most of this page's text is real
+researched database content (12 destination guides — known-for,
+best-time, how-to-get-there, sources), so scope was deliberately narrow:
+only the static chrome wrapping that data. Added 9 new dictionary keys ×
+8 languages (72 strings) — heading, subtitle, the 3 field labels, the 2
+action buttons, "Sources:", and the empty-state message. Left
+untranslated: the disclosure banner (embedded conditional + several
+proper nouns, same risk judgment as earlier skipped sentences), the
+admin-only migration-setup message, and — critically — every actual
+destination field, since that's real sourced data, not app UI text
+(Rule 3). `frontend/bd-guide.php` now has 9 `tms_t()` call sites, up
+from 0.
+
+Live-verified in Bengali (full page across all 12 real destination
+cards, underlying English source data correctly untouched), Arabic
+(heading/subtitle/labels/buttons via DOM inspection), and English (the
+"Check Current Weather" button's onclick/fetch logic confirmed
+unregressed by clicking it live).
+
+**Files touched:** `backend/i18n.php`, `frontend/bd-guide.php`.
+Full detail in `CHANGELOG.md`.
+
+**Testing status: live-verified** across English, Bengali, and Arabic,
+including a live functional click-test of the weather button to rule
+out a regression.
+
+### Round 118 continued: explore.php wired for i18n
+
+**explore.php wired for i18n:** continuing item 36, wired the public
+(unauthenticated) Explore Mode landing page, which had zero `tms_t()`
+calls. Added 7 new dictionary keys × 8 languages (56 strings) — hero
+heading/subtitle, search placeholder, "Recently Explored", "What you'll
+get" + its paragraph, and the "Browse our Tour Packages" link.
+`frontend/explore.php` now has 7 `tms_t()` call sites, up from 0.
+Deliberately left untranslated: the 8 popular-destination chips
+(Paris/Tokyo/Bali/etc.) and any recent-history entries, since these are
+real place names passed as literal search input to the page's
+geocoding lookup, not UI copy — translating the label without a
+matching canonical-name mapping would break search.
+
+Live-verified in Bengali and Arabic (heading, subtitle, placeholder,
+"What you'll get" section, tour-packages link, all correct; confirmed
+via the chip's onclick attribute that the real place-name/coordinate
+data passed to goToDestination() is untouched) and English (full page
+text matches the original exactly, no regression).
+
+**Files touched:** `backend/i18n.php`, `frontend/explore.php`.
+Full detail in `CHANGELOG.md`.
+
+**Testing status: live-verified** across English, Bengali, and Arabic,
+including a DOM-level check that the untranslated search-input data
+passed to the page's own JS function is unaffected.
+
+### Round 118 continued: hotels.php wired for i18n
+
+**hotels.php wired for i18n:** continuing item 36, wired the public
+hotel marketplace page (zero `tms_t()` calls previously; already
+labeled sample/demo data per its own Rule 3 docblock). Added 14 new
+dictionary keys × 8 languages (112 strings) — heading, the sample/demo
+disclosure banner (with its embedded `<strong>` tag rendering correctly
+as real bold HTML in every language), the Search/City/Min-Stars/Sort-By
+filter labels and option values, the results-count line (reusing
+label_page/label_of_pagination), the "Sample" card badge, "View & Book"
+button, and empty-state message. Reused 6 existing keys. Deliberately
+left untranslated: the city-filter dropdown values, since they're real
+`tblhotels.City` column values used directly in a SQL filter — same
+judgment as destinations.php/explore.php's dynamic/real-data values.
+`frontend/hotels.php` now has 23 `tms_t()` call sites, up from 0.
+
+Live-verified in Bengali (full page against the real 16-hotel catalog,
+bold emphasis confirmed rendering as real HTML not escaped text),
+Arabic (heading/banner/options/badges/button via DOM inspection), and
+English (unaffected, plus a genuine zero-result search showing the
+correct empty-state message).
+
+**Files touched:** `backend/i18n.php`, `frontend/hotels.php`.
+Full detail in `CHANGELOG.md`.
+
+**Testing status: live-verified** across English, Bengali, and Arabic,
+including a zero-result search case and a DOM-level check that
+translated HTML markup renders correctly rather than as escaped text.
+
+### Round 118 continued: activities.php wired for i18n
+
+**activities.php wired for i18n:** continuing item 36, wired the public
+activities marketplace page (zero `tms_t()` calls previously; sample/
+demo data per Rule 3), completing the marketplace pair with hotels.php.
+Added just 6 new dictionary keys × 8 languages (48 strings) -- heading,
+sample/demo banner, "Category" label, results-count line, and
+empty-state message -- since 9 keys from the hotels.php pass reused
+directly (search/reset/city/sort-option labels, sample badge, view-book
+button, and even the "Try a different search or" message, which is
+character-for-character identical between the two pages).
+`frontend/activities.php` now has 22 `tms_t()` call sites, up from 0.
+Deliberately left untranslated: the city/category dropdown values
+(real `tblactivities` column values used in SQL filters) and each
+activity's own catalog data.
+
+Live-verified in Bengali (full page against the real 16-activity
+catalog), Arabic (heading/category label/results-count/view-book button
+via DOM inspection), and English (unaffected, plus a genuine
+zero-result search showing the correct empty-state message).
+
+**Files touched:** `backend/i18n.php`, `frontend/activities.php`.
+Full detail in `CHANGELOG.md`.
+
+**Testing status: live-verified** across English, Bengali, and Arabic,
+including a zero-result search case.
+
+### Round 118 continued: blog.php wired for i18n
+
+**blog.php wired for i18n:** continuing item 36, wired the public
+Travel Blog listing page (zero `tms_t()` calls previously). Added 6 new
+dictionary keys × 8 languages (48 strings) — heading, search
+placeholder, "No articles yet" + subtitle, "Read More →" link, and a
+translated fallback for the "Admin" author label. `frontend/blog.php`
+now has 6 `tms_t()` call sites, up from 0. Deliberately left
+untranslated: every real blog post's title/tag/author/date/excerpt,
+since it's real published content from `tblblog`, not app UI text.
+
+Live-verified in Bengali (heading, placeholder, "Read More" links
+across all 3 real posts, plus a zero-result search showing the
+translated empty state), Arabic (heading/placeholder/read-more via DOM
+inspection), and English (unaffected, full page text matches original).
+
+**Files touched:** `backend/i18n.php`, `frontend/blog.php`.
+Full detail in `CHANGELOG.md`.
+
+**Testing status: live-verified** across English, Bengali, and Arabic,
+including a zero-result search case.
+
+### Round 118 continued: compare.php wired for i18n, one real bug caught and fixed
+
+**compare.php wired for i18n:** continuing item 36, wired the real
+side-by-side package comparison tool (zero `tms_t()` calls previously).
+Added 29 new dictionary keys × 8 languages (232 strings) — heading,
+empty-state instructions (with an embedded link, rendering as real
+HTML), selected-count label, Clear All, all 11 comparison-table row
+labels, Feature column header, No-reviews/Not-specified/Not-listed/
+High-demand messages, Current Weather plus its two distinct honest
+fallback messages (kept separate per this page's own earlier fix about
+not conflating "no coordinates" with "API call failed"), Seats
+Available plus its interpolated-number messages, Action, and a
+translated N/A fallback. Reused 3 existing keys. `frontend/compare.php`
+now has 35 `tms_t()` call sites, up from 0.
+
+**Bug caught during verification:** 4 of the "Not specified"/"Not
+listed" replacements initially nested a `<?php echo tms_t(...); ?>` tag
+inside an already-open PHP string literal (those 4 branches build their
+fallback as a plain string inside a `<?= ?>` ternary, not a real
+if/else block like the others) — invalid PHP syntax, caught immediately
+by live-loading the page (a real parse error, not a silent failure) and
+fixed with proper string concatenation instead of embedded tags, then
+re-verified. Deliberately left untranslated: every real package's name,
+type, location, hotel, meals, transport, highlights, and description.
+
+Live-verified with real session state (added 2 real packages via the
+page's own "Compare" buttons on package-list.php) in Bengali (all
+labels, the fixed Not-specified fallbacks, live weather data), Arabic
+(all field labels/buttons via DOM inspection), and English (unaffected,
+full page matches original).
+
+**Files touched:** `backend/i18n.php`, `frontend/compare.php`.
+Full detail in `CHANGELOG.md`.
+
+**Testing status: live-verified** across English, Bengali, and Arabic
+with genuine session state, including catching and fixing a real PHP
+syntax bug before considering the work done.
+
+### Round 118 continued: cart.php wired for i18n, first authenticated page this pass
+
+**cart.php wired for i18n:** continuing item 36, moved from public
+browsing pages to the core booking flow. `frontend/cart.php` (behind
+`tms_require_user()`) had zero `tms_t()` calls. Added 15 new dictionary
+keys × 8 languages (120 strings) — the page heading, the 3-step
+progress indicator (Cart/Checkout/Confirmed, named generically since
+checkout.php and ticket.php almost certainly render the same steps —
+set up for direct reuse), the empty-cart message and subtitle, "Browse
+Packages", the "Add-ons:" label, the traveller-count suffix, "Order
+Summary", the package-count suffix, "Total", "Proceed to Checkout", and
+the JS `confirm()` removal-dialog text (translated via `addslashes()`
+to stay valid inside the single-quoted JS literal). Reused 1 existing
+key (`msg_only_prefix` from compare.php). `frontend/cart.php` now has
+16 `tms_t()` call sites, up from 0.
+
+Hit the same French/Spanish anchor collision from the compare.php round
+again (`'msg_na'=>'N/D'` matching both languages) and fixed it the same
+way, widening the anchor with the preceding `label_action` line which
+does differ between the two languages.
+
+Deliberately left untranslated: every real cart item's package
+name/location/dates (real catalog/booking data from
+`tbltourpackages`/`tblcart`), and the low-stock blocking warning with
+its two interpolated numbers and its own singular/plural branch — the
+same category of sentence skipped for translation-quality risk in
+earlier rounds.
+
+**Testing status: live-verified with a real authenticated session, in
+3 languages.** This was the first page this round requiring login, so
+used the standing-approved `$_SESSION`-simulation technique (never a
+real login-form submission) — authenticated as a real existing user
+(`abir@gmail.com`) with a real cart row, verified in Bengali (full
+cart with real item) and Arabic (full cart, then empty-cart state after
+removing the item), and confirmed English unaffected including the
+empty-cart state matching the original text exactly. Both temporary
+diagnostic scripts were neutralized to disabled 404 stubs afterward,
+nothing left live.
+
+**Files touched:** `backend/i18n.php`, `frontend/cart.php`.
+Full detail in `CHANGELOG.md`.
+
+### Round 118 continued: checkout.php wired for i18n, second authenticated page this pass
+
+**checkout.php wired for i18n:** continuing item 36, moved further through
+the core booking flow (cart.php → checkout.php → payment.php).
+`frontend/checkout.php` (behind `tms_require_user()`) had zero `tms_t()`
+calls. Added 10 new dictionary keys × 8 languages (80 strings) — the
+"Review Your N Booking(s)" heading (prefix/suffix split around the
+count), "Price not set", the "add-ons" suffix word, "Mobile Number" and
+its optional-hint text, "Confirm & Book All" (shared by the active and
+disabled button states), the disabled button's tooltip text, "Back to
+Cart" (reused for two links that previously only differed in letter
+case), and the pending-booking footer note with an embedded
+`<strong>pending</strong>` tag. Reused 4 existing keys from the cart.php
+round — `step_cart`/`step_checkout`/`step_confirmed` (the exact reuse
+those generically-named keys were set up for) and `label_traveller_word`
+— plus `label_total`. `frontend/checkout.php` now has 18 `tms_t()` call
+sites, up from 0.
+
+Hit a genuine testing pitfall this round, not a code bug: this page only
+renders correctly via its root-level shim URL (`/checkout.php`) — going
+straight to `/frontend/checkout.php` produces a blank page because that
+file's own relative include path only resolves correctly when reached
+through the shim. Worth remembering for future authenticated-page rounds.
+
+Deliberately left untranslated: the real cart item's name/dates, the
+phone-number placeholder format, and the POST-handling error messages
+(capacity conflicts, transaction failures) — all complex multi-clause,
+multi-value strings in the same category skipped all session.
+
+**Testing status: live-verified with a real authenticated session, in
+3 languages, with one branch explicitly not exercised.** Verified via
+the root-shim URL in English, Bengali, and Arabic with a real, correctly
+priced cart item (heading, step indicator, review line, traveller/total
+math, mobile field, confirm button, back-to-cart links, and the
+`<strong>`-embedded footer note all confirmed correct). The disabled
+"unpriced cart" button state could not be tested live because no real
+package in the catalog currently has a null/zero price, and per Rule 3
+no price was altered to force it — that code path is implemented and
+passed the same structural checks as everything else, but is honestly
+reported as not live-tested rather than claimed as verified.
+
+**Files touched:** `backend/i18n.php`, `frontend/checkout.php`.
+Full detail in `CHANGELOG.md`.
+
+### Round 118 continued: ticket.php wired for i18n, third authenticated page this pass
+
+**ticket.php wired for i18n:** continuing item 36 through the
+post-booking flow. `frontend/ticket.php` (the print-optimized HTML
+e-ticket, behind `tms_require_user()`) had zero `tms_t()` calls. Added
+27 new dictionary keys × 8 languages (216 strings) covering all three
+page states — not-found, not-ready (cancelled vs. still-pending
+branches), and the full confirmed ticket (toolbar, heading, all 8 field
+labels, cost-row labels including the price-times-travelers and
+FX-disclosure lines split around their interpolated values, the footer
+note with its embedded `<strong>My Bookings</strong>` link and real
+support phone number, verification code, and QR instructions). Reused
+`step_confirmed`, `label_destination`, and `label_traveller_word` from
+earlier rounds. `frontend/ticket.php` now has 30 `tms_t()` call sites,
+up from 0.
+
+Deliberately left untranslated: the real booking's passenger/package/
+destination/date/verification-code data, the three-value FX-rate
+technical disclosure line, and one client-side JS error fallback inside
+a `<script>` block (not worth a data-attribute plumbing layer for a
+rarely-hit message).
+
+**Testing status: live-verified across all three page states with real
+data, in 3 languages, with one sub-case honestly reported as not
+tested.** Found and used real pre-existing bookings for each state — a
+confirmed booking with a real verification code and FX record (English/
+Bengali/Arabic, including the `<strong>` footer note confirmed via DOM
+inspection), a real cancelled booking and a real pending booking (both
+verified in Arabic), and a nonexistent booking id for the not-found
+state (Arabic, then English confirmed matching the original exactly).
+The "Discount" row could not be seen live because no real confirmed
+booking currently has a discount applied — verified structurally only,
+per Rule 3's ban on fabricating data to force an untested branch.
+
+**Files touched:** `backend/i18n.php`, `frontend/ticket.php`.
+Full detail in `CHANGELOG.md`.
+
+### Round 118 continued: payment.php wired for i18n, fourth authenticated page this pass
+
+**payment.php wired for i18n:** continuing item 36 through the
+post-checkout flow (checkout.php → payment.php → ticket.php).
+`frontend/payment.php` (the sandbox payment step, behind
+`tms_require_user()`) had zero `tms_t()` calls. Added 8 new dictionary
+keys × 8 languages (64 strings) — the "Payment" heading, the sandbox
+disclosure banner (one string with an embedded `<strong>` lead-in), two
+of the page's three error messages (the third mixes customer text with
+a developer-only parenthetical and was left untranslated, consistent
+with this session's practice around mixed-audience strings), "Go to My
+Trips", the "Pay {amount} (Sandbox)" button split around the
+interpolated amount, and the skip-payment note. Reused
+`label_traveller_word` and `label_total`. `frontend/payment.php` now
+has 10 `tms_t()` call sites, up from 0.
+
+**Testing status: live-verified with real, unmutated data, in 3
+languages, across all three page states.** Verified the full pay screen
+with a real pending booking in Arabic, English, and Bengali (including
+the `<strong>`-embedded banner confirmed via DOM inspection); verified
+the "nothing waiting" empty state in Bengali; and verified the
+ownership-mismatch fail-closed state in Bengali and English, which also
+re-confirmed the page's existing IDOR protection still works correctly.
+Deliberately never submitted the actual payment form, since doing so
+would permanently mark a real booking as paid — a lasting side effect
+avoided in the same spirit as never fabricating data to force a branch.
+English confirmed unaffected, matching the original exactly.
+
+**Files touched:** `backend/i18n.php`, `frontend/payment.php`.
+Full detail in `CHANGELOG.md`.
+
+## Round 118 (continued) — tour-history.php wired for i18n (item 36
+progress); largest key set of this pass; one duplicate key caught and
+fixed before it shipped
+
+**Context:** Continuing the core-booking-flow i18n backlog (cart ->
+checkout -> payment -> ticket -> tour-history.php). This customer-facing
+"My Bookings" page had only 1 pre-existing `tms_t()` call and zero
+elsewhere.
+
+**What shipped:** added 44 new dictionary keys × 8 languages (352 new
+translated strings) to `backend/i18n.php` — the 3-step progress
+indicator (reusing cart.php's `step_cart`/`step_checkout`/
+`step_confirmed`), the post-checkout success banner, generic
+"ERROR:"/"SUCCESS:" prefixes, the bookings-count heading, status and
+payment-status labels (the latter restructured from a raw
+`ucfirst(str_replace(...))` call into a real `tms_t()` lookup covering
+all 6 `PaymentStatus` enum values — a genuine code-structure change, not
+just a string swap), the cancellation-actor suffix, the "Pay Now
+(Sandbox)" button, the booking timeline's step labels, every detail-row
+label (Package/From/To/Travelers/Total/Note/Cancelled at), the refund
+and date-change-request badges, the per-booking action links, the
+cancel-confirmation JS dialog (split via `addslashes()`), the
+disabled-cancel tooltip, the empty state, and the full date-change
+modal. Reused 10 existing keys, including the pre-existing `btn_cancel`.
+
+**Bug caught and fixed before it shipped:** `btn_cancel` was planned as
+a new key without first checking whether it already existed — it did,
+from a very early round. The structural sanity check's per-key
+occurrence count (16 hits instead of the expected 8) caught the
+duplicate immediately after insertion, before anything was synced. Fixed
+by stripping the 8 duplicate entries and updating every planned call
+site to reuse the pre-existing key. Lesson for future rounds: always
+grep for a "new" key's exact name first, even short/generic ones.
+
+**Deliberately left untranslated:** both POST handlers' interpolated
+`$error`/`$msg` business-logic sentences; real package names, notes, and
+modification notes (real data, not UI chrome); the client-side "QR
+unavailable" JS fallback.
+
+**Files touched:** `backend/i18n.php`, `frontend/tour-history.php`.
+
+**Testing status: live-verified with real, unmutated booking data in 3
+languages, plus one real (non-destructive) POST.** Used a real test
+account with one Confirmed and one Cancelled booking — the confirmed
+one's already-past departure date meant the **disabled** cancel button
+(24h tooltip) got genuine live coverage for the first time this pass.
+Verified the full list, the disabled-tooltip, and (via calling the
+page's own `openModModal()` JS directly, a safe non-mutating check) the
+full date-change modal, in English, Bengali, and Arabic. Verified the
+post-checkout success banner and the empty state (zero-booking real
+account) too. Sent one real, harmless POST against a nonexistent booking
+ID to confirm the ERROR: banner renders correctly without touching any
+real row. **Not live-tested, honestly:** the enabled-cancel confirm()
+dialog and the actual cancel/date-change success paths, since no real
+booking currently qualifies (non-cancelled and >24h out) without either
+fabricating data or permanently mutating one of the few real bookings
+that do — structural correctness was confirmed via the same sanity
+checks used everywhere else. Both temp diagnostic scripts were
+neutralized to the standard 404 stub and confirmed live.
+
+Full detail in `CHANGELOG.md`.
+
+## Round 119 — expense-tracker.php wired for i18n (item 36 progress);
+first round to translate a dynamic category-key lookup
+
+**Context:** Continuing the i18n backlog beyond the core booking flow.
+`frontend/expense-tracker.php` (linked from tour-history.php's
+"Expenses" button) had zero `tms_t()` calls.
+
+**What shipped:** added 29 new dictionary keys × 8 languages (232 new
+translated strings) — page heading/subtitle, filter tab, form labels
+(Trip/Category/Amount/Description/Date), the budget-vs-actual and
+spending-by-category headings, the "Spent X of Y budget" and "N% used /
+over budget / remaining" sentences (each split around interpolated
+currency amounts), empty states, and the delete-confirmation dialog. New
+this round: 6 category-name keys reached through a single dynamic
+lookup, `tms_t('cat_' . $cat, ucfirst($cat))`, used at all 3 places a
+category name is displayed, rather than one literal call per category.
+Reused `label_category` and `label_description`. `frontend/expense-
+tracker.php` now has 28 `tms_t()` call sites, up from 0.
+
+**Deliberately left untranslated:** the AI-generated budget insight
+sentence (dynamic, data-driven analyst output, same category as the
+copilot/chatbot content skipped elsewhere); the user's own expense
+description text.
+
+**Files touched:** `backend/i18n.php`, `frontend/expense-tracker.php`.
+
+**Testing status: live-verified in 3 languages, including a full real
+add-view-delete cycle** since this feature had never been used by any
+real account (`tblexpenses` was completely empty). Verified the
+all-empty state in English, Bengali, and Arabic with a real account.
+Since no historical data existed to exercise the category-breakdown and
+recent-expenses-list render paths, submitted one real, harmless test
+expense through the page's own live handler, confirmed it rendered
+correctly in English and Bengali, then removed it through the page's own
+delete handler and confirmed via a direct database count that the
+account is back to zero expense rows. All temp diagnostic scripts were
+neutralized to the standard 404 stub and confirmed live.
+
+Full detail in `CHANGELOG.md`.
+
+## Round 120 — wallet.php wired for i18n (item 36 progress); surfaced
+a real, pre-existing environment gap
+
+**Context:** Continuing the i18n backlog. `frontend/wallet.php` (linked
+from tour-history.php's "Wallet" button; combines real e-tickets with an
+encrypted personal-document store) had zero `tms_t()` calls.
+
+**What shipped:** added 30 new dictionary keys × 8 languages (240 new
+translated strings) — page heading/subtitle, security note, form labels,
+all 6 document-type names reached via a dynamic lookup (same pattern as
+expense-tracker.php's category names, applied to a second fixed enum),
+upload button, empty states, the expiry-badge sentence (split around two
+interpolated values), download button, delete-confirmation dialog, and
+My Tickets section. A 30th key was added mid-round after live testing
+surfaced a real, entirely customer-facing error message that had been
+missed initially. `frontend/wallet.php` now has 25 `tms_t()` call sites,
+up from 0.
+
+**Real environment gap surfaced, not silently fixed:** a real upload
+attempt (synthetic harmless test file, never real PII) failed because
+`WALLET_ENCRYPTION_KEY` doesn't exist in `.env` at all — this means the
+entire upload-success path (encrypted write, document list, expiry
+badges, download, delete) has never worked in this environment since the
+feature was built. Generating an encryption key for real PII documents
+is a security decision for the site operator, not something to decide
+silently — flagged as a new open item rather than worked around.
+
+**Files touched:** `backend/i18n.php`, `frontend/wallet.php`.
+
+**Testing status: live-verified the full empty-state page and the
+encryption-unavailable failure path in 3 languages; the upload-success
+UI could not be live-tested for the infrastructure reason above.**
+Verified all static content, the real "My Tickets" section with a real
+confirmed booking, and confirmed the failed test upload left zero rows
+and zero files behind via a direct database and filesystem check. The
+document-row/expiry-badge/download/delete UI is honestly reported as not
+live-tested, pending the operator's decision on the encryption-key gap.
+All temp diagnostic scripts were neutralized to the standard 404 stub
+and confirmed live.
+
+Full detail in `CHANGELOG.md`.
+
+## Round 121 — my-trip.php wired for i18n (item 36 progress); largest
+single-file key set so far
+
+**Context:** Continuing the i18n backlog. `frontend/my-trip.php` (752
+lines, the "My Trip" hub, reached through the root `/my-trip.php` shim)
+had zero `tms_t()` calls, with much of its visible text built in
+client-side JavaScript.
+
+**What shipped:** added 87 new dictionary keys × 8 languages (696 new
+translated strings), each dedup-checked by exact name first (zero
+collisions) — not-found branch, phase/status/payment badges (payment
+badge restructured from a raw `ucfirst()` call into the same `$payLabels`
+lookup tour-history.php uses), traveler count and countdown, Trip
+Readiness heading, trip details labels, itinerary card and AI disclosure,
+weather-check card, all 16 phase-conditional link labels, offline-save
+card and its item labels, payment card, and every static string in the
+page's JavaScript (itinerary generation, all three weather-replan steps,
+offline-save states) via the established `addslashes(tms_t(...))`
+pattern. `frontend/my-trip.php` now has 119 `tms_t()` call sites, up
+from 0.
+
+**Left untranslated:** Trip Readiness component/action labels (they come
+from `backend/services/TripReadinessScore.php`, a follow-up), real
+safety-alert text, AI itinerary content, server error text passed through
+from `api/ai.php`. Number-based sentences are translated as fragments
+(no placeholder support in this dictionary), so a few read imperfectly
+in some languages — same known limitation as earlier count strings.
+
+**Files touched:** `backend/i18n.php`, `frontend/my-trip.php`.
+
+**Testing status: live-verified in English, Bengali, and Arabic across
+the after, cancelled, before (including the singular "1 day to go"
+branch and Trip Readiness), and not-found states, using real, unmutated
+bookings only;** also confirmed the page's whole script block parses
+with every JS function defined. Not live-tested: populated itinerary,
+weather-replan flows, generate/offline-save status messages, during-phase
+links, safety alerts — no real booking has an itinerary or active alert,
+and generating one would write onto a real person's booking. The
+count-checked replacement script caught 3 mismatches on its first run and
+saved nothing until they were fixed. All temp diagnostic scripts were
+neutralized to the standard 404 stub and confirmed live.
+
+Full detail in `CHANGELOG.md`.
+
+## Round 122 — Trip Readiness labels translated (finishes my-trip.php)
+
+**What shipped:** 8 new keys × 8 languages for the Trip Readiness card's
+four component labels and four action labels. `TripReadinessScore.php`
+keeps returning its English strings (the API endpoint and
+`tests/run.php` depend on them); the only change is an additive `key`
+field on each `missing` entry, and `my-trip.php` translates at display
+time through `tms_t('readiness_' . key, englishLabel)`. my-trip.php now
+has 122 `tms_t()` call sites.
+
+**Files touched:** `backend/i18n.php`,
+`backend/services/TripReadinessScore.php`, `frontend/my-trip.php`.
+
+**Testing status:** re-ran the service's existing unit assertions in a
+temporary browser-run script, since there's no PHP CLI here. They all
+passed, plus a new check that every missing entry has a `key`. The card
+was live-verified in Bengali and Arabic on a real upcoming booking held
+by the QA account. A real booking that moved into its travel dates
+overnight also gave live coverage of the during-phase link set in
+Bengali. Temp scripts were re-stubbed to 404 and that was confirmed live.
+
+Full detail in `CHANGELOG.md`.
+
+## Round 123 — dashboard.php wired for i18n (item 36 progress)
+
+**What shipped:** 25 new `dash_` keys × 8 languages, plus 9 existing keys
+reused after searching the dictionary's English values for exact
+matches. Covers the welcome hero, stat labels, boarding-pass card, empty
+state, quick tiles and badges, recent activity, and quick actions.
+`frontend/dashboard.php` now has 36 `tms_t()` call sites, up from 0.
+The member-since month name (`date('F Y')`) still renders in English and
+is noted as a small follow-up.
+
+**Files touched:** `backend/i18n.php`, `frontend/dashboard.php`.
+
+**Testing status:** live-verified through `/dashboard.php` in English,
+Bengali, and Arabic with five real accounts (read-only), covering the
+boarding pass, the no-trip state, the pending and open badges, all three
+status pills, and the empty recent-activity message. Three branches have
+no real data to show them and are listed as not live-tested in
+`CHANGELOG.md`. The temp session helper was re-stubbed to 404 and that
+was confirmed live.
+
+Full detail in `CHANGELOG.md`.

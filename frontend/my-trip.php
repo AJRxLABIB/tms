@@ -6,6 +6,7 @@ include('backend/config.php');
 // CrowdPredictor) internally with paths relative to its own directory -- no
 // need to require them again here (same pattern api/ai.php uses).
 require_once dirname(__DIR__) . '/backend/ai/ItineraryPlanner.php';
+require_once dirname(__DIR__) . '/backend/services/TripReadinessScore.php';
 tms_require_user();
 
 /**
@@ -102,13 +103,22 @@ if (!$trip) {
     }
     $payStatus = $trip->PaymentStatus ?? 'unpaid';
     $payBadge = ['unpaid'=>'default','pending'=>'warning','paid'=>'success','failed'=>'danger','refunded'=>'default','partially_refunded'=>'warning'][$payStatus] ?? 'default';
+    $payLabels = [
+        'unpaid'              => tms_t('label_payment_unpaid', 'Unpaid'),
+        'pending'             => tms_t('label_pending', 'Pending'),
+        'paid'                => tms_t('label_payment_paid', 'Paid'),
+        'failed'              => tms_t('label_payment_failed', 'Failed'),
+        'refunded'            => tms_t('label_payment_refunded', 'Refunded'),
+        'partially_refunded'  => tms_t('label_payment_partially_refunded', 'Partially refunded'),
+    ];
+    $payLabel = $payLabels[$payStatus] ?? ucfirst(str_replace('_',' ', $payStatus));
 
     $statusConfig = [
-        0 => ['label' => 'Pending Confirmation', 'class' => 'warning'],
-        1 => ['label' => 'Confirmed', 'class' => 'success'],
-        2 => ['label' => 'Cancelled', 'class' => 'danger'],
+        0 => ['label' => tms_t('status_pending_confirmation', 'Pending Confirmation'), 'class' => 'warning'],
+        1 => ['label' => tms_t('step_confirmed', 'Confirmed'), 'class' => 'success'],
+        2 => ['label' => tms_t('label_cancelled', 'Cancelled'), 'class' => 'danger'],
     ];
-    $sc = $statusConfig[$trip->status] ?? ['label' => 'Unknown', 'class' => 'default'];
+    $sc = $statusConfig[$trip->status] ?? ['label' => tms_t('label_unknown', 'Unknown'), 'class' => 'default'];
 
     // Pre-trip / during-trip / post-trip phase (Rule 68) -- pure date math
     // against this booking's own real dates, nothing inferred or invented.
@@ -128,6 +138,12 @@ if (!$trip) {
 
     $planner = new ItineraryPlanner($dbh);
     $itinerary = $planner->getByBookingId($bookingId);
+
+    // TMS V2 -- Trip Readiness Score. Only meaningful before departure
+    // (during/after/cancelled trips don't need a "get ready" checklist),
+    // computed from real facts already available on this page -- no new
+    // query for payment/confirmation status, since $trip already has them.
+    $readiness = ($phase === 'before') ? TripReadinessScore::forBooking($dbh, $trip, $email) : null;
 }
 ?>
 <!DOCTYPE HTML>
@@ -136,11 +152,15 @@ if (!$trip) {
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#0B2B3C">
 <link rel="apple-touch-icon" href="images/icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="TMS">
+<meta name="mobile-web-app-capable" content="yes">
 <title>TMS | My Trip</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
 <link href="css/bootstrap.min2.css" rel='stylesheet' type='text/css' />
-<link href="css/style.min.css" rel='stylesheet' type='text/css' />
+<link href="<?php echo tms_asset_ver('css/style.min.css'); ?>" rel='stylesheet' type='text/css' />
 <link href="css/font-awesome.min2.css" rel="stylesheet">
 <link href="<?php echo tms_asset_ver('css/modern-theme.css'); ?>" rel="stylesheet">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -148,6 +168,7 @@ if (!$trip) {
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700;9..144,800&family=Manrope:wght@400;500;600;700;800&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
 <script src="js/jquery-1.12.0.min.js" defer></script>
 <script src="js/bootstrap.min.js" defer></script>
+<script src="<?php echo tms_asset_ver('js/ai-feedback.js'); ?>" defer></script>
 <style>
 .mt-hero{background:linear-gradient(135deg,#0f2027,#203a43,#2c5364);color:#fff;padding:40px 0;margin-bottom:30px;}
 .mt-hero h2{margin:0 0 6px;font-weight:800;}
@@ -193,33 +214,68 @@ html[data-theme="dark"] .mt-sched-item{color:var(--text-muted) !important;}
 <?php if ($notFound): ?>
 <div class="container" style="padding:80px 0;text-align:center;">
     <i class="fa fa-exclamation-circle" style="font-size:56px;color:#ddd;"></i>
-    <h3 style="margin-top:16px;">Trip not found</h3>
-    <p style="color:#888;">We couldn't find that booking on your account.</p>
-    <a href="tour-history.php" class="btn btn-primary" style="margin-top:10px;">Back to My Bookings</a>
+    <h3 style="margin-top:16px;"><?php echo htmlspecialchars(tms_t('heading_trip_not_found','Trip not found'), ENT_QUOTES, 'UTF-8'); ?></h3>
+    <p style="color:#888;"><?php echo htmlspecialchars(tms_t('msg_trip_not_found_subtitle',"We couldn't find that booking on your account."), ENT_QUOTES, 'UTF-8'); ?></p>
+    <a href="tour-history.php" class="btn btn-primary" style="margin-top:10px;"><?php echo htmlspecialchars(tms_t('btn_back_to_my_bookings','Back to My Bookings'), ENT_QUOTES, 'UTF-8'); ?></a>
 </div>
 <?php else: ?>
 
 <div class="mt-hero">
     <div class="container">
         <span class="mt-phase mt-phase-<?php echo $phase; ?>">
-            <?php echo ['before' => 'Upcoming Trip', 'during' => 'Happening Now', 'after' => 'Completed', 'cancelled' => 'Cancelled'][$phase]; ?>
+            <?php echo ['before' => tms_t('phase_upcoming_trip','Upcoming Trip'), 'during' => tms_t('phase_happening_now','Happening Now'), 'after' => tms_t('phase_completed','Completed'), 'cancelled' => tms_t('label_cancelled','Cancelled')][$phase]; ?>
         </span>
         <span class="label label-<?php echo $sc['class']; ?>" style="font-size:12px;padding:5px 10px;"><?php echo $sc['label']; ?></span>
         <span class="label label-<?php echo $payBadge; ?>" style="font-size:12px;padding:5px 10px;">
-            <i class="fa fa-credit-card"></i> <?php echo ucfirst(str_replace('_',' ', $payStatus)); ?>
+            <i class="fa fa-credit-card"></i> <?php echo $payLabel; ?>
         </span>
         <h2><?php echo htmlspecialchars($trip->PackageName, ENT_QUOTES, 'UTF-8'); ?></h2>
         <div class="mt-meta">
             <i class="fa fa-map-marker"></i> <?php echo htmlspecialchars($trip->PackageLocation, ENT_QUOTES, 'UTF-8'); ?>
             &nbsp;·&nbsp; <i class="fa fa-calendar"></i>
             <?php echo (new DateTime($trip->FromDate))->format('d M Y'); ?> — <?php echo (new DateTime($trip->ToDate))->format('d M Y'); ?>
-            &nbsp;·&nbsp; <i class="fa fa-users"></i> <?php echo (int)$trip->NoOfPersons; ?> traveler<?php echo ((int)$trip->NoOfPersons === 1 ? '' : 's'); ?>
+            &nbsp;·&nbsp; <i class="fa fa-users"></i> <?php echo (int)$trip->NoOfPersons; ?> <?php echo tms_t(((int)$trip->NoOfPersons === 1 ? 'label_traveler_word' : 'label_travelers_word'), ((int)$trip->NoOfPersons === 1 ? 'traveler' : 'travelers')); ?>
             <?php if ($phase === 'before'): ?>
-            &nbsp;·&nbsp; <strong><?php echo $daysUntil; ?> day<?php echo $daysUntil === 1 ? '' : 's'; ?> to go</strong>
+            &nbsp;·&nbsp; <strong><?php echo $daysUntil; ?> <?php echo tms_t(($daysUntil === 1 ? 'label_day_word' : 'label_days_suffix'), ($daysUntil === 1 ? 'day' : 'days')); ?> <?php echo tms_t('dest_to_go_suffix','to go'); ?></strong>
             <?php endif; ?>
         </div>
     </div>
 </div>
+
+<?php if ($readiness !== null): ?>
+<div class="container" style="margin-top:20px;">
+    <div class="mt-card" style="padding:18px 22px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:10px;">
+            <h4 style="margin:0;"><i class="fa fa-tasks"></i> <?php echo htmlspecialchars(tms_t('heading_trip_readiness','Trip Readiness'), ENT_QUOTES, 'UTF-8'); ?></h4>
+            <strong style="font-size:20px;color:<?php echo $readiness['score'] >= 80 ? '#16a34a' : ($readiness['score'] >= 40 ? '#d97706' : '#dc2626'); ?>;"><?php echo (int)$readiness['score']; ?>% <?php echo tms_t('label_ready_suffix','ready'); ?></strong>
+        </div>
+        <div style="background:#e5e7eb;border-radius:10px;height:10px;overflow:hidden;margin-bottom:14px;">
+            <div style="background:<?php echo $readiness['score'] >= 80 ? '#16a34a' : ($readiness['score'] >= 40 ? '#d97706' : '#dc2626'); ?>;height:100%;width:<?php echo (int)$readiness['score']; ?>%;"></div>
+        </div>
+        <div style="display:flex;flex-wrap:wrap;gap:10px 22px;font-size:13px;">
+            <?php foreach ($readiness['components'] as $c): ?>
+            <span style="color:<?php echo $c['met'] ? '#16a34a' : '#94a3b8'; ?>;">
+                <i class="fa fa-<?php echo $c['met'] ? 'check-circle' : 'circle-o'; ?>"></i>
+                <?php echo htmlspecialchars(tms_t('readiness_' . $c['key'], $c['label']), ENT_QUOTES, 'UTF-8'); ?>
+            </span>
+            <?php endforeach; ?>
+        </div>
+        <?php if (!empty($readiness['missing'])): ?>
+        <div style="margin-top:12px;display:flex;flex-wrap:wrap;gap:8px;">
+            <?php foreach ($readiness['missing'] as $m): ?>
+                <?php if (!empty($m['action_url'])): ?>
+                <a href="<?php echo htmlspecialchars($m['action_url'], ENT_QUOTES, 'UTF-8'); ?>" class="btn btn-sm" style="background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe;font-size:12px;padding:5px 12px;border-radius:20px;">
+                    <i class="fa fa-arrow-right"></i> <?php echo htmlspecialchars(tms_t('readiness_action_' . ($m['key'] ?? ''), $m['action_label']), ENT_QUOTES, 'UTF-8'); ?>
+                </a>
+                <?php else: ?>
+                <span style="font-size:12px;color:#94a3b8;padding:5px 12px;"><?php echo htmlspecialchars(tms_t('readiness_action_' . ($m['key'] ?? ''), $m['action_label']), ENT_QUOTES, 'UTF-8'); ?></span>
+                <?php endif; ?>
+            <?php endforeach; ?>
+        </div>
+        <?php endif; ?>
+    </div>
+</div>
+<?php endif; ?>
 
 <?php if (!empty($safetyAlerts)): ?>
 <div class="container" style="margin-top:20px;">
@@ -233,7 +289,7 @@ html[data-theme="dark"] .mt-sched-item{color:var(--text-muted) !important;}
     <div style="background:<?php echo $sevStyle['bg']; ?>;color:<?php echo $sevStyle['text']; ?>;border-radius:10px;padding:14px 18px;margin-bottom:12px;display:flex;gap:12px;align-items:flex-start;">
         <i class="fa fa-<?php echo $sevStyle['icon']; ?>" style="font-size:18px;margin-top:2px;"></i>
         <div>
-            <strong><?php echo htmlspecialchars(ucfirst($alert->alert_type), ENT_QUOTES, 'UTF-8'); ?> alert — <?php echo htmlspecialchars($alert->destination, ENT_QUOTES, 'UTF-8'); ?></strong>
+            <strong><?php echo htmlspecialchars(ucfirst($alert->alert_type), ENT_QUOTES, 'UTF-8'); ?> <?php echo htmlspecialchars(tms_t('label_alert_word','alert'), ENT_QUOTES, 'UTF-8'); ?> — <?php echo htmlspecialchars($alert->destination, ENT_QUOTES, 'UTF-8'); ?></strong>
             <div style="font-size:13.5px;margin-top:3px;"><?php echo htmlspecialchars($alert->message, ENT_QUOTES, 'UTF-8'); ?></div>
         </div>
     </div>
@@ -246,19 +302,19 @@ html[data-theme="dark"] .mt-sched-item{color:var(--text-muted) !important;}
         <div class="col-md-8">
 
             <div class="mt-card">
-                <h4><i class="fa fa-info-circle"></i> Trip Details</h4>
-                <div class="mt-fact-row"><i class="fa fa-hashtag"></i> Booking #BK<?php echo (int)$trip->BookingId; ?> — booked <?php echo htmlspecialchars($trip->RegDate, ENT_QUOTES, 'UTF-8'); ?></div>
-                <div class="mt-fact-row"><i class="fa fa-money"></i> Total cost: ৳<?php echo number_format((float)$trip->TotalCost, 2); ?></div>
+                <h4><i class="fa fa-info-circle"></i> <?php echo htmlspecialchars(tms_t('heading_trip_details','Trip Details'), ENT_QUOTES, 'UTF-8'); ?></h4>
+                <div class="mt-fact-row"><i class="fa fa-hashtag"></i> <?php echo htmlspecialchars(tms_t('dest_booking_hash_prefix','Booking #BK'), ENT_QUOTES, 'UTF-8'); ?><?php echo (int)$trip->BookingId; ?> — <?php echo htmlspecialchars(tms_t('label_booked_word','booked'), ENT_QUOTES, 'UTF-8'); ?> <?php echo htmlspecialchars($trip->RegDate, ENT_QUOTES, 'UTF-8'); ?></div>
+                <div class="mt-fact-row"><i class="fa fa-money"></i> <?php echo htmlspecialchars(tms_t('label_total_cost_prefix','Total cost:'), ENT_QUOTES, 'UTF-8'); ?> ৳<?php echo number_format((float)$trip->TotalCost, 2); ?></div>
                 <?php if (!empty($trip->HotelName)): ?>
                 <div class="mt-fact-row"><i class="fa fa-bed"></i> <?php echo htmlspecialchars($trip->HotelName, ENT_QUOTES, 'UTF-8'); ?><?php if (!empty($trip->HotelRating)): ?> (<?php echo htmlspecialchars((string)$trip->HotelRating, ENT_QUOTES, 'UTF-8'); ?> <i class="fa fa-star" style="font-size:11px;"></i>)<?php endif; ?><?php if (!empty($trip->MealPlan)): ?> — <?php echo htmlspecialchars($trip->MealPlan, ENT_QUOTES, 'UTF-8'); ?><?php endif; ?></div>
                 <?php else: ?>
-                <div class="mt-fact-row"><i class="fa fa-bed"></i> Accommodation details not specified for this package.</div>
+                <div class="mt-fact-row"><i class="fa fa-bed"></i> <?php echo htmlspecialchars(tms_t('msg_accommodation_not_specified','Accommodation details not specified for this package.'), ENT_QUOTES, 'UTF-8'); ?></div>
                 <?php endif; ?>
                 <?php if (!empty($trip->TransportMode)): ?>
-                <div class="mt-fact-row"><i class="fa fa-bus"></i> Transport: <?php echo htmlspecialchars($trip->TransportMode, ENT_QUOTES, 'UTF-8'); ?></div>
+                <div class="mt-fact-row"><i class="fa fa-bus"></i> <?php echo htmlspecialchars(tms_t('label_transport_prefix','Transport:'), ENT_QUOTES, 'UTF-8'); ?> <?php echo htmlspecialchars($trip->TransportMode, ENT_QUOTES, 'UTF-8'); ?></div>
                 <?php endif; ?>
                 <?php if (!empty($trip->VerificationCode) && $trip->status != 2): ?>
-                <div class="mt-fact-row"><i class="fa fa-qrcode"></i> E-ticket verification code: <code><?php echo htmlspecialchars($trip->VerificationCode, ENT_QUOTES, 'UTF-8'); ?></code></div>
+                <div class="mt-fact-row"><i class="fa fa-qrcode"></i> <?php echo htmlspecialchars(tms_t('label_eticket_code_prefix','E-ticket verification code:'), ENT_QUOTES, 'UTF-8'); ?> <code><?php echo htmlspecialchars($trip->VerificationCode, ENT_QUOTES, 'UTF-8'); ?></code></div>
                 <?php endif; ?>
             </div>
 
@@ -269,14 +325,14 @@ html[data-theme="dark"] .mt-sched-item{color:var(--text-muted) !important;}
             // "Generate an AI Itinerary" click would 403. This one is unconditional. ?>
             <?php tms_csrf_field(); ?>
             <div class="mt-card" id="mtItineraryCard">
-                <h4><i class="fa fa-calendar-check-o"></i> Day-by-Day Itinerary</h4>
+                <h4><i class="fa fa-calendar-check-o"></i> <?php echo htmlspecialchars(tms_t('heading_day_by_day_itinerary','Day-by-Day Itinerary'), ENT_QUOTES, 'UTF-8'); ?></h4>
                 <?php if ($itinerary && !empty($itinerary['days'])): ?>
                     <div class="mt-ai-disclosure">
-                        <i class="fa fa-info-circle"></i> This is an AI-generated trip plan — a suggestion to help you plan, not a confirmed itinerary booked or verified by TMS staff. Hotel/restaurant names and prices here are AI suggestions, not part of your actual booking.
+                        <i class="fa fa-info-circle"></i> <?php echo htmlspecialchars(tms_t('msg_ai_itinerary_disclosure',"This is an AI-generated trip plan — a suggestion to help you plan, not a confirmed itinerary booked or verified by TMS staff. Hotel/restaurant names and prices here are AI suggestions, not part of your actual booking."), ENT_QUOTES, 'UTF-8'); ?>
                     </div>
                     <?php foreach ($itinerary['days'] as $day): ?>
                     <div class="mt-day">
-                        <h5>Day <?php echo (int)($day['day'] ?? 0); ?><?php if (!empty($day['title'])): ?> — <?php echo htmlspecialchars($day['title'], ENT_QUOTES, 'UTF-8'); ?><?php endif; ?></h5>
+                        <h5><?php echo htmlspecialchars(tms_t('label_day_prefix','Day'), ENT_QUOTES, 'UTF-8'); ?> <?php echo (int)($day['day'] ?? 0); ?><?php if (!empty($day['title'])): ?> — <?php echo htmlspecialchars($day['title'], ENT_QUOTES, 'UTF-8'); ?><?php endif; ?></h5>
                         <?php foreach (($day['schedule'] ?? []) as $item): ?>
                         <div class="mt-sched-item">
                             <strong><?php echo htmlspecialchars($item['time'] ?? '', ENT_QUOTES, 'UTF-8'); ?></strong> —
@@ -286,15 +342,47 @@ html[data-theme="dark"] .mt-sched-item{color:var(--text-muted) !important;}
                         <?php endforeach; ?>
                     </div>
                     <?php endforeach; ?>
+                    <?php
+                    // Round 115, master prompt item 14 ("AI Feedback Loop"): one
+                    // thumbs up/down for the generated itinerary as a whole (not
+                    // per day -- Rule 73, a per-day control would be more noise
+                    // than signal for a single AI generation call). See
+                    // js/ai-feedback.js.
+                    ?>
+                    <div class="tms-ai-feedback" style="margin-top:6px;font-size:12px;color:#999;">
+                        <?php echo htmlspecialchars(tms_t('msg_was_itinerary_helpful','Was this itinerary helpful?'), ENT_QUOTES, 'UTF-8'); ?>
+                        <button type="button" onclick="tmsSendAiFeedback('itinerary', <?php echo (int)$trip->BookingId; ?>, 1, this)" style="border:none;background:none;color:#27ae60;cursor:pointer;padding:2px 6px;" title="<?php echo htmlspecialchars(tms_t('title_feedback_yes_helpful','Yes, helpful'), ENT_QUOTES, 'UTF-8'); ?>"><i class="fa fa-thumbs-up"></i></button>
+                        <button type="button" onclick="tmsSendAiFeedback('itinerary', <?php echo (int)$trip->BookingId; ?>, -1, this)" style="border:none;background:none;color:#c0392b;cursor:pointer;padding:2px 6px;" title="<?php echo htmlspecialchars(tms_t('title_feedback_no_helpful','No, not helpful'), ENT_QUOTES, 'UTF-8'); ?>"><i class="fa fa-thumbs-down"></i></button>
+                    </div>
+                <?php if ($phase === 'before' || $phase === 'during'): ?>
+                <?php
+                // Round 115 (master prompt item 12, "AI Dynamic Trip
+                // Replanning"): pure opt-in check, never automatic. Nothing
+                // here changes the saved itinerary or the booking unless the
+                // traveler explicitly clicks "Apply" on a proposal they've
+                // already read in full -- see api/ai.php's
+                // handleWeatherReplan{Check,Preview,Apply}() and
+                // ItineraryPlanner::checkWeatherRisk()/saveApprovedItinerary().
+                ?>
+                <div class="mt-card" id="mtWeatherReplanCard" style="margin-top:16px;">
+                    <h4><i class="fa fa-cloud"></i> Weather Impact Check</h4>
+                    <p style="font-size:13px;color:#888;margin-bottom:12px;">
+                        <?php echo htmlspecialchars(tms_t('dest_weather_replan_intro',"Checks the real forecast against your saved itinerary and flags any day that might need a change. Nothing changes automatically — you review and approve any suggested update yourself before it's saved."), ENT_QUOTES, 'UTF-8'); ?></p>
+                    <button type="button" class="mt-generate-btn" id="mtWeatherCheckBtn" onclick="mtCheckWeatherReplan()">
+                        <i class="fa fa-cloud"></i> <?php echo htmlspecialchars(tms_t('btn_check_weather_impact','Check Weather Impact on My Itinerary'), ENT_QUOTES, 'UTF-8'); ?>
+                    </button>
+                    <div id="mtWeatherReplanResult" style="margin-top:14px;"></div>
+                </div>
+                <?php endif; ?>
                 <?php else: ?>
                     <div class="mt-empty">
                         <i class="fa fa-map-o"></i>
-                        <p>No itinerary generated for this trip yet.</p>
+                        <p><?php echo htmlspecialchars(tms_t('msg_no_itinerary_yet','No itinerary generated for this trip yet.'), ENT_QUOTES, 'UTF-8'); ?></p>
                         <?php if ($trip->status != 2): ?>
                         <button type="button" class="mt-generate-btn" id="mtGenerateBtn" onclick="mtGenerateItinerary()">
-                            <i class="fa fa-magic"></i> Generate an AI Itinerary
+                            <i class="fa fa-magic"></i> <?php echo htmlspecialchars(tms_t('btn_generate_ai_itinerary','Generate an AI Itinerary'), ENT_QUOTES, 'UTF-8'); ?>
                         </button>
-                        <p style="font-size:12px;color:#aaa;margin-top:10px;">Uses your real trip dates and destination. Takes about 15–30 seconds.</p>
+                        <p style="font-size:12px;color:#aaa;margin-top:10px;"><?php echo htmlspecialchars(tms_t('dest_itinerary_generation_hint','Uses your real trip dates and destination. Takes about 15–30 seconds.'), ENT_QUOTES, 'UTF-8'); ?></p>
                         <?php endif; ?>
                     </div>
                 <?php endif; ?>
@@ -303,7 +391,7 @@ html[data-theme="dark"] .mt-sched-item{color:var(--text-muted) !important;}
         </div>
         <div class="col-md-4">
             <div class="mt-card">
-                <h4><i class="fa fa-th-large"></i> Everything for this trip</h4>
+                <h4><i class="fa fa-th-large"></i> <?php echo htmlspecialchars(tms_t('heading_everything_for_trip','Everything for this trip'), ENT_QUOTES, 'UTF-8'); ?></h4>
                 <?php
                 // Master prompt item 68 ("PRE-TRIP / DURING-TRIP / POST-TRIP"):
                 // $phase was already computed above (line ~113) and used for the
@@ -324,34 +412,39 @@ html[data-theme="dark"] .mt-sched-item{color:var(--text-muted) !important;}
                 ?>
                 <div class="mt-links">
                     <?php if ($phase === 'before'): ?>
-                    <a href="weather.php?dest=<?php echo (int)$trip->PackageId; ?>" class="mt-link"><i class="fa fa-cloud"></i> Weather</a>
-                    <a href="budget-planner.php" class="mt-link"><i class="fa fa-calculator"></i> Budget Planner</a>
-                    <a href="packing-assistant.php" class="mt-link"><i class="fa fa-suitcase"></i> Packing Assistant</a>
-                    <a href="wallet.php" class="mt-link"><i class="fa fa-briefcase"></i> Documents</a>
-                    <a href="tour-map.php" class="mt-link"><i class="fa fa-map"></i> Map</a>
+                    <a href="weather.php?dest=<?php echo (int)$trip->PackageId; ?>" class="mt-link"><i class="fa fa-cloud"></i> <?php echo htmlspecialchars(tms_t('link_weather','Weather'), ENT_QUOTES, 'UTF-8'); ?></a>
+                    <a href="budget-planner.php" class="mt-link"><i class="fa fa-calculator"></i> <?php echo htmlspecialchars(tms_t('link_budget_planner','Budget Planner'), ENT_QUOTES, 'UTF-8'); ?></a>
+                    <a href="packing-assistant.php" class="mt-link"><i class="fa fa-suitcase"></i> <?php echo htmlspecialchars(tms_t('link_packing_assistant','Packing Assistant'), ENT_QUOTES, 'UTF-8'); ?></a>
+                    <a href="wallet.php" class="mt-link"><i class="fa fa-briefcase"></i> <?php echo htmlspecialchars(tms_t('link_documents','Documents'), ENT_QUOTES, 'UTF-8'); ?></a>
+                    <a href="tour-map.php" class="mt-link"><i class="fa fa-map"></i> <?php echo htmlspecialchars(tms_t('link_map','Map'), ENT_QUOTES, 'UTF-8'); ?></a>
                     <?php elseif ($phase === 'during'): ?>
-                    <a href="tour-map.php" class="mt-link"><i class="fa fa-map"></i> Map</a>
-                    <a href="weather.php?dest=<?php echo (int)$trip->PackageId; ?>" class="mt-link"><i class="fa fa-cloud"></i> Weather</a>
-                    <a href="flight-status.php" class="mt-link"><i class="fa fa-plane"></i> Flight Tracker</a>
-                    <a href="emergency.php" class="mt-link"><i class="fa fa-phone"></i> Emergency</a>
-                    <a href="expense-tracker.php?booking=<?php echo (int)$trip->BookingId; ?>" class="mt-link"><i class="fa fa-money"></i> Expenses</a>
-                    <a href="ai-copilot.php?booking_id=<?php echo (int)$trip->BookingId; ?>" class="mt-link"><i class="fa fa-comments"></i> AI Copilot</a>
+                    <a href="tour-map.php" class="mt-link"><i class="fa fa-map"></i> <?php echo htmlspecialchars(tms_t('link_map','Map'), ENT_QUOTES, 'UTF-8'); ?></a>
+                    <a href="weather.php?dest=<?php echo (int)$trip->PackageId; ?>" class="mt-link"><i class="fa fa-cloud"></i> <?php echo htmlspecialchars(tms_t('link_weather','Weather'), ENT_QUOTES, 'UTF-8'); ?></a>
+                    <a href="flight-status.php" class="mt-link"><i class="fa fa-plane"></i> <?php echo htmlspecialchars(tms_t('link_flight_tracker','Flight Tracker'), ENT_QUOTES, 'UTF-8'); ?></a>
+                    <a href="emergency.php" class="mt-link"><i class="fa fa-phone"></i> <?php echo htmlspecialchars(tms_t('link_emergency','Emergency'), ENT_QUOTES, 'UTF-8'); ?></a>
+                    <a href="expense-tracker.php?booking=<?php echo (int)$trip->BookingId; ?>" class="mt-link"><i class="fa fa-money"></i> <?php echo htmlspecialchars(tms_t('link_expenses','Expenses'), ENT_QUOTES, 'UTF-8'); ?></a>
+                    <a href="ai-copilot.php?booking_id=<?php echo (int)$trip->BookingId; ?>" class="mt-link"><i class="fa fa-comments"></i> <?php echo htmlspecialchars(tms_t('link_ai_copilot','AI Copilot'), ENT_QUOTES, 'UTF-8'); ?></a>
                     <?php if ($trip->status == 1): ?>
-                    <a href="ticket.php?bkid=<?php echo (int)$trip->BookingId; ?>" class="mt-link"><i class="fa fa-download"></i> E-Ticket / Reservations</a>
+                    <a href="ticket.php?bkid=<?php echo (int)$trip->BookingId; ?>" class="mt-link"><i class="fa fa-download"></i> <?php echo htmlspecialchars(tms_t('link_eticket_reservations','E-Ticket / Reservations'), ENT_QUOTES, 'UTF-8'); ?></a>
                     <?php endif; ?>
                     <?php elseif ($phase === 'after'): ?>
-                    <a href="reviews.php?pkg=<?php echo (int)$trip->PackageId; ?>" class="mt-link"><i class="fa fa-star"></i> Write a Review</a>
-                    <a href="travel-memory.php" class="mt-link"><i class="fa fa-camera"></i> Travel Memories</a>
-                    <a href="expense-tracker.php?booking=<?php echo (int)$trip->BookingId; ?>" class="mt-link"><i class="fa fa-money"></i> Expenses (planned vs actual)</a>
-                    <a href="loyalty.php" class="mt-link"><i class="fa fa-trophy"></i> Achievements</a>
-                    <a href="ai-recommend.php" class="mt-link"><i class="fa fa-magic"></i> Recommendations for your next trip</a>
-                    <a href="package-list.php" class="mt-link"><i class="fa fa-compass"></i> Plan Your Next Trip</a>
+                    <a href="reviews.php?pkg=<?php echo (int)$trip->PackageId; ?>" class="mt-link"><i class="fa fa-star"></i> <?php echo htmlspecialchars(tms_t('link_write_review','Write a Review'), ENT_QUOTES, 'UTF-8'); ?></a>
+                    <a href="travel-memory.php" class="mt-link"><i class="fa fa-camera"></i> <?php echo htmlspecialchars(tms_t('link_travel_memories','Travel Memories'), ENT_QUOTES, 'UTF-8'); ?></a>
+                    <a href="expense-tracker.php?booking=<?php echo (int)$trip->BookingId; ?>" class="mt-link"><i class="fa fa-money"></i> <?php echo htmlspecialchars(tms_t('link_expenses_planned_actual','Expenses (planned vs actual)'), ENT_QUOTES, 'UTF-8'); ?></a>
+                    <a href="loyalty.php" class="mt-link"><i class="fa fa-trophy"></i> <?php echo htmlspecialchars(tms_t('link_achievements','Achievements'), ENT_QUOTES, 'UTF-8'); ?></a>
+                    <a href="ai-recommend.php" class="mt-link"><i class="fa fa-magic"></i> <?php echo htmlspecialchars(tms_t('link_recommendations_next_trip','Recommendations for your next trip'), ENT_QUOTES, 'UTF-8'); ?></a>
+                    <a href="package-list.php" class="mt-link"><i class="fa fa-compass"></i> <?php echo htmlspecialchars(tms_t('link_plan_next_trip','Plan Your Next Trip'), ENT_QUOTES, 'UTF-8'); ?></a>
                     <?php else: /* cancelled -- no phase-specific set in item 68, keep the previously-generic links */ ?>
-                    <a href="weather.php?dest=<?php echo (int)$trip->PackageId; ?>" class="mt-link"><i class="fa fa-cloud"></i> Weather</a>
-                    <a href="tour-map.php" class="mt-link"><i class="fa fa-map"></i> Map</a>
-                    <a href="wallet.php" class="mt-link"><i class="fa fa-briefcase"></i> Documents</a>
+                    <a href="weather.php?dest=<?php echo (int)$trip->PackageId; ?>" class="mt-link"><i class="fa fa-cloud"></i> <?php echo htmlspecialchars(tms_t('link_weather','Weather'), ENT_QUOTES, 'UTF-8'); ?></a>
+                    <a href="tour-map.php" class="mt-link"><i class="fa fa-map"></i> <?php echo htmlspecialchars(tms_t('link_map','Map'), ENT_QUOTES, 'UTF-8'); ?></a>
+                    <a href="wallet.php" class="mt-link"><i class="fa fa-briefcase"></i> <?php echo htmlspecialchars(tms_t('link_documents','Documents'), ENT_QUOTES, 'UTF-8'); ?></a>
                     <?php endif; ?>
-                    <a href="tour-history.php" class="mt-link"><i class="fa fa-cog"></i> Manage Booking</a>
+                    <a href="tour-history.php" class="mt-link"><i class="fa fa-cog"></i> <?php echo htmlspecialchars(tms_t('link_manage_booking','Manage Booking'), ENT_QUOTES, 'UTF-8'); ?></a>
+                    <!-- Round 115 continuation (master prompt item 10 -- Booking Engine
+                         "support" sub-requirement): same enquiry.php link as
+                         tour-history.php's booking card, so support is reachable from
+                         here regardless of trip phase. -->
+                    <a href="enquiry.php?subject=<?php echo urlencode('Booking #BK'.(int)$trip->BookingId); ?>" class="mt-link"><i class="fa fa-life-ring"></i> <?php echo htmlspecialchars(tms_t('link_support','Support'), ENT_QUOTES, 'UTF-8'); ?></a>
                 </div>
             </div>
 
@@ -370,20 +463,20 @@ html[data-theme="dark"] .mt-sched-item{color:var(--text-muted) !important;}
             // for a trip that isn't happening.
             $offlineKitItems = [];
             if ($trip->status != 2) {
-                $offlineKitItems[] = ['url' => 'my-trip.php?id=' . (int)$trip->BookingId, 'label' => 'Trip Itinerary'];
+                $offlineKitItems[] = ['url' => 'my-trip.php?id=' . (int)$trip->BookingId, 'label' => tms_t('item_trip_itinerary', 'Trip Itinerary')];
                 if ((int)$trip->status === 1) {
-                    $offlineKitItems[] = ['url' => 'ticket.php?bkid=' . (int)$trip->BookingId, 'label' => 'E-Ticket / Booking Confirmation'];
+                    $offlineKitItems[] = ['url' => 'ticket.php?bkid=' . (int)$trip->BookingId, 'label' => tms_t('item_eticket_booking_confirmation', 'E-Ticket / Booking Confirmation')];
                 }
-                $offlineKitItems[] = ['url' => 'emergency.php', 'label' => 'Emergency Contacts & Safety'];
-                $offlineKitItems[] = ['url' => 'wallet.php', 'label' => 'My Documents'];
-                $offlineKitItems[] = ['url' => 'packing-assistant.php', 'label' => 'Packing Assistant'];
+                $offlineKitItems[] = ['url' => 'emergency.php', 'label' => tms_t('item_emergency_contacts_safety', 'Emergency Contacts & Safety')];
+                $offlineKitItems[] = ['url' => 'wallet.php', 'label' => tms_t('item_my_documents', 'My Documents')];
+                $offlineKitItems[] = ['url' => 'packing-assistant.php', 'label' => tms_t('link_packing_assistant', 'Packing Assistant')];
             }
             ?>
             <?php if ($offlineKitItems): ?>
             <div class="mt-card" id="mtOfflineCard">
-                <h4><i class="fa fa-wifi"></i> Save This Trip for Offline</h4>
+                <h4><i class="fa fa-wifi"></i> <?php echo htmlspecialchars(tms_t('heading_save_trip_offline','Save This Trip for Offline'), ENT_QUOTES, 'UTF-8'); ?></h4>
                 <p style="font-size:13px;color:#888;margin-bottom:12px;">
-                    Stores these real pages on this device so you can still open them with no signal:
+                    <?php echo htmlspecialchars(tms_t('dest_offline_intro','Stores these real pages on this device so you can still open them with no signal:'), ENT_QUOTES, 'UTF-8'); ?>
                 </p>
                 <ul style="font-size:13px;color:#555;margin:0 0 14px;padding-left:20px;">
                     <?php foreach ($offlineKitItems as $item): ?>
@@ -391,25 +484,22 @@ html[data-theme="dark"] .mt-sched-item{color:var(--text-muted) !important;}
                     <?php endforeach; ?>
                 </ul>
                 <button type="button" class="mt-generate-btn" id="mtOfflineBtn" onclick="mtSaveOffline()">
-                    <i class="fa fa-download"></i> Save for Offline
+                    <i class="fa fa-download"></i> <?php echo htmlspecialchars(tms_t('btn_save_for_offline','Save for Offline'), ENT_QUOTES, 'UTF-8'); ?>
                 </button>
                 <div id="mtOfflineStatus" style="font-size:12.5px;color:#888;margin-top:10px;"></div>
                 <p style="font-size:11.5px;color:#aaa;margin-top:10px;">
-                    Live features (payment, weather, AI Copilot, live chat) still need a
-                    connection and won't work offline -- only the pages above are saved as
-                    a snapshot of what they show right now.
-                </p>
+                    <?php echo htmlspecialchars(tms_t('dest_offline_disclaimer',"Live features (payment, weather, AI Copilot, live chat) still need a connection and won't work offline -- only the pages above are saved as a snapshot of what they show right now."), ENT_QUOTES, 'UTF-8'); ?></p>
             </div>
             <?php endif; ?>
 
             <?php if (($trip->PaymentStatus ?? 'unpaid') === 'unpaid' && $trip->status != 2): ?>
             <div class="mt-card">
-                <h4><i class="fa fa-credit-card"></i> Payment</h4>
-                <p style="font-size:13px;color:#888;">This trip hasn't been paid for yet.</p>
+                <h4><i class="fa fa-credit-card"></i> <?php echo htmlspecialchars(tms_t('heading_payment','Payment'), ENT_QUOTES, 'UTF-8'); ?></h4>
+                <p style="font-size:13px;color:#888;"><?php echo htmlspecialchars(tms_t('msg_trip_not_paid',"This trip hasn't been paid for yet."), ENT_QUOTES, 'UTF-8'); ?></p>
                 <form method="POST" action="pay-now.php">
                     <?php tms_csrf_field(); ?>
                     <input type="hidden" name="booking_id" value="<?php echo (int)$trip->BookingId; ?>">
-                    <button type="submit" class="btn btn-primary btn-block"><i class="fa fa-flask"></i> Pay Now (Sandbox)</button>
+                    <button type="submit" class="btn btn-primary btn-block"><i class="fa fa-flask"></i> <?php echo htmlspecialchars(tms_t('btn_pay_now','Pay Now'), ENT_QUOTES, 'UTF-8'); ?> <?php echo htmlspecialchars(tms_t('label_sandbox_suffix','(Sandbox)'), ENT_QUOTES, 'UTF-8'); ?></button>
                 </form>
             </div>
             <?php endif; ?>
@@ -421,7 +511,7 @@ html[data-theme="dark"] .mt-sched-item{color:var(--text-muted) !important;}
 function mtGenerateItinerary() {
     var btn = document.getElementById('mtGenerateBtn');
     btn.disabled = true;
-    btn.innerHTML = '<i class="fa fa-spinner fa-spin"></i> Generating…';
+    btn.innerHTML = '<i class="fa fa-spinner fa-spin"></i> <?php echo addslashes(tms_t('msg_generating_ellipsis','Generating…')); ?>';
 
     var body = new URLSearchParams({
         booking_id: <?php echo (int)$trip->BookingId; ?>,
@@ -445,16 +535,157 @@ function mtGenerateItinerary() {
                 location.reload();
             } else {
                 btn.disabled = false;
-                btn.innerHTML = '<i class="fa fa-magic"></i> Generate an AI Itinerary';
-                alert((res && res.error) ? res.error : 'Could not generate an itinerary right now. Please try again.');
+                btn.innerHTML = '<i class="fa fa-magic"></i> <?php echo addslashes(tms_t('btn_generate_ai_itinerary','Generate an AI Itinerary')); ?>';
+                alert((res && res.error) ? res.error : '<?php echo addslashes(tms_t('msg_could_not_generate_itinerary','Could not generate an itinerary right now. Please try again.')); ?>');
             }
         })
         .catch(function () {
             btn.disabled = false;
-            btn.innerHTML = '<i class="fa fa-magic"></i> Generate an AI Itinerary';
-            alert('Network error — please try again.');
+            btn.innerHTML = '<i class="fa fa-magic"></i> <?php echo addslashes(tms_t('btn_generate_ai_itinerary','Generate an AI Itinerary')); ?>';
+            alert('<?php echo addslashes(tms_t('msg_network_error_retry','Network error — please try again.')); ?>');
         });
 }
+
+// Round 115 (master prompt item 12, "AI Dynamic Trip Replanning"). Three
+// steps, matching the three separate API actions: check (read-only) ->
+// preview (generates but does not save) -> apply (saves exactly what was
+// previewed, only on an explicit click).
+<?php if ($phase === 'before' || $phase === 'during'): ?>
+var mtTripData = {
+    booking_id: <?php echo (int)$trip->BookingId; ?>,
+    destination: <?php echo json_encode($trip->PackageLocation, JSON_UNESCAPED_UNICODE); ?>,
+    start_date: <?php echo json_encode((new DateTime($trip->FromDate))->format('Y-m-d')); ?>,
+    duration: <?php echo max(1, (new DateTime($trip->FromDate))->diff(new DateTime($trip->ToDate))->days ?: 1); ?>,
+    travelers: <?php echo (int)$trip->NoOfPersons; ?>,
+    budget: <?php echo (int)round((float)$trip->TotalCost); ?>,
+    accommodation: <?php echo json_encode($trip->HotelName ?: 'hotel'); ?>,
+    transport: <?php echo json_encode($trip->TransportMode ?: 'mixed'); ?>
+};
+
+function mtCsrf() { return (document.querySelector('[name="csrf_token"]') || {}).value || ''; }
+
+function mtCheckWeatherReplan() {
+    var btn = document.getElementById('mtWeatherCheckBtn');
+    var resultBox = document.getElementById('mtWeatherReplanResult');
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fa fa-spinner fa-spin"></i> <?php echo addslashes(tms_t('msg_checking_ellipsis','Checking…')); ?>';
+    resultBox.innerHTML = '';
+
+    var body = new URLSearchParams({
+        booking_id: mtTripData.booking_id, destination: mtTripData.destination,
+        start_date: mtTripData.start_date, duration: mtTripData.duration, csrf_token: mtCsrf()
+    });
+
+    fetch('api/ai.php?action=weather_replan_check', { method: 'POST', body: body })
+        .then(function (r) { return r.json(); })
+        .then(function (res) {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fa fa-cloud"></i> <?php echo addslashes(tms_t('btn_check_weather_impact','Check Weather Impact on My Itinerary')); ?>';
+            if (!res || !res.success) {
+                resultBox.innerHTML = '<p style="color:#c0392b;font-size:13px;">' + ((res && res.error) || '<?php echo addslashes(tms_t('msg_could_not_check_weather','Could not check weather right now.')); ?>') + '</p>';
+                return;
+            }
+            var data = res.data;
+            if (data.no_forecast_available) {
+                resultBox.innerHTML = '<p style="font-size:13px;color:#888;"><?php echo addslashes(tms_t('msg_no_forecast_available','No live forecast available yet for these dates (forecasts only cover about a week out) — check back closer to your trip.')); ?></p>';
+            } else if (!data.flagged_days || data.flagged_days.length === 0) {
+                resultBox.innerHTML = '<p style="font-size:13px;color:#27ae60;"><i class="fa fa-check-circle"></i> <?php echo addslashes(tms_t('msg_no_weather_concerns','No weather concerns found for your itinerary right now.')); ?></p>';
+            } else {
+                var html = '<p style="font-size:13px;color:#c0392b;font-weight:600;"><i class="fa fa-exclamation-triangle"></i> ' + data.flagged_days.length + ' <?php echo addslashes(tms_t('dest_days_may_need_look_suffix','day(s) may need a look:')); ?></p>';
+                data.flagged_days.forEach(function (d) {
+                    html += '<div class="mt-day" style="border-left-color:#e74c3c;">'
+                        + '<h5><?php echo addslashes(tms_t('label_day_prefix','Day')); ?> ' + d.day + ' — ' + d.date + '</h5>'
+                        + '<div class="mt-sched-item"><?php echo addslashes(tms_t('label_forecast_prefix','Forecast:')); ?> ' + d.rain_chance + '<?php echo addslashes(tms_t('dest_rain_chance_suffix','% chance of rain,')); ?> ' + d.temp_range + '</div>'
+                        + (d.itinerary_title ? '<div class="mt-sched-item"><?php echo addslashes(tms_t('label_planned_prefix','Planned:')); ?> ' + d.itinerary_title + '</div>' : '')
+                        + '<button type="button" class="mt-generate-btn" style="margin-top:8px;font-size:12px;padding:6px 14px;" onclick="mtPreviewReplan(' + d.day + ', \'' + d.date + '\', ' + d.rain_chance + ', this)"><?php echo addslashes(tms_t('btn_suggest_alternative_prefix','Suggest an alternative for Day')); ?> ' + d.day + '</button>'
+                        + '<div class="mt-replan-preview" style="margin-top:10px;"></div>'
+                        + '</div>';
+                });
+                resultBox.innerHTML = html;
+            }
+        })
+        .catch(function () {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fa fa-cloud"></i> <?php echo addslashes(tms_t('btn_check_weather_impact','Check Weather Impact on My Itinerary')); ?>';
+            resultBox.innerHTML = '<p style="color:#c0392b;font-size:13px;"><?php echo addslashes(tms_t('msg_network_error_retry','Network error — please try again.')); ?></p>';
+        });
+}
+
+function mtPreviewReplan(day, date, rainChance, btnEl) {
+    var previewBox = btnEl.parentElement.querySelector('.mt-replan-preview');
+    btnEl.disabled = true;
+    btnEl.innerHTML = '<i class="fa fa-spinner fa-spin"></i> <?php echo addslashes(tms_t('msg_generating_proposal','Generating proposal…')); ?>';
+    previewBox.innerHTML = '';
+
+    var body = new URLSearchParams({
+        booking_id: mtTripData.booking_id, destination: mtTripData.destination,
+        start_date: mtTripData.start_date, duration: mtTripData.duration,
+        travelers: mtTripData.travelers, budget: mtTripData.budget,
+        accommodation: mtTripData.accommodation, transport: mtTripData.transport,
+        flagged_day: day, flagged_date: date, rain_chance: rainChance, csrf_token: mtCsrf()
+    });
+
+    fetch('api/ai.php?action=weather_replan_preview', { method: 'POST', body: body })
+        .then(function (r) { return r.json(); })
+        .then(function (res) {
+            btnEl.style.display = 'none';
+            if (!res || !res.success) {
+                previewBox.innerHTML = '<p style="color:#c0392b;font-size:13px;">' + ((res && res.error) || '<?php echo addslashes(tms_t('msg_could_not_generate_proposal','Could not generate a proposal right now.')); ?>') + '</p>';
+                return;
+            }
+            var itin = res.data.itinerary;
+            var html = '<div style="background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:12px;">'
+                + '<p style="font-size:12px;color:#92400e;font-weight:700;margin-bottom:8px;"><i class="fa fa-info-circle"></i> <?php echo addslashes(tms_t('msg_proposed_change_banner','PROPOSED CHANGE — not saved yet. Review the full itinerary below, then choose.')); ?></p>';
+            (itin.days || []).forEach(function (d) {
+                html += '<div class="mt-day"><h5><?php echo addslashes(tms_t('label_day_prefix','Day')); ?> ' + (d.day || '') + (d.title ? ' — ' + d.title : '') + '</h5>';
+                (d.schedule || []).forEach(function (item) {
+                    html += '<div class="mt-sched-item"><strong>' + (item.time || '') + '</strong> — ' + (item.activity || '') + (item.location ? ' @ ' + item.location : '') + '</div>';
+                });
+                html += '</div>';
+            });
+            html += '<button type="button" class="mt-generate-btn" onclick="mtApplyReplan(this)"><?php echo addslashes(tms_t('btn_apply_update','Apply This Update')); ?></button> '
+                + '<button type="button" class="mt-generate-btn" style="background:#aaa;" onclick="this.closest(\'.mt-replan-preview\').innerHTML=\'\'"><?php echo addslashes(tms_t('btn_discard','Discard')); ?></button>'
+                + '</div>';
+            previewBox.innerHTML = html;
+            previewBox.dataset.itinerary = JSON.stringify(itin);
+        })
+        .catch(function () {
+            previewBox.innerHTML = '<p style="color:#c0392b;font-size:13px;"><?php echo addslashes(tms_t('msg_network_error_retry','Network error — please try again.')); ?></p>';
+        });
+}
+
+function mtApplyReplan(btnEl) {
+    var previewBox = btnEl.closest('.mt-replan-preview');
+    var itinJson = previewBox.dataset.itinerary;
+    btnEl.disabled = true;
+    btnEl.innerHTML = '<i class="fa fa-spinner fa-spin"></i> <?php echo addslashes(tms_t('msg_saving_ellipsis','Saving…')); ?>';
+
+    var body = new URLSearchParams({
+        booking_id: mtTripData.booking_id, destination: mtTripData.destination,
+        start_date: mtTripData.start_date, duration: mtTripData.duration,
+        travelers: mtTripData.travelers, budget: mtTripData.budget,
+        accommodation: mtTripData.accommodation, transport: mtTripData.transport,
+        itinerary: itinJson, csrf_token: mtCsrf()
+    });
+
+    fetch('api/ai.php?action=weather_replan_apply', { method: 'POST', body: body })
+        .then(function (r) { return r.json(); })
+        .then(function (res) {
+            if (res && res.success) {
+                location.reload();
+            } else {
+                btnEl.disabled = false;
+                btnEl.innerHTML = '<?php echo addslashes(tms_t('btn_apply_update','Apply This Update')); ?>';
+                alert((res && res.error) || '<?php echo addslashes(tms_t('msg_could_not_save_update','Could not save this update. Please try again.')); ?>');
+            }
+        })
+        .catch(function () {
+            btnEl.disabled = false;
+            btnEl.innerHTML = '<?php echo addslashes(tms_t('btn_apply_update','Apply This Update')); ?>';
+            alert('<?php echo addslashes(tms_t('msg_network_error_retry','Network error — please try again.')); ?>');
+        });
+}
+<?php endif; ?>
 
 // Round 83 (master prompt item 52): talks to sw.js's message handler over a
 // MessageChannel so this page gets a real per-call reply instead of firing
@@ -480,7 +711,7 @@ function mtSaveOffline() {
     var btn = document.getElementById('mtOfflineBtn');
     var status = document.getElementById('mtOfflineStatus');
     btn.disabled = true;
-    btn.innerHTML = '<i class="fa fa-spinner fa-spin"></i> Saving…';
+    btn.innerHTML = '<i class="fa fa-spinner fa-spin"></i> <?php echo addslashes(tms_t('msg_saving_ellipsis','Saving…')); ?>';
     status.textContent = '';
 
     mtSwMessage({ type: 'TMS_CACHE_TRIP', urls: mtOfflineItems.map(function (i) { return i.url; }) })
@@ -489,18 +720,18 @@ function mtSaveOffline() {
             var okCount = results.filter(function (r) { return r.ok; }).length;
             btn.disabled = false;
             if (okCount === mtOfflineItems.length) {
-                btn.innerHTML = '<i class="fa fa-check-circle"></i> Saved for Offline';
+                btn.innerHTML = '<i class="fa fa-check-circle"></i> <?php echo addslashes(tms_t('msg_saved_for_offline','Saved for Offline')); ?>';
                 localStorage.setItem(mtOfflineStorageKey, String(Date.now()));
-                status.textContent = 'All ' + okCount + ' pages saved. Last saved: ' + new Date().toLocaleString();
+                status.textContent = '<?php echo addslashes(tms_t('dest_pages_saved_all_prefix','All')); ?> ' + okCount + ' <?php echo addslashes(tms_t('dest_pages_saved_suffix','pages saved. Last saved:')); ?> ' + new Date().toLocaleString();
             } else {
-                btn.innerHTML = '<i class="fa fa-download"></i> Retry Save for Offline';
-                status.textContent = okCount + ' of ' + mtOfflineItems.length + ' pages saved -- some failed (check your connection and try again).';
+                btn.innerHTML = '<i class="fa fa-download"></i> <?php echo addslashes(tms_t('btn_retry_save_offline','Retry Save for Offline')); ?>';
+                status.textContent = okCount + ' <?php echo addslashes(tms_t('label_of_word','of')); ?> ' + mtOfflineItems.length + ' <?php echo addslashes(tms_t('dest_pages_saved_partial_tail','pages saved -- some failed (check your connection and try again).')); ?>';
             }
         })
         .catch(function (err) {
             btn.disabled = false;
-            btn.innerHTML = '<i class="fa fa-download"></i> Save for Offline';
-            status.textContent = 'Could not save for offline right now: ' + (err && err.message ? err.message : 'unknown error');
+            btn.innerHTML = '<i class="fa fa-download"></i> <?php echo addslashes(tms_t('btn_save_for_offline','Save for Offline')); ?>';
+            status.textContent = '<?php echo addslashes(tms_t('dest_could_not_save_offline_prefix','Could not save for offline right now:')); ?> ' + (err && err.message ? err.message : '<?php echo addslashes(tms_t('dest_unknown_error','unknown error')); ?>');
         });
 }
 
@@ -511,7 +742,7 @@ function mtSaveOffline() {
     var last = localStorage.getItem(mtOfflineStorageKey);
     if (last) {
         var status = document.getElementById('mtOfflineStatus');
-        if (status) { status.textContent = 'Last saved for offline: ' + new Date(parseInt(last, 10)).toLocaleString(); }
+        if (status) { status.textContent = '<?php echo addslashes(tms_t('dest_last_saved_offline_prefix','Last saved for offline:')); ?> ' + new Date(parseInt(last, 10)).toLocaleString(); }
     }
 })();
 <?php endif; ?>

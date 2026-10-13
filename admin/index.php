@@ -293,8 +293,8 @@ body{font-family:'Inter',sans-serif;min-height:100vh;display:flex;background:#0f
       <form method="post" autocomplete="off">
         <?php tms_csrf_field(); ?>
         <div class="field-group">
-          <label class="form-label">Authentication Code</label>
-          <input type="text" name="totp_code" class="form-input" placeholder="123456" inputmode="numeric" pattern="[0-9]*" maxlength="6" required autocomplete="one-time-code" autofocus>
+          <label class="form-label" for="adminTotpCodeField">Authentication Code</label>
+          <input type="text" id="adminTotpCodeField" name="totp_code" class="form-input" placeholder="123456" inputmode="numeric" pattern="[0-9]*" maxlength="6" required autocomplete="one-time-code" autofocus>
         </div>
         <button type="submit" name="btn-verify-2fa" class="btn-login">Verify &#8594;</button>
       </form>
@@ -311,12 +311,12 @@ body{font-family:'Inter',sans-serif;min-height:100vh;display:flex;background:#0f
       <form method="post" autocomplete="off">
         <?php tms_csrf_field(); ?>
         <div class="field-group">
-          <label class="form-label">Username</label>
-          <input type="text" name="txtusername" class="form-input" placeholder="Admin username" required autocomplete="username">
+          <label class="form-label" for="adminUsernameField">Username</label>
+          <input type="text" id="adminUsernameField" name="txtusername" class="form-input" placeholder="Admin username" required autocomplete="username">
         </div>
         <div class="field-group">
-          <label class="form-label">Password</label>
-          <input type="password" name="txtpassword" class="form-input" placeholder="••••••••" required autocomplete="current-password">
+          <label class="form-label" for="adminPasswordField">Password</label>
+          <input type="password" id="adminPasswordField" name="txtpassword" class="form-input" placeholder="••••••••" required autocomplete="current-password">
         </div>
         <button type="submit" name="btn-login" class="btn-login">Sign In &#8594;</button>
       </form>

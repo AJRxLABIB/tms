@@ -124,17 +124,17 @@ if (isset($_POST['save_post'])) {
   <div class="card-body">
     <form method="post" enctype="multipart/form-data">
       <?php tms_csrf_field(); ?>
-      <div class="form-group"><label>Title *</label><input type="text" name="title" class="form-control" value="<?= htmlspecialchars($post->Title) ?>" required></div>
+      <div class="form-group"><label for="blogTitleField">Title *</label><input type="text" id="blogTitleField" name="title" class="form-control" value="<?= htmlspecialchars($post->Title) ?>" required></div>
       <div class="row">
-        <div class="col-md-6"><div class="form-group"><label>Tag</label><input type="text" name="tag" class="form-control" value="<?= htmlspecialchars($post->Tag??'') ?>"></div></div>
-        <div class="col-md-6"><div class="form-group"><label>Cover Image (leave blank to keep current)</label><input type="file" name="cover" class="form-control" accept="image/*"></div></div>
+        <div class="col-md-6"><div class="form-group"><label for="blogTagField">Tag</label><input type="text" id="blogTagField" name="tag" class="form-control" value="<?= htmlspecialchars($post->Tag??'') ?>"></div></div>
+        <div class="col-md-6"><div class="form-group"><label for="blogCoverField">Cover Image (leave blank to keep current)</label><input type="file" id="blogCoverField" name="cover" class="form-control" accept="image/*"></div></div>
       </div>
-      <div class="form-group"><label>Content *</label><textarea name="content" class="form-control" rows="12" required><?= htmlspecialchars($post->Content) ?></textarea></div>
+      <div class="form-group"><label for="blogContentField">Content *</label><textarea id="blogContentField" name="content" class="form-control" rows="12" required><?= htmlspecialchars($post->Content) ?></textarea></div>
       <div class="row">
         <div class="col-md-6">
           <div class="form-group">
-            <label>Related Destination <small style="font-weight:400;color:#999;">(optional)</small></label>
-            <select name="related_destination" class="form-control">
+            <label for="blogRelatedDestField">Related Destination <small style="font-weight:400;color:#999;">(optional)</small></label>
+            <select id="blogRelatedDestField" name="related_destination" class="form-control">
               <option value="">— None —</option>
               <?php foreach ($blogDestOptions as $c): ?>
               <option value="<?= htmlspecialchars($c, ENT_QUOTES, 'UTF-8') ?>" <?= ($post->RelatedDestination ?? '')===$c?'selected':'' ?>><?= htmlspecialchars($c, ENT_QUOTES, 'UTF-8') ?></option>
@@ -144,8 +144,8 @@ if (isset($_POST['save_post'])) {
         </div>
         <div class="col-md-6">
           <div class="form-group">
-            <label>Related Package <small style="font-weight:400;color:#999;">(optional)</small></label>
-            <select name="related_package_id" class="form-control">
+            <label for="blogRelatedPkgField">Related Package <small style="font-weight:400;color:#999;">(optional)</small></label>
+            <select id="blogRelatedPkgField" name="related_package_id" class="form-control">
               <option value="">— None —</option>
               <?php foreach ($blogPkgOptions as $p): ?>
               <option value="<?= (int)$p->PackageId ?>" <?= (int)($post->RelatedPackageId ?? 0)===(int)$p->PackageId?'selected':'' ?>><?= htmlspecialchars($p->PackageName, ENT_QUOTES, 'UTF-8') ?></option>
@@ -155,8 +155,8 @@ if (isset($_POST['save_post'])) {
         </div>
       </div>
       <div class="form-group">
-        <label>Sources <small style="font-weight:400;color:#999;">(optional — one URL or citation per line)</small></label>
-        <textarea name="sources" class="form-control" rows="3" placeholder="e.g. https://example.gov/visa-requirements"><?= htmlspecialchars($post->Sources ?? '') ?></textarea>
+        <label for="blogSourcesField">Sources <small style="font-weight:400;color:#999;">(optional — one URL or citation per line)</small></label>
+        <textarea id="blogSourcesField" name="sources" class="form-control" rows="3" placeholder="e.g. https://example.gov/visa-requirements"><?= htmlspecialchars($post->Sources ?? '') ?></textarea>
       </div>
       <?php if (!empty($post->UpdatedAt)): ?>
       <p style="font-size:12px;color:#999;">Last updated: <?= date('d M Y, g:i a', strtotime($post->UpdatedAt)) ?></p>

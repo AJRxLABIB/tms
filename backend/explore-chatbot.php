@@ -1,5 +1,5 @@
 <!-- TMS Explore Mode — Floating AI Travel Assistant -->
-<!-- Include on any Explore page: include('includes/explore-chatbot.php'); -->
+<!-- Include on any Explore page: include('backend/explore-chatbot.php'); -->
 <?php
 // FIX (Round 14): this widget rendered a "🟢 Live · powered by Gemini" badge and
 // a working-looking launcher even with no API key configured — every message

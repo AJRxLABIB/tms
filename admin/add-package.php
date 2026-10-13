@@ -130,15 +130,15 @@ if (isset($_POST['submit'])) {
             <div class="row">
                 <div class="col-md-6">
                     <div class="form-group">
-                        <label>Package Name *</label>
-                        <input type="text" name="packagename" class="form-control" required maxlength="200"
+                        <label for="pkgNameField">Package Name *</label>
+                        <input type="text" id="pkgNameField" name="packagename" class="form-control" required maxlength="200"
                                value="<?php echo htmlspecialchars($_POST['packagename']??'',ENT_QUOTES,'UTF-8'); ?>">
                     </div>
                 </div>
                 <div class="col-md-6">
                     <div class="form-group">
-                        <label>Package Type *</label>
-                        <select name="packagetype" class="form-control" required>
+                        <label for="pkgTypeField">Package Type *</label>
+                        <select id="pkgTypeField" name="packagetype" class="form-control" required>
                             <option value="">-- Select Type --</option>
                             <?php $types=['Family Package','Couple Package','Group Package','Domestic Packages','International Package','Adventure Package'];
                             foreach ($types as $t): ?>
@@ -149,14 +149,14 @@ if (isset($_POST['submit'])) {
                 </div>
                 <div class="col-md-6">
                     <div class="form-group">
-                        <label>Package Location *</label>
-                        <input type="text" name="packagelocation" class="form-control" required maxlength="200"
+                        <label for="pkgLocationField">Package Location *</label>
+                        <input type="text" id="pkgLocationField" name="packagelocation" class="form-control" required maxlength="200"
                                value="<?php echo htmlspecialchars($_POST['packagelocation']??'',ENT_QUOTES,'UTF-8'); ?>">
                     </div>
                 </div>
                 <div class="col-md-6">
                     <div class="form-group">
-                        <label>Package Price (৳) *</label>
+                        <label for="packagePriceInput">Package Price (৳) *</label>
                         <div style="display:flex;gap:8px;">
                             <input type="number" name="packageprice" id="packagePriceInput" class="form-control" required min="1"
                                    value="<?php echo (int)($_POST['packageprice']??0) ?: ''; ?>">
@@ -170,95 +170,95 @@ if (isset($_POST['submit'])) {
                 </div>
                 <div class="col-md-12">
                     <div class="form-group">
-                        <label>Features</label>
-                        <input type="text" name="packagefeatures" class="form-control" maxlength="500"
+                        <label for="pkgFeaturesField">Features</label>
+                        <input type="text" id="pkgFeaturesField" name="packagefeatures" class="form-control" maxlength="500"
                                placeholder="e.g. Hotel, Meals, Transport"
                                value="<?php echo htmlspecialchars($_POST['packagefeatures']??'',ENT_QUOTES,'UTF-8'); ?>">
                     </div>
                 </div>
                 <div class="col-md-6">
                     <div class="form-group">
-                        <label>Duration <small style="color:#aaa;">(e.g. "5 Days 4 Nights")</small></label>
-                        <input type="text" name="packageduration" class="form-control"
+                        <label for="pkgDurationField">Duration <small style="color:#aaa;">(e.g. "5 Days 4 Nights")</small></label>
+                        <input type="text" id="pkgDurationField" name="packageduration" class="form-control"
                                value="<?php echo htmlspecialchars($_POST['packageduration']??'',ENT_QUOTES,'UTF-8'); ?>" placeholder="5 Days 4 Nights">
                     </div>
                 </div>
                 <div class="col-md-6">
                     <div class="form-group">
-                        <label>Map Coordinates <small style="color:#aaa;">(powers the interactive map &amp; nearby-places widget — optional)</small></label>
-                        <div style="display:flex;gap:8px;">
-                            <input type="number" step="any" name="maplat" class="form-control" placeholder="Latitude" value="<?php echo htmlspecialchars($_POST['maplat']??'',ENT_QUOTES,'UTF-8'); ?>">
-                            <input type="number" step="any" name="maplng" class="form-control" placeholder="Longitude" value="<?php echo htmlspecialchars($_POST['maplng']??'',ENT_QUOTES,'UTF-8'); ?>">
+                        <label id="pkgMapCoordsGroupLabel">Map Coordinates <small style="color:#aaa;">(powers the interactive map &amp; nearby-places widget — optional)</small></label>
+                        <div style="display:flex;gap:8px;" role="group" aria-labelledby="pkgMapCoordsGroupLabel">
+                            <input type="number" step="any" name="maplat" class="form-control" aria-label="Latitude" placeholder="Latitude" value="<?php echo htmlspecialchars($_POST['maplat']??'',ENT_QUOTES,'UTF-8'); ?>">
+                            <input type="number" step="any" name="maplng" class="form-control" aria-label="Longitude" placeholder="Longitude" value="<?php echo htmlspecialchars($_POST['maplng']??'',ENT_QUOTES,'UTF-8'); ?>">
                         </div>
                     </div>
                 </div>
                 <div class="col-md-6">
                     <div class="form-group">
-                        <label>Hotel Name <small style="color:#aaa;">(shown in package comparison)</small></label>
-                        <input type="text" name="hotelname" class="form-control" placeholder="e.g. Sea Pearl Beach Resort"
+                        <label for="pkgHotelNameField">Hotel Name <small style="color:#aaa;">(shown in package comparison)</small></label>
+                        <input type="text" id="pkgHotelNameField" name="hotelname" class="form-control" placeholder="e.g. Sea Pearl Beach Resort"
                                value="<?php echo htmlspecialchars($_POST['hotelname']??'',ENT_QUOTES,'UTF-8'); ?>">
                     </div>
                 </div>
                 <div class="col-md-6">
                     <div class="form-group">
-                        <label>Hotel Rating <small style="color:#aaa;">(1&ndash;5 stars, optional)</small></label>
-                        <input type="number" step="0.5" min="1" max="5" name="hotelrating" class="form-control" placeholder="4.5"
+                        <label for="pkgHotelRatingField">Hotel Rating <small style="color:#aaa;">(1&ndash;5 stars, optional)</small></label>
+                        <input type="number" step="0.5" min="1" max="5" id="pkgHotelRatingField" name="hotelrating" class="form-control" placeholder="4.5"
                                value="<?php echo htmlspecialchars($_POST['hotelrating']??'',ENT_QUOTES,'UTF-8'); ?>">
                     </div>
                 </div>
                 <div class="col-md-6">
                     <div class="form-group">
-                        <label>Meal Plan</label>
-                        <input type="text" name="mealplan" class="form-control" placeholder="e.g. Breakfast Included"
+                        <label for="pkgMealPlanField">Meal Plan</label>
+                        <input type="text" id="pkgMealPlanField" name="mealplan" class="form-control" placeholder="e.g. Breakfast Included"
                                value="<?php echo htmlspecialchars($_POST['mealplan']??'',ENT_QUOTES,'UTF-8'); ?>">
                     </div>
                 </div>
                 <div class="col-md-6">
                     <div class="form-group">
-                        <label>Transport Mode</label>
-                        <input type="text" name="transportmode" class="form-control" placeholder="e.g. AC Bus, Flight"
+                        <label for="pkgTransportModeField">Transport Mode</label>
+                        <input type="text" id="pkgTransportModeField" name="transportmode" class="form-control" placeholder="e.g. AC Bus, Flight"
                                value="<?php echo htmlspecialchars($_POST['transportmode']??'',ENT_QUOTES,'UTF-8'); ?>">
                     </div>
                 </div>
                 <div class="col-md-6">
                     <div class="form-group">
-                        <label>Seats Available <small style="color:#aaa;">(leave blank = unlimited/not tracked)</small></label>
-                        <input type="number" min="0" name="seatsavailable" class="form-control" placeholder="e.g. 30"
+                        <label for="pkgSeatsField">Seats Available <small style="color:#aaa;">(leave blank = unlimited/not tracked)</small></label>
+                        <input type="number" min="0" id="pkgSeatsField" name="seatsavailable" class="form-control" placeholder="e.g. 30"
                                value="<?php echo htmlspecialchars($_POST['seatsavailable']??'',ENT_QUOTES,'UTF-8'); ?>">
                     </div>
                 </div>
                 <div class="col-md-12">
                     <div class="form-group">
-                        <label>Package Details</label>
-                        <textarea name="packagedetails" class="form-control" rows="5"
+                        <label for="pkgDetailsField">Package Details</label>
+                        <textarea id="pkgDetailsField" name="packagedetails" class="form-control" rows="5"
                                   placeholder="Full description of the package…"><?php echo htmlspecialchars($_POST['packagedetails']??'',ENT_QUOTES,'UTF-8'); ?></textarea>
                     </div>
                 </div>
                 <div class="col-md-6">
                     <div class="form-group">
-                        <label>Inclusions <small style="color:#aaa;">(one item per line, e.g. "Hotel accommodation")</small></label>
-                        <textarea name="inclusions" class="form-control" rows="4"
+                        <label for="pkgInclusionsField">Inclusions <small style="color:#aaa;">(one item per line, e.g. "Hotel accommodation")</small></label>
+                        <textarea id="pkgInclusionsField" name="inclusions" class="form-control" rows="4"
                                   placeholder="Hotel accommodation&#10;Daily breakfast&#10;Airport transfers"><?php echo htmlspecialchars($_POST['inclusions']??'',ENT_QUOTES,'UTF-8'); ?></textarea>
                     </div>
                 </div>
                 <div class="col-md-6">
                     <div class="form-group">
-                        <label>Exclusions <small style="color:#aaa;">(one item per line, e.g. "International airfare")</small></label>
-                        <textarea name="exclusions" class="form-control" rows="4"
+                        <label for="pkgExclusionsField">Exclusions <small style="color:#aaa;">(one item per line, e.g. "International airfare")</small></label>
+                        <textarea id="pkgExclusionsField" name="exclusions" class="form-control" rows="4"
                                   placeholder="International airfare&#10;Travel insurance&#10;Personal expenses"><?php echo htmlspecialchars($_POST['exclusions']??'',ENT_QUOTES,'UTF-8'); ?></textarea>
                     </div>
                 </div>
                 <div class="col-md-12">
                     <div class="form-group">
-                        <label>Cancellation Policy <small style="color:#aaa;">(one rule per line, shown to travelers before booking)</small></label>
-                        <textarea name="cancellationpolicy" class="form-control" rows="4"
+                        <label for="pkgCancellationPolicyField">Cancellation Policy <small style="color:#aaa;">(one rule per line, shown to travelers before booking)</small></label>
+                        <textarea id="pkgCancellationPolicyField" name="cancellationpolicy" class="form-control" rows="4"
                                   placeholder="Free cancellation up to 7 days before departure&#10;50% refund within 3-7 days&#10;No refund within 48 hours"><?php echo htmlspecialchars($_POST['cancellationpolicy']??'',ENT_QUOTES,'UTF-8'); ?></textarea>
                     </div>
                 </div>
                 <div class="col-md-12">
                     <div class="form-group">
-                        <label>Package Image <small style="color:#aaa;">(JPG/PNG/GIF/WEBP, max 5 MB)</small></label>
-                        <input type="file" name="packageimage" class="form-control" accept="image/*"
+                        <label for="pkgImageField">Package Image <small style="color:#aaa;">(JPG/PNG/GIF/WEBP, max 5 MB)</small></label>
+                        <input type="file" id="pkgImageField" name="packageimage" class="form-control" accept="image/*"
                                onchange="previewImg(this)">
                         <img id="imgPreview" class="img-preview" alt="Preview">
                     </div>

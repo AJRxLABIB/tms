@@ -106,11 +106,15 @@ if (!isset($_POST['recommend']) && !empty($_SESSION['login'])) {
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#0B2B3C">
 <link rel="apple-touch-icon" href="images/icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="TMS">
+<meta name="mobile-web-app-capable" content="yes">
 <title>TMS | AI Smart Tour Recommendation</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
 <link href="css/bootstrap.min2.css" rel='stylesheet' type='text/css' />
-<link href="css/style.min.css" rel='stylesheet' type='text/css' />
+<link href="<?php echo tms_asset_ver('css/style.min.css'); ?>" rel='stylesheet' type='text/css' />
 <link href="css/font-awesome.min2.css" rel="stylesheet">
 <link href="<?php echo tms_asset_ver('css/modern-theme.css'); ?>" rel="stylesheet">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -120,6 +124,7 @@ if (!isset($_POST['recommend']) && !empty($_SESSION['login'])) {
 <script src="js/jquery-1.12.0.min.js" defer></script>
 <script src="js/bootstrap.min.js" defer></script>
 <script src="js/wow.min.js" defer></script>
+<script src="<?php echo tms_asset_ver('js/ai-feedback.js'); ?>" defer></script>
 <style>
 .ai-hero { background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%); padding: 60px 0; text-align:center; color:#fff; }
 .ai-hero h1 { font-size: 2.5em; margin-bottom:10px; }
@@ -323,6 +328,17 @@ html[data-theme="dark"] .input-group-icon .fa { color: var(--text-muted) !import
                     <p><i class="fa fa-map-marker" style="color:#e74c3c"></i> <?php echo htmlentities($pkg['destination'] ?? ''); ?></p>
                     <?php if (!empty($pkg['why_recommended'])): ?>
                     <p style="font-size:13px;color:#555;font-style:italic;">"<?php echo htmlentities($pkg['why_recommended']); ?>"</p>
+                    <?php
+                    // Round 115, master prompt item 14 ("AI Feedback Loop"): a
+                    // thumbs up/down on the recommendation itself, right next to
+                    // the "why" text it's rating. See js/ai-feedback.js.
+                    $pkgIdForFeedback = (int)($pkg['package_id'] ?? 0);
+                    ?>
+                    <div class="tms-ai-feedback" style="margin:2px 0 8px;font-size:12px;color:#999;">
+                        Helpful?
+                        <button type="button" onclick="tmsSendAiFeedback('recommend', <?php echo $pkgIdForFeedback; ?>, 1, this)" style="border:none;background:none;color:#27ae60;cursor:pointer;padding:2px 6px;" title="Yes, helpful"><i class="fa fa-thumbs-up"></i></button>
+                        <button type="button" onclick="tmsSendAiFeedback('recommend', <?php echo $pkgIdForFeedback; ?>, -1, this)" style="border:none;background:none;color:#c0392b;cursor:pointer;padding:2px 6px;" title="No, not helpful"><i class="fa fa-thumbs-down"></i></button>
+                    </div>
                     <?php endif; ?>
                     <?php if ($scores): ?>
                     <ul style="list-style:none;padding:0;margin:8px 0;font-size:12px;">

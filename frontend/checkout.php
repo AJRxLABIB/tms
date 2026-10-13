@@ -135,12 +135,19 @@ if (isset($_POST['confirm_checkout'])) {
         // Round 91 (items 10/81): + this item's cart add-ons, computed above.
         $itemTotal   = ((int)$it->EffectivePrice * $itemPersons) + (int)$it->AddonTotal;
         $verificationCode = strtoupper(bin2hex(random_bytes(5)));
+        // FEATURE (Round 115 continuation, master prompt item 37 --
+        // Currency): see tms_capture_booking_fx()'s own docblock and
+        // package-details.php's identical comment.
+        $itemFx = tms_capture_booking_fx((float)$itemTotal);
+        // Defensive (Rule 8): migration 013 may not have run yet on this
+        // deployment -- never let a pending migration break checkout.
+        $hasBookingFx = tms_booking_fx_columns_exist($dbh);
 
         $ins = $dbh->prepare(
-            "INSERT INTO tblbooking(PackageId,UserEmail,FromDate,ToDate,Comment,status,NoOfPersons,MobileNumber,TotalCost,VerificationCode,BookingDate)
-             VALUES(:pid,:email,:from,:to,:comment,0,:persons,:mobile,:total,:vcode,:bdate)"
+            "INSERT INTO tblbooking(PackageId,UserEmail,FromDate,ToDate,Comment,status,NoOfPersons,MobileNumber,TotalCost,VerificationCode,BookingDate" . ($hasBookingFx ? ",DisplayCurrency,DisplayAmount,FxRate,FxRateSource,FxRateTimestamp" : "") . ")
+             VALUES(:pid,:email,:from,:to,:comment,0,:persons,:mobile,:total,:vcode,:bdate" . ($hasBookingFx ? ",:dcur,:damt,:frate,:fsrc,:fts" : "") . ")"
         );
-        $ins->execute([
+        $ins->execute(array_merge([
             ':pid' => $it->PackageId, ':email' => $email,
             ':from' => $it->FromDate, ':to' => $it->ToDate, ':comment' => $it->Comment,
             ':persons' => $itemPersons, ':mobile' => $mobile ?: null,
@@ -156,7 +163,10 @@ if (isset($_POST['confirm_checkout'])) {
             // actually expects (RegDate already covers "when the booking
             // record was created").
             ':bdate' => $it->FromDate,
-        ]);
+        ], $hasBookingFx ? [
+            ':dcur' => $itemFx['currency'], ':damt' => $itemFx['converted_amount'],
+            ':frate' => $itemFx['rate'], ':fsrc' => $itemFx['source'], ':fts' => $itemFx['rate_timestamp'],
+        ] : []));
         $newId = $dbh->lastInsertId();
         if ($newId) {
             $createdIds[] = $newId;
@@ -237,10 +247,14 @@ if (isset($_POST['confirm_checkout'])) {
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#0B2B3C">
 <link rel="apple-touch-icon" href="images/icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="TMS">
+<meta name="mobile-web-app-capable" content="yes">
 <title>TMS | Checkout</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <link href="css/bootstrap.min2.css" rel='stylesheet'/>
-<link href="css/style.min.css" rel='stylesheet'/>
+<link href="<?php echo tms_asset_ver('css/style.min.css'); ?>" rel='stylesheet'/>
 <link href="css/font-awesome.min2.css" rel="stylesheet">
 <link href="<?php echo tms_asset_ver('css/modern-theme.css'); ?>" rel="stylesheet">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -261,17 +275,17 @@ html[data-theme="dark"] .summary-row.total { color: var(--text) !important; }
 <?php include('backend/header.php'); ?>
 <div class="page-title">
   <div class="container">
-    <h2 style="margin:0 0 20px;"><i class="fa fa-lock"></i> Checkout</h2>
+    <h2 style="margin:0 0 20px;"><i class="fa fa-lock"></i> <?php echo tms_t('step_checkout','Checkout'); ?></h2>
     <div class="tms-steps">
-      <div class="tms-step done"><div class="tms-step-circle"><i class="fa fa-check"></i></div><div class="tms-step-label">Cart</div></div>
-      <div class="tms-step active"><div class="tms-step-circle">2</div><div class="tms-step-label">Checkout</div></div>
-      <div class="tms-step"><div class="tms-step-circle">3</div><div class="tms-step-label">Confirmed</div></div>
+      <div class="tms-step done"><div class="tms-step-circle"><i class="fa fa-check"></i></div><div class="tms-step-label"><?php echo tms_t('step_cart','Cart'); ?></div></div>
+      <div class="tms-step active"><div class="tms-step-circle">2</div><div class="tms-step-label"><?php echo tms_t('step_checkout','Checkout'); ?></div></div>
+      <div class="tms-step"><div class="tms-step-circle">3</div><div class="tms-step-label"><?php echo tms_t('step_confirmed','Confirmed'); ?></div></div>
     </div>
   </div>
 </div>
 <div class="container" style="padding-bottom:50px;max-width:700px;">
   <div class="summary-box">
-    <h5 style="font-weight:700;margin-bottom:10px;">Review Your <?php echo count($items); ?> Booking(s)</h5>
+    <h5 style="font-weight:700;margin-bottom:10px;"><?php echo tms_t('label_review_your_prefix','Review Your'); ?> <?php echo count($items); ?> <?php echo tms_t('label_bookings_suffix','Booking(s)'); ?></h5>
     <?php if ($error): ?>
     <div style="background:#fee2e2;color:#991b1b;border:1px solid #fecaca;border-radius:8px;padding:12px 14px;margin-bottom:16px;font-size:13.5px;">
       <i class="fa fa-exclamation-circle"></i> <?php echo htmlspecialchars($error, ENT_QUOTES, 'UTF-8'); ?>
@@ -294,40 +308,40 @@ html[data-theme="dark"] .summary-row.total { color: var(--text) !important; }
       <?php $pax = max(1, (int)$it->NoOfPersons); ?>
       <div style="text-align:right;">
         <?php if ($it->PackagePrice === null || (float)$it->PackagePrice <= 0): ?>
-          <span style="color:#e11d48;">Price not set</span>
+          <span style="color:#e11d48;"><?php echo tms_t('msg_price_not_set','Price not set'); ?></span>
         <?php else: ?>
           <?php echo tms_currency((int)$it->EffectivePrice); ?>
           <div style="font-size:12px;color:#888;">
-            × <?php echo $pax; ?> traveller<?php echo $pax > 1 ? 's' : ''; ?>
-            <?php if ($it->AddonTotal > 0): ?>+ <?php echo tms_currency($it->AddonTotal); ?> add-ons<?php endif; ?>
+            × <?php echo $pax; ?> <?php echo tms_t('label_traveller_word','traveller(s)'); ?>
+            <?php if ($it->AddonTotal > 0): ?>+ <?php echo tms_currency($it->AddonTotal); ?> <?php echo tms_t('label_addons_word','add-ons'); ?><?php endif; ?>
             = <strong><?php echo tms_currency(((int)$it->EffectivePrice * $pax) + $it->AddonTotal); ?></strong>
           </div>
         <?php endif; ?>
       </div>
     </div>
     <?php endforeach; ?>
-    <div class="summary-row total"><span>Total</span><span><?php echo tms_currency($total); ?></span></div>
+    <div class="summary-row total"><span><?php echo tms_t('label_total','Total'); ?></span><span><?php echo tms_currency($total); ?></span></div>
 
     <form method="post">
       <?php tms_csrf_field(); ?>
       <div class="form-group" style="margin-top:16px;">
-        <label style="font-weight:600;font-size:13px;">Mobile Number <small style="color:#94a3b8;">(optional, for booking contact)</small></label>
+        <label style="font-weight:600;font-size:13px;"><?php echo tms_t('label_mobile_number','Mobile Number'); ?> <small style="color:#94a3b8;"><?php echo tms_t('dest_mobile_optional_hint','(optional, for booking contact)'); ?></small></label>
         <input type="tel" name="mobile" class="form-control" placeholder="e.g. 017XXXXXXXX" maxlength="20">
       </div>
       <?php if ($hasInvalidPrice): ?>
-      <button type="button" class="btn-confirm" disabled style="opacity:.5;cursor:not-allowed;" title="Remove the unpriced item(s) from your cart first">
-        <i class="fa fa-check-circle"></i> Confirm &amp; Book All
+      <button type="button" class="btn-confirm" disabled style="opacity:.5;cursor:not-allowed;" title="<?php echo htmlspecialchars(tms_t('msg_remove_unpriced_first','Remove the unpriced item(s) from your cart first'), ENT_QUOTES, 'UTF-8'); ?>">
+        <i class="fa fa-check-circle"></i> <?php echo tms_t('btn_confirm_book_all','Confirm & Book All'); ?>
       </button>
-      <a href="cart.php" style="display:block;text-align:center;margin-top:10px;font-size:13px;color:var(--secondary);">&larr; Back to cart</a>
+      <a href="cart.php" style="display:block;text-align:center;margin-top:10px;font-size:13px;color:var(--secondary);">&larr; <?php echo tms_t('link_back_to_cart','Back to Cart'); ?></a>
       <?php else: ?>
       <button type="submit" name="confirm_checkout" class="btn-confirm">
-        <i class="fa fa-check-circle"></i> Confirm &amp; Book All
+        <i class="fa fa-check-circle"></i> <?php echo tms_t('btn_confirm_book_all','Confirm & Book All'); ?>
       </button>
       <?php endif; ?>
     </form>
-    <p style="text-align:center;margin-top:12px;"><a href="cart.php" style="font-size:13px;color:#94a3b8;">← Back to Cart</a></p>
+    <p style="text-align:center;margin-top:12px;"><a href="cart.php" style="font-size:13px;color:#94a3b8;">← <?php echo tms_t('link_back_to_cart','Back to Cart'); ?></a></p>
     <p style="text-align:center;font-size:11.5px;color:#cbd5e1;margin-top:8px;">
-      Each booking starts as <strong>pending</strong> and will be confirmed by our team shortly — just like booking one package at a time.
+      <?php echo tms_t('dest_checkout_pending_note', 'Each booking starts as <strong>pending</strong> and will be confirmed by our team shortly — just like booking one package at a time.'); ?>
     </p>
   </div>
 </div>
