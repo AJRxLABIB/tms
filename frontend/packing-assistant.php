@@ -84,7 +84,7 @@ tms_require_user(); // Batch 1 (landing/auth gating): whole app now requires log
 .btn-action { padding:10px 22px; border-radius:10px; font-size:13px; font-weight:700; cursor:pointer; transition:.2s; border:none; display:flex; align-items:center; gap:8px; }
 .btn-action.print   { background:#f8fafc; border:2px solid #e2e8f0; color:#4a5568; }
 .btn-action.print:hover { background:#edf2f7; }
-.btn-action.save    { background:linear-gradient(135deg,#667eea,#764ba2); color:#fff; }
+.btn-action.save    { background:linear-gradient(135deg,#176B50,#104B3A); color:#fff; }
 .btn-action.save:hover { opacity:.9; }
 
 /* Spinner */

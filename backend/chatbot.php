@@ -16,8 +16,8 @@
     50% { transform: scale(1.04); }
 }
 @keyframes tmsRobotGlow {
-    0%, 100% { box-shadow: 0 0 18px 4px rgba(102,126,234,0.45), 0 8px 25px rgba(0,0,0,0.25); }
-    50% { box-shadow: 0 0 30px 10px rgba(118,75,162,0.55), 0 8px 25px rgba(0,0,0,0.25); }
+    0%, 100% { box-shadow: 0 0 18px 4px rgba(23,107,80,0.45), 0 8px 25px rgba(0,0,0,0.25); }
+    50% { box-shadow: 0 0 30px 10px rgba(16,75,58,0.55), 0 8px 25px rgba(0,0,0,0.25); }
 }
 @keyframes tmsEyeBlink {
     0%, 92%, 100% { transform: scaleY(1); }
@@ -63,16 +63,16 @@
 
 <!-- Chatbot Button — animated AI robot assistant -->
 <button id="tmsChatToggle" onclick="TmsChatWidget.toggleChat()" title="<?php echo htmlspecialchars(tms_t('chatbot_widget_title', 'Chat with TMS AI Assistant'), ENT_QUOTES, 'UTF-8'); ?>" aria-label="<?php echo htmlspecialchars(tms_t('chatbot_widget_aria', 'Open AI travel assistant'), ENT_QUOTES, 'UTF-8'); ?>">
-    <div class="tms-robot-glow" style="background: radial-gradient(circle, rgba(102,126,234,0.35), transparent 70%);"></div>
+    <div class="tms-robot-glow" style="background: radial-gradient(circle, rgba(23,107,80,0.35), transparent 70%);"></div>
     <div class="tms-robot-body">
         <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
             <defs>
                 <linearGradient id="tmsRobotHeadGrad" x1="0" y1="0" x2="1" y2="1">
                     <stop offset="0%" stop-color="#8b9dff"/>
-                    <stop offset="100%" stop-color="#764ba2"/>
+                    <stop offset="100%" stop-color="#104B3A"/>
                 </linearGradient>
                 <linearGradient id="tmsRobotBodyGrad" x1="0" y1="0" x2="1" y2="1">
-                    <stop offset="0%" stop-color="#667eea"/>
+                    <stop offset="0%" stop-color="#176B50"/>
                     <stop offset="100%" stop-color="#5a3f8f"/>
                 </linearGradient>
             </defs>
@@ -104,7 +104,7 @@
 #tmsChatPanel { position:fixed; bottom:100px; right:25px; width:360px; height:500px; background:#fff; border-radius:16px; box-shadow:0 10px 40px rgba(0,0,0,0.2); z-index:9998; display:none; flex-direction:column; overflow:hidden; }
 #tmsChatPanel.open { display:flex; }
 
-.chat-header { background:linear-gradient(135deg,#667eea,#764ba2); padding:15px 18px; color:#fff; display:flex; align-items:center; gap:12px; }
+.chat-header { background:linear-gradient(135deg,#176B50,#104B3A); padding:15px 18px; color:#fff; display:flex; align-items:center; gap:12px; }
 .chat-avatar { width:40px; height:40px; background:rgba(255,255,255,0.2); border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:18px; flex-shrink:0; }
 .chat-header-info h5 { margin:0; font-size:15px; font-weight:700; }
 .chat-header-info p { margin:0; font-size:12px; opacity:0.85; }
@@ -119,7 +119,7 @@
    symmetric padding:5px and already clear 24px on both axes). min-height
    plus flex-centering guarantee a full 24px-tall box without changing the
    icon's visible size; width was already passing so it's untouched. */
-.chat-mic { background:none; border:none; color:#764ba2; font-size:16px; cursor:pointer; padding:0 8px; min-height:24px; display:inline-flex; align-items:center; opacity:0.7; transition:opacity .15s, color .15s; }
+.chat-mic { background:none; border:none; color:#104B3A; font-size:16px; cursor:pointer; padding:0 8px; min-height:24px; display:inline-flex; align-items:center; opacity:0.7; transition:opacity .15s, color .15s; }
 .chat-mic:hover { opacity:1; }
 .chat-mic.listening { color:#e74c3c; opacity:1; animation:tmsMicPulse 1s ease-in-out infinite; }
 @keyframes tmsMicPulse { 0%,100%{ transform:scale(1); } 50%{ transform:scale(1.18); } }
@@ -130,20 +130,20 @@
 .msg-user { align-self:flex-end; }
 .msg-bubble { padding:10px 14px; border-radius:12px; font-size:13px; line-height:1.5; }
 .msg-bot .msg-bubble { background:#fff; color:#333; box-shadow:0 1px 5px rgba(0,0,0,0.08); border-radius:0 12px 12px 12px; }
-.msg-user .msg-bubble { background:linear-gradient(135deg,#667eea,#764ba2); color:#fff; border-radius:12px 0 12px 12px; }
+.msg-user .msg-bubble { background:linear-gradient(135deg,#176B50,#104B3A); color:#fff; border-radius:12px 0 12px 12px; }
 .msg-time { font-size:10px; color:#aaa; margin-top:3px; }
 .msg-bot .msg-time { text-align:left; }
 .msg-user .msg-time { text-align:right; }
-.bot-name { font-size:11px; color:#667eea; font-weight:700; margin-bottom:3px; }
+.bot-name { font-size:11px; color:#176B50; font-weight:700; margin-bottom:3px; }
 
 .quick-replies { display:flex; flex-wrap:wrap; gap:6px; padding:5px 0; }
-.qr-btn { padding:6px 12px; border-radius:20px; font-size:12px; border:2px solid #667eea; color:#667eea; background:#fff; cursor:pointer; transition:0.2s; white-space:nowrap; }
-.qr-btn:hover { background:#667eea; color:#fff; }
+.qr-btn { padding:6px 12px; border-radius:20px; font-size:12px; border:2px solid #176B50; color:#176B50; background:#fff; cursor:pointer; transition:0.2s; white-space:nowrap; }
+.qr-btn:hover { background:#176B50; color:#fff; }
 
 .chat-input-area { padding:12px 15px; border-top:1px solid #eee; background:#fff; display:flex; gap:8px; align-items:center; }
 .chat-input { flex:1; border:2px solid #e0e0e0; border-radius:20px; padding:8px 14px; font-size:13px; outline:none; transition:0.2s; }
-.chat-input:focus { border-color:#667eea; }
-.chat-send { width:38px; height:38px; background:linear-gradient(135deg,#667eea,#764ba2); border:none; border-radius:50%; cursor:pointer; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+.chat-input:focus { border-color:#176B50; }
+.chat-send { width:38px; height:38px; background:linear-gradient(135deg,#176B50,#104B3A); border:none; border-radius:50%; cursor:pointer; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
 .chat-send i { color:#fff; font-size:14px; }
 .chat-send:hover { opacity:0.9; }
 
@@ -277,29 +277,29 @@ try {
 }
 $tmsChatPackagesReply = $tmsChatTopTypes
     ? ("🌍 We have {$tmsChatCatalogTotal}+ tour packages across categories like "
-        . implode(', ', array_slice($tmsChatTopTypes, 0, 4)) . " and more.\n\nVisit our <a href='package-list.php' style='color:#667eea'>Package List</a> to filter by type, price and destination!")
-    : "🌍 Browse our full range on the <a href='package-list.php' style='color:#667eea'>Package List</a> page -- filter by type, price and destination!";
+        . implode(', ', array_slice($tmsChatTopTypes, 0, 4)) . " and more.\n\nVisit our <a href='package-list.php' style='color:#176B50'>Package List</a> to filter by type, price and destination!")
+    : "🌍 Browse our full range on the <a href='package-list.php' style='color:#176B50'>Package List</a> page -- filter by type, price and destination!";
 $tmsChatMapReply = $tmsChatTopCountries
-    ? ("🗺️ Explore our destinations on our <a href='tour-map.php' style='color:#667eea'>Interactive Map</a>!\n\nWe cover {$tmsChatCatalogTotal}+ destinations, including "
+    ? ("🗺️ Explore our destinations on our <a href='tour-map.php' style='color:#176B50'>Interactive Map</a>!\n\nWe cover {$tmsChatCatalogTotal}+ destinations, including "
         . implode(', ', array_slice($tmsChatTopCountries, 0, 6)) . " and more.\n\nFilter by package type and click any marker for details!")
-    : "🗺️ Explore our destinations on our <a href='tour-map.php' style='color:#667eea'>Interactive Map</a>! Filter by package type and click any marker for details!";
+    : "🗺️ Explore our destinations on our <a href='tour-map.php' style='color:#176B50'>Interactive Map</a>! Filter by package type and click any marker for details!";
 ?>
 // Knowledge base
 var kb = [
     { patterns: ['hello','hi','hey','good morning','good evening','greetings'], response: "Hello! 👋 Welcome to TMS Travel Assistant. I'm here to help you plan your dream trip! What can I help you with today?\n\nYou can ask me about:\n• Tour packages\n• Booking process\n• Weather & best travel times\n• Budget planning\n• Safety tips", quick: ['Show Packages','Budget Help','Best Destinations','Book a Tour'] },
     { patterns: ['package','packages','tour','tours','available','what tours'], response: <?php echo json_encode($tmsChatPackagesReply, JSON_UNESCAPED_UNICODE); ?>, quick: ['Show Packages','AI Recommend','Budget Planner'] },
-    { patterns: ['book','booking','reserve','how to book'], response: "📋 Booking a tour is easy!\n\n1. Browse <a href='package-list.php' style='color:#667eea'>Tour Packages</a>\n2. Click on a package you like\n3. Select your travel dates\n4. Sign in or create an account\n5. Submit your booking\n\nOur team confirms within 24 hours. You can also <a href='custom-trip.php' style='color:#667eea'>design a custom trip</a>!", quick: ['Browse Packages','Custom Trip','Sign Up','Contact Us'] },
-    { patterns: ['price','cost','budget','cheap','expensive','how much'], response: "💰 Our tour packages start from:\n\nPrices vary by destination and season — the live figures are on each package page.\n\nPrices are per person. Use our <a href='budget-planner.php' style='color:#667eea'>Budget Planner</a> to estimate total costs for your group!\n\nWant our AI to find packages within your budget?", quick: ['Budget Planner','AI Recommender','Family Packages','Cheap Packages'] },
-    { patterns: ['weather','climate','best time','when to visit','season','temperature'], response: "☀️ Best travel seasons:\n\n🇮🇳 **India/Bhutan/Sikkim** – Oct to May\n🇮🇩 **Bali** – Apr to Sep\n🇦🇪 **Dubai** – Nov to Mar\n🇫🇷 **France/Switzerland** – Apr to Oct\n\nCheck our <a href='weather.php' style='color:#667eea'>Weather Tool</a> for detailed monthly forecasts for any destination!", quick: ['Check Weather','Bali','Dubai','Paris'] },
-    { patterns: ['safety','safe','emergency','danger','police','hospital','ambulance'], response: "🛡️ Safety is our priority!\n\nOur <a href='emergency.php' style='color:#667eea'>Emergency Contacts</a> page has:\n\n• Emergency numbers for all destinations\n• Tourist helpline numbers\n• Embassy information\n• Travel safety tips\n\nAlways share your itinerary with someone before traveling!", quick: ['Emergency Contacts','Safety Tips','Travel Insurance','Contact Us'] },
+    { patterns: ['book','booking','reserve','how to book'], response: "📋 Booking a tour is easy!\n\n1. Browse <a href='package-list.php' style='color:#176B50'>Tour Packages</a>\n2. Click on a package you like\n3. Select your travel dates\n4. Sign in or create an account\n5. Submit your booking\n\nOur team confirms within 24 hours. You can also <a href='custom-trip.php' style='color:#176B50'>design a custom trip</a>!", quick: ['Browse Packages','Custom Trip','Sign Up','Contact Us'] },
+    { patterns: ['price','cost','budget','cheap','expensive','how much'], response: "💰 Our tour packages start from:\n\nPrices vary by destination and season — the live figures are on each package page.\n\nPrices are per person. Use our <a href='budget-planner.php' style='color:#176B50'>Budget Planner</a> to estimate total costs for your group!\n\nWant our AI to find packages within your budget?", quick: ['Budget Planner','AI Recommender','Family Packages','Cheap Packages'] },
+    { patterns: ['weather','climate','best time','when to visit','season','temperature'], response: "☀️ Best travel seasons:\n\n🇮🇳 **India/Bhutan/Sikkim** – Oct to May\n🇮🇩 **Bali** – Apr to Sep\n🇦🇪 **Dubai** – Nov to Mar\n🇫🇷 **France/Switzerland** – Apr to Oct\n\nCheck our <a href='weather.php' style='color:#176B50'>Weather Tool</a> for detailed monthly forecasts for any destination!", quick: ['Check Weather','Bali','Dubai','Paris'] },
+    { patterns: ['safety','safe','emergency','danger','police','hospital','ambulance'], response: "🛡️ Safety is our priority!\n\nOur <a href='emergency.php' style='color:#176B50'>Emergency Contacts</a> page has:\n\n• Emergency numbers for all destinations\n• Tourist helpline numbers\n• Embassy information\n• Travel safety tips\n\nAlways share your itinerary with someone before traveling!", quick: ['Emergency Contacts','Safety Tips','Travel Insurance','Contact Us'] },
     { patterns: ['map','location','where','destination','country','place'], response: <?php echo json_encode($tmsChatMapReply, JSON_UNESCAPED_UNICODE); ?>, quick: ['View Map'] },
-    { patterns: ['review','reviews','rating','feedback','testimonial','experience'], response: "⭐ Read real traveler reviews on our <a href='reviews.php' style='color:#667eea'>Review Page</a>!\n\nYou can:\n• Read reviews by package\n• Rate your own trip (1-5 stars)\n• Upload travel photos\n• See overall ratings\n\nWe have verified reviews from real customers!", quick: ['Read Reviews','Write Review','Top Rated','Best Packages'] },
-    { patterns: ['custom','customize','personalise','build my own','special request'], response: "🎨 Yes! We offer fully customized trips!\n\nWith our <a href='custom-trip.php' style='color:#667eea'>Custom Trip Planner</a> you can choose:\n\n• Specific destinations\n• Travel dates & duration\n• Accommodation type\n• Transport preference\n• Activities & meal plans\n• Special requests\n\nSubmit your requirements and we'll create a tailor-made quote!", quick: ['Build Custom Trip','Standard Packages','Budget Planner','Contact Us'] },
-    { patterns: ['recommend','suggest','which','best for me','advice','help me choose'], response: "🤖 Try our <a href='ai-recommend.php' style='color:#667eea'>AI Tour Recommender</a>!\n\nIt analyzes your:\n• Budget\n• Travel style (family, couple, group)\n• Climate preference\n• Trip duration\n\nAnd suggests the best matching packages. Give it a try!", quick: ['AI Recommender','Family Tours','Couple Tours','Solo Travel'] },
-    { patterns: ['language','translate','bengali','hindi','french','arabic','spanish'], response: "🌐 TMS supports multiple languages!\n\nVisit our <a href='language.php' style='color:#667eea'>Language Settings</a> to switch to:\n\n🇧🇩 Bengali | 🇮🇳 Hindi | 🇫🇷 French\n🇸🇦 Arabic | 🇨🇳 Chinese | 🇪🇸 Spanish | 🇩🇪 German\n\nSelect your preferred language for a better experience!", quick: ['Change Language','Bengali','Hindi','English'] },
-    { patterns: ['cancel','cancellation','refund','policy'], response: "📋 Our Cancellation Policy:\n\n• 30+ days before: Full refund\n• 15–30 days: 50% refund\n• 7–15 days: 25% refund\n• Under 7 days: No refund\n\nFor special circumstances, please <a href='page.php?type=contact' style='color:#667eea'>contact us</a> directly. We try to be flexible!", quick: ['Contact Support','My Bookings','Book Now','Custom Trip'] },
-    { patterns: ['contact','call','email','phone','support','help','talk to','human'], response: "📞 Need to speak with us?\n\n• 💬 <a href='enquiry.php' style='color:#667eea'>Send us an enquiry</a> and we'll reply by email\n• 🎫 For an existing booking, open a ticket from your account\n• 🕒 We answer enquiries Mon–Sat\n• 💬 You can also <a href='enquiry.php' style='color:#667eea'>send an enquiry</a>\n\nOr use the Issue Tracker in your account for booking-related issues.", quick: ['Send Enquiry','Book Now','Emergency','FAQ'] },
-    { patterns: ['visa','passport','document','requirement'], response: "📄 For visa requirements:\n\n• Requirements vary by nationality and destination\n• We recommend checking official embassy websites\n• We can provide invitation/booking letters\n• Allow 2–4 weeks for visa processing\n\nOur team can guide you through the process — just <a href='enquiry.php' style='color:#667eea'>send an enquiry</a>!", quick: ['Send Enquiry','Emergency Contacts','Contact Us','Book Now'] },
+    { patterns: ['review','reviews','rating','feedback','testimonial','experience'], response: "⭐ Read real traveler reviews on our <a href='reviews.php' style='color:#176B50'>Review Page</a>!\n\nYou can:\n• Read reviews by package\n• Rate your own trip (1-5 stars)\n• Upload travel photos\n• See overall ratings\n\nWe have verified reviews from real customers!", quick: ['Read Reviews','Write Review','Top Rated','Best Packages'] },
+    { patterns: ['custom','customize','personalise','build my own','special request'], response: "🎨 Yes! We offer fully customized trips!\n\nWith our <a href='custom-trip.php' style='color:#176B50'>Custom Trip Planner</a> you can choose:\n\n• Specific destinations\n• Travel dates & duration\n• Accommodation type\n• Transport preference\n• Activities & meal plans\n• Special requests\n\nSubmit your requirements and we'll create a tailor-made quote!", quick: ['Build Custom Trip','Standard Packages','Budget Planner','Contact Us'] },
+    { patterns: ['recommend','suggest','which','best for me','advice','help me choose'], response: "🤖 Try our <a href='ai-recommend.php' style='color:#176B50'>AI Tour Recommender</a>!\n\nIt analyzes your:\n• Budget\n• Travel style (family, couple, group)\n• Climate preference\n• Trip duration\n\nAnd suggests the best matching packages. Give it a try!", quick: ['AI Recommender','Family Tours','Couple Tours','Solo Travel'] },
+    { patterns: ['language','translate','bengali','hindi','french','arabic','spanish'], response: "🌐 TMS supports multiple languages!\n\nVisit our <a href='language.php' style='color:#176B50'>Language Settings</a> to switch to:\n\n🇧🇩 Bengali | 🇮🇳 Hindi | 🇫🇷 French\n🇸🇦 Arabic | 🇨🇳 Chinese | 🇪🇸 Spanish | 🇩🇪 German\n\nSelect your preferred language for a better experience!", quick: ['Change Language','Bengali','Hindi','English'] },
+    { patterns: ['cancel','cancellation','refund','policy'], response: "📋 Our Cancellation Policy:\n\n• 30+ days before: Full refund\n• 15–30 days: 50% refund\n• 7–15 days: 25% refund\n• Under 7 days: No refund\n\nFor special circumstances, please <a href='page.php?type=contact' style='color:#176B50'>contact us</a> directly. We try to be flexible!", quick: ['Contact Support','My Bookings','Book Now','Custom Trip'] },
+    { patterns: ['contact','call','email','phone','support','help','talk to','human'], response: "📞 Need to speak with us?\n\n• 💬 <a href='enquiry.php' style='color:#176B50'>Send us an enquiry</a> and we'll reply by email\n• 🎫 For an existing booking, open a ticket from your account\n• 🕒 We answer enquiries Mon–Sat\n• 💬 You can also <a href='enquiry.php' style='color:#176B50'>send an enquiry</a>\n\nOr use the Issue Tracker in your account for booking-related issues.", quick: ['Send Enquiry','Book Now','Emergency','FAQ'] },
+    { patterns: ['visa','passport','document','requirement'], response: "📄 For visa requirements:\n\n• Requirements vary by nationality and destination\n• We recommend checking official embassy websites\n• We can provide invitation/booking letters\n• Allow 2–4 weeks for visa processing\n\nOur team can guide you through the process — just <a href='enquiry.php' style='color:#176B50'>send an enquiry</a>!", quick: ['Send Enquiry','Emergency Contacts','Contact Us','Book Now'] },
     { patterns: ['thank','thanks','thank you','great','awesome','good','helpful'], response: "😊 You're welcome! I'm glad I could help!\n\nIs there anything else you'd like to know about our tours or services? I'm here 24/7!", quick: ['Browse Packages','Plan My Trip','AI Recommender','Goodbye'] },
     { patterns: ['bye','goodbye','exit','see you','ciao','done'], response: "👋 Safe travels and happy adventures!\n\nCome back anytime you need help planning your trip. TMS is always here for you! 🌍✈️", quick: [] },
 ];
@@ -357,7 +357,7 @@ function chatFormat(text) {
     // textContent -> innerHTML trick, which escapes "<", ">" and "&" but
     // does NOT escape quote characters in text content (only attribute
     // VALUES need that, and this isn't one). So a real model response like
-    // <a href="budget-planner.php" style="color:#667eea">Budget Planner</a>
+    // <a href="budget-planner.php" style="color:#176B50">Budget Planner</a>
     // came out of chatEscape() as &lt;a href="..." style="..."&gt;...&lt;/a&gt;
     // -- a literal, un-escaped double quote. The allow-list regex below only
     // ever matched &quot; or a literal single quote, never a literal double
@@ -368,7 +368,7 @@ function chatFormat(text) {
         .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
         .replace(
             /&lt;a\s+href=(?:&quot;|"|')([a-z0-9\-]{1,40}\.php(?:\?[a-z_]{1,20}=[a-z0-9\-]{1,40})?)(?:&quot;|"|')[^&]*&gt;([^&<]{1,120})&lt;\/a&gt;/gi,
-            '<a href="$1" style="color:#667eea">$2</a>'
+            '<a href="$1" style="color:#176B50">$2</a>'
         );
 }
 
@@ -451,7 +451,7 @@ function getResponse(input) {
         }
     }
     return {
-        text: "I'm not sure about that, but I'm learning every day! 😊\n\nYou might find what you need in:\n• <a href='package-list.php' style='color:#667eea'>Tour Packages</a>\n• <a href='enquiry.php' style='color:#667eea'>Send Enquiry</a>\n• <a href='page.php?type=contact' style='color:#667eea'>Contact Us</a>",
+        text: "I'm not sure about that, but I'm learning every day! 😊\n\nYou might find what you need in:\n• <a href='package-list.php' style='color:#176B50'>Tour Packages</a>\n• <a href='enquiry.php' style='color:#176B50'>Send Enquiry</a>\n• <a href='page.php?type=contact' style='color:#176B50'>Contact Us</a>",
         quick: ['Show Packages','Contact Us','Send Enquiry','AI Recommender']
     };
 }

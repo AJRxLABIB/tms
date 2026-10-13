@@ -102,8 +102,8 @@ try {
     border:1px solid #e2e8f0; position:relative;
 }
 .caption-card p { font-size:13px; color:#2d3748; line-height:1.7; margin:0; }
-.copy-btn { position:absolute; top:10px; right:10px; background:#fff; border:1px solid #e2e8f0; border-radius:8px; padding:4px 10px; font-size:11px; cursor:pointer; color:#667eea; transition:.2s; }
-.copy-btn:hover { background:#667eea; color:#fff; }
+.copy-btn { position:absolute; top:10px; right:10px; background:#fff; border:1px solid #e2e8f0; border-radius:8px; padding:4px 10px; font-size:11px; cursor:pointer; color:#176B50; transition:.2s; }
+.copy-btn:hover { background:#176B50; color:#fff; }
 
 .achievement-card {
     background:linear-gradient(135deg,#f093fb,#f5576c);

@@ -588,7 +588,7 @@ html[data-theme="dark"] .tms-notif-msg { color: #eef2f7; }
   transition: var(--transition);
 }
 .tms-mega-item:hover .tms-mega-icon { transform: scale(1.1); }
-.icon-ai { background: linear-gradient(135deg, #667eea, #764ba2); color: #fff; }
+.icon-ai { background: linear-gradient(135deg, #176B50, #104B3A); color: #fff; }
 .icon-map { background: linear-gradient(135deg, #11998e, #38ef7d); color: #fff; }
 .icon-weather { background: linear-gradient(135deg, #4facfe, #00f2fe); color: #fff; }
 .icon-budget { background: linear-gradient(135deg, #f093fb, #f5576c); color: #fff; }

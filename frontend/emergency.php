@@ -172,7 +172,7 @@ html[data-theme="dark"] .country-card h4 { color: var(--text) !important; }
                     ['#1abc9c','fa-wifi','Stay Connected','Buy a local SIM or portable WiFi. Offline maps can be lifesavers.'],
                     ['#e67e22','fa-lock','Valuables','Use hotel safe for valuables. Avoid flashing expensive items in crowded areas.'],
                     ['#2c3e50','fa-flag','Embassy Contact','Know your country\'s embassy location in every country you visit.'],
-                    ['#8e44ad','fa-shield','Travel Insurance','Always buy travel insurance covering medical emergencies and trip cancellation.'],
+                    ['#1F8A66','fa-shield','Travel Insurance','Always buy travel insurance covering medical emergencies and trip cancellation.'],
                 ];
                 foreach($tips as $tip): ?>
                 <div class="tip-item">

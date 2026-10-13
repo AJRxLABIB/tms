@@ -48,7 +48,7 @@ body { background: #f0f4f8; margin: 0; }
 .copilot-sidebar { background: #1a1a2e; display: flex; flex-direction: column; overflow: hidden; }
 .sidebar-header { padding: 20px; border-bottom: 1px solid rgba(255,255,255,.08); }
 .brand-row { display: flex; align-items: center; gap: 10px; color: #fff; margin-bottom: 12px; }
-.brand-icon { width: 40px; height: 40px; background: linear-gradient(135deg,#667eea,#764ba2); border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 18px; }
+.brand-icon { width: 40px; height: 40px; background: linear-gradient(135deg,#176B50,#104B3A); border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 18px; }
 .brand-text strong { display: block; font-size: 15px; font-weight: 800; }
 .brand-text span { font-size: 11px; color: rgba(255,255,255,.4); }
 .online-pill { display: inline-flex; align-items: center; gap: 6px; background: rgba(72,187,120,.12); border: 1px solid rgba(72,187,120,.25); color: #68d391; border-radius: 20px; padding: 3px 10px; font-size: 11px; }
@@ -58,18 +58,18 @@ body { background: #f0f4f8; margin: 0; }
 .trip-selector label { font-size: 10px; color: rgba(255,255,255,.35); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 5px; display: block; }
 .trip-select { width:100%; background: rgba(255,255,255,.07); border: 1px solid rgba(255,255,255,.12); color: #fff; border-radius: 8px; padding: 7px 10px; font-size: 12px; outline: none; }
 .trip-select option { background: #1a1a2e; }
-.trip-info-card { margin: 12px 20px; background: rgba(102,126,234,.15); border: 1px solid rgba(102,126,234,.25); border-radius: 10px; padding: 12px; }
+.trip-info-card { margin: 12px 20px; background: rgba(23,107,80,.15); border: 1px solid rgba(23,107,80,.25); border-radius: 10px; padding: 12px; }
 .trip-info-title { font-size: 13px; font-weight: 700; color: #fff; margin-bottom: 6px; }
 .trip-info-meta { font-size: 11px; color: rgba(255,255,255,.5); }
 .quick-actions { padding: 12px 20px; border-bottom: 1px solid rgba(255,255,255,.06); }
 .qa-label { font-size: 10px; color: rgba(255,255,255,.35); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px; }
 .qa-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 5px; }
 .qa-btn { background: rgba(255,255,255,.05); border: 1px solid rgba(255,255,255,.08); color: rgba(255,255,255,.7); border-radius: 7px; padding: 7px 8px; font-size: 11px; cursor: pointer; text-align: center; transition: .2s; }
-.qa-btn:hover { background: rgba(102,126,234,.2); color: #fff; }
+.qa-btn:hover { background: rgba(23,107,80,.2); color: #fff; }
 .sidebar-links { padding: 12px 20px; margin-top: auto; border-top: 1px solid rgba(255,255,255,.06); }
 .s-link { display: flex; align-items: center; gap: 8px; color: rgba(255,255,255,.4); font-size: 12px; text-decoration: none; padding: 5px 6px; border-radius: 6px; }
 .s-link:hover { background: rgba(255,255,255,.04); color: rgba(255,255,255,.7); }
-.s-link i { color: #667eea; width: 12px; }
+.s-link i { color: #176B50; width: 12px; }
 .chat-main { display: flex; flex-direction: column; background: #f8fafc; }
 .chat-topbar { background: #fff; padding: 14px 20px; border-bottom: 1px solid #e2e8f0; display: flex; align-items: center; justify-content: space-between; }
 .chat-topbar-title { font-size: 15px; font-weight: 800; color: #1a202c; }
@@ -82,10 +82,10 @@ body { background: #f0f4f8; margin: 0; }
 .msg.user { align-self: flex-end; align-items: flex-end; }
 .msg.assistant { align-self: flex-start; align-items: flex-start; }
 .msg-meta { font-size: 10px; color: #a0aec0; margin-bottom: 3px; display: flex; align-items: center; gap: 5px; }
-.msg-avatar { width: 26px; height: 26px; border-radius: 7px; background: linear-gradient(135deg,#667eea,#764ba2); display: flex; align-items: center; justify-content: center; font-size: 12px; color: #fff; }
+.msg-avatar { width: 26px; height: 26px; border-radius: 7px; background: linear-gradient(135deg,#176B50,#104B3A); display: flex; align-items: center; justify-content: center; font-size: 12px; color: #fff; }
 .msg-bubble { padding: 11px 14px; border-radius: 14px; font-size: 13px; line-height: 1.6; }
 .msg.assistant .msg-bubble { background: #fff; color: #1a202c; border-radius: 0 14px 14px 14px; box-shadow: 0 2px 8px rgba(0,0,0,.06); }
-.msg.user .msg-bubble { background: linear-gradient(135deg,#667eea,#764ba2); color: #fff; border-radius: 14px 0 14px 14px; }
+.msg.user .msg-bubble { background: linear-gradient(135deg,#176B50,#104B3A); color: #fff; border-radius: 14px 0 14px 14px; }
 .suggestions { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 6px; }
 .sug-chip { background: #ebf8ff; color: #2c5282; border: 1px solid #bee3f8; border-radius: 16px; padding: 4px 10px; font-size: 11px; cursor: pointer; transition: .2s; }
 .sug-chip:hover { background: #bee3f8; }
@@ -98,9 +98,9 @@ body { background: #f0f4f8; margin: 0; }
 .chat-input-bar { background: #fff; padding: 12px 20px; border-top: 1px solid #e2e8f0; display: flex; gap: 8px; align-items: flex-end; }
 .chat-input-wrap { flex: 1; }
 .chat-textarea { width: 100%; border: 2px solid #e2e8f0; border-radius: 12px; padding: 10px 14px; font-size: 13px; resize: none; outline: none; transition: .2s; max-height: 100px; font-family: inherit; }
-.chat-textarea:focus { border-color: #667eea; }
-.send-btn { width: 42px; height: 42px; background: linear-gradient(135deg,#667eea,#764ba2); border: none; border-radius: 10px; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
-.mic-btn { width: 42px; height: 42px; background: #f1f5f9; color: #667eea; border: 2px solid #e2e8f0; border-radius: 10px; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; transition: .2s; }
+.chat-textarea:focus { border-color: #176B50; }
+.send-btn { width: 42px; height: 42px; background: linear-gradient(135deg,#176B50,#104B3A); border: none; border-radius: 10px; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.mic-btn { width: 42px; height: 42px; background: #f1f5f9; color: #176B50; border: 2px solid #e2e8f0; border-radius: 10px; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; transition: .2s; }
 .mic-btn.listening { background: linear-gradient(135deg,#ef4444,#dc2626); color: #fff; border-color: transparent; animation: micPulse 1.2s infinite; }
 .mic-btn:disabled { opacity: .4; cursor: not-allowed; }
 @keyframes micPulse { 0%,100%{ box-shadow: 0 0 0 0 rgba(239,68,68,.4); } 50%{ box-shadow: 0 0 0 8px rgba(239,68,68,0); } }
@@ -221,7 +221,7 @@ body { background: #f0f4f8; margin: 0; }
       <div style="font-size:60px;margin-bottom:20px;">✈️</div>
       <h3>No Active Trip Selected</h3>
       <p>The Trip Copilot activates with a confirmed booking. Select a booking from the sidebar, or explore and book a package below.</p>
-      <a href="package-list.php" style="background:linear-gradient(135deg,#667eea,#764ba2);color:#fff;padding:11px 24px;border-radius:10px;text-decoration:none;font-weight:700;font-size:13px;">
+      <a href="package-list.php" style="background:linear-gradient(135deg,#176B50,#104B3A);color:#fff;padding:11px 24px;border-radius:10px;text-decoration:none;font-weight:700;font-size:13px;">
         Browse Packages
       </a>
     </div>
@@ -378,7 +378,7 @@ function updateVoiceToggleUI() {
   btn.innerHTML = voiceOutputEnabled
     ? '<i class="fa fa-volume-up"></i> Voice Replies: On'
     : '<i class="fa fa-volume-off"></i> Voice Replies';
-  btn.style.color = voiceOutputEnabled ? '#667eea' : '';
+  btn.style.color = voiceOutputEnabled ? '#176B50' : '';
 }
 
 // Task 6 fix (shared logic with backend/chatbot.php's widget): pick the

@@ -128,14 +128,14 @@ if (!isset($_POST['recommend']) && !empty($_SESSION['login'])) {
 .ai-hero { background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%); padding: 60px 0; text-align:center; color:#fff; }
 .ai-hero h1 { font-size: 2.5em; margin-bottom:10px; }
 .ai-hero p { font-size: 1.1em; opacity:0.85; }
-.ai-badge { background: linear-gradient(135deg,#667eea,#764ba2); color:#fff; padding:4px 12px; border-radius:20px; font-size:12px; font-weight:700; display:inline-block; margin-bottom:20px; }
+.ai-badge { background: linear-gradient(135deg,#176B50,#104B3A); color:#fff; padding:4px 12px; border-radius:20px; font-size:12px; font-weight:700; display:inline-block; margin-bottom:20px; }
 .filter-card { background:var(--white); border-radius:12px; box-shadow:0 8px 30px rgba(0,0,0,0.1); padding:35px; margin: -30px auto 40px; max-width:900px; position:relative; z-index:10; }
 .filter-card h3 { color:#333; margin-bottom:25px; font-size:1.4em; }
 .form-group label { font-weight:600; color:#555; margin-bottom:6px; display:block; }
 .form-control { border:2px solid #e8ecf0; border-radius:8px; padding:10px 14px; font-size:14px; transition:0.3s; }
-.form-control:focus { border-color:#667eea; box-shadow:0 0 0 3px rgba(102,126,234,0.1); outline:none; }
-.btn-ai { background: linear-gradient(135deg,#667eea,#764ba2); color:#fff; border:none; border-radius:8px; padding:12px 35px; font-size:15px; font-weight:700; cursor:pointer; width:100%; margin-top:10px; transition:0.3s; }
-.btn-ai:hover { transform:translateY(-2px); box-shadow:0 8px 25px rgba(102,126,234,0.4); color:#fff; }
+.form-control:focus { border-color:#176B50; box-shadow:0 0 0 3px rgba(23,107,80,0.1); outline:none; }
+.btn-ai { background: linear-gradient(135deg,#176B50,#104B3A); color:#fff; border:none; border-radius:8px; padding:12px 35px; font-size:15px; font-weight:700; cursor:pointer; width:100%; margin-top:10px; transition:0.3s; }
+.btn-ai:hover { transform:translateY(-2px); box-shadow:0 8px 25px rgba(23,107,80,0.4); color:#fff; }
 .result-section { padding:20px 0 50px; }
 .pkg-card { background:var(--white); border-radius:12px; box-shadow:0 4px 20px rgba(0,0,0,0.08); overflow:hidden; margin-bottom:25px; transition:0.3s; border:1px solid #f0f0f0; }
 .pkg-card:hover { transform:translateY(-4px); box-shadow:0 12px 35px rgba(0,0,0,0.15); }
@@ -147,14 +147,14 @@ if (!isset($_POST['recommend']) && !empty($_SESSION['login'])) {
 .match-low { background:#f8d7da; color:#721c24; }
 .pkg-card-body h4 { font-size:1em; font-weight:700; color:#333; margin-bottom:5px; }
 .pkg-card-body p { font-size:13px; color:#777; margin-bottom:4px; }
-.price-tag { font-size:1.3em; font-weight:700; color:#667eea; }
+.price-tag { font-size:1.3em; font-weight:700; color:#176B50; }
 .stars { color:#f0ad4e; font-size:13px; }
 .match-bar-wrap { background:#eee; border-radius:10px; height:6px; margin:10px 0; }
-.match-bar { height:6px; border-radius:10px; background: linear-gradient(90deg,#667eea,#764ba2); transition:width 1s ease; }
-.btn-view { background:#667eea; color:#fff; border-radius:6px; padding:8px 20px; font-size:13px; font-weight:600; display:inline-block; margin-top:10px; }
+.match-bar { height:6px; border-radius:10px; background: linear-gradient(90deg,#176B50,#104B3A); transition:width 1s ease; }
+.btn-view { background:#176B50; color:#fff; border-radius:6px; padding:8px 20px; font-size:13px; font-weight:600; display:inline-block; margin-top:10px; }
 .btn-view:hover { background:#5a6fd6; color:#fff; }
-.ai-tip { background: linear-gradient(135deg,#e8f4fd,#f0e8fd); border-radius:10px; padding:18px; margin-bottom:25px; border-left:4px solid #667eea; }
-.ai-tip i { color:#667eea; margin-right:8px; }
+.ai-tip { background: linear-gradient(135deg,#e8f4fd,#f0e8fd); border-radius:10px; padding:18px; margin-bottom:25px; border-left:4px solid #176B50; }
+.ai-tip i { color:#176B50; margin-right:8px; }
 .no-results { text-align:center; padding:60px 20px; }
 .no-results i { font-size:60px; color:#ddd; display:block; margin-bottom:20px; }
 .input-group-icon { position:relative; }
@@ -180,7 +180,7 @@ html[data-theme="dark"] .input-group-icon .fa { color: var(--text-muted) !import
 
 <div class="container">
     <div class="filter-card wow fadeInUp">
-        <h3><i class="fa fa-sliders" style="color:#667eea"></i> Your Travel Preferences</h3>
+        <h3><i class="fa fa-sliders" style="color:#176B50"></i> Your Travel Preferences</h3>
         <form method="post">
         <?php tms_csrf_field(); ?>
             <div class="row">

@@ -52,7 +52,7 @@ $breakdown = $filterBookingId ? $analyst->getBudgetComparison($email, $filterBoo
 $insight   = $analyst->generateInsight($email, $filterBookingId);
 
 $categoryIcons = ['accommodation'=>'bed','food'=>'cutlery','transport'=>'car','activities'=>'star','shopping'=>'shopping-bag','other'=>'ellipsis-h'];
-$categoryColors = ['accommodation'=>'#3b82f6','food'=>'#f59e0b','transport'=>'#10b981','activities'=>'#8b5cf6','shopping'=>'#ec4899','other'=>'#6b7280'];
+$categoryColors = ['accommodation'=>'#3b82f6','food'=>'#f59e0b','transport'=>'#10b981','activities'=>'#1F8A66','shopping'=>'#ec4899','other'=>'#6b7280'];
 ?>
 <!DOCTYPE HTML><html lang="<?php echo htmlspecialchars(tms_active_language(), ENT_QUOTES, 'UTF-8'); ?>"><head>
 <link rel="manifest" href="manifest.json">

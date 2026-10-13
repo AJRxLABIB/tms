@@ -80,7 +80,7 @@ function tms_transport_duration_text(int $minutes): string {
 .tc-hero h1 { font-size: 2.3em; margin-bottom:10px; }
 .tc-form-card { background:var(--white); border-radius:12px; box-shadow:0 8px 30px rgba(0,0,0,0.1); padding:30px; margin: -30px auto 30px; max-width:800px; position:relative; z-index:10; }
 .tc-form-card .form-control { border:2px solid #e8ecf0; border-radius:8px; padding:10px 14px; }
-.tc-btn { background: linear-gradient(135deg,#667eea,#764ba2); color:#fff; border:none; border-radius:8px; padding:12px 35px; font-weight:700; cursor:pointer; width:100%; margin-top:10px; }
+.tc-btn { background: linear-gradient(135deg,#176B50,#104B3A); color:#fff; border:none; border-radius:8px; padding:12px 35px; font-weight:700; cursor:pointer; width:100%; margin-top:10px; }
 .tc-summary { display:flex; flex-wrap:wrap; gap:12px; margin-bottom:25px; }
 .tc-summary-card { flex:1; min-width:170px; background:var(--white); border-radius:10px; padding:16px; box-shadow:0 3px 14px rgba(0,0,0,.07); text-align:center; }
 .tc-summary-card .lbl { font-size:11px; color:#999; text-transform:uppercase; letter-spacing:.5px; }
@@ -92,7 +92,7 @@ function tms_transport_duration_text(int $minutes): string {
 .tc-table tr.tc-unrealistic { opacity:.45; }
 .tc-tier { display:inline-block; }
 .tc-tier .dot { display:inline-block; width:7px; height:7px; border-radius:50%; background:#e0e0e0; margin-right:2px; }
-.tc-tier .dot.on { background:#667eea; }
+.tc-tier .dot.on { background:#176B50; }
 .tc-badge-real { background:#d4edda; color:#155724; padding:2px 8px; border-radius:10px; font-size:10.5px; font-weight:700; }
 .tc-badge-est { background:#fff3cd; color:#8a6d00; padding:2px 8px; border-radius:10px; font-size:10.5px; font-weight:700; }
 html[data-theme="dark"] .tc-summary-card .val,

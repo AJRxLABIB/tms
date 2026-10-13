@@ -65,25 +65,25 @@ include('backend/config.php');
     background: #f8fafc; transition: .2s;
 }
 .field-input:focus, .field-select:focus, .field-textarea:focus {
-    border-color: #667eea; background: #fff;
-    box-shadow: 0 0 0 3px rgba(102,126,234,.1);
+    border-color: #176B50; background: #fff;
+    box-shadow: 0 0 0 3px rgba(23,107,80,.1);
 }
 .field-textarea { min-height: 80px; resize: vertical; }
 
 .btn-generate {
-    background: linear-gradient(135deg, #667eea, #764ba2);
+    background: linear-gradient(135deg, #176B50, #104B3A);
     color: #fff; border: none; border-radius: 12px;
     padding: 14px 32px; font-size: 15px; font-weight: 700;
     cursor: pointer; transition: .3s; width: 100%;
     display: flex; align-items: center; justify-content: center; gap: 10px;
 }
-.btn-generate:hover { transform: translateY(-2px); box-shadow: 0 8px 25px rgba(102,126,234,.4); }
+.btn-generate:hover { transform: translateY(-2px); box-shadow: 0 8px 25px rgba(23,107,80,.4); }
 .btn-generate:disabled { opacity: .6; transform: none; }
 
 /* Itinerary output */
 .itinerary-wrap { display: none; }
 .itin-header {
-    background: linear-gradient(135deg, #667eea, #764ba2);
+    background: linear-gradient(135deg, #176B50, #104B3A);
     border-radius: 16px; padding: 28px 32px; color: #fff; margin-bottom: 28px;
 }
 .itin-title { font-size: 1.8rem; font-weight: 800; margin-bottom: 8px; }
@@ -113,7 +113,7 @@ include('backend/config.php');
     justify-content: space-between; cursor: pointer;
 }
 .day-number {
-    background: linear-gradient(135deg, #667eea, #764ba2);
+    background: linear-gradient(135deg, #176B50, #104B3A);
     color: #fff; border-radius: 8px; padding: 4px 12px;
     font-size: 13px; font-weight: 800; margin-right: 12px;
 }
@@ -127,7 +127,7 @@ include('backend/config.php');
     border-bottom: 1px dashed #f0f0f0;
 }
 .schedule-item:last-child { border-bottom: none; }
-.schedule-time { width: 56px; font-size: 12px; font-weight: 700; color: #667eea; flex-shrink: 0; padding-top: 2px; }
+.schedule-time { width: 56px; font-size: 12px; font-weight: 700; color: #176B50; flex-shrink: 0; padding-top: 2px; }
 .schedule-icon {
     width: 36px; height: 36px; border-radius: 8px; flex-shrink: 0;
     display: flex; align-items: center; justify-content: center; font-size: 14px;
@@ -135,11 +135,11 @@ include('backend/config.php');
 .schedule-icon.sightseeing { background: #ebf8ff; color: #2c5282; }
 .schedule-icon.meal        { background: #fffbeb; color: #92400e; }
 .schedule-icon.transport   { background: #f0fff4; color: #276749; }
-.schedule-icon.accommodation{ background: #faf5ff; color: #553c9a; }
+.schedule-icon.accommodation{ background: #faf5ff; color: #104B3A; }
 .schedule-icon.activity    { background: #fff5f5; color: #c53030; }
 .schedule-content { flex: 1; }
 .schedule-activity { font-size: 14px; font-weight: 700; color: #1a202c; margin-bottom: 2px; }
-.schedule-location { font-size: 12px; color: #667eea; margin-bottom: 4px; }
+.schedule-location { font-size: 12px; color: #176B50; margin-bottom: 4px; }
 .schedule-meta { display: flex; gap: 12px; font-size: 11px; color: #718096; }
 .schedule-notes { font-size: 12px; color: #4a5568; margin-top: 4px; font-style: italic; }
 
@@ -158,16 +158,16 @@ include('backend/config.php');
 .extras-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 28px; }
 .extras-card { background: #fff; border-radius: 16px; padding: 20px; box-shadow: 0 4px 16px rgba(0,0,0,.06); }
 .extras-title { font-size: 14px; font-weight: 800; color: #1a202c; margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }
-.extras-title i { color: #667eea; }
+.extras-title i { color: #176B50; }
 .extras-item { font-size: 13px; color: #4a5568; padding: 6px 0; border-bottom: 1px solid #f8f8f8; display: flex; align-items: center; gap: 8px; }
 .extras-item:last-child { border-bottom: none; }
 
 .btn-download {
-    background: #fff; border: 2px solid #667eea; color: #667eea;
+    background: #fff; border: 2px solid #176B50; color: #176B50;
     border-radius: 10px; padding: 10px 20px; font-size: 13px; font-weight: 700;
     cursor: pointer; transition: .2s; display: inline-flex; align-items: center; gap: 8px;
 }
-.btn-download:hover { background: #667eea; color: #fff; }
+.btn-download:hover { background: #176B50; color: #fff; }
 .btn-regen {
     background: linear-gradient(135deg, #48bb78, #38a169); color: #fff;
     border: none; border-radius: 10px; padding: 10px 20px; font-size: 13px; font-weight: 700;
@@ -179,7 +179,7 @@ include('backend/config.php');
 .ai-thinking { text-align: center; padding: 60px 20px; display: none; }
 .ai-spinner {
     width: 60px; height: 60px; border: 4px solid #e2e8f0;
-    border-top-color: #667eea; border-radius: 50%;
+    border-top-color: #176B50; border-radius: 50%;
     animation: spin 1s linear infinite; margin: 0 auto 20px;
 }
 @keyframes spin { to{transform:rotate(360deg)} }
@@ -201,7 +201,7 @@ include('backend/config.php');
 <div class="container" style="max-width:860px; margin-top:40px; padding-bottom:60px;">
     <!-- Form -->
     <div class="planner-card">
-        <h5 style="font-weight:800;color:#1a202c;margin-bottom:24px;"><i class="fa fa-magic" style="color:#667eea;"></i> Plan My Trip</h5>
+        <h5 style="font-weight:800;color:#1a202c;margin-bottom:24px;"><i class="fa fa-magic" style="color:#176B50;"></i> Plan My Trip</h5>
         <?php
         // FIX (Round 110, live CRITICAL bug found during the AI-upgrade audit):
         // this page has never rendered a CSRF token, and api/ai.php's
@@ -480,7 +480,7 @@ function renderItinerary(itin) {
     </div>
 
     <!-- Days -->
-    <h5 style="font-weight:800;color:#1a202c;margin-bottom:16px;"><i class="fa fa-list-alt" style="color:#667eea;"></i> Day-by-Day Itinerary</h5>`;
+    <h5 style="font-weight:800;color:#1a202c;margin-bottom:16px;"><i class="fa fa-list-alt" style="color:#176B50;"></i> Day-by-Day Itinerary</h5>`;
 
     days.forEach((day, i) => {
         const schedule = (day.schedule || []);
@@ -568,7 +568,7 @@ function renderItinerary(itin) {
 }
 
 function costBox(label, amount, isTotal = false) {
-    return `<div class="cost-box" style="${isTotal?'background:linear-gradient(135deg,#667eea,#764ba2);color:#fff;':''}">
+    return `<div class="cost-box" style="${isTotal?'background:linear-gradient(135deg,#176B50,#104B3A);color:#fff;':''}">
         <div class="amount" style="${isTotal?'color:#fff;':''}">${amount ? '৳'+Number(amount).toLocaleString() : '—'}</div>
         <div class="label" style="${isTotal?'color:rgba(255,255,255,.8);':''}">${label}</div>
     </div>`;

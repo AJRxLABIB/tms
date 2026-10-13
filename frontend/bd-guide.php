@@ -81,7 +81,7 @@ html[data-theme="dark"] .bdg-note { background:#2a2400; border-color:#5c4a00; co
 .bdg-sources a { color:var(--text-light); text-decoration:underline; }
 .bdg-actions { display:flex; flex-wrap:wrap; gap:8px; margin-top:12px; }
 .bdg-btn { background: linear-gradient(135deg,#006a4e,#00875f); color:#fff; border:none; border-radius:7px; padding:9px 14px; font-weight:600; font-size:12.5px; cursor:pointer; text-decoration:none; display:inline-flex; align-items:center; gap:6px; }
-.bdg-btn.bdg-btn-alt { background:linear-gradient(135deg,#667eea,#764ba2); }
+.bdg-btn.bdg-btn-alt { background:linear-gradient(135deg,#176B50,#104B3A); }
 .bdg-btn:disabled { opacity:.6; cursor:default; }
 .bdg-weather-result { margin-top:8px; font-size:12.5px; }
 .bdg-weather-mini { background:#f4f9f7; border-radius:6px; padding:8px 10px; color:var(--text); }

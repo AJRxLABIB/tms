@@ -218,7 +218,7 @@ WHAT TMS OFFERS RIGHT NOW:
 {$packageBlurb}
 
 SITE PAGES YOU CAN LINK TO (use relative paths exactly as written, inside a
-normal HTML anchor tag like <a href="package-list.php" style="color:#667eea">
+normal HTML anchor tag like <a href="package-list.php" style="color:#176B50">
 Tour Packages</a> — this chat window renders raw HTML, so anchors work,
 markdown does not):
 - package-list.php — browse/search all tour packages

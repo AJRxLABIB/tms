@@ -135,7 +135,7 @@ if(!empty($_SESSION['login'])) {
     background-size:400% 100%;animation:aiShimmer 1.4s ease infinite;margin-bottom:10px;}
 @keyframes aiShimmer{0%{background-position:100% 50%;}100%{background-position:0 50%;}}
 .ai-error-box{background:#fff3f3;border:1px solid #ffd0d0;border-radius:10px;padding:16px 20px;color:#c0392b;font-size:13.5px;}
-.ai-itin-header{background:linear-gradient(135deg,#667eea,#764ba2);color:#fff;border-radius:10px;padding:20px 24px;margin-bottom:16px;}
+.ai-itin-header{background:linear-gradient(135deg,#176B50,#104B3A);color:#fff;border-radius:10px;padding:20px 24px;margin-bottom:16px;}
 .ai-itin-header h3{margin:0 0 6px;font-size:1.3em;}
 .ai-cost-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:10px;margin-top:14px;}
 .ai-cost-item{background:rgba(255,255,255,0.15);border-radius:8px;padding:10px;text-align:center;}
@@ -147,7 +147,7 @@ if(!empty($_SESSION['login'])) {
 .ai-day-body.open{display:block;}
 .ai-sched-row{display:flex;gap:12px;padding:8px 0;border-bottom:1px dashed #eee;font-size:13.5px;}
 .ai-sched-row:last-child{border-bottom:none;}
-.ai-sched-time{flex:0 0 60px;color:#667eea;font-weight:700;}
+.ai-sched-time{flex:0 0 60px;color:#176B50;font-weight:700;}
 .ai-rec-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;margin-top:10px;}
 .ai-rec-card{background:#f8f9fc;border-radius:8px;padding:12px 14px;font-size:13px;}
 .ai-rec-card strong{display:block;color:#333;margin-bottom:3px;}
@@ -290,12 +290,12 @@ html[data-theme="dark"] .ai-tip-list { color: var(--text-muted) !important; }
 
         <!-- Step 3.5: AI Itinerary Preview -->
         <div class="step-card wow fadeInUp">
-            <h4><span class="step-num" style="background:linear-gradient(135deg,#667eea,#764ba2)"><i class="fa fa-magic" style="font-size:13px;"></i></span> AI Itinerary Preview</h4>
+            <h4><span class="step-num" style="background:linear-gradient(135deg,#176B50,#104B3A)"><i class="fa fa-magic" style="font-size:13px;"></i></span> AI Itinerary Preview</h4>
             <p style="color:#777;font-size:13px;margin-bottom:15px;">
                 See a complete AI-generated day-by-day plan — itinerary, costs, hotel &amp; restaurant picks, and safety tips —
                 before you submit your request. This is optional and doesn't affect your booking.
             </p>
-            <button type="button" class="btn-custom" id="genAiBtn" onclick="generateAiItinerary()" style="background:linear-gradient(135deg,#667eea,#764ba2);">
+            <button type="button" class="btn-custom" id="genAiBtn" onclick="generateAiItinerary()" style="background:linear-gradient(135deg,#176B50,#104B3A);">
                 <i class="fa fa-magic"></i> Generate AI Itinerary Preview
             </button>
             <!-- NEW (AI-trip-planning round): this button used to relabel
@@ -506,7 +506,7 @@ function renderItinerary(itin) {
         itin.days.forEach(function(day, idx) {
             html += '<div class="ai-day-card">';
             html += '<div class="ai-day-head" onclick="toggleAiDay(this)"><span><i class="fa fa-chevron-right" style="font-size:11px;margin-right:6px;"></i> Day ' + esc(day.day) + ': ' + esc(day.title) + '</span>' +
-                    (day.daily_budget ? '<span style="color:#667eea;font-weight:700;">৳' + Number(day.daily_budget).toLocaleString() + '</span>' : '') + '</div>';
+                    (day.daily_budget ? '<span style="color:#176B50;font-weight:700;">৳' + Number(day.daily_budget).toLocaleString() + '</span>' : '') + '</div>';
             html += '<div class="ai-day-body' + (idx === 0 ? ' open' : '') + '">';
             if (day.weather_note) html += '<p style="font-size:13px;color:#777;"><i class="fa fa-cloud"></i> ' + esc(day.weather_note) + '</p>';
             if (Array.isArray(day.schedule)) {
@@ -527,14 +527,14 @@ function renderItinerary(itin) {
 
     // Hotel & restaurant recommendations
     if (Array.isArray(itin.hotel_recommendations) && itin.hotel_recommendations.length) {
-        html += '<h5 style="margin-top:18px;"><i class="fa fa-bed" style="color:#667eea;"></i> Hotel Recommendations</h5><div class="ai-rec-grid">';
+        html += '<h5 style="margin-top:18px;"><i class="fa fa-bed" style="color:#176B50;"></i> Hotel Recommendations</h5><div class="ai-rec-grid">';
         itin.hotel_recommendations.forEach(function(h) {
             html += '<div class="ai-rec-card"><strong>' + esc(h.name) + '</strong>' + esc(h.tier || '') + (h.price_range ? ' · ' + esc(h.price_range) : '') + (h.why ? '<br>' + esc(h.why) : '') + '</div>';
         });
         html += '</div>';
     }
     if (Array.isArray(itin.restaurant_recommendations) && itin.restaurant_recommendations.length) {
-        html += '<h5 style="margin-top:18px;"><i class="fa fa-cutlery" style="color:#667eea;"></i> Restaurant Recommendations</h5><div class="ai-rec-grid">';
+        html += '<h5 style="margin-top:18px;"><i class="fa fa-cutlery" style="color:#176B50;"></i> Restaurant Recommendations</h5><div class="ai-rec-grid">';
         itin.restaurant_recommendations.forEach(function(r) {
             html += '<div class="ai-rec-card"><strong>' + esc(r.name) + '</strong>' + esc(r.cuisine || '') + (r.price_range ? ' · ' + esc(r.price_range) : '') + (r.must_try ? '<br>Try: ' + esc(r.must_try) : '') + '</div>';
         });
@@ -543,7 +543,7 @@ function renderItinerary(itin) {
 
     // Transportation
     if (Array.isArray(itin.transportation_suggestions) && itin.transportation_suggestions.length) {
-        html += '<h5 style="margin-top:18px;"><i class="fa fa-plane" style="color:#667eea;"></i> Getting There &amp; Around</h5><ul class="ai-tip-list">';
+        html += '<h5 style="margin-top:18px;"><i class="fa fa-plane" style="color:#176B50;"></i> Getting There &amp; Around</h5><ul class="ai-tip-list">';
         itin.transportation_suggestions.forEach(function(t) { html += '<li>' + esc(t) + '</li>'; });
         html += '</ul>';
     }
@@ -563,7 +563,7 @@ function renderItinerary(itin) {
     ];
     extras.forEach(function(ex) {
         if (Array.isArray(ex[2]) && ex[2].length) {
-            html += '<h5 style="margin-top:18px;"><i class="fa ' + ex[1] + '" style="color:#667eea;"></i> ' + ex[0] + '</h5><ul class="ai-tip-list">';
+            html += '<h5 style="margin-top:18px;"><i class="fa ' + ex[1] + '" style="color:#176B50;"></i> ' + ex[0] + '</h5><ul class="ai-tip-list">';
             ex[2].forEach(function(item) { html += '<li>' + esc(item) + '</li>'; });
             html += '</ul>';
         }

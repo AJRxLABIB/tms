@@ -122,10 +122,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <?php endif; ?>
   <style>
-    body{background:linear-gradient(135deg,rgba(15,32,39,0.82),rgba(32,58,67,0.82),rgba(44,83,100,0.82)),url('images/c2.jpg');background-size:cover;background-position:center;min-height:100vh;display:flex;align-items:center;justify-content:center;font-family:'Segoe UI',sans-serif;padding:20px 0;}
+    body{background:linear-gradient(135deg,#0E3B2D,#104B3A 55%,#176B50);min-height:100vh;display:flex;align-items:center;justify-content:center;font-family:var(--font-body,'Inter',sans-serif);padding:20px 0;}
     .register-wrap{width:100%;max-width:480px;padding:16px;}
     .register-card{background:#fff;border-radius:16px;box-shadow:0 24px 60px rgba(0,0,0,.4);overflow:hidden;}
-    .register-header{background:linear-gradient(135deg,#667eea,#764ba2);padding:28px 32px 22px;text-align:center;color:#fff;}
+    .register-header{background:linear-gradient(135deg,#176B50,#104B3A);padding:28px 32px 22px;text-align:center;color:#fff;}
     .register-header .logo{font-size:26px;font-weight:800;letter-spacing:-1px;}
     .register-header .logo span{opacity:.7;font-size:12px;font-weight:400;display:block;margin-top:2px;}
     .register-header h2{font-size:17px;font-weight:600;margin:10px 0 0;opacity:.9;}
@@ -142,16 +142,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
        icon's visible position (right nudged from 10px to 4px to
        compensate for the wider box). */
     .input-icon .eye-btn{position:absolute;right:4px;top:50%;transform:translateY(-50%);background:none;border:none;color:#a0aec0;cursor:pointer;padding:0;font-size:13px;width:24px;height:24px;display:flex;align-items:center;justify-content:center;}
-    .form-control{border:2px solid #e2e8f0;border-radius:8px;height:44px;font-size:14px;transition:.2s;}
-    .form-control:focus{border-color:#667eea;box-shadow:0 0 0 3px rgba(102,126,234,.15);outline:none;}
-    .btn-register{background:linear-gradient(135deg,#667eea,#764ba2);color:#fff;border:none;border-radius:8px;height:46px;font-size:15px;font-weight:700;width:100%;transition:.2s;cursor:pointer;}
-    .btn-register:hover{transform:translateY(-1px);box-shadow:0 6px 20px rgba(102,126,234,.4);}
+    .form-control{width:100%;border:2px solid #e2e8f0;border-radius:8px;height:44px;font-size:14px;transition:.2s;}
+    .form-control:focus{border-color:#176B50;box-shadow:0 0 0 3px rgba(23,107,80,.15);outline:none;}
+    .btn-register{background:linear-gradient(135deg,#176B50,#104B3A);color:#fff;border:none;border-radius:8px;height:46px;font-size:15px;font-weight:700;width:100%;transition:.2s;cursor:pointer;}
+    .btn-register:hover{transform:translateY(-1px);box-shadow:0 6px 20px rgba(23,107,80,.4);}
     .btn-register:disabled{opacity:.7;transform:none;}
     .alert{border-radius:8px;font-size:13px;padding:11px 14px;border:none;margin-bottom:16px;}
     .alert-danger{background:#fff5f5;color:#c53030;}
     .alert-success{background:#f0fff4;color:#276749;}
     .signin-link{text-align:center;margin-top:18px;font-size:13px;color:#718096;}
-    .signin-link a{color:#667eea;font-weight:700;text-decoration:none;}
+    .signin-link a{color:#176B50;font-weight:700;text-decoration:none;}
     .strength-bar{height:4px;border-radius:2px;margin-top:5px;background:#e2e8f0;overflow:hidden;}
     .strength-fill{height:100%;border-radius:2px;transition:.3s;width:0;}
   </style>

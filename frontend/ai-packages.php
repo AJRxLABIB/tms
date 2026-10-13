@@ -43,20 +43,20 @@ if (!empty($_SESSION['login'])) {
 .pkg-badge .dot{width:6px;height:6px;background:#48bb78;border-radius:50%;animation:pulse 2s infinite}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
 .pkg-hero h1{font-size:2.6rem;font-weight:900;line-height:1.2;margin-bottom:14px}
-.pkg-hero h1 span{background:linear-gradient(135deg,#63b3ed,#a78bfa);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.pkg-hero h1 span{background:linear-gradient(135deg,#63b3ed,#7FD6AE);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
 .pkg-hero p{color:rgba(255,255,255,.65);font-size:1.05rem;max-width:540px;margin:0 auto}
 
 /* Form */
 .gen-form-card{background:#fff;border-radius:22px;padding:36px;box-shadow:0 20px 60px rgba(0,0,0,.12);margin-top:-30px;position:relative;z-index:10}
 .section-label{font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:#4a5568;margin-bottom:12px;display:flex;align-items:center;gap:6px}
-.section-label i{color:#667eea}
+.section-label i{color:#176B50}
 .gen-input,.gen-select{width:100%;padding:11px 14px;border:2px solid #e2e8f0;border-radius:10px;font-size:13px;outline:none;background:#f8fafc;transition:.2s}
-.gen-input:focus,.gen-select:focus{border-color:#667eea;background:#fff;box-shadow:0 0 0 3px rgba(102,126,234,.1)}
+.gen-input:focus,.gen-select:focus{border-color:#176B50;background:#fff;box-shadow:0 0 0 3px rgba(23,107,80,.1)}
 .gen-textarea{width:100%;padding:11px 14px;border:2px solid #e2e8f0;border-radius:10px;font-size:13px;outline:none;background:#f8fafc;resize:vertical;min-height:80px;transition:.2s}
-.gen-textarea:focus{border-color:#667eea;background:#fff}
+.gen-textarea:focus{border-color:#176B50;background:#fff}
 .gen-label{font-size:12px;font-weight:600;color:#4a5568;margin-bottom:5px;display:block}
-.btn-gen-pkg{width:100%;background:linear-gradient(135deg,#667eea,#764ba2);color:#fff;border:none;border-radius:12px;padding:15px;font-size:15px;font-weight:800;cursor:pointer;transition:.3s;display:flex;align-items:center;justify-content:center;gap:10px}
-.btn-gen-pkg:hover{transform:translateY(-2px);box-shadow:0 10px 30px rgba(102,126,234,.4)}
+.btn-gen-pkg{width:100%;background:linear-gradient(135deg,#176B50,#104B3A);color:#fff;border:none;border-radius:12px;padding:15px;font-size:15px;font-weight:800;cursor:pointer;transition:.3s;display:flex;align-items:center;justify-content:center;gap:10px}
+.btn-gen-pkg:hover{transform:translateY(-2px);box-shadow:0 10px 30px rgba(23,107,80,.4)}
 .btn-gen-pkg:disabled{opacity:.6;transform:none;box-shadow:none}
 
 /* Result */
@@ -64,7 +64,7 @@ if (!empty($_SESSION['login'])) {
 
 /* Package card */
 .ai-pkg-card{background:#fff;border-radius:22px;overflow:hidden;box-shadow:0 8px 40px rgba(0,0,0,.1);border:1px solid rgba(0,0,0,.06)}
-.ai-pkg-header{background:linear-gradient(135deg,#667eea,#764ba2);padding:32px;color:#fff;position:relative}
+.ai-pkg-header{background:linear-gradient(135deg,#176B50,#104B3A);padding:32px;color:#fff;position:relative}
 .ai-pkg-badge{position:absolute;top:20px;right:20px;background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.3);border-radius:20px;padding:5px 14px;font-size:12px;font-weight:700;backdrop-filter:blur(6px)}
 .ai-pkg-name{font-size:1.8rem;font-weight:900;margin-bottom:6px}
 .ai-pkg-tagline{opacity:.85;font-size:14px;margin-bottom:16px}
@@ -74,7 +74,7 @@ if (!empty($_SESSION['login'])) {
 /* Pricing */
 .pricing-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:1px;background:#f0f0f0}
 .pricing-box{background:#fff;padding:18px;text-align:center}
-.pricing-box.total-box{background:linear-gradient(135deg,#667eea,#764ba2);color:#fff}
+.pricing-box.total-box{background:linear-gradient(135deg,#176B50,#104B3A);color:#fff}
 .pricing-amount{font-size:1.3rem;font-weight:900}
 .pricing-label{font-size:11px;color:#718096;text-transform:uppercase;letter-spacing:.5px;margin-top:3px}
 .total-box .pricing-label{color:rgba(255,255,255,.75)}
@@ -83,12 +83,12 @@ if (!empty($_SESSION['login'])) {
 .pkg-section{padding:24px 28px;border-bottom:1px solid #f0f0f0}
 .pkg-section:last-child{border-bottom:none}
 .pkg-section-title{font-size:14px;font-weight:800;color:#1a202c;margin-bottom:14px;display:flex;align-items:center;gap:8px}
-.pkg-section-title i{color:#667eea}
+.pkg-section-title i{color:#176B50}
 
 /* Itinerary preview */
 .itin-day{display:flex;gap:16px;padding:10px 0;border-bottom:1px dashed #f0f0f0}
 .itin-day:last-child{border-bottom:none}
-.itin-day-num{width:40px;height:40px;background:linear-gradient(135deg,#667eea,#764ba2);color:#fff;border-radius:10px;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:13px;flex-shrink:0}
+.itin-day-num{width:40px;height:40px;background:linear-gradient(135deg,#176B50,#104B3A);color:#fff;border-radius:10px;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:13px;flex-shrink:0}
 .itin-day-title{font-size:13px;font-weight:700;color:#1a202c;margin-bottom:4px}
 .itin-day-highlights{font-size:12px;color:#4a5568}
 
@@ -113,17 +113,17 @@ if (!empty($_SESSION['login'])) {
 /* Action buttons */
 .pkg-actions{display:flex;gap:12px;padding:24px 28px;background:#f8fafc;flex-wrap:wrap}
 .btn-pkg-action{padding:11px 22px;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:7px;transition:.2s;text-decoration:none;border:none}
-.btn-pkg-primary{background:linear-gradient(135deg,#667eea,#764ba2);color:#fff}
+.btn-pkg-primary{background:linear-gradient(135deg,#176B50,#104B3A);color:#fff}
 .btn-pkg-primary:hover{opacity:.9;color:#fff}
-.btn-pkg-outline{background:#fff;color:#667eea;border:2px solid #667eea}
-.btn-pkg-outline:hover{background:#667eea;color:#fff}
+.btn-pkg-outline{background:#fff;color:#176B50;border:2px solid #176B50}
+.btn-pkg-outline:hover{background:#176B50;color:#fff}
 
 /* AI reasoning */
-.ai-reasoning{background:linear-gradient(135deg,#f8f9ff,#ede9fe);border-radius:14px;padding:18px;border-left:4px solid #667eea;margin-top:16px;font-size:13px;color:#2d3748;line-height:1.7}
+.ai-reasoning{background:linear-gradient(135deg,#f8f9ff,#ede9fe);border-radius:14px;padding:18px;border-left:4px solid #176B50;margin-top:16px;font-size:13px;color:#2d3748;line-height:1.7}
 
 /* Thinking */
 .ai-thinking-pkg{text-align:center;padding:70px 20px;display:none}
-.thinking-orbit{width:80px;height:80px;border:4px solid #e2e8f0;border-top-color:#667eea;border-radius:50%;animation:spin 1.2s linear infinite;margin:0 auto 24px}
+.thinking-orbit{width:80px;height:80px;border:4px solid #e2e8f0;border-top-color:#176B50;border-radius:50%;animation:spin 1.2s linear infinite;margin:0 auto 24px}
 @keyframes spin{to{transform:rotate(360deg)}}
 .thinking-msgs{color:#718096;font-size:14px}
 
@@ -131,10 +131,10 @@ if (!empty($_SESSION['login'])) {
 .my-pkgs-section{margin-top:50px}
 .my-pkg-card{background:#fff;border-radius:16px;padding:20px;box-shadow:0 2px 12px rgba(0,0,0,.07);border:1px solid #f0f0f0;margin-bottom:16px;display:flex;gap:16px;align-items:center;transition:.2s}
 .my-pkg-card:hover{box-shadow:0 6px 20px rgba(0,0,0,.1);transform:translateY(-2px)}
-.my-pkg-icon{width:50px;height:50px;background:linear-gradient(135deg,#667eea,#764ba2);border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0}
+.my-pkg-icon{width:50px;height:50px;background:linear-gradient(135deg,#176B50,#104B3A);border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0}
 .my-pkg-name{font-size:14px;font-weight:700;color:#1a202c;margin-bottom:4px}
 .my-pkg-meta{font-size:12px;color:#718096}
-.my-pkg-price{font-size:16px;font-weight:800;color:#667eea;margin-left:auto;text-align:right;flex-shrink:0}
+.my-pkg-price{font-size:16px;font-weight:800;color:#176B50;margin-left:auto;text-align:right;flex-shrink:0}
 
 @media(max-width:768px){.incl-grid{grid-template-columns:1fr}.ai-pkg-meta{gap:10px}.pkg-actions{flex-direction:column}}
 </style>
@@ -251,7 +251,7 @@ if (!empty($_SESSION['login'])) {
   <!-- My Generated Packages -->
   <?php if (!empty($myPackages)): ?>
   <div class="my-pkgs-section">
-    <h5 style="font-weight:800;color:#1a202c;margin-bottom:20px;"><i class="fa fa-folder-open" style="color:#667eea;"></i> My AI-Generated Packages</h5>
+    <h5 style="font-weight:800;color:#1a202c;margin-bottom:20px;"><i class="fa fa-folder-open" style="color:#176B50;"></i> My AI-Generated Packages</h5>
     <?php foreach ($myPackages as $pkg): ?>
     <div class="my-pkg-card">
       <div class="my-pkg-icon">✈️</div>
@@ -413,7 +413,7 @@ function renderPackage(pkg) {
         </div>
       </div>`).join('')}
       <div style="margin-top:12px;">
-        <a href="ai-planner.php" style="font-size:13px;color:#667eea;text-decoration:none;font-weight:600;">
+        <a href="ai-planner.php" style="font-size:13px;color:#176B50;text-decoration:none;font-weight:600;">
           <i class="fa fa-calendar-plus-o"></i> Generate full day-by-day itinerary →
         </a>
       </div>

@@ -41,7 +41,7 @@ $allPackages = $q2->fetchAll(PDO::FETCH_OBJ);
 // quick filters), each given a real color, so the legend/pills/markers
 // all describe the actual catalogue.
 $tmsMapTypeColors = [];
-$tmsMapTypePalette = ['#27ae60', '#8e44ad', '#3498db', '#f1c40f', '#1abc9c', '#e67e22'];
+$tmsMapTypePalette = ['#27ae60', '#1F8A66', '#3498db', '#f1c40f', '#1abc9c', '#e67e22'];
 try {
     $typeRows = $dbh->query(
         "SELECT PackageType, COUNT(*) AS n FROM tbltourpackages
@@ -89,28 +89,28 @@ $tmsMapOtherColor = '#95a5a6';
 .map-sidebar { background:var(--white); border-radius:12px; box-shadow:0 4px 20px rgba(0,0,0,0.08); padding:20px; height:520px; overflow-y:auto; margin:25px 0; }
 .map-sidebar h4 { color:#333; font-size:1em; border-bottom:2px solid #eee; padding-bottom:10px; margin-bottom:15px; }
 .dest-item { padding:10px; border-radius:8px; cursor:pointer; transition:0.2s; margin-bottom:8px; border:1px solid #f0f0f0; }
-.dest-item:hover, .dest-item.active { background: linear-gradient(135deg,#667eea11,#764ba211); border-color:#667eea; }
+.dest-item:hover, .dest-item.active { background: linear-gradient(135deg,#176B5011,#104B3A11); border-color:#176B50; }
 .dest-item h5 { font-size:13px; font-weight:700; margin:0 0 3px; color:#333; }
 .dest-item p { font-size:12px; color:#777; margin:0; }
-.dest-item span { font-size:12px; font-weight:700; color:#667eea; }
+.dest-item span { font-size:12px; font-weight:700; color:#176B50; }
 .dest-item-nomap { opacity:0.6; cursor:help; }
 .dest-item-nomap:hover { background:#f7f7f7; border-color:#f0f0f0; }
 .dest-nomap-badge { display:inline-block; margin-left:6px; padding:1px 7px; border-radius:10px; background:#fef3c7; color:#92400e; font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.3px; }
 .popup-card h4 { font-size:14px; font-weight:700; margin:0 0 5px; }
 .popup-card p { font-size:12px; margin:2px 0; color:#555; }
-.popup-card a { display:inline-block; background:#667eea; color:#fff; padding:5px 12px; border-radius:5px; font-size:12px; margin-top:8px; text-decoration:none; }
+.popup-card a { display:inline-block; background:#176B50; color:#fff; padding:5px 12px; border-radius:5px; font-size:12px; margin-top:8px; text-decoration:none; }
 .map-legend { background:var(--white); border-radius:10px; padding:15px 20px; box-shadow:0 2px 15px rgba(0,0,0,0.1); margin-bottom:20px; }
 .map-legend h5 { font-size:14px; font-weight:700; margin-bottom:10px; }
 .legend-item { display:inline-block; margin-right:15px; font-size:13px; }
 .legend-dot { width:12px; height:12px; border-radius:50%; display:inline-block; margin-right:5px; vertical-align:middle; }
 .filter-pills { margin-bottom:20px; }
-.filter-pill { display:inline-block; padding:6px 15px; border-radius:20px; font-size:13px; border:2px solid #667eea; color:#667eea; cursor:pointer; margin:3px; transition:0.2s; }
-.filter-pill.active, .filter-pill:hover { background:#667eea; color:#fff; }
+.filter-pill { display:inline-block; padding:6px 15px; border-radius:20px; font-size:13px; border:2px solid #176B50; color:#176B50; cursor:pointer; margin:3px; transition:0.2s; }
+.filter-pill.active, .filter-pill:hover { background:#176B50; color:#fff; }
 
 /* ── Destination search (live autocomplete) ── */
 .map-search-wrap { position:relative; margin-bottom:20px; }
 .map-search-input { width:100%; padding:12px 16px 12px 42px; border-radius:10px; border:2px solid #e5e7eb; font-size:14px; }
-.map-search-input:focus { outline:none; border-color:#667eea; }
+.map-search-input:focus { outline:none; border-color:#176B50; }
 .map-search-icon { position:absolute; left:15px; top:13px; color:#999; }
 .map-search-results { position:absolute; top:calc(100% + 6px); left:0; right:0; background:var(--white); border-radius:10px; box-shadow:0 8px 30px rgba(0,0,0,0.18); max-height:320px; overflow-y:auto; z-index:1000; display:none; }
 .map-search-result { padding:10px 16px; cursor:pointer; border-bottom:1px solid #f2f2f2; }
@@ -138,7 +138,7 @@ $tmsMapOtherColor = '#95a5a6';
 .tms-dir-panel-close { background:none; border:none; color:#999; font-size:16px; cursor:pointer; line-height:1; padding:2px 4px; }
 .tms-dir-panel-close:hover { color:#e74c3c; }
 .mode-btn { display:inline-block; padding:5px 9px; border-radius:6px; border:1px solid #ddd; font-size:11.5px; cursor:pointer; margin-right:5px; background:var(--white); }
-.mode-btn.active { background:#667eea; color:#fff; border-color:#667eea; }
+.mode-btn.active { background:#176B50; color:#fff; border-color:#176B50; }
 .directions-stats { font-size:12px; margin-top:8px; color:#333; }
 html[data-theme="dark"] .map-sidebar h4,
 html[data-theme="dark"] .dest-item h5,
@@ -148,7 +148,7 @@ html[data-theme="dark"] .directions-stats { color: var(--text) !important; }
 html[data-theme="dark"] .dest-item p,
 html[data-theme="dark"] .map-search-icon,
 html[data-theme="dark"] .map-search-result span { color: var(--text-muted) !important; }
-.directions-stats strong { color:#667eea; }
+.directions-stats strong { color:#176B50; }
 @media (max-width:600px) { .tms-dir-panel { width:calc(100% - 24px); } }
 .tms-you-are-here { position:relative; width:22px; height:22px; background:#4285f4; color:#fff; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:11px; border:2px solid #fff; box-shadow:0 1px 4px rgba(0,0,0,0.4); }
 .tms-you-are-here-pulse { position:absolute; inset:-8px; border-radius:50%; background:rgba(66,133,244,0.35); animation:tmsPulse 1.8s ease-out infinite; }
@@ -174,7 +174,7 @@ html[data-theme="dark"] .map-search-result span { color: var(--text-muted) !impo
     </div>
 
     <div class="map-legend">
-        <h5><i class="fa fa-info-circle" style="color:#667eea"></i> Map Legend</h5>
+        <h5><i class="fa fa-info-circle" style="color:#176B50"></i> Map Legend</h5>
         <?php foreach ($tmsMapTypeColors as $tName => $tInfo): ?>
         <span class="legend-item"><span class="legend-dot" style="background:<?php echo $tInfo['color']; ?>"></span> <?php echo htmlentities($tName); ?></span>
         <?php endforeach; ?>
@@ -234,7 +234,7 @@ html[data-theme="dark"] .map-search-result span { color: var(--text-muted) !impo
         </div>
         <div class="col-md-3">
             <div class="map-sidebar">
-                <h4><i class="fa fa-list" style="color:#667eea"></i> Destinations (<span id="destCount"><?php echo count($allPackages); ?></span>)</h4>
+                <h4><i class="fa fa-list" style="color:#176B50"></i> Destinations (<span id="destCount"><?php echo count($allPackages); ?></span>)</h4>
                 <?php foreach($allPackages as $p):
                     $c = $tmsMapTypeColors[$p->PackageType]['color'] ?? $tmsMapOtherColor;
                     // BUG FIX: a package with no (or only partial) map coordinates
@@ -610,8 +610,8 @@ function computeRoute() {
         var route = data.routes[0];
         if (routeLine) map.removeLayer(routeLine);
         var latlngs = route.geometry.coordinates.map(function(c){ return [c[1], c[0]]; });
-        var routeColors = { driving:'#667eea', cycling:'#27ae60', walking:'#f39c12' };
-        routeLine = L.polyline(latlngs, { color: routeColors[currentMode] || '#667eea', weight: 5, opacity: 0.85 }).addTo(map);
+        var routeColors = { driving:'#176B50', cycling:'#27ae60', walking:'#f39c12' };
+        routeLine = L.polyline(latlngs, { color: routeColors[currentMode] || '#176B50', weight: 5, opacity: 0.85 }).addTo(map);
         // Padding is asymmetric on the left/bottom so the fitted route doesn't
         // duck under the directions panel docked in that corner (Task 4 fix —
         // "the route should remain visible" while the info panel stays put).
