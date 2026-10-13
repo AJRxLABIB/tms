@@ -1835,3 +1835,7 @@ html body i.fa.fa-user, html body i.fa.fa-ticket, html body i.fa.fa-clock-o, htm
 /* Header auth buttons: keep labels on one line on narrow screens */
 .btn-topbar-signup, .btn-topbar-login { white-space: nowrap; }
 @media (max-width: 480px) { .btn-topbar-signup, .btn-topbar-login { padding: 8px 12px !important; font-size: 13px !important; } }
+
+/* signed-in topbar links: single line, tighter spacing so they don't wrap */
+.tms-topbar a { white-space: nowrap; }
+@media (max-width: 1280px) { .tms-topbar a { font-size: 12px; } }

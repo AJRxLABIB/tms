@@ -9,7 +9,7 @@ $error = '';
 
 $q = $dbh->prepare(
     "SELECT c.id, c.PackageId, c.FromDate, c.ToDate, c.Comment, c.NoOfPersons, c.DynamicPrice,
-            p.PackageName, p.PackageLocation, p.PackagePrice, p.PackageImage
+            p.PackageName, p.PackageLocation, p.PackagePrice, p.PackageImage, p.CancellationPolicy
      FROM tblcart c JOIN tbltourpackages p ON p.PackageId = c.PackageId
      WHERE c.UserEmail=:e ORDER BY c.id DESC"
 );
@@ -69,7 +69,11 @@ if (isset($_POST['confirm_checkout'])) {
     tms_csrf_validate();
     $mobile = tms_clean($_POST['mobile'] ?? '');
 
-    if ($hasInvalidPrice) {
+    // Explicit consent is enforced server-side (the HTML `required` attribute
+    // alone is not a control -- a crafted POST would skip it).
+    if (empty($_POST['accept_terms'])) {
+        $error = tms_t('msg_accept_terms_required', 'Please confirm that you have read the cancellation policy and privacy policy before booking.');
+    } elseif ($hasInvalidPrice) {
         $error = "One or more items in your cart don't have a price set yet, so checkout can't proceed. Please remove them from your cart or contact support.";
     } else {
     // CONCURRENCY FIX (Rule 9 -- prevent double booking): everything from the
@@ -265,7 +269,7 @@ if (isset($_POST['confirm_checkout'])) {
 .checkout-item{display:flex;justify-content:space-between;padding:12px 0;border-bottom:1px solid #eef1f6;font-size:14px;}
 .checkout-item:last-child{border-bottom:none;}
 .summary-box{background:var(--white);border-radius:12px;padding:26px;box-shadow:0 3px 15px rgba(0,0,0,0.08);}
-.summary-row.total{display:flex;justify-content:space-between;font-size:19px;font-weight:800;color:#1e293b;border-top:2px solid #eee;margin-top:14px;padding-top:16px;}
+.summary-row.total{display:flex;justify-content:space-between;font-size:19px;font-weight:800;color:var(--text);border-top:2px solid #eee;margin-top:14px;padding-top:16px;}
 html[data-theme="dark"] .summary-row.total { color: var(--text) !important; }
 .btn-confirm{background:var(--secondary);color:#fff;border:none;border-radius:8px;padding:14px;font-weight:700;font-size:15px;width:100%;cursor:pointer;margin-top:18px;}
 .btn-confirm:hover{background:#2d6a97;}
@@ -286,7 +290,7 @@ html[data-theme="dark"] .summary-row.total { color: var(--text) !important; }
   <div class="summary-box">
     <h5 style="font-weight:700;margin-bottom:10px;"><?php echo tms_t('label_review_your_prefix','Review Your'); ?> <?php echo count($items); ?> <?php echo tms_t('label_bookings_suffix','Booking(s)'); ?></h5>
     <?php if ($error): ?>
-    <div style="background:#fee2e2;color:#991b1b;border:1px solid #fecaca;border-radius:8px;padding:12px 14px;margin-bottom:16px;font-size:13.5px;">
+    <div style="background:var(--danger-bg);color:var(--danger-text);border:1px solid var(--danger);border-radius:8px;padding:12px 14px;margin-bottom:16px;font-size:13.5px;">
       <i class="fa fa-exclamation-circle"></i> <?php echo htmlspecialchars($error, ENT_QUOTES, 'UTF-8'); ?>
     </div>
     <?php endif; ?>
@@ -294,9 +298,15 @@ html[data-theme="dark"] .summary-row.total { color: var(--text) !important; }
     <div class="checkout-item">
       <div>
         <strong><?php echo htmlspecialchars($it->PackageName, ENT_QUOTES, 'UTF-8'); ?></strong><br>
-        <small style="color:#888;"><?php echo date('d M Y', strtotime($it->FromDate)); ?> &rarr; <?php echo date('d M Y', strtotime($it->ToDate)); ?></small>
+        <small style="color:var(--text-muted);"><?php echo date('d M Y', strtotime($it->FromDate)); ?> &rarr; <?php echo date('d M Y', strtotime($it->ToDate)); ?></small>
+        <?php if (!empty(trim((string)$it->CancellationPolicy))): ?>
+        <details style="margin-top:6px;font-size:12.5px;color:var(--text-muted);">
+          <summary style="cursor:pointer;color:var(--secondary);font-weight:600;"><?php echo htmlspecialchars(tms_t('label_cancellation_policy', 'Cancellation policy'), ENT_QUOTES, 'UTF-8'); ?></summary>
+          <div style="margin-top:6px;white-space:pre-line;"><?php echo htmlspecialchars(trim((string)$it->CancellationPolicy), ENT_QUOTES, 'UTF-8'); ?></div>
+        </details>
+        <?php endif; ?>
         <?php if (!empty($it->Addons)): ?>
-        <br><small style="color:#888;">
+        <br><small style="color:var(--text-muted);">
           <i class="fa fa-plus-circle"></i>
           <?php foreach ($it->Addons as $ao): ?>
             <?php echo htmlspecialchars($ao->Name, ENT_QUOTES, 'UTF-8'); ?><?php echo $ao->Quantity > 1 ? ' ×' . (int)$ao->Quantity : ''; ?><?php echo $ao !== end($it->Addons) ? ',' : ''; ?>
@@ -307,10 +317,10 @@ html[data-theme="dark"] .summary-row.total { color: var(--text) !important; }
       <?php $pax = max(1, (int)$it->NoOfPersons); ?>
       <div style="text-align:right;">
         <?php if ($it->PackagePrice === null || (float)$it->PackagePrice <= 0): ?>
-          <span style="color:#e11d48;"><?php echo tms_t('msg_price_not_set','Price not set'); ?></span>
+          <span style="color:var(--danger);"><?php echo tms_t('msg_price_not_set','Price not set'); ?></span>
         <?php else: ?>
           <?php echo tms_currency((int)$it->EffectivePrice); ?>
-          <div style="font-size:12px;color:#888;">
+          <div style="font-size:12px;color:var(--text-muted);">
             × <?php echo $pax; ?> <?php echo tms_t('label_traveller_word','traveller(s)'); ?>
             <?php if ($it->AddonTotal > 0): ?>+ <?php echo tms_currency($it->AddonTotal); ?> <?php echo tms_t('label_addons_word','add-ons'); ?><?php endif; ?>
             = <strong><?php echo tms_currency(((int)$it->EffectivePrice * $pax) + $it->AddonTotal); ?></strong>
@@ -324,8 +334,16 @@ html[data-theme="dark"] .summary-row.total { color: var(--text) !important; }
     <form method="post">
       <?php tms_csrf_field(); ?>
       <div class="form-group" style="margin-top:16px;">
-        <label style="font-weight:600;font-size:13px;"><?php echo tms_t('label_mobile_number','Mobile Number'); ?> <small style="color:#94a3b8;"><?php echo tms_t('dest_mobile_optional_hint','(optional, for booking contact)'); ?></small></label>
+        <label style="font-weight:600;font-size:13px;"><?php echo tms_t('label_mobile_number','Mobile Number'); ?> <small style="color:var(--text-muted);"><?php echo tms_t('dest_mobile_optional_hint','(optional, for booking contact)'); ?></small></label>
         <input type="tel" name="mobile" class="form-control" placeholder="e.g. 017XXXXXXXX" maxlength="20">
+      </div>
+      <div class="form-group" style="margin-top:14px;">
+        <label style="display:flex;gap:10px;align-items:flex-start;font-weight:500;font-size:13.5px;cursor:pointer;">
+          <input type="checkbox" name="accept_terms" value="1" required style="margin-top:3px;width:18px;height:18px;flex-shrink:0;">
+          <span><?php echo tms_t('label_accept_terms_pre', 'I have read the cancellation policy above and the'); ?>
+            <a href="privacy.php" target="_blank" rel="noopener" style="color:var(--secondary);text-decoration:underline;"><?php echo tms_t('label_privacy_policy', 'privacy policy'); ?></a>,
+            <?php echo tms_t('label_accept_terms_post', 'and I understand the booking starts as pending until confirmed.'); ?></span>
+        </label>
       </div>
       <?php if ($hasInvalidPrice): ?>
       <button type="button" class="btn-confirm" disabled style="opacity:.5;cursor:not-allowed;" title="<?php echo htmlspecialchars(tms_t('msg_remove_unpriced_first','Remove the unpriced item(s) from your cart first'), ENT_QUOTES, 'UTF-8'); ?>">
@@ -338,8 +356,8 @@ html[data-theme="dark"] .summary-row.total { color: var(--text) !important; }
       </button>
       <?php endif; ?>
     </form>
-    <p style="text-align:center;margin-top:12px;"><a href="cart.php" style="font-size:13px;color:#94a3b8;">← <?php echo tms_t('link_back_to_cart','Back to Cart'); ?></a></p>
-    <p style="text-align:center;font-size:11.5px;color:#cbd5e1;margin-top:8px;">
+    <p style="text-align:center;margin-top:12px;"><a href="cart.php" style="font-size:13px;color:var(--text-muted);">← <?php echo tms_t('link_back_to_cart','Back to Cart'); ?></a></p>
+    <p style="text-align:center;font-size:11.5px;color:var(--text-muted);margin-top:8px;">
       <?php echo tms_t('dest_checkout_pending_note', 'Each booking starts as <strong>pending</strong> and will be confirmed by our team shortly — just like booking one package at a time.'); ?>
     </p>
   </div>
