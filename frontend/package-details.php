@@ -488,7 +488,7 @@ if ($pkg) {
 .pkg-body h2{font-size:1.6em;font-weight:700;color:#333;margin-bottom:6px;}
 .meta-row{display:flex;flex-wrap:wrap;gap:18px;margin:14px 0;font-size:14px;color:#666;}
 .meta-row span i{margin-right:5px;color:var(--secondary);}
-.price-box{background:linear-gradient(135deg,var(--secondary),#27ae60);color:#fff;border-radius:10px;padding:18px 22px;margin-bottom:22px;text-align:center;}
+.price-box{background:linear-gradient(135deg,var(--primary-dark),var(--primary));color:#fff;border-radius:10px;padding:18px 22px;margin-bottom:22px;text-align:center;}
 .price-box .price{font-size:2.2em;font-weight:700;}
 .price-box small{opacity:.85;font-size:13px;}
 .form-control{border:2px solid #e0e0e0;border-radius:7px;height:42px;font-size:14px;}
@@ -497,7 +497,7 @@ if ($pkg) {
 .btn-book:hover{background:#2d6a97;}
 .review-mini{background:#f8f9fa;border-radius:8px;padding:14px;margin-bottom:12px;}
 .review-mini h6{font-size:13px;font-weight:700;color:#333;margin:0 0 4px;}
-.stars-sm{color:#f0ad4e;font-size:13px;}
+.stars-sm{color:var(--brass);font-size:13px;}
 </style>
 </head>
 <body>
@@ -572,7 +572,7 @@ if ($pkg) {
                         <p style="font-size:12px;color:#aaa;margin:0;">#PKG-<?php echo (int)$pkg->PackageId; ?></p>
                         <h2><?php echo htmlspecialchars($pkgNameT ?? $pkg->PackageName,ENT_QUOTES,'UTF-8'); ?></h2>
                         <?php if (!empty($pkg->AvgRating) && $pkg->AvgRating > 0): ?>
-                        <div style="color:#f0ad4e;font-size:16px;margin-bottom:8px;">
+                        <div style="color:var(--brass);font-size:16px;margin-bottom:8px;">
                             <?php for ($i=1;$i<=5;$i++) echo $i<=round($pkg->AvgRating)?'★':'☆'; ?>
                             <span style="font-size:13px;color:#888;"><?php echo number_format($pkg->AvgRating,1); ?> / 5</span>
                         </div>
@@ -707,7 +707,7 @@ if ($pkg) {
                             <?php foreach ($suitLabels as $key=>$label): if (!isset($meta[$key])) continue; ?>
                             <div style="font-size:13px;color:#555;">
                                 <?php echo $label; ?>:
-                                <span style="color:#f0ad4e;"><?php for($i=1;$i<=5;$i++) echo $i<=intval($meta[$key])?'★':'☆'; ?></span>
+                                <span style="color:var(--brass);"><?php for($i=1;$i<=5;$i++) echo $i<=intval($meta[$key])?'★':'☆'; ?></span>
                             </div>
                             <?php endforeach; ?>
                         </div>
@@ -750,7 +750,7 @@ if ($pkg) {
                             <?php endif; ?>
                             <?php if (!empty($meta['nearby_hospitals'])): ?>
                             <div class="col-sm-6" style="margin-bottom:14px;">
-                                <h5><i class="fa fa-plus-square" style="color:#e74c3c"></i> Nearby Hospitals / Emergency</h5>
+                                <h5><i class="fa fa-plus-square" style="color:var(--danger)"></i> Nearby Hospitals / Emergency</h5>
                                 <ul style="font-size:13px;color:#666;padding-left:18px;">
                                     <?php foreach ($meta['nearby_hospitals'] as $hos): ?><li><?php echo $esc($hos); ?></li><?php endforeach; ?>
                                 </ul>
@@ -759,14 +759,14 @@ if ($pkg) {
                         </div>
 
                         <?php if (!empty($meta['travel_tips'])): ?>
-                        <h4 style="margin-top:10px;"><i class="fa fa-lightbulb-o" style="color:#f0ad4e"></i> Travel Tips</h4>
+                        <h4 style="margin-top:10px;"><i class="fa fa-lightbulb-o" style="color:var(--brass)"></i> Travel Tips</h4>
                         <ul style="font-size:13.5px;color:#555;padding-left:18px;">
                             <?php foreach ($meta['travel_tips'] as $tip): ?><li><?php echo $esc($tip); ?></li><?php endforeach; ?>
                         </ul>
                         <?php endif; ?>
 
                         <?php if (!empty($meta['safety_guidelines'])): ?>
-                        <h4 style="margin-top:10px;"><i class="fa fa-shield" style="color:#27ae60"></i> Safety Guidelines</h4>
+                        <h4 style="margin-top:10px;"><i class="fa fa-shield" style="color:var(--success)"></i> Safety Guidelines</h4>
                         <ul style="font-size:13.5px;color:#555;padding-left:18px;">
                             <?php foreach ($meta['safety_guidelines'] as $s): ?><li><?php echo $esc($s); ?></li><?php endforeach; ?>
                         </ul>
@@ -845,7 +845,7 @@ if ($pkg) {
                 <!-- Recent Reviews -->
                 <?php if (count($reviews) > 0): ?>
                 <div class="pkg-card wow fadeInUp" style="padding:24px;">
-                    <h4 style="font-weight:700;margin-bottom:16px;"><i class="fa fa-star" style="color:#f0ad4e"></i> <?php echo tms_t('heading_reviews','Recent Reviews'); ?></h4>
+                    <h4 style="font-weight:700;margin-bottom:16px;"><i class="fa fa-star" style="color:var(--brass)"></i> <?php echo tms_t('heading_reviews','Recent Reviews'); ?></h4>
                     <?php foreach ($reviews as $rev): ?>
                     <div class="review-mini">
                         <div style="display:flex;justify-content:space-between;align-items:center;">
@@ -947,7 +947,7 @@ if ($pkg) {
                      coordinates set — no fake pins for packages without them. -->
                 <?php if(!empty($pkg->MapLat) && !empty($pkg->MapLng)): ?>
                 <div class="pkg-card wow fadeInUp" style="padding:24px;">
-                    <h4 style="font-weight:700;margin-bottom:4px;"><i class="fa fa-map-marker" style="color:#e74c3c"></i> Nearby Essentials</h4>
+                    <h4 style="font-weight:700;margin-bottom:4px;"><i class="fa fa-map-marker" style="color:var(--primary)"></i> Nearby Essentials</h4>
                     <p style="font-size:12.5px;color:#94a3b8;margin-bottom:14px;">Live data around this destination — hotels, food, and emergency services.</p>
                     <div id="nearbyMap" style="height:280px;border-radius:var(--radius-sm);margin-bottom:14px;background:#eef2f5;"></div>
                     <div id="nearbyTabs" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px;">
@@ -1023,7 +1023,7 @@ html[data-theme="dark"] .meta-row { color: var(--text-muted) !important; }
                 .pd-section-title i{color:var(--secondary);}
                 .pd-section-text{font-size:12.5px;color:#64748b;line-height:1.5;margin:0;}
                 .pd-list-item{font-size:12.5px;color:var(--text);padding:4px 0;display:flex;gap:8px;align-items:flex-start;}
-                .pd-list-item i{color:#27ae60;margin-top:3px;flex-shrink:0;}
+                .pd-list-item i{color:var(--success);margin-top:3px;flex-shrink:0;}
                 html[data-theme="dark"] .pd-section{border-top-color:#2a3441;}
                 html[data-theme="dark"] .pd-badge{background:#232b37;color:#eef2f7;}
                 </style>
@@ -1468,7 +1468,7 @@ html[data-theme="dark"] .meta-row { color: var(--text-muted) !important; }
                         </a>
                         <?php if(!empty($pkg->MapLat) && !empty($pkg->MapLng)): ?>
                         <a href="tour-map.php?focus=<?php echo (int)$pkg->PackageId; ?>" class="btn btn-default" style="flex:1;border:2px solid #eee;border-radius:8px;font-size:13px;padding:10px;text-align:center;">
-                            <i class="fa fa-map-marker" style="color:#e74c3c"></i> View on Map
+                            <i class="fa fa-map-marker" style="color:var(--primary)"></i> View on Map
                         </a>
                         <?php endif; ?>
                     </div>
@@ -1531,7 +1531,7 @@ if (!empty($_SESSION['login']) && $pkg) {
 <script>
 function checkCoupon() {
     var code = document.getElementById('couponCode').value.trim();
-    if (!code) { document.getElementById('couponResult').innerHTML = '<span style="color:#e74c3c">Enter a coupon code first.</span>'; return; }
+    if (!code) { document.getElementById('couponResult').innerHTML = '<span style="color:var(--danger)">Enter a coupon code first.</span>'; return; }
     var xhr = new XMLHttpRequest();
     xhr.open('POST', 'coupon-check.php', true);
     xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
@@ -1539,9 +1539,9 @@ function checkCoupon() {
         var res = JSON.parse(xhr.responseText);
         var el = document.getElementById('couponResult');
         if (res.valid) {
-            el.innerHTML = '<span style="color:#27ae60;font-weight:700;"><i class="fa fa-check"></i> ' + res.msg + '</span>';
+            el.innerHTML = '<span style="color:var(--success);font-weight:700;"><i class="fa fa-check"></i> ' + res.msg + '</span>';
         } else {
-            el.innerHTML = '<span style="color:#e74c3c;"><i class="fa fa-times"></i> ' + res.msg + '</span>';
+            el.innerHTML = '<span style="color:var(--danger);"><i class="fa fa-times"></i> ' + res.msg + '</span>';
         }
     };
     xhr.send('code=' + encodeURIComponent(code));

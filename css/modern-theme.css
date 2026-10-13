@@ -1356,7 +1356,7 @@ html[data-theme="dark"] .tms-notif-msg { color: #eef2f7; }
 .tms-footer-col h5 { font-size: 14px; font-weight: 700; color: #fff; margin-bottom: 20px; text-transform: uppercase; letter-spacing: 1px; }
 .tms-footer-col ul li { margin-bottom: 10px; }
 .tms-footer-col ul li a { font-size: 13.5px; color: rgba(255,255,255,0.55); transition: var(--transition); }
-.tms-footer-col ul li a:hover { color: var(--secondary); padding-left: 4px; }
+.tms-footer-col ul li a:hover { color: var(--mint); padding-left: 4px; }
 .tms-footer-bottom {
   border-top: 1px solid rgba(255,255,255,0.08);
   padding: 20px 0;
@@ -1365,7 +1365,7 @@ html[data-theme="dark"] .tms-notif-msg { color: #eef2f7; }
   justify-content: space-between;
   font-size: 12.5px;
 }
-.tms-footer-bottom a { color: var(--secondary); }
+.tms-footer-bottom a { color: var(--mint); }
 
 /* ─── UTILITY BUTTONS ─── */
 .btn-primary-tms {
@@ -1811,6 +1811,27 @@ html[data-theme="dark"] .tms-breadcrumb li:not(:first-child)::before { color: #4
   min-width: 24px;
 }
 
+
+/* ═══ v7 compatibility layer: neutralise legacy template styles ═══
+   css/style.css (the original Bootstrap template) defines GLOBAL rules such as
+   `i.fa.fa-columns { font-size: 9em; color: blue }`, which blow up icons on every
+   page that uses them (nav "Home", Compare buttons, lock icons...). Reset them to
+   inherit; pages that want a larger icon set font-size inline (which still wins). */
+html body i.fa.fa-home, html body i.fa.fa-lock, html body i.fa.fa-columns, html body i.fa.fa-usd,
+html body i.fa.fa-h-square, html body i.fa.fa-mobile, html body i.fa.fa-map-marker, html body i.fa.fa-truck,
+html body i.fa.fa-user, html body i.fa.fa-ticket, html body i.fa.fa-clock-o, html body i.fa.fa-gift {
+  font-size: inherit; color: inherit; padding-right: 0; margin-top: 0;
+}
+/* Old template page banners used unrelated stock photos; use the brand gradient instead. */
+.banner-1, .banner-2, .banner-3 {
+  background: linear-gradient(135deg, var(--primary-dark), var(--primary)) !important;
+  min-height: 160px;
+}
+/* Bootstrap-3 blue buttons -> brand tokens */
+.btn-primary { background: var(--primary); border-color: var(--primary-dark); color: #fff; }
+.btn-primary:hover, .btn-primary:focus { background: var(--primary-dark); border-color: var(--primary-dark); color: #fff; }
+.btn-info { background: var(--mint); border-color: var(--mint); color: var(--mint-ink); }
+.btn-info:hover, .btn-info:focus { background: #A5D9BB; border-color: #A5D9BB; color: var(--mint-ink); }
 /* Header auth buttons: keep labels on one line on narrow screens */
 .btn-topbar-signup, .btn-topbar-login { white-space: nowrap; }
 @media (max-width: 480px) { .btn-topbar-signup, .btn-topbar-login { padding: 8px 12px !important; font-size: 13px !important; } }

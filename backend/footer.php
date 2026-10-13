@@ -12,7 +12,7 @@
                         <span>Tourism Management</span>
                     </div>
                 </a>
-                <p>Your premium travel partner. AI-powered planning, expert guidance, and world-class service.</p>
+                <p>Plan, compare and book tour packages with AI-assisted trip planning, live weather and multi-currency prices.</p>
                 <?php /* Round 14: these four buttons were all href="#" — clicking any of
                          them just jumped to the top of the page. Set TMS_SOCIAL_* in .env
                          to switch them on; until then they are not rendered at all, which
@@ -73,17 +73,19 @@
                     <li><a href="reviews.php">Reviews</a></li>
                     <li><a href="loyalty.php">Loyalty Points</a></li>
                     <li><a href="custom-trip.php">Custom Trips</a></li>
-                    <li><a href="admin/index.php">Admin Login</a></li>
                 </ul>
-                <div style="margin-top:20px;padding:14px;background:rgba(255,183,3,0.1);border-radius:10px;border:1px solid rgba(255,183,3,0.2);">
-                    <div style="color:var(--accent);font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;">24/7 Support</div>
-                    <div style="color:#fff;font-size:15px;font-weight:700;"><i class="fa fa-phone"></i> +880 1759-443004</div>
+                <?php $tmsSupportPhone = trim((string)tms_env('TMS_SUPPORT_PHONE', '+880 1759-443004')); ?>
+                <?php if ($tmsSupportPhone !== ''): ?>
+                <div style="margin-top:20px;padding:14px;background:rgba(184,228,201,0.1);border-radius:10px;border:1px solid rgba(184,228,201,0.25);">
+                    <div style="color:var(--mint);font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;">Contact</div>
+                    <a href="tel:<?php echo htmlspecialchars(preg_replace('/[^0-9+]/', '', $tmsSupportPhone), ENT_QUOTES, 'UTF-8'); ?>" style="color:#fff;font-size:15px;font-weight:700;"><i class="fa fa-phone" aria-hidden="true"></i> <?php echo htmlspecialchars($tmsSupportPhone, ENT_QUOTES, 'UTF-8'); ?></a>
                 </div>
+                <?php endif; ?>
             </div>
             <?php endif; ?>
         </div>
         <div class="tms-footer-bottom">
-            <span>© 2026 TMS — Tourism Management System. <?php echo tms_t('footer_rights','All rights reserved.'); ?></span>
+            <span>© <?php echo date('Y'); ?> TMS — Tourism Management System. <?php echo tms_t('footer_rights','All rights reserved.'); ?></span>
             <?php if (empty($tms_landing_mode)): ?>
             <div style="display:flex;align-items:center;gap:16px;">
                 <select class="tms-currency-select" aria-label="See price in" title="See price in" style="background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.2);color:rgba(255,255,255,0.85);">

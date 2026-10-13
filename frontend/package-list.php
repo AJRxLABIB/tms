@@ -526,12 +526,12 @@ html[data-theme="dark"] .no-results { color: var(--text-light) !important; }
                     <div class="col-md-6 room-midle">
                         <h4><?php echo htmlspecialchars(tms_pkg_name($result, $translatedNames), ENT_QUOTES, 'UTF-8'); ?></h4>
                         <h6><i class="fa fa-tag" style="color:var(--secondary)"></i> <?php echo htmlspecialchars($result->PackageType, ENT_QUOTES, 'UTF-8'); ?></h6>
-                        <p><i class="fa fa-map-marker" style="color:#e74c3c"></i> <strong>Location:</strong> <?php echo htmlspecialchars($result->PackageLocation, ENT_QUOTES, 'UTF-8'); ?></p>
-                        <p><i class="fa fa-list" style="color:#27ae60"></i> <?php echo htmlspecialchars($result->PackageFetures ?? '', ENT_QUOTES, 'UTF-8'); ?></p>
+                        <p><i class="fa fa-map-marker" style="color:var(--primary)"></i> <strong>Location:</strong> <?php echo htmlspecialchars($result->PackageLocation, ENT_QUOTES, 'UTF-8'); ?></p>
+                        <p><i class="fa fa-list" style="color:var(--success)"></i> <?php echo htmlspecialchars($result->PackageFetures ?? '', ENT_QUOTES, 'UTF-8'); ?></p>
                         <?php if (!empty($result->AvgRating) && $result->AvgRating > 0): ?>
                         <p style="margin:4px 0;">
                             <?php for ($s = 1; $s <= 5; $s++): ?>
-                                <i class="fa fa-star<?php echo $s <= round($result->AvgRating) ? '' : '-o'; ?>" style="color:#f0ad4e;font-size:13px;"></i>
+                                <i class="fa fa-star<?php echo $s <= round($result->AvgRating) ? '' : '-o'; ?>" style="color:var(--brass);font-size:13px;"></i>
                             <?php endfor; ?>
                             <span style="font-size:12px;color:#888;margin-left:4px;"><?php echo number_format($result->AvgRating, 1); ?></span>
                         </p>
@@ -572,7 +572,7 @@ html[data-theme="dark"] .no-results { color: var(--text-light) !important; }
                             <form method="post" action="wishlist.php" style="display:inline;">
                                 <?php tms_csrf_field(); ?>
                                 <input type="hidden" name="pkgid" value="<?php echo (int)$result->PackageId; ?>">
-                                <button name="toggle_wish" style="background:<?php echo $inWish?'#e74c3c':'#fff'; ?>;color:<?php echo $inWish?'#fff':'#e74c3c'; ?>;border:1px solid #e74c3c;padding:5px 12px;border-radius:6px;font-size:13px;cursor:pointer;">
+                                <button name="toggle_wish" style="background:<?php echo $inWish?'var(--danger)':'#fff'; ?>;color:<?php echo $inWish?'#fff':'var(--danger)'; ?>;border:1px solid var(--danger);padding:5px 12px;border-radius:6px;font-size:13px;cursor:pointer;">
                                     <i class="fa fa-heart<?php echo $inWish?'':'-o'; ?>"></i> <?php echo $inWish?'Saved':'Save'; ?>
                                 </button>
                             </form>
