@@ -43,9 +43,9 @@ $selectedBookingId = (int)($_GET['booking_id'] ?? ($activeBooking->BookingId ?? 
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <style>
-body { background: #f0f4f8; margin: 0; }
-.copilot-layout { display: grid; grid-template-columns: 300px 1fr; height: calc(100vh - 120px); }
-.copilot-sidebar { background: #1a1a2e; display: flex; flex-direction: column; overflow: hidden; }
+body { background: var(--bg); margin: 0; }
+.copilot-layout { display: grid; grid-template-columns: 300px 1fr; height: calc(100vh - 112px); height: calc(100dvh - 112px); min-height: 520px; }
+.copilot-sidebar { background: #0E2A21; display: flex; flex-direction: column; overflow: hidden; }
 .sidebar-header { padding: 20px; border-bottom: 1px solid rgba(255,255,255,.08); }
 .brand-row { display: flex; align-items: center; gap: 10px; color: #fff; margin-bottom: 12px; }
 .brand-icon { width: 40px; height: 40px; background: linear-gradient(135deg,#176B50,#104B3A); border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 18px; }
@@ -57,10 +57,10 @@ body { background: #f0f4f8; margin: 0; }
 .trip-selector { padding: 12px 20px; border-bottom: 1px solid rgba(255,255,255,.06); }
 .trip-selector label { font-size: 10px; color: rgba(255,255,255,.7); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 5px; display: block; }
 .trip-select { width:100%; background: rgba(255,255,255,.07); border: 1px solid rgba(255,255,255,.12); color: #fff; border-radius: 8px; padding: 7px 10px; font-size: 12px; outline: none; }
-.trip-select option { background: #1a1a2e; }
+.trip-select option { background: #0E2A21; }
 .trip-info-card { margin: 12px 20px; background: rgba(23,107,80,.15); border: 1px solid rgba(23,107,80,.25); border-radius: 10px; padding: 12px; }
 .trip-info-title { font-size: 13px; font-weight: 700; color: #fff; margin-bottom: 6px; }
-.trip-info-meta { font-size: 11px; color: rgba(255,255,255,.5); }
+.trip-info-meta { font-size: 11px; color: rgba(255,255,255,.75); }
 .quick-actions { padding: 12px 20px; border-bottom: 1px solid rgba(255,255,255,.06); }
 .qa-label { font-size: 10px; color: rgba(255,255,255,.7); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px; }
 .qa-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 5px; }
@@ -70,46 +70,60 @@ body { background: #f0f4f8; margin: 0; }
 .s-link { display: flex; align-items: center; gap: 8px; color: rgba(255,255,255,.72); font-size: 12px; text-decoration: none; padding: 5px 6px; border-radius: 6px; }
 .s-link:hover { background: rgba(255,255,255,.04); color: rgba(255,255,255,.7); }
 .s-link i { color: #176B50; width: 12px; }
-.chat-main { display: flex; flex-direction: column; background: #f8fafc; }
-.chat-topbar { background: #fff; padding: 14px 20px; border-bottom: 1px solid #e2e8f0; display: flex; align-items: center; justify-content: space-between; }
-.chat-topbar-title { font-size: 15px; font-weight: 800; color: #1a202c; }
+.chat-main { display: flex; flex-direction: column; background: var(--bg); min-height: 0; min-width: 0; }
+.chat-topbar { background: var(--white); padding: 14px 20px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; }
+.chat-topbar-title { font-size: 15px; font-weight: 800; color: var(--text); }
 .chat-topbar-sub { font-size: 12px; color:var(--text-muted); }
 .topbar-actions { display: flex; gap: 8px; }
-.topbar-btn { background: #f0f4f8; border: none; border-radius: 7px; padding: 6px 12px; font-size: 12px; color: #4a5568; cursor: pointer; display: flex; align-items: center; gap: 5px; text-decoration: none; }
-.topbar-btn:hover { background: #e2e8f0; }
+.topbar-btn { background: var(--bg-dark); border: none; border-radius: 7px; padding: 8px 12px; min-height: 32px; font-size: 12px; color: var(--text); cursor: pointer; display: flex; align-items: center; gap: 5px; text-decoration: none; }
+.topbar-btn:hover { background: var(--border); }
+.chat-main .chat-messages { background: transparent !important; }
 .chat-messages { flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 14px; }
-.msg { max-width: 78%; display: flex; flex-direction: column; }
+.msg { max-width: min(78%, 640px); display: flex; flex-direction: column; }
 .msg.user { align-self: flex-end; align-items: flex-end; }
 .msg.assistant { align-self: flex-start; align-items: flex-start; }
 .msg-meta { font-size: 10px; color:var(--text-muted); margin-bottom: 3px; display: flex; align-items: center; gap: 5px; }
 .msg-avatar { width: 26px; height: 26px; border-radius: 7px; background: linear-gradient(135deg,#176B50,#104B3A); display: flex; align-items: center; justify-content: center; font-size: 12px; color: #fff; }
 .msg-bubble { padding: 11px 14px; border-radius: 14px; font-size: 13px; line-height: 1.6; }
-.msg.assistant .msg-bubble { background: #fff; color: #1a202c; border-radius: 0 14px 14px 14px; box-shadow: 0 2px 8px rgba(0,0,0,.06); }
+.msg.assistant .msg-bubble { background: var(--white); color: var(--text); border: 1px solid var(--border); border-radius: 0 14px 14px 14px; box-shadow: 0 2px 8px rgba(0,0,0,.06); }
 .msg.user .msg-bubble { background: linear-gradient(135deg,#176B50,#104B3A); color: #fff; border-radius: 14px 0 14px 14px; }
 .suggestions { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 6px; }
-.sug-chip { background: #ebf8ff; color: #2c5282; border: 1px solid #bee3f8; border-radius: 16px; padding: 4px 10px; font-size: 11px; cursor: pointer; transition: .2s; }
-.sug-chip:hover { background: #bee3f8; }
+.sug-chip { background: #E7F5EE; color: #0E3B2D; border: 1px solid #B8E4C9; border-radius: 16px; padding: 6px 12px; min-height: 28px; font-size: 12px; font-family: inherit; cursor: pointer; transition: .2s; }
+.sug-chip:hover { background: #B8E4C9; }
 .typing-msg { align-self: flex-start; }
-.typing-bubble { background: #fff; border-radius: 0 14px 14px 14px; padding: 12px 16px; box-shadow: 0 2px 8px rgba(0,0,0,.06); display: flex; gap: 4px; }
+.typing-bubble { background: var(--white); border-radius: 0 14px 14px 14px; padding: 12px 16px; box-shadow: 0 2px 8px rgba(0,0,0,.06); display: flex; gap: 4px; }
 .typing-dot { width: 7px; height: 7px; background: #a0aec0; border-radius: 50%; animation: typeBounce 1.2s infinite; }
 .typing-dot:nth-child(2){animation-delay:.2s}
 .typing-dot:nth-child(3){animation-delay:.4s}
 @keyframes typeBounce{0%,60%,100%{transform:translateY(0)}30%{transform:translateY(-5px)}}
-.chat-input-bar { background: #fff; padding: 12px 20px; border-top: 1px solid #e2e8f0; display: flex; gap: 8px; align-items: flex-end; }
+.chat-input-bar { background: var(--white); padding: 12px 20px; border-top: 1px solid var(--border); display: flex; gap: 8px; align-items: flex-end; }
 .chat-input-wrap { flex: 1; }
-.chat-textarea { width: 100%; border: 2px solid #e2e8f0; border-radius: 12px; padding: 10px 14px; font-size: 13px; resize: none; outline: none; transition: .2s; max-height: 100px; font-family: inherit; }
+.chat-textarea { width: 100%; background: var(--white); color: var(--text); border: 2px solid var(--border); border-radius: 12px; padding: 10px 14px; font-size: 13px; resize: none; outline: none; transition: .2s; max-height: 100px; font-family: inherit; }
 .chat-textarea:focus { border-color: #176B50; }
 .send-btn { width: 42px; height: 42px; background: linear-gradient(135deg,#176B50,#104B3A); border: none; border-radius: 10px; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
-.mic-btn { width: 42px; height: 42px; background: #f1f5f9; color: #176B50; border: 2px solid #e2e8f0; border-radius: 10px; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; transition: .2s; }
+.mic-btn { width: 42px; height: 42px; background: var(--bg-dark); color: var(--primary); border: 2px solid var(--border); border-radius: 10px; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; transition: .2s; }
 .mic-btn.listening { background: linear-gradient(135deg,#ef4444,#dc2626); color: #fff; border-color: transparent; animation: micPulse 1.2s infinite; }
 .mic-btn:disabled { opacity: .4; cursor: not-allowed; }
 @keyframes micPulse { 0%,100%{ box-shadow: 0 0 0 0 rgba(239,68,68,.4); } 50%{ box-shadow: 0 0 0 8px rgba(239,68,68,0); } }
 .send-btn i { color: #fff; font-size: 14px; }
 .send-btn:disabled { opacity: .5; }
 .no-booking { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 40px; }
-.no-booking h3 { font-size: 1.2rem; font-weight: 800; color: #1a202c; margin-bottom: 10px; }
-.no-booking p { color:#4B5563; max-width: 380px; margin-bottom: 20px; font-size: 14px; }
-@media(max-width:768px){.copilot-sidebar{display:none}.copilot-layout{grid-template-columns:1fr}}
+.no-booking h3 { font-size: 1.2rem; font-weight: 800; color: var(--text); margin-bottom: 10px; }
+.no-booking p { color: var(--text-muted); max-width: 380px; margin-bottom: 20px; font-size: 14px; }
+@media(max-width:768px){
+  .copilot-layout{display:block;height:auto;min-height:0}
+  .copilot-sidebar{display:block;overflow:visible}
+  .sidebar-header{padding:12px 16px}.brand-row{margin-bottom:8px}
+  .sidebar-links,.trip-info-card{display:none}
+  .trip-selector,.quick-actions{padding:10px 16px}
+  .qa-grid{display:flex;overflow-x:auto;gap:6px;padding-bottom:4px}
+  .qa-btn{flex:0 0 auto;white-space:nowrap;padding:9px 12px;min-height:36px}
+  .chat-main{min-height:70vh}
+  .chat-messages{min-height:300px;max-height:60vh}
+  .msg{max-width:92%}
+  .topbar-actions{flex-wrap:wrap}
+}
+.qa-btn{font-family:inherit}
 </style>
 </head>
 <body>
@@ -183,7 +197,7 @@ body { background: #f0f4f8; margin: 0; }
       </div>
     </div>
 
-    <div class="chat-messages" id="chatMessages">
+    <div class="chat-messages" id="chatMessages" role="log" aria-live="polite" aria-label="Conversation with Trip Copilot">
       <div class="msg assistant">
         <div class="msg-meta"><div class="msg-avatar">🤖</div><span>Copilot</span></div>
         <div class="msg-bubble">
@@ -194,24 +208,24 @@ body { background: #f0f4f8; margin: 0; }
           How can I help you today?
         </div>
         <div class="suggestions">
-          <span class="sug-chip" onclick="sendQuick('What should I visit first?')">What to visit first?</span>
-          <span class="sug-chip" onclick="sendQuick('Tell me about my destination')">About my destination</span>
-          <span class="sug-chip" onclick="sendQuick('Weather forecast for my trip')">Weather forecast</span>
+          <button type="button" class="sug-chip" onclick="sendQuick('What should I visit first?')">What to visit first?</button>
+          <button type="button" class="sug-chip" onclick="sendQuick('Tell me about my destination')">About my destination</button>
+          <button type="button" class="sug-chip" onclick="sendQuick('Weather forecast for my trip')">Weather forecast</button>
         </div>
       </div>
     </div>
 
     <div class="chat-input-bar">
       <div class="chat-input-wrap">
-        <textarea class="chat-textarea" id="chatInput" rows="1"
+        <textarea class="chat-textarea" id="chatInput" rows="1" aria-label="Ask Trip Copilot a question"
           placeholder="Ask anything about your trip…"
           onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendMessage()}"
           oninput="this.style.height='auto';this.style.height=Math.min(this.scrollHeight,100)+'px'"></textarea>
       </div>
-      <button class="mic-btn" id="micBtn" onclick="toggleListening()" title="Speak your question" style="display:none;">
+      <button class="mic-btn" id="micBtn" onclick="toggleListening()" title="Speak your question" aria-label="Speak your question" style="display:none;">
         <i class="fa fa-microphone"></i>
       </button>
-      <button class="send-btn" id="sendBtn" onclick="sendMessage()">
+      <button class="send-btn" id="sendBtn" onclick="sendMessage()" aria-label="Send message">
         <i class="fa fa-paper-plane"></i>
       </button>
     </div>
@@ -433,7 +447,7 @@ function addMsg(role, text, animate=false, suggestions=[]) {
   if (!wrap) return;
   const time = new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
   const sugHtml = suggestions.length
-    ? '<div class="suggestions">'+suggestions.map(s=>`<span class="sug-chip" onclick="sendQuick('${s.replace(/'/g,"\\'")}')">${esc(s)}</span>`).join('')+'</div>'
+    ? '<div class="suggestions">'+suggestions.map(s=>`<button type="button" class="sug-chip" onclick="sendQuick('${s.replace(/'/g,"\\'")}')">${esc(s)}</button>`).join('')+'</div>'
     : '';
   const html = `<div class="msg ${role}" ${animate?'style="opacity:0;transform:translateY(8px);transition:.3s"':''}>
     ${role==='assistant'?`<div class="msg-meta"><div class="msg-avatar">🤖</div><span>Copilot</span><span>${time}</span></div>`:`<div class="msg-meta"><span>${time}</span></div>`}
