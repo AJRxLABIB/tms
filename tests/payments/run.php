@@ -22,8 +22,11 @@ function cleanup(PDO $d, string $e): void {
         $d->prepare("DELETE FROM tblpayments WHERE BookingId=?")->execute([$id]);
     }
     $d->prepare("DELETE FROM tblbooking WHERE UserEmail=?")->execute([$e]);
+    $d->prepare("DELETE FROM tblusers WHERE EmailId=? AND FullName='Pay Test'")->execute([$e]);
 }
 function mk(PDO $d, string $e, int $status): int {
+    // tblbooking.UserEmail has a foreign key to tblusers (migration 004), so the test customer must exist.
+    $d->prepare("INSERT IGNORE INTO tblusers (FullName, MobileNumber, EmailId, Password) VALUES ('Pay Test','01700000001',?, 'x')")->execute([$e]);
     $pk = (int)$d->query("SELECT PackageId FROM tbltourpackages WHERE Status=1 LIMIT 1")->fetchColumn();
     $d->prepare("INSERT INTO tblbooking (PackageId,UserEmail,FromDate,ToDate,status,NoOfPersons,TotalCost,PaymentStatus) VALUES (?,?,?,?,?,1,5000,'unpaid')")
       ->execute([$pk, $e, '2030-01-01', '2030-01-03', $status]);

@@ -677,6 +677,7 @@ MSG;
             ];
         }
         return [
+            'is_fallback' => true, // lets callers (e.g. TripAutopilot) refuse to present this template as a real, tailored plan
             'trip_title'  => "Your Trip to $dest",
             'destination' => $dest,
             'total_duration' => $duration,

@@ -99,6 +99,9 @@ try {
         'weather_replan_check'   => handleWeatherReplanCheck($dbh, $userEmail),
         'weather_replan_preview' => handleWeatherReplanPreview($dbh, $userEmail),
         'weather_replan_apply'   => handleWeatherReplanApply($dbh, $userEmail),
+        'autopilot_check'   => handleAutopilotCheck($dbh, $userEmail),
+        'autopilot_approve' => handleAutopilotDecision($dbh, $userEmail, true),
+        'autopilot_decline' => handleAutopilotDecision($dbh, $userEmail, false),
         default           => apiError(404, "Unknown action: $action"),
     };
 } catch (Throwable $e) {
@@ -829,6 +832,48 @@ function handleWeatherReplanApply(PDO $dbh, string $email): void {
         apiError(500, 'Could not save the updated itinerary right now.');
     }
     apiSuccess(['saved' => true]);
+}
+
+/**
+ * Trip Autopilot (see TRIP_AUTOPILOT.md). Customer-initiated "check my trip now", approve, decline. All three need a signed-in
+ * owner of the booking and a CSRF token. Approve applies the proposal STORED on the server; the browser never supplies the plan.
+ */
+function autopilotLoadOwnedBooking(PDO $dbh, string $email): array {
+    if ($email === 'guest') { apiError(401, 'Please sign in.'); }
+    tms_csrf_validate();
+    $bid = (int)($_POST['booking_id'] ?? 0);
+    $st = $dbh->prepare("SELECT b.*, p.PackageLocation FROM tblbooking b LEFT JOIN tbltourpackages p ON p.PackageId=b.PackageId WHERE b.BookingId=? AND b.UserEmail=? LIMIT 1");
+    $st->execute([$bid, $email]);
+    $b = $st->fetch(PDO::FETCH_ASSOC);
+    if (!$b) { apiError(403, 'This booking was not found on your account.'); }
+    return $b;
+}
+
+function handleAutopilotCheck(PDO $dbh, string $email): void {
+    if (function_exists('set_time_limit')) { @set_time_limit(120); }
+    $b = autopilotLoadOwnedBooking($dbh, $email);
+    if ((int)$b['status'] === 2 || $b['ToDate'] < date('Y-m-d')) { apiError(409, 'This trip is cancelled or finished.'); }
+    // Each check can cost an AI call: at most one per booking every 5 minutes per session.
+    $k = 'autopilot_last_' . (int)$b['BookingId'];
+    if (isset($_SESSION[$k]) && time() - (int)$_SESSION[$k] < 300) { apiError(429, 'You checked a moment ago. Please wait a few minutes.'); }
+    $_SESSION[$k] = time();
+    require_once dirname(__DIR__) . '/backend/services/TripAutopilot.php';
+    $res = TripAutopilot::checkBooking($dbh, $b, new ItineraryPlanner($dbh), false);
+    apiSuccess($res);
+}
+
+function handleAutopilotDecision(PDO $dbh, string $email, bool $approve): void {
+    if ($email === 'guest') { apiError(401, 'Please sign in.'); }
+    tms_csrf_validate();
+    require_once dirname(__DIR__) . '/backend/services/TripAutopilot.php';
+    $id = (int)($_POST['proposal_id'] ?? 0);
+    if ($approve) {
+        $r = TripAutopilot::approve($dbh, $id, $email);
+        if (!$r['ok']) { apiError(in_array($r['status'], ['not_found'], true) ? 404 : 409, $r['message']); }
+        apiSuccess(['status' => $r['status'], 'message' => $r['message']]);
+    }
+    if (!TripAutopilot::decline($dbh, $id, $email)) { apiError(409, 'This proposal is not open.'); }
+    apiSuccess(['status' => 'declined']);
 }
 
 function apiSuccess(array $data): void {

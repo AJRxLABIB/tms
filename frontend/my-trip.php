@@ -323,6 +323,54 @@ html[data-theme="dark"] .mt-sched-item{color:var(--text-muted) !important;}
             // paid trip with no itinerary yet would have no token to send and every
             // "Generate an AI Itinerary" click would 403. This one is unconditional. ?>
             <?php tms_csrf_field(); ?>
+            <?php
+            // Trip Autopilot: pending proposal for this booking (verified notice and/or forecast -> suggested itinerary change).
+            // Nothing here changes anything; the customer approves or declines. See TRIP_AUTOPILOT.md.
+            $apProposal = null; $apDiff = [];
+            if ($trip->status != 2 && ($phase === 'before' || $phase === 'during')) {
+                require_once dirname(__DIR__) . '/backend/services/TripAutopilot.php';
+                TripAutopilot::expireStale($dbh);
+                $apProposal = TripAutopilot::pendingFor($dbh, (int)$trip->BookingId, $email);
+                if ($apProposal && $apProposal['proposed']) { $apDiff = TripAutopilot::diffDays($itinerary, $apProposal['proposed']); }
+            }
+            $apE = function ($v) { return htmlspecialchars((string)$v, ENT_QUOTES, 'UTF-8'); };
+            if ($trip->status != 2 && ($phase === 'before' || $phase === 'during')): ?>
+            <div class="mt-card" id="mtAutopilotCard" role="region" aria-labelledby="mtApHeading">
+                <h4 id="mtApHeading"><i class="fa fa-magic"></i> Trip Autopilot</h4>
+                <?php if ($apProposal): ?>
+                    <p style="font-size:13px;margin-bottom:10px;"><strong>A verified disruption may affect this trip.</strong> Nothing has been changed. Review and choose.</p>
+                    <?php foreach ($apProposal['signals'] as $sg): ?>
+                        <div class="mt-fact-row" style="display:block;">
+                        <?php if ($sg['type'] === 'notice'): ?>
+                            <strong><?php echo $apE($sg['title']); ?></strong> (<?php echo $apE($sg['country']); ?>)<br>
+                            <span style="font-size:13px;"><?php echo nl2br($apE($sg['body'])); ?></span><br>
+                            <span style="font-size:12px;color:var(--text-muted);">Source: <a href="<?php echo $apE($sg['source_url']); ?>" target="_blank" rel="noopener noreferrer"><?php echo $apE($sg['source_name']); ?></a> &middot; checked <?php echo $apE($sg['verified_on']); ?><?php if (!empty($sg['expires_on'])): ?> &middot; valid until <?php echo $apE($sg['expires_on']); ?><?php endif; ?>. Check the source before you decide.</span>
+                        <?php else: ?>
+                            <strong>Forecast:</strong> <?php echo (int)$sg['rain_chance']; ?>% chance of rain on day <?php echo (int)$sg['day']; ?> (<?php echo $apE($sg['date']); ?>).
+                        <?php endif; ?>
+                        </div>
+                    <?php endforeach; ?>
+                    <?php if ($apProposal['proposed']): ?>
+                        <p style="font-size:13px;margin:10px 0 4px;"><strong>Suggested change</strong> &mdash; <?php echo (int)count($apDiff); ?> day(s). This is an AI suggestion, not a confirmed booking or a staff-verified plan. Prices and venues in it are not part of your booking.</p>
+                        <ul style="font-size:13px;">
+                        <?php foreach ($apDiff as $d): ?>
+                            <li>Day <?php echo (int)$d['day']; ?> (<?php echo $apE($d['status']); ?>): <?php echo $apE($d['old_title'] ?? '—'); ?> &rarr; <strong><?php echo $apE($d['new_title'] ?? '—'); ?></strong></li>
+                        <?php endforeach; ?>
+                        <?php if (!$apDiff): ?><li>No day-level difference from your current plan.</li><?php endif; ?>
+                        </ul>
+                        <p style="font-size:12px;color:var(--text-muted);">Approving saves a new version of your day-by-day itinerary only. Your booking, dates, price and payment are never changed here.</p>
+                        <button type="button" class="mt-generate-btn" id="mtApApprove" onclick="mtApDecide('approve', <?php echo (int)$apProposal['ProposalId']; ?>)">Approve this change</button>
+                    <?php else: ?>
+                        <p style="font-size:13px;"><?php echo $apE($apProposal['Summary']); ?></p>
+                    <?php endif; ?>
+                    <button type="button" class="mt-generate-btn" style="background:#595959;" id="mtApDecline" onclick="mtApDecide('decline', <?php echo (int)$apProposal['ProposalId']; ?>)"><?php echo $apProposal['proposed'] ? 'No thanks, keep my plan' : 'Dismiss'; ?></button>
+                <?php else: ?>
+                    <p style="font-size:13px;color:var(--text-muted);margin-bottom:12px;">Checks this trip against admin-verified travel notices and the forecast. If something affects it, you get a suggested change to review. Nothing changes unless you approve.</p>
+                    <button type="button" class="mt-generate-btn" id="mtApCheck" onclick="mtApCheck()">Check my trip for disruptions</button>
+                <?php endif; ?>
+                <div id="mtApMsg" role="status" aria-live="polite" style="margin-top:10px;font-size:13px;"></div>
+            </div>
+            <?php endif; ?>
             <div class="mt-card" id="mtItineraryCard">
                 <h4><i class="fa fa-calendar-check-o"></i> <?php echo htmlspecialchars(tms_t('heading_day_by_day_itinerary','Day-by-Day Itinerary'), ENT_QUOTES, 'UTF-8'); ?></h4>
                 <?php if ($itinerary && !empty($itinerary['days'])): ?>
@@ -560,6 +608,33 @@ var mtTripData = {
     accommodation: <?php echo json_encode($trip->HotelName ?: 'hotel'); ?>,
     transport: <?php echo json_encode($trip->TransportMode ?: 'mixed'); ?>
 };
+
+function mtApPost(action, extra, done) {
+    var body = new URLSearchParams(Object.assign({ csrf_token: (document.querySelector('[name="csrf_token"]') || {}).value || '' }, extra));
+    var msg = document.getElementById('mtApMsg');
+    fetch('api/ai.php?action=' + action, { method: 'POST', body: body })
+        .then(function (r) { return r.json(); })
+        .then(function (res) { done(res, msg); })
+        .catch(function () { msg.textContent = 'Network error. Please try again.'; });
+}
+function mtApCheck() {
+    var b = document.getElementById('mtApCheck'); b.disabled = true; b.textContent = 'Checking...';
+    mtApPost('autopilot_check', { booking_id: <?php echo (int)$trip->BookingId; ?> }, function (res, msg) {
+        b.disabled = false; b.textContent = 'Check my trip for disruptions';
+        if (!res.success) { msg.textContent = res.error || 'Could not check right now.'; return; }
+        if (res.data.status === 'no_disruption') { msg.textContent = 'No verified disruption affects this trip right now. This only covers notices our team has verified, so also check official sources before you travel.'; return; }
+        location.reload();
+    });
+}
+function mtApDecide(kind, id) {
+    document.getElementById('mtApApprove') && (document.getElementById('mtApApprove').disabled = true);
+    document.getElementById('mtApDecline') && (document.getElementById('mtApDecline').disabled = true);
+    mtApPost(kind === 'approve' ? 'autopilot_approve' : 'autopilot_decline', { proposal_id: id }, function (res, msg) {
+        if (res.success) { location.reload(); return; }
+        msg.textContent = res.error || 'Could not complete that.';
+        setTimeout(function () { location.reload(); }, 2500);
+    });
+}
 
 function mtCsrf() { return (document.querySelector('[name="csrf_token"]') || {}).value || ''; }
 

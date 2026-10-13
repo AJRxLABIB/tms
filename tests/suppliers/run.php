@@ -24,6 +24,7 @@ function cleanup(PDO $d): void {
             $d->prepare('DELETE FROM tblbooking WHERE PackageId=?')->execute([$p]);
         }
         $d->prepare('DELETE FROM tbl_supplier_settlement_items WHERE SettlementId IN (SELECT SettlementId FROM tbl_supplier_settlements WHERE SupplierId=?)')->execute([$id]);
+        $d->exec("DELETE FROM tblusers WHERE EmailId='cust@supplier-test.example.test'");
         foreach (['tbl_supplier_settlements', 'tbl_supplier_blackouts', 'tbltourpackages', 'tbl_supplier_audit', 'tbl_suppliers'] as $tb) {
             try { $d->prepare("DELETE FROM $tb WHERE SupplierId=?")->execute([$id]); } catch (Throwable $e) {}
         }
@@ -104,6 +105,8 @@ t('B cannot delete A\'s blackout', !SupplierService::deleteBlackout($dbh, $b, (i
 t('A can delete own blackout; dates free again', SupplierService::deleteBlackout($dbh, $a, (int)$bo) && SupplierService::blackoutConflict($dbh, $pa, $d(31), $d(33)) === null);
 
 // --- bookings, responses, PII ---
+// tblbooking.UserEmail has a foreign key to tblusers (migration 004): the test customer must exist.
+$dbh->exec("INSERT IGNORE INTO tblusers (FullName, MobileNumber, EmailId, Password) VALUES ('Supplier Test Cust','01700000000','cust@supplier-test.example.test','x')");
 $mk = function (string $from, string $toD, int $status, string $pay, int $cost) use ($dbh, $pa): int {
     $dbh->prepare("INSERT INTO tblbooking (PackageId,UserEmail,FromDate,ToDate,status,NoOfPersons,TotalCost,PaymentStatus,MobileNumber) VALUES (?,?,?,?,?,1,?,?,'01700000000')")
         ->execute([$pa, 'cust@supplier-test.example.test', $from, $toD, $status, $cost, $pay]);

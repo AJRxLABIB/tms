@@ -11,6 +11,7 @@ together; each script's own docblock has the full detail.
 |---|---|---|
 | `database/migrate.php` | On deploy, not periodic | Applies any pending schema migrations. Run this once after pulling new code, not on a timer. Safe to re-run — already-applied migrations are skipped (see `DATABASE.md`). |
 | `scripts/check_alerts.php` | Every 30–60 minutes | Fires price-drop and availability notifications for `alerts.php` (Rule 26/27). |
+| `scripts/check_trip_disruptions.php` | Daily | Trip Autopilot: for upcoming/ongoing bookings, finds admin-verified disruption notices that apply and stores ONE proposal per event for the customer to approve or decline (never changes anything itself). `--no-ai` for alerts only. See `TRIP_AUTOPILOT.md`. |
 | `scripts/check_wallet_expiry.php` | Daily | Notifies travelers at 30-day and 7-day windows before a Travel Wallet document expires (Rule 28). |
 | `scripts/backup_database.php` | Daily | Encrypted database backup with retention pruning and an optional offsite copy (item 60). See `BACKUPS.md`. |
 | `scripts/restore_database.php --verify` | Weekly | Restore-tests the newest backup (decrypts + validates, never touches the live DB) so "we have backups" is a tested fact, not a hope. See `BACKUPS.md`. |

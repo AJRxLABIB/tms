@@ -83,6 +83,7 @@ jobs:
           php tests/payments/run.php
           php tests/suppliers/run.php
           php tests/notices/run.php
+          php tests/autopilot/run.php
 
       - name: Start the app (PHP built-in server) for E2E testing
         run: |
@@ -94,3 +95,8 @@ jobs:
 
       - name: Run E2E test suite (real HTTP requests against the running app)
         run: php tests/e2e/run_e2e.php
+
+      - name: Security and Trip Autopilot checks over real HTTP
+        run: |
+          php tests/security/run.php http://127.0.0.1:8000
+          php tests/autopilot/http.php http://127.0.0.1:8000
