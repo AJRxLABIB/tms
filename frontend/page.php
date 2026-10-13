@@ -199,19 +199,24 @@ function tms_page_t(array $T, string $key, string $fallback): string {
 		<p style="color:#555;"><?php echo htmlspecialchars(tms_page_t($T, 'story_body', "TMS started with a simple frustration: booking a trip shouldn't mean juggling five different websites for packages, weather, maps and reviews. We built a single place where you can explore any destination, see live weather and nearby places, compare packages, and book — all without leaving the site."), ENT_QUOTES, 'UTF-8'); ?></p>
 	</div>
 
+	<?php
+	require_once dirname(__DIR__) . '/backend/SiteStats.php';
+	$aboutStats = isset($dbh) && $dbh instanceof PDO ? tms_site_stats($dbh) : [];
+	$aboutItems = array_filter([
+		tms_page_t($T, 'stat_packages', 'Tour Packages')      => (int)($aboutStats['packages'] ?? 0),
+		tms_page_t($T, 'stat_destinations', 'Destinations')   => (int)($aboutStats['destinations'] ?? 0),
+		tms_page_t($T, 'stat_reviews', 'Traveller Reviews')   => (int)($aboutStats['reviews'] ?? 0),
+	], static function ($n) { return $n > 0; });
+	?>
+	<?php if ($aboutItems): ?>
 	<div class="row wow fadeInUp" style="text-align:center;margin:30px 0;">
-		<div class="col-xs-6 col-sm-3" style="margin-bottom:20px;">
-			<h2 style="color:var(--secondary);font-weight:800;" data-counter="400">0</h2><p style="color:#666;"><?php echo htmlspecialchars(tms_page_t($T, 'stat_packages', 'Tour Packages'), ENT_QUOTES, 'UTF-8'); ?></p>
+		<?php foreach ($aboutItems as $lbl => $n): ?>
+		<div class="col-xs-6 col-sm-4" style="margin-bottom:20px;">
+			<h2 style="color:var(--secondary);font-weight:800;" data-counter="<?php echo (int)$n; ?>">0</h2><p style="color:var(--text-muted);"><?php echo htmlspecialchars($lbl, ENT_QUOTES, 'UTF-8'); ?></p>
 		</div>
-		<div class="col-xs-6 col-sm-3" style="margin-bottom:20px;">
-			<h2 style="color:var(--secondary);font-weight:800;" data-counter="1900">0</h2><p style="color:#666;"><?php echo htmlspecialchars(tms_page_t($T, 'stat_travellers', 'Happy Travellers'), ENT_QUOTES, 'UTF-8'); ?></p>
-		</div>
-		<div class="col-xs-6 col-sm-3" style="margin-bottom:20px;">
-			<h2 style="color:var(--secondary);font-weight:800;" data-counter="60">0</h2><p style="color:#666;"><?php echo htmlspecialchars(tms_page_t($T, 'stat_destinations', 'Destinations'), ENT_QUOTES, 'UTF-8'); ?></p>
-		</div>
-		<div class="col-xs-6 col-sm-3" style="margin-bottom:20px;">
-			<h2 style="color:var(--secondary);font-weight:800;">24/7</h2><p style="color:#666;"><?php echo htmlspecialchars(tms_page_t($T, 'stat_support', 'Support'), ENT_QUOTES, 'UTF-8'); ?></p>
-		</div>
+		<?php endforeach; ?>
+	</div>
+	<?php endif; ?>
 	</div>
 
 	<div class="pkg-card wow fadeInUp" style="padding:24px;">

@@ -160,7 +160,7 @@ if('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch
 // strip and About page mission stats were static text ("1,900+") with no
 // animation at all. Any element with data-counter="N" now counts up from 0
 // to N once it scrolls into view, formatted with thousands separators and
-// a trailing "+". IntersectionObserver-based so it only ever plays once per
+// an optional data-suffix (e.g. "+"; none by default so exact counts stay exact). IntersectionObserver-based so it only ever plays once per
 // element and costs nothing on pages that don't use it.
 (function() {
     var counters = document.querySelectorAll('[data-counter]');
@@ -177,7 +177,7 @@ if('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch
             // ease-out — fast start, gentle settle, matches "subtle and professional"
             var eased = 1 - Math.pow(1 - progress, 3);
             var current = Math.floor(eased * target);
-            el.textContent = current.toLocaleString() + (progress >= 1 ? '+' : '');
+            el.textContent = current.toLocaleString() + (progress >= 1 ? (el.getAttribute('data-suffix') || '') : '');
             if (progress < 1) requestAnimationFrame(step);
         }
         requestAnimationFrame(step);
