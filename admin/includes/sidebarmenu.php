@@ -7,7 +7,7 @@
   </div>
 
   <!-- Nav -->
-  <nav class="sidebar-nav">
+  <nav class="sidebar-nav" aria-label="Admin sections">
     <?php
     function navItem($file, $icon, $label, $cur) {
         $a = ($cur===$file) ? 'active' : '';
@@ -94,6 +94,12 @@
       <?php if ($canSee(['ai_manager', 'manager'])): ?>
         <?php navItem('ai-dashboard.php','magic','AI Usage Dashboard',$cur); ?>
         <?php navItem('ai-safety.php','shield','AI Safety &amp; Evaluation',$cur); ?>
+      <?php endif; ?>
+      <?php if ($canSee(['manager', 'package_manager'])): ?>
+        <?php navItem('manage-suppliers.php','briefcase','Suppliers',$cur); ?>
+      <?php endif; ?>
+      <?php if ($canSee(['finance', 'manager'])): ?>
+        <?php navItem('supplier-settlements.php','money','Supplier Settlements',$cur); ?>
       <?php endif; ?>
       <?php if ($canSee(['finance', 'package_manager', 'manager'])): ?>
         <?php navItem('manage-coupons.php','tag','Coupons',$cur); ?>

@@ -79,3 +79,9 @@ real payment.
   fixture data), not answer quality.
 - Gemini and OpenAI remain optional fallbacks. If `AI_PROVIDER` is not `ollama`, prompts go to a
   third party; the privacy page says so.
+
+## Supplier marketplace (Phase 9)
+Built and tested (72 service-level checks, a real browser run of the portal and the customer blackout rule, axe clean on the portal). See `SUPPLIERS.md`. Not done: automated payouts (settlements are bookkeeping only), supplier email verification / CAPTCHA / password reset, supplier document upload, Bengali for the supplier portal, and a run on this Windows/XAMPP install.
+
+## Unverifiable features: foundation only
+Live disruption alerts, sustainability scores, visa/entry rules and real-time routing need real data sources or licences. They are intentionally not simulated anywhere in the site; where the assistant is asked, it should say it cannot confirm and point to the official source.

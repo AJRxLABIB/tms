@@ -2,6 +2,7 @@
 session_start();
 error_reporting(E_ALL); ini_set('display_errors', '0'); ini_set('log_errors', '1');
 include('backend/config.php');
+require_once 'backend/services/SupplierService.php';
 // LIVE BUG FIX (customer-facing audit): this page is real browsing/
 // marketing content -- it's explicitly allowed in robots.txt and listed
 // in sitemap.php for search engines -- but a blanket "require login
@@ -48,6 +49,8 @@ if (isset($_POST['submit2']) || isset($_POST['addcart'])) {
             $error = 'Return date must be after the departure date.';
         } elseif ($pid === 0) {
             $error = 'Invalid package.';
+        } elseif (($blackoutMsg = SupplierService::blackoutConflict($dbh, $pid, $from->format('Y-m-d'), $to->format('Y-m-d'))) !== null) {
+            $error = $blackoutMsg; // supplier blackout dates are enforced server-side
         } elseif (isset($_POST['addcart'])) {
             $cartPriceQ = $dbh->prepare("SELECT PackagePrice FROM tbltourpackages WHERE PackageId=:pid LIMIT 1");
             $cartPriceQ->execute([':pid' => $pid]);

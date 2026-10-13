@@ -32,7 +32,7 @@ $initials = strtoupper(substr($adminName,0,2));
   <button class="topbar-toggle" id="sidebarToggle" aria-label="Toggle sidebar">
     <i class="fa fa-bars"></i>
   </button>
-  <nav class="topbar-breadcrumb">
+  <nav class="topbar-breadcrumb" aria-label="Breadcrumb">
     <a href="dashboard.php">Home</a>
     <span class="bc-sep"><i class="fa fa-chevron-right" style="font-size:10px;"></i></span>
     <span class="bc-current"><?= $currentLabel ?></span>
