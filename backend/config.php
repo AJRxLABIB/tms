@@ -1510,11 +1510,20 @@ function _tms_run_core_migrations(PDO $dbh): void {
         try { $dbh->exec($sql); } catch (Exception $e) {}
     }
 
-    // Seed admin
+    // Seed admin -- SECURITY: no hard-coded default password any more. A fresh,
+    // empty `admin` table is only bootstrapped when TMS_BOOTSTRAP_ADMIN_PASSWORD
+    // is set in .env (min 12 chars); otherwise nothing is created and the log
+    // says how to create one:  php tools/create-admin.php
     try {
         if ((int)$dbh->query("SELECT COUNT(*) FROM admin")->fetchColumn() === 0) {
-            $hash = password_hash('Test@12345', PASSWORD_BCRYPT, ['cost' => 12]);
-            $dbh->exec("INSERT INTO admin (UserName, Password) VALUES ('admin', '$hash')");
+            $bootPw = (string)tms_env('TMS_BOOTSTRAP_ADMIN_PASSWORD', '');
+            if (strlen($bootPw) >= 12) {
+                $hash = password_hash($bootPw, PASSWORD_BCRYPT, ['cost' => 12]);
+                $st = $dbh->prepare("INSERT INTO admin (UserName, Password) VALUES ('admin', ?)");
+                $st->execute([$hash]);
+            } else {
+                error_log('[TMS] No admin account exists. Run `php tools/create-admin.php` (or set TMS_BOOTSTRAP_ADMIN_PASSWORD, 12+ chars, in .env).');
+            }
         }
     } catch (Exception $e) {}
 

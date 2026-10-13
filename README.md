@@ -10,7 +10,7 @@
 3. Import `database/legacy-sql/tms.sql` then `database/legacy-sql/v6_migration.sql` into phpMyAdmin (database name: `tms`)
 4. Edit `backend/config.php` with your DB credentials
 5. Open `http://localhost/tms/`
-6. Admin: `http://localhost/tms/admin/` — user: `admin` / pass: `Test@12345`
+6. Create an admin: `php tools/create-admin.php` (prints a random password once), then sign in at `http://localhost/tms/admin/`
 
 **See `INSTALL.html` for the complete step-by-step guide with screenshots and troubleshooting.**
 
