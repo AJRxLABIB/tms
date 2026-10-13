@@ -21,6 +21,11 @@ final class ToolRouter
         if (preg_match('/\b(cancel|cancellation|refund)\b|বাতিল|ফেরত/u', $m) && $pkgId > 0) {
             $calls[] = ['tool' => 'get_cancellation_policy', 'args' => ['package_id' => $pkgId]];
         }
+        if (preg_match('/\b(visa|passport|entry (rule|requirement)s?|immigration|advisory|travel warning|strike|hartal|disruption|safe to (travel|visit)|is it safe|sustainab|eco[- ]?friendly|carbon)\b|ভিসা|পাসপোর্ট|হরতাল|নিরাপদ/u', $m)) {
+            $a = ['query' => mb_substr($message, 0, 200)];
+            if (!empty($pageContext['country']) && is_string($pageContext['country'])) $a['country'] = mb_substr($pageContext['country'], 0, 100);
+            $calls[] = ['tool' => 'get_travel_notices', 'args' => $a];
+        }
         $max = null;
         if (preg_match('/\b(?:under|below|less than|within|max(?:imum)?|budget)\D{0,8}(\d[\d,\.]*)\s*(k|000)?\b/u', $m, $b)
             || preg_match('/(\d[\d,\.]*)\s*(হাজার|k)?\s*(?:টাকার\s*)?(?:এর\s*)?(?:নিচে|কম|মধ্যে)/u', $m, $b)) {

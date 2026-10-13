@@ -24,12 +24,18 @@
     {"id":"r7","query":"quantum chromodynamics","expect_none":true}
   ],
   "routing": [
+    {"id":"t_n1","message":"Do I need a visa for Nepal?","expect_tools":["get_travel_notices"]},
+    {"id":"t_n2","message":"is it safe to travel during the hartal?","expect_tools":["get_travel_notices"]},
+    {"id":"t_n3","message":"ভিসা লাগবে কি?","expect_tools":["get_travel_notices"]},
     {"id":"t1","message":"what are my upcoming bookings?","expect_tools":["my_bookings"]},
     {"id":"t2","message":"আমার বুকিং কোনগুলো?","expect_tools":["my_bookings"]},
     {"id":"t3","message":"beach packages under 30k","expect_tools":["search_packages"],"expect_max_price":30000},
     {"id":"t4","message":"Can I get a refund?","ctx_package":1,"expect_tools":["get_cancellation_policy"]}
   ],
   "tools": [
+    {"id":"v_n1","tool":"get_travel_notices","args":{"query":"visa","extra":"x"},"expect_ok":false},
+    {"id":"v_n2","tool":"get_travel_notices","args":{},"expect_ok":false},
+    {"id":"v_n3","tool":"get_travel_notices","args":{"query":"visa for Nepal"},"expect_ok":true},
     {"id":"v1","tool":"get_package","args":{"package_id":"abc"},"expect_ok":false},
     {"id":"v2","tool":"get_package","args":{"package_id":1,"extra":"x"},"expect_ok":false},
     {"id":"v3","tool":"search_packages","args":{"query":""},"expect_ok":false},

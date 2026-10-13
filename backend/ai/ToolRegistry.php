@@ -33,6 +33,11 @@ final class ToolRegistry
             'get_package' => ['auth' => false, 'params' => ['package_id' => ['type' => 'int', 'required' => true, 'min' => 1, 'max' => 2147483647]]],
             'get_cancellation_policy' => ['auth' => false, 'params' => ['package_id' => ['type' => 'int', 'required' => true, 'min' => 1, 'max' => 2147483647]]],
             'my_bookings' => ['auth' => true, 'params' => []],
+            // Staff-entered, sourced, dated notices only (see TRAVEL_NOTICES.md). Never a live feed.
+            'get_travel_notices' => ['auth' => false, 'params' => [
+                'query'   => ['type' => 'string', 'required' => true, 'max' => 200],
+                'country' => ['type' => 'string', 'max' => 100],
+            ]],
         ];
     }
 
@@ -83,6 +88,7 @@ final class ToolRegistry
                 'get_package' => $this->index->get($a['package_id']) ?? ['not_found' => true],
                 'get_cancellation_policy' => $this->policy($a['package_id']),
                 'my_bookings' => $this->myBookings((string)($ctx['email'] ?? '')),
+                'get_travel_notices' => $this->travelNotices($a),
             };
             $this->audit($tool, $a, $ctx, 'ok');
             return ['ok' => true, 'data' => $data];
@@ -108,6 +114,29 @@ final class ToolRegistry
         return array_map(fn($h) => ['id' => $h['id'], 'title' => $h['meta']['title'], 'location' => $h['meta']['location'],
             'country' => $h['meta']['country'], 'price_bdt' => $h['meta']['price'], 'duration' => $h['meta']['duration'],
             'citation' => $h['citation']], $hits);
+    }
+
+    private function travelNotices(array $a): array
+    {
+        $none = ['notices' => [], 'status' => 'no_verified_notice',
+            'note' => 'TMS has no staff-verified notice for this. You MUST say you cannot confirm current entry rules, disruptions or advisories, and tell the traveler to check the official government or embassy source. Do not guess.'];
+        if (!$this->db) return $none;
+        require_once dirname(__DIR__) . '/services/TravelNoticeService.php';
+        $country = trim((string)($a['country'] ?? ''));
+        if ($country === '') {
+            $q = mb_strtolower((string)$a['query'], 'UTF-8');
+            foreach (TravelNoticeService::countries($this->db) as $c) {
+                if ($c !== '' && mb_strpos($q, mb_strtolower((string)$c, 'UTF-8')) !== false) { $country = (string)$c; break; }
+            }
+        }
+        if ($country === '') return $none;
+        $rows = TravelNoticeService::visible($this->db, $country);
+        if (!$rows) return $none;
+        return ['status' => 'notices_found',
+            'note' => 'Staff-entered, NOT live. Quote the checked-on date and source for every statement, and mention any "may_be_out_of_date" flag. Tell the traveler to confirm with the official source.',
+            'notices' => array_map(fn($n) => ['type' => $n['Kind'], 'country' => $n['Country'], 'title' => $n['Title'], 'details' => $n['Body'],
+                'source' => $n['SourceName'], 'source_url' => $n['SourceUrl'], 'checked_on' => $n['VerifiedOn'], 'shown_until' => $n['ExpiresOn'],
+                'may_be_out_of_date' => (bool)$n['stale']], array_slice($rows, 0, 5))];
     }
 
     private function policy(int $id): array

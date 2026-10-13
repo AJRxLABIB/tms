@@ -50,6 +50,22 @@ t('edit updates in place', $S(['title' => 'Edited'], (int)$old['id'])['ok'] && T
 $xss = $S(['title' => '<script>alert(1)</script>']);
 t('stored text is kept raw (escaped at output)', TravelNoticeService::find($dbh, (int)$xss['id'])['Title'] === '<script>alert(1)</script>');
 
+// --- assistant tool (real DB) ---
+require_once 'backend/ai/ToolRegistry.php';
+$reg = new ToolRegistry(KnowledgeIndex::fromDb($dbh), $dbh);
+$dbh->prepare('UPDATE tbl_travel_notices SET ExpiresOn=? WHERE NoticeId=?')->execute([$d(5), $disId]);
+$dbh->prepare('UPDATE tbl_travel_notices SET VerifiedOn=? WHERE NoticeId=?')->execute([$d(-8), $disId]);
+$r1 = $reg->execute('get_travel_notices', ['query' => 'Do I need a visa for zz-test?'], []);
+t('assistant tool finds notices by country named in the question', $r1['ok'] && $r1['data']['status'] === 'notices_found' && count($r1['data']['notices']) >= 2);
+$dis = array_values(array_filter($r1['data']['notices'], fn($n) => $n['type'] === 'disruption'))[0] ?? null;
+t('tool passes source, checked date and stale flag through', $dis && $dis['source_url'] !== '' && $dis['checked_on'] === $d(-8) && $dis['may_be_out_of_date'] === true);
+$r2 = $reg->execute('get_travel_notices', ['query' => 'visa for Atlantis'], []);
+t('no notice => explicit "cannot confirm" instruction, no invented facts', $r2['ok'] && $r2['data']['status'] === 'no_verified_notice' && $r2['data']['notices'] === [] && str_contains($r2['data']['note'], 'cannot confirm'));
+$r3 = $reg->execute('get_travel_notices', ['query' => 'x', 'country' => 'ZZ-Other'], []);
+t('explicit country with no notices is also "cannot confirm"', $r3['data']['status'] === 'no_verified_notice');
+$dbh->prepare('UPDATE tbl_travel_notices SET Status="archived" WHERE Country="ZZ-Test"')->execute();
+t('archived notices are never given to the assistant', $reg->execute('get_travel_notices', ['query' => 'visa zz-test'], [])['data']['status'] === 'no_verified_notice');
+
 $dbh->exec("DELETE FROM tbl_travel_notices WHERE Country='ZZ-Test'");
 echo "\n$pass passed, $fail failed\n";
 exit($fail ? 1 : 0);

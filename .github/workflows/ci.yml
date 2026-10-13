@@ -45,7 +45,10 @@ jobs:
         uses: shivammathur/setup-php@v2
         with:
           php-version: '8.2'
-          extensions: pdo_mysql, curl
+          extensions: pdo_mysql, curl, mbstring
+
+      - name: Secret scan (never prints values; fails if .env or a key file is tracked)
+        run: php tools/scan-secrets.php
 
       - name: Lint every PHP file (php -l)
         run: |
@@ -54,11 +57,9 @@ jobs:
 
       - name: Load base schema
         run: |
-          mysql -h127.0.0.1 -uroot tms < tms.sql
-          mysql -h127.0.0.1 -uroot tms < v6_migration.sql
-          mysql -h127.0.0.1 -uroot tms < AI_MIGRATION.sql
-          mysql -h127.0.0.1 -uroot tms < explore_migration.sql
-          mysql -h127.0.0.1 -uroot tms < schema_repair_migration.sql
+          for f in tms v6_migration AI_MIGRATION explore_migration schema_repair_migration; do
+            mysql -h127.0.0.1 -uroot tms < database/legacy-sql/$f.sql
+          done
 
       - name: Configure environment
         run: |
@@ -66,12 +67,22 @@ jobs:
           sed -i 's/^DB_HOST=.*/DB_HOST=127.0.0.1/' .env
           sed -i 's/^DB_NAME=.*/DB_NAME=tms/' .env
           sed -i 's/^DB_USER=.*/DB_USER=root/' .env
+          # Fixtures the DB-backed suites need (sample catalogue); never set this on a real install.
+          echo "TMS_SEED_SAMPLE_PACKAGES=1" >> .env
 
       - name: Run migrations
         run: php database/migrate.php
 
       - name: Run test suite
         run: php tests/run.php
+
+      - name: AI safety/retrieval evaluation, re-ranker, payments, suppliers, travel notices
+        run: |
+          php tests/ai/run_eval.php
+          php tests/ai/rerank_test.php
+          php tests/payments/run.php
+          php tests/suppliers/run.php
+          php tests/notices/run.php
 
       - name: Start the app (PHP built-in server) for E2E testing
         run: |

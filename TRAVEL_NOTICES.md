@@ -10,7 +10,7 @@ Those need licensed or official data sources that this project does not have, so
 | Customer page | `/travel-notices.php` (filter by country; linked in the Explore menu) |
 | Package page card | `frontend/package-details.php` shows up to 3 notices when the package's Country matches |
 | Admin | `admin/manage-travel-notices.php` (roles: operations, manager) |
-| Tests | `php tests/notices/run.php` (27 checks) |
+| Tests | `php tests/notices/run.php` (32 checks) |
 
 ## Rules
 * A notice cannot be saved without a source name, a valid `http(s)` source link and the date it was checked
@@ -23,13 +23,13 @@ Those need licensed or official data sources that this project does not have, so
 * An empty table shows an honest empty state; no placeholder or example notices are shipped.
 
 ## Verified
-27 service checks; browser run (admin add/validation, public page, XSS escaping, country filter, empty state, package-page
+32 service/assistant-tool checks; browser run (admin add/validation, public page, XSS escaping, country filter, empty state, package-page
 card, anonymous admin access blocked, 390 px); axe WCAG 2.x A/AA clean on the admin and public pages in light and dark
 (the shared site header has a non-WCAG "region" best-practice note on every public page).
 
 ## Not done / how to extend
 * No automatic data. To connect a licensed source later, write rows into `tbl_travel_notices` (keep Source/VerifiedOn
   populated) or replace `TravelNoticeService::visible()`; the pages need no change.
-* The AI assistant does not read these notices yet. Until it does, it must not claim to know current entry rules.
+* The AI assistant reads them through the read-only `get_travel_notices` tool (routed on visa/passport/advisory/hartal/safety/sustainability questions). It must quote the source and checked-on date, mention stale flags, and when no verified notice exists it is told to say it cannot confirm and point to the official source. Archived and expired notices are never given to it. Whether a real model follows those instructions well is NOT measured (no Ollama run); the tool output and routing are tested.
 * English only; matching to packages is by exact country name (case-insensitive).
 * Staff are responsible for accuracy: this feature only makes the source and age of each statement visible.
