@@ -193,6 +193,37 @@ $pageTitle = 'System Health';
       </div>
     </div>
 
+    <?php
+    // Setup warnings: only things this page can verify without a paid call.
+    $setupWarnings = [];
+    $wk = (string)tms_env('WALLET_ENCRYPTION_KEY', '');
+    if ($wk === '') {
+        $setupWarnings[] = 'WALLET_ENCRYPTION_KEY is not set in .env, so Travel Wallet uploads are refused. Generate one with: php -r "echo bin2hex(random_bytes(32));"';
+    } elseif (!preg_match('/^[0-9a-fA-F]{64}$/', $wk)) {
+        $setupWarnings[] = 'WALLET_ENCRYPTION_KEY must be exactly 64 hex characters; Travel Wallet uploads are refused until it is fixed.';
+    }
+    try {
+        $seedFile = __DIR__ . '/../data/packages_seed.json';
+        $seedNames = [];
+        if (is_file($seedFile)) {
+            foreach ((array)json_decode((string)file_get_contents($seedFile), true) as $r) { if (!empty($r['PackageName'])) $seedNames[$r['PackageName']] = true; }
+        }
+        $sampleCount = 0;
+        foreach ($dbh->query("SELECT PackageName FROM tbltourpackages")->fetchAll(PDO::FETCH_COLUMN) as $n) { if (isset($seedNames[$n])) $sampleCount++; }
+        if ($sampleCount > 0) {
+            $setupWarnings[] = $sampleCount . ' tour package(s) are generated sample data from data/packages_seed.json (their ratings were randomly generated). Preview and remove them with: php tools/remove-sample-data.php  (add --apply to delete those with no bookings).';
+        }
+    } catch (Exception $e) {}
+    ?>
+    <?php if ($setupWarnings): ?>
+    <div role="alert" style="border-left:4px solid #B45309;background:var(--card-bg,#fff);color:var(--text-primary,#17231e);padding:12px 16px;border-radius:8px;margin:0 0 20px;">
+      <strong>Setup needs attention</strong>
+      <ul style="margin:8px 0 0 18px;padding:0;">
+        <?php foreach ($setupWarnings as $w): ?><li style="margin-bottom:4px;"><?php echo htmlspecialchars($w, ENT_QUOTES, 'UTF-8'); ?></li><?php endforeach; ?>
+      </ul>
+    </div>
+    <?php endif; ?>
+
     <h4>External providers</h4>
     <p style="color:var(--text-muted);font-size:13px;margin-top:-8px;">Configured/not-configured only — this project never makes a
         real paid API call just to check a health page, and never displays key values (Rule 57).</p>

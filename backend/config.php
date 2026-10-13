@@ -49,6 +49,9 @@ define('OPENAI_BASE_URL', rtrim((string) tms_env('OPENAI_BASE_URL', 'https://api
 // Self-hosted inference (AI_PROVIDER=ollama). Keep the runtime on localhost/private network.
 define('OLLAMA_BASE_URL', rtrim((string) tms_env('OLLAMA_BASE_URL', 'http://127.0.0.1:11434'), '/'));
 define('OLLAMA_MODEL',    tms_env('OLLAMA_MODEL', 'qwen2.5:3b-instruct'));
+// Optional semantic re-ranking of assistant search results (see backend/ai/rag/EmbeddingReranker.php).
+// Empty = off (BM25 only). Example: AI_EMBED_MODEL=nomic-embed-text after `ollama pull nomic-embed-text`.
+define('AI_EMBED_MODEL',  trim((string) tms_env('AI_EMBED_MODEL', '')));
 
 define('AI_MAX_TOKENS',   (int) tms_env('AI_MAX_TOKENS', 32768));
 define('AI_CACHE_TTL',    (int) tms_env('AI_CACHE_TTL', 3600));   // Cache AI responses for 1 hour
@@ -206,11 +209,11 @@ register_shutdown_function(function () {
     http_response_code(500);
     echo '<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><title>TMS — Temporarily Unavailable</title>'
        . '<meta name="viewport" content="width=device-width, initial-scale=1">'
-       . '<style>body{font-family:Poppins,Arial,sans-serif;background:#f5f8fb;color:#333;display:flex;'
+       . '<style>body{font-family:Poppins,Arial,sans-serif;background:#F7F8F5;color:#17231e;display:flex;'
        . 'align-items:center;justify-content:center;min-height:100vh;margin:0;text-align:center;padding:20px;}'
        . '.box{background:#fff;padding:40px;border-radius:14px;box-shadow:0 4px 24px rgba(0,0,0,.08);max-width:440px;}'
        . '.box i{font-size:40px;color:#e74c3c;margin-bottom:14px;display:block;}'
-       . 'a{color:#3F84B1;font-weight:600;text-decoration:none;}</style></head><body>'
+       . 'a{color:#176B50;font-weight:600;text-decoration:underline;}</style></head><body>'
        . '<div class="box"><i>&#9888;</i><h2>Something went wrong</h2>'
        . '<p>This page hit an unexpected error. Our team has been notified. Please try again, '
        . 'or <a href="index.php">return to the homepage</a>.</p></div></body></html>';
@@ -821,6 +824,12 @@ function _tms_repair_schema_drift(PDO $dbh): void {
     // assigned the more restricted 'manager' role.
     tms_ensure_columns($dbh, 'admin', [
         'Role' => "Role VARCHAR(20) DEFAULT 'superadmin'",
+        'TwoFASecret'  => 'TwoFASecret VARCHAR(64) DEFAULT NULL',
+        'TwoFAEnabled' => 'TwoFAEnabled TINYINT(1) DEFAULT 0',
+    ]);
+    // Customer 2FA columns (previously only created by an optional SQL migration, which made
+    // two-factor-setup.php fatal with "Unknown column" on installs that never ran it).
+    tms_ensure_columns($dbh, 'tblusers', [
         'TwoFASecret'  => 'TwoFASecret VARCHAR(64) DEFAULT NULL',
         'TwoFAEnabled' => 'TwoFAEnabled TINYINT(1) DEFAULT 0',
     ]);
@@ -1573,6 +1582,25 @@ function _tms_run_core_migrations(PDO $dbh): void {
         }
     } catch (Exception $e) {}
 
+    // Seed Terms / Privacy pages when missing, or when they still hold the
+    // sample text shipped in tms.sql (a copied "Yahoo! India" terms page and
+    // lorem-ipsum privacy page). Admin-edited pages are never touched.
+    // These are plain-language DRAFTS describing what this software actually
+    // does; the business owner must review them (ideally with a lawyer).
+    try {
+        $policyDefaults = tms_default_policy_pages();
+        $sel = $dbh->prepare("SELECT id, detail FROM tblpages WHERE type = :t LIMIT 1");
+        foreach ($policyDefaults as $ptype => $pbody) {
+            $sel->execute([':t' => $ptype]);
+            $row = $sel->fetch(PDO::FETCH_ASSOC);
+            if (!$row) {
+                $dbh->prepare("INSERT INTO tblpages(type, detail) VALUES(:t, :d)")->execute([':t' => $ptype, ':d' => $pbody]);
+            } elseif (stripos($row['detail'], 'Yahoo') !== false || stripos($row['detail'], 'At vero eos') !== false) {
+                $dbh->prepare("UPDATE tblpages SET detail = :d WHERE id = :id")->execute([':d' => $pbody, ':id' => $row['id']]);
+            }
+        }
+    } catch (Exception $e) {}
+
     // Seed coupons
     try {
         if ((int)$dbh->query("SELECT COUNT(*) FROM tblcoupons")->fetchColumn() === 0) {
@@ -2298,7 +2326,18 @@ function tms_backfill_package_images(PDO $dbh): void {
     }
 }
 
+/**
+ * Sample tour packages (data/packages_seed.json) are demo content, not the
+ * business's real catalogue. They are only inserted when the owner opts in
+ * with TMS_SEED_SAMPLE_PACKAGES=1 in .env, so a real install never has fake
+ * packages (re)created behind its back. See tools/remove-sample-data.php.
+ */
+function tms_sample_packages_enabled(): bool {
+    return (string)tms_env('TMS_SEED_SAMPLE_PACKAGES', '0') === '1';
+}
+
 function tms_seed_tourism_packages(PDO $dbh): void {
+    if (!tms_sample_packages_enabled()) return;
     try {
         $jsonPath = __DIR__ . '/../data/packages_seed.json';
         if (!file_exists($jsonPath)) return;
@@ -2366,11 +2405,11 @@ function tms_seed_tourism_packages(PDO $dbh): void {
                                 ),
                 ':lat'      => $row['MapLat'],
                 ':lng'      => $row['MapLng'],
-                ':rating'   => round(mt_rand(38, 50) / 10, 1),
+                ':rating'   => 0, // no invented ratings: AvgRating comes from real reviews only
                 ':country'  => $row['Country'],
                 ':region'   => $row['Region'],
                 ':featured' => ($row['Country'] === 'Bangladesh' && mt_rand(0, 4) === 0) ? 1 : 0,
-                ':meta'     => json_encode($rowMeta),
+                ':meta'     => json_encode($rowMeta + ['is_sample' => true]),
             ]);
             $i++;
         }
@@ -3686,3 +3725,40 @@ function tms_customer_2fa_columns_exist(PDO $dbh): bool {
     return $exists;
 }
 
+/**
+ * Draft Terms of Service and Privacy Policy, written from what this application
+ * really does. Not legal advice: the owner must review and edit them (Admin >
+ * Pages). Cancellation tiers are deliberately not stated here, so there is one
+ * source of truth: the policy shown at checkout.
+ */
+function tms_default_policy_pages(): array {
+    $terms = '<h4>1. About these terms</h4>'
+        . '<p>These terms apply when you browse this site, create an account or make a booking. By ticking the box at checkout you confirm you have read them.</p>'
+        . '<h4>2. Bookings</h4>'
+        . '<p>A booking starts as <strong>pending</strong>. It is only confirmed once our team confirms it, and you will see the status change in your account. Prices are shown before you confirm and may change until a booking is confirmed.</p>'
+        . '<h4>3. Payments</h4>'
+        . '<p>Payments are handled by the payment methods offered at checkout. A payment is only recorded once the payment provider confirms it to us. If a payment does not complete, your booking stays pending.</p>'
+        . '<h4>4. Cancellations and refunds</h4>'
+        . '<p>The cancellation and refund policy that applies to your booking is shown on the checkout page before you confirm. That policy is part of these terms.</p>'
+        . '<h4>5. Your account</h4>'
+        . '<p>Keep your password private and give accurate details. You can export or delete your data from the privacy settings in your account.</p>'
+        . '<h4>6. AI assistant and trip tools</h4>'
+        . '<p>Our assistant, itinerary planner and recommendations are automated and can be wrong. Treat them as suggestions: check prices, availability, opening times, visa and safety information with us or the official source before you rely on them.</p>'
+        . '<h4>7. Changes</h4>'
+        . '<p>We may update these terms. The version on this page is the current one.</p>'
+        . '<h4>8. Contact</h4>'
+        . '<p>Questions? Use the contact page.</p>';
+    $privacy = '<h4>What we collect</h4>'
+        . '<p>Your name, email address and password (stored only as a hash), an optional mobile number, your bookings, reviews, wishlist and enquiries, and any documents you choose to upload to your Travel Wallet (stored encrypted). We also keep technical logs needed to run and secure the site.</p>'
+        . '<h4>How we use it</h4>'
+        . '<p>To run your account and bookings, send booking and security emails, prevent fraud and abuse, and improve the site. We do not send marketing email.</p>'
+        . '<h4>AI features</h4>'
+        . '<p>When you use the assistant, planner or recommendations, the text you type and relevant site data are processed by the AI service this site is configured to use. If that service is hosted by us, the text stays on our systems. If it is a third-party service, your text is sent to that provider. Do not enter passwords, payment details or other secrets in AI chats. You can delete your AI history in your privacy settings.</p>'
+        . '<h4>Sharing</h4>'
+        . '<p>We share data only with providers needed to deliver the service (for example payment and email providers), or where the law requires it. We do not sell personal data.</p>'
+        . '<h4>Your choices</h4>'
+        . '<p>Signed-in customers can export their data, delete AI history, change notification and personalisation settings and delete their account from the privacy settings page. Deleting an account anonymises it; records we must keep for accounting may be retained without identifying details.</p>'
+        . '<h4>Contact</h4>'
+        . '<p>Use the contact page for any privacy question.</p>';
+    return ['terms' => $terms, 'privacy' => $privacy];
+}

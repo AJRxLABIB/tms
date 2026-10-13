@@ -48,16 +48,16 @@ $pointsFromReferrals = count($referred) * 50;
 <style>
 .page-title{background:linear-gradient(135deg,#176B50,#104B3A);color:#fff;padding:40px 0;margin-bottom:30px;}
 .info-card{background:var(--white);border-radius:12px;padding:24px;box-shadow:0 3px 15px rgba(0,0,0,0.08);margin-bottom:20px;}
-.ref-link-box{display:flex;gap:8px;background:#f8fafc;border:2px dashed #cbd5e1;border-radius:10px;padding:14px 16px;align-items:center;}
-.ref-link-box input{flex:1;border:none;background:transparent;font-size:13.5px;color:#334155;outline:none;font-family:monospace;}
+.ref-link-box{display:flex;gap:8px;background:var(--bg);border:2px dashed var(--border);border-radius:10px;padding:14px 16px;align-items:center;}
+.ref-link-box input{flex:1;border:none;background:transparent;font-size:13.5px;color:var(--text);outline:none;font-family:monospace;}
 .btn-copy{background:#176B50;color:#fff;border:none;border-radius:7px;padding:10px 18px;font-weight:700;font-size:13px;cursor:pointer;white-space:nowrap;}
-.btn-copy:hover{background:#5568d3;}
+.btn-copy:hover{background:#104B3A;}
 .stat-row{display:flex;gap:16px;margin-bottom:20px;}
 .stat-box{flex:1;background:var(--white);border-radius:12px;padding:20px;text-align:center;box-shadow:0 3px 15px rgba(0,0,0,0.08);}
 .stat-box .num{font-size:32px;font-weight:900;color:#176B50;}
 .stat-box .lbl{font-size:12.5px;color:var(--text-muted);margin-top:4px;}
 .share-btns{display:flex;gap:10px;margin-top:14px;flex-wrap:wrap;}
-.share-btns a{padding:9px 16px;border-radius:8px;font-size:13px;font-weight:600;text-decoration:none;color:#fff;display:inline-flex;align-items:center;gap:6px;}
+.share-btns a{padding:9px 16px;border-radius:8px;font-size:13px;font-weight:600;text-decoration:none;color:#fff !important;display:inline-flex;align-items:center;gap:6px;}
 </style>
 </head><body>
 <?php include('backend/header.php'); ?>
@@ -76,13 +76,13 @@ $pointsFromReferrals = count($referred) * 50;
     <h5><i class="fa fa-link"></i> Your Referral Link</h5>
     <p style="color:var(--text-muted);font-size:13px;">Share this link — anyone who signs up through it gives you both 50 points.</p>
     <div class="ref-link-box">
-      <input type="text" id="refLinkInput" readonly value="<?= htmlspecialchars($referralLink, ENT_QUOTES, 'UTF-8') ?>">
+      <input type="text" id="refLinkInput" aria-label="Your referral link" readonly value="<?= htmlspecialchars($referralLink, ENT_QUOTES, 'UTF-8') ?>">
       <button class="btn-copy" onclick="copyRefLink()"><i class="fa fa-copy"></i> Copy</button>
     </div>
     <p style="margin-top:10px;font-size:12.5px;color:var(--text-muted);">Your referral code: <strong><?= htmlspecialchars($myCode, ENT_QUOTES, 'UTF-8') ?></strong></p>
     <div class="share-btns">
-      <a href="https://wa.me/?text=<?= urlencode("Plan your next trip with TMS Travel! Sign up with my link and we both get bonus points: $referralLink") ?>" target="_blank" style="background:#25D366;"><i class="fa fa-whatsapp"></i> WhatsApp</a>
-      <a href="mailto:?subject=<?= urlencode('Join me on TMS Travel') ?>&body=<?= urlencode("Hey! I've been using TMS Travel to plan trips. Sign up with my referral link and we both get 50 bonus points: $referralLink") ?>" style="background:#64748b;"><i class="fa fa-envelope"></i> Email</a>
+      <a href="https://wa.me/?text=<?= urlencode("Plan your next trip with TMS Travel! Sign up with my link and we both get bonus points: $referralLink") ?>" target="_blank" style="background:#075E54;"><i class="fa fa-whatsapp"></i> WhatsApp</a>
+      <a href="mailto:?subject=<?= urlencode('Join me on TMS Travel') ?>&body=<?= urlencode("Hey! I've been using TMS Travel to plan trips. Sign up with my referral link and we both get 50 bonus points: $referralLink") ?>" style="background:#475569;"><i class="fa fa-envelope"></i> Email</a>
     </div>
   </div>
 

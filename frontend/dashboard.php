@@ -96,9 +96,9 @@ $recent->execute([':e' => $email]);
 $recent = $recent->fetchAll(PDO::FETCH_OBJ);
 
 $statusMeta = [
-    0 => ['label' => tms_t('label_pending', 'Pending'),   'color' => '#d97706', 'bg' => '#fef3c7'],
-    1 => ['label' => tms_t('step_confirmed', 'Confirmed'), 'color' => '#059669', 'bg' => '#d1fae5'],
-    2 => ['label' => tms_t('label_cancelled', 'Cancelled'), 'color' => '#dc2626', 'bg' => '#fee2e2'],
+    0 => ['label' => tms_t('label_pending', 'Pending'),   'color' => '#92400E', 'bg' => '#fef3c7'],
+    1 => ['label' => tms_t('step_confirmed', 'Confirmed'), 'color' => '#065F46', 'bg' => '#d1fae5'],
+    2 => ['label' => tms_t('label_cancelled', 'Cancelled'), 'color' => '#B91C1C', 'bg' => '#fee2e2'],
 ];
 ?>
 <!DOCTYPE HTML><html lang="<?php echo htmlspecialchars(tms_active_language(), ENT_QUOTES, 'UTF-8'); ?>"><head>
@@ -131,8 +131,8 @@ $statusMeta = [
 .dash-stat .lbl{font-size:11.5px;opacity:.75;margin-top:6px;}
 
 .dash-section{padding:36px 0;}
-.dash-card{background:#fff;border-radius:var(--radius-md);box-shadow:var(--shadow-sm);padding:22px;margin-bottom:22px;}
-.dash-card h4{font-family:var(--font-display);font-weight:600;font-size:17px;color:var(--primary);margin:0 0 16px;}
+.dash-card{background:var(--white);border-radius:var(--radius-md);box-shadow:var(--shadow-sm);padding:22px;margin-bottom:22px;}
+.dash-card h4{font-family:var(--font-display);font-weight:600;font-size:17px;color:var(--text);margin:0 0 16px;}
 
 /* Signature: the "next trip" boarding-pass preview card */
 .boarding-preview{position:relative;background:linear-gradient(120deg,var(--primary-dark),var(--primary));color:#fff;border-radius:var(--radius-lg);padding:26px 28px;display:flex;align-items:center;gap:24px;flex-wrap:wrap;overflow:hidden;}
@@ -147,15 +147,17 @@ $statusMeta = [
 .boarding-preview .cta{position:relative;flex-shrink:0;}
 .boarding-preview .cta a{background:var(--accent);color:#fff;padding:11px 22px;border-radius:var(--radius-sm);font-weight:700;font-size:13.5px;display:inline-block;}
 
-.no-trip{background:#fff;border-radius:var(--radius-lg);border:2px dashed var(--bg-dark);padding:34px 28px;text-align:center;}
+.no-trip{background:var(--white);border-radius:var(--radius-lg);border:2px dashed var(--bg-dark);padding:34px 28px;text-align:center;}
 .no-trip i{font-size:34px;color:var(--secondary);margin-bottom:10px;}
+html[data-theme="dark"] .dash-primary-btn{color:#0E3B2D !important;}
 .no-trip a{background:var(--secondary);color:#fff;padding:10px 24px;border-radius:var(--radius-sm);font-weight:700;font-size:13.5px;display:inline-block;margin-top:12px;}
+html[data-theme="dark"] .no-trip a{color:#0E3B2D;}
 
 .quick-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:14px;}
-.quick-tile{background:#fff;border-radius:var(--radius-md);box-shadow:var(--shadow-sm);padding:18px;text-align:center;transition:var(--transition);border:1px solid transparent;}
+.quick-tile{background:var(--white);border-radius:var(--radius-md);box-shadow:var(--shadow-sm);padding:18px;text-align:center;transition:var(--transition);border:1px solid transparent;}
 .quick-tile:hover{box-shadow:var(--shadow-md);transform:translateY(-3px);border-color:rgba(23,107,80,0.25);}
 .quick-tile i{font-size:22px;color:var(--secondary);margin-bottom:8px;}
-.quick-tile .n{font-family:var(--font-mono);font-size:20px;font-weight:700;color:var(--primary);}
+.quick-tile .n{font-family:var(--font-mono);font-size:20px;font-weight:700;color:var(--text);}
 .quick-tile .l{font-size:11.5px;color:var(--text-muted);margin-top:2px;}
 .quick-tile .badge-alert{background:var(--accent);color:#fff;font-size:9.5px;font-weight:700;padding:1px 7px;border-radius:10px;margin-left:4px;vertical-align:top;}
 
@@ -202,7 +204,7 @@ $statusMeta = [
     <?php else: ?>
     <div class="no-trip">
       <i class="fa fa-compass"></i>
-      <h4 style="font-family:var(--font-display);color:var(--primary);margin:0 0 6px;"><?php echo htmlspecialchars(tms_t('dash_no_upcoming_trips','No upcoming trips yet'), ENT_QUOTES, 'UTF-8'); ?></h4>
+      <h4 style="font-family:var(--font-display);color:var(--text);margin:0 0 6px;"><?php echo htmlspecialchars(tms_t('dash_no_upcoming_trips','No upcoming trips yet'), ENT_QUOTES, 'UTF-8'); ?></h4>
       <p style="color:var(--text-muted);font-size:13.5px;margin:0;"><?php echo htmlspecialchars(tms_t('dash_next_adventure','Your next adventure is one search away.'), ENT_QUOTES, 'UTF-8'); ?></p>
       <a href="package-list.php"><i class="fa fa-suitcase"></i> <?php echo htmlspecialchars(tms_t('btn_browse_packages','Browse Packages'), ENT_QUOTES, 'UTF-8'); ?></a>
     </div>
@@ -268,7 +270,7 @@ $statusMeta = [
         <div class="dash-card">
           <h4><i class="fa fa-bolt"></i> <?php echo htmlspecialchars(tms_t('dash_quick_actions','Quick Actions'), ENT_QUOTES, 'UTF-8'); ?></h4>
           <div style="display:flex;flex-direction:column;gap:10px;">
-            <a href="ai-planner.php" class="btn" style="background:var(--secondary);color:#fff;text-align:left;font-weight:600;font-size:13px;padding:11px 14px;border-radius:var(--radius-sm);"><i class="fa fa-magic"></i>&nbsp; <?php echo htmlspecialchars(tms_t('dash_plan_trip_ai','Plan a trip with AI'), ENT_QUOTES, 'UTF-8'); ?></a>
+            <a href="ai-planner.php" class="btn dash-primary-btn" style="background:var(--secondary);color:#fff;text-align:left;font-weight:600;font-size:13px;padding:11px 14px;border-radius:var(--radius-sm);"><i class="fa fa-magic"></i>&nbsp; <?php echo htmlspecialchars(tms_t('dash_plan_trip_ai','Plan a trip with AI'), ENT_QUOTES, 'UTF-8'); ?></a>
             <a href="package-list.php" class="btn" style="background:var(--bg-dark);color:var(--text);text-align:left;font-weight:600;font-size:13px;padding:11px 14px;border-radius:var(--radius-sm);"><i class="fa fa-search"></i>&nbsp; <?php echo htmlspecialchars(tms_t('btn_browse_packages','Browse Packages'), ENT_QUOTES, 'UTF-8'); ?></a>
             <a href="profile.php" class="btn" style="background:var(--bg-dark);color:var(--text);text-align:left;font-weight:600;font-size:13px;padding:11px 14px;border-radius:var(--radius-sm);"><i class="fa fa-user"></i>&nbsp; <?php echo htmlspecialchars(tms_t('dash_edit_profile','Edit Profile'), ENT_QUOTES, 'UTF-8'); ?></a>
             <a href="issuetickets.php" class="btn" style="background:var(--bg-dark);color:var(--text);text-align:left;font-weight:600;font-size:13px;padding:11px 14px;border-radius:var(--radius-sm);"><i class="fa fa-life-ring"></i>&nbsp; <?php echo htmlspecialchars(tms_t('dash_get_support','Get Support'), ENT_QUOTES, 'UTF-8'); ?></a>

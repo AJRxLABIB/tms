@@ -65,7 +65,7 @@ class SiteAssistant {
         try {
             $pkgCtx = [];
             if (preg_match('/pkgid=(\d+)/', $pageContext, $pm)) $pkgCtx['package_id'] = (int)$pm[1];
-            $registry = new ToolRegistry(KnowledgeIndex::fromDb($this->db), $this->db);
+            $registry = new ToolRegistry(KnowledgeIndex::fromDb($this->db), $this->db, EmbeddingReranker::fromEnv());
             $run = ToolRouter::run($registry, ToolRouter::plan($message, $pkgCtx),
                 ['email' => $email, 'signed_in' => ($email !== 'guest' && $email !== '')]);
             $system .= "\n\nREFERENCE DATA FOR THIS QUESTION (from the live catalogue — prefer it over the general list above; "

@@ -84,7 +84,7 @@
 .explore-panel.active { display: block; }
 
 .explore-card {
-  background: #fff; border-radius: var(--radius-md); box-shadow: var(--shadow-sm);
+  background: var(--white); border-radius: var(--radius-md); box-shadow: var(--shadow-sm);
   padding: 24px; margin-bottom: 22px;
 }
 .explore-card h4 { font-size: 1.05em; font-weight: 700; color: var(--text); margin-bottom: 14px; display: flex; align-items: center; gap: 8px; }

@@ -112,7 +112,7 @@ $statusMeta = [
     <?php if ($error): ?><div class="alert-error"><i class="fa fa-exclamation-circle"></i> <?php echo htmlspecialchars($error, ENT_QUOTES, 'UTF-8'); ?></div><?php endif; ?>
     <?php if ($msg): ?><div class="alert-success"><i class="fa fa-check-circle"></i> <?php echo htmlspecialchars($msg, ENT_QUOTES, 'UTF-8'); ?></div><?php endif; ?>
 
-    <h3 style="color:var(--primary);margin-bottom:14px;"><i class="fa fa-hotel"></i> Hotel Bookings</h3>
+    <h3 style="color:var(--secondary);margin-bottom:14px;"><i class="fa fa-hotel"></i> Hotel Bookings</h3>
     <?php if (empty($hotelBookings)): ?>
     <p style="color:var(--text-muted);">No hotel bookings yet. <a href="hotels.php">Browse Hotels →</a></p>
     <?php else: foreach ($hotelBookings as $hb): $sm = $statusMeta[(int)$hb->status] ?? $statusMeta[0]; ?>
@@ -134,7 +134,7 @@ $statusMeta = [
     </div>
     <?php endforeach; endif; ?>
 
-    <h3 style="color:var(--primary);margin:28px 0 14px;"><i class="fa fa-map-signs"></i> Activity Bookings</h3>
+    <h3 style="color:var(--secondary);margin:28px 0 14px;"><i class="fa fa-map-signs"></i> Activity Bookings</h3>
     <?php if (empty($activityBookings)): ?>
     <p style="color:var(--text-muted);">No activity bookings yet. <a href="activities.php">Browse Activities →</a></p>
     <?php else: foreach ($activityBookings as $ab): $sm = $statusMeta[(int)$ab->status] ?? $statusMeta[0]; ?>

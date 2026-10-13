@@ -142,6 +142,7 @@ $exportUrl = 'export-my-data.php';
 .priv-card h3{margin:0 0 6px;font-size:18px;font-weight:700;color:var(--text);}
 .priv-card p.desc{color:var(--text-muted);font-size:14px;margin:0 0 16px;}
 .priv-card.danger{border:1px solid var(--danger-bg);}
+html[data-theme="dark"] .priv-card .btn-danger{color:#3A1414;}
 .priv-card.danger h3{color:var(--danger);}
 .priv-toggle{display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid #f0f0f0;}
 .priv-toggle:last-child{border-bottom:none;}
@@ -179,14 +180,14 @@ $exportUrl = 'export-my-data.php';
                     <b>Booking status email notifications</b>
                     <small>When off, we'll still show in-app notifications and never skip password-reset or security emails -- this only turns off status-update emails.</small>
                 </div>
-                <input type="checkbox" name="notifications_enabled" <?php echo $user->NotificationsEnabled ? 'checked' : ''; ?> style="width:20px;height:20px;">
+                <input type="checkbox" aria-label="Booking status email notifications" name="notifications_enabled" <?php echo $user->NotificationsEnabled ? 'checked' : ''; ?> style="width:20px;height:20px;">
             </div>
             <div class="priv-toggle">
                 <div>
                     <b>Personalized recommendations</b>
                     <small>When off, the AI Recommender won't factor your past bookings into future suggestions.</small>
                 </div>
-                <input type="checkbox" name="personalization_enabled" <?php echo $user->PersonalizationEnabled ? 'checked' : ''; ?> style="width:20px;height:20px;">
+                <input type="checkbox" aria-label="Personalized recommendations" name="personalization_enabled" <?php echo $user->PersonalizationEnabled ? 'checked' : ''; ?> style="width:20px;height:20px;">
             </div>
             <button type="submit" name="save_preferences" class="btn btn-primary" style="margin-top:16px;">Save Preferences</button>
         </form>

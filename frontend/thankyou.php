@@ -20,6 +20,8 @@ tms_require_user(); // Batch 1 (landing/auth gating): whole app now requires log
 <link href="css/bootstrap.min2.css" rel='stylesheet' type='text/css' />
 <link href="<?php echo tms_asset_ver('css/style.min.css'); ?>" rel='stylesheet' type='text/css' />
 <link href="css/font-awesome.min2.css" rel="stylesheet">
+<link href="<?php echo tms_asset_ver('css/modern-theme.css'); ?>" rel="stylesheet">
+<style>.contact h3{color:var(--text);}</style>
 <!-- Custom Theme files -->
 <script src="js/jquery-1.12.0.min.js" defer></script>
 <script src="js/bootstrap.min.js" defer></script>

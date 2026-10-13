@@ -41,7 +41,7 @@ $allPackages = $q2->fetchAll(PDO::FETCH_OBJ);
 // quick filters), each given a real color, so the legend/pills/markers
 // all describe the actual catalogue.
 $tmsMapTypeColors = [];
-$tmsMapTypePalette = ['#27ae60', '#1F8A66', '#3498db', '#f1c40f', '#1abc9c', '#e67e22'];
+$tmsMapTypePalette = ['#1B7F5F', '#176B50', '#2B6CB0', '#8A5A00', '#0F766E', '#C2410C'];
 try {
     $typeRows = $dbh->query(
         "SELECT PackageType, COUNT(*) AS n FROM tbltourpackages
@@ -57,7 +57,7 @@ try {
 } catch (Exception $e) {
     error_log('[TMS] tour-map type colors failed: ' . $e->getMessage());
 }
-$tmsMapOtherColor = '#95a5a6';
+$tmsMapOtherColor = '#5F6D65';
 ?>
 <!DOCTYPE HTML>
 <html lang="<?php echo htmlspecialchars(tms_active_language(), ENT_QUOTES, 'UTF-8'); ?>">
@@ -92,8 +92,10 @@ $tmsMapOtherColor = '#95a5a6';
 .dest-item:hover, .dest-item.active { background: linear-gradient(135deg,#176B5011,#104B3A11); border-color:#176B50; }
 .dest-item h5 { font-size:13px; font-weight:700; margin:0 0 3px; color:#333; }
 .dest-item p { font-size:12px; color:var(--text-muted); margin:0; }
-.dest-item span { font-size:12px; font-weight:700; color:#176B50; }
-.dest-item-nomap { opacity:0.6; cursor:help; }
+.dest-item span { font-size:12px; font-weight:700; color:var(--secondary); }
+.dest-item span.dest-nomap-badge { color:#92400e; }
+.dest-item-nomap { cursor:help; }
+.dest-item-nomap h5, .dest-item-nomap p { font-style:italic; }
 .dest-item-nomap:hover { background:#f7f7f7; border-color:#f0f0f0; }
 .dest-nomap-badge { display:inline-block; margin-left:6px; padding:1px 7px; border-radius:10px; background:#fef3c7; color:#92400e; font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.3px; }
 .popup-card h4 { font-size:14px; font-weight:700; margin:0 0 5px; }
@@ -104,7 +106,7 @@ $tmsMapOtherColor = '#95a5a6';
 .legend-item { display:inline-block; margin-right:15px; font-size:13px; }
 .legend-dot { width:12px; height:12px; border-radius:50%; display:inline-block; margin-right:5px; vertical-align:middle; }
 .filter-pills { margin-bottom:20px; }
-.filter-pill { display:inline-block; padding:6px 15px; border-radius:20px; font-size:13px; border:2px solid #176B50; color:#176B50; cursor:pointer; margin:3px; transition:0.2s; }
+.filter-pill { display:inline-block; padding:6px 15px; border-radius:20px; font-size:13px; border:2px solid var(--secondary); color:var(--secondary); cursor:pointer; margin:3px; transition:0.2s; }
 .filter-pill.active, .filter-pill:hover { background:#176B50; color:#fff; }
 
 /* ── Destination search (live autocomplete) ── */
@@ -233,7 +235,7 @@ html[data-theme="dark"] .map-search-result span { color: var(--text-muted) !impo
             </div>
         </div>
         <div class="col-md-3">
-            <div class="map-sidebar">
+            <div class="map-sidebar" tabindex="0" role="region" aria-label="Destinations list">
                 <h4><i class="fa fa-list" style="color:#176B50"></i> Destinations (<span id="destCount"><?php echo count($allPackages); ?></span>)</h4>
                 <?php foreach($allPackages as $p):
                     $c = $tmsMapTypeColors[$p->PackageType]['color'] ?? $tmsMapOtherColor;

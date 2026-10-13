@@ -25,12 +25,12 @@ tms_require_user(); // Batch 1 (landing/auth gating): whole app now requires log
 <script src="js/bootstrap.min.js" defer></script>
 <style>
 .page-title{background:linear-gradient(135deg,var(--primary-dark),var(--primary));color:#fff;padding:40px 0;margin-bottom:30px;}
-.ft-card{background:#fff;border-radius:12px;box-shadow:0 3px 20px rgba(0,0,0,0.07);padding:24px;margin-bottom:24px;}
+.ft-card{background:var(--white);border-radius:12px;box-shadow:0 3px 20px rgba(0,0,0,0.07);padding:24px;margin-bottom:24px;}
 .scope-note{background:#fffbeb;border:1px solid #fde68a;color:#92400e;font-size:12.5px;padding:12px 16px;border-radius:8px;margin-bottom:20px;display:flex;gap:10px;align-items:flex-start;}
 #flightMap{height:380px;border-radius:10px;margin-top:16px;display:none;}
 .stat-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:14px;margin-top:16px;}
-.stat-box{background:#f8fafc;border-radius:10px;padding:14px;text-align:center;}
-.stat-box .val{font-size:20px;font-weight:800;color:#1f2937;}
+.stat-box{background:var(--bg);border-radius:10px;padding:14px;text-align:center;}
+.stat-box .val{font-size:20px;font-weight:800;color:var(--text);}
 .stat-box .lbl{font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.4px;margin-top:2px;}
 </style>
 </head><body>

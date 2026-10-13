@@ -44,6 +44,8 @@
                     <li><a href="blog.php"><?php echo tms_t('nav_blog','Travel Blog'); ?></a></li>
                     <li><a href="enquiry.php">Enquiry</a></li>
                     <li><a href="page.php?type=contact"><?php echo tms_t('nav_contact','Contact Us'); ?></a></li>
+                    <li><a href="page.php?type=terms"><?php echo tms_t('label_terms','Terms of Service'); ?></a></li>
+                    <li><a href="page.php?type=privacy"><?php echo tms_t('label_privacy_policy','Privacy Policy'); ?></a></li>
                 </ul>
             </div>
             <div class="tms-footer-col">

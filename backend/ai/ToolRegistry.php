@@ -8,16 +8,18 @@
  * output), and written to an audit table.
  */
 require_once __DIR__ . '/rag/KnowledgeIndex.php';
+require_once __DIR__ . '/rag/EmbeddingReranker.php';
 
 final class ToolRegistry
 {
     private array $schemas;
     private KnowledgeIndex $index;
     private ?PDO $db;
+    private ?EmbeddingReranker $reranker;
 
-    public function __construct(KnowledgeIndex $index, ?PDO $db = null)
+    public function __construct(KnowledgeIndex $index, ?PDO $db = null, ?EmbeddingReranker $reranker = null)
     {
-        $this->index = $index; $this->db = $db;
+        $this->index = $index; $this->db = $db; $this->reranker = $reranker;
         $this->schemas = [
             'search_packages' => [
                 'auth' => false,
@@ -95,9 +97,17 @@ final class ToolRegistry
         $f = [];
         if (isset($a['max_price'])) $f['max_price'] = $a['max_price'];
         if (!empty($a['country'])) $f['country'] = $a['country'];
+        $limit = (int)($a['limit'] ?? 5);
+        if ($this->reranker) {
+            // Optional semantic re-rank of a wider BM25 candidate pool; falls back to BM25 order on any failure.
+            $pool = $this->index->search($a['query'], max($limit, 15), $f);
+            $hits = array_slice($this->reranker->rerank((string)$a['query'], $pool)['hits'], 0, max(1, min(20, $limit)));
+        } else {
+            $hits = $this->index->search($a['query'], $limit ?: 5, $f);
+        }
         return array_map(fn($h) => ['id' => $h['id'], 'title' => $h['meta']['title'], 'location' => $h['meta']['location'],
             'country' => $h['meta']['country'], 'price_bdt' => $h['meta']['price'], 'duration' => $h['meta']['duration'],
-            'citation' => $h['citation']], $this->index->search($a['query'], $a['limit'] ?? 5, $f));
+            'citation' => $h['citation']], $hits);
     }
 
     private function policy(int $id): array

@@ -341,7 +341,8 @@ html[data-theme="dark"] .summary-row.total { color: var(--text) !important; }
         <label style="display:flex;gap:10px;align-items:flex-start;font-weight:500;font-size:13.5px;cursor:pointer;">
           <input type="checkbox" name="accept_terms" value="1" required style="margin-top:3px;width:18px;height:18px;flex-shrink:0;">
           <span><?php echo tms_t('label_accept_terms_pre', 'I have read the cancellation policy above and the'); ?>
-            <a href="privacy.php" target="_blank" rel="noopener" style="color:var(--secondary);text-decoration:underline;"><?php echo tms_t('label_privacy_policy', 'privacy policy'); ?></a>,
+            <a href="page.php?type=terms" target="_blank" rel="noopener" style="color:var(--secondary);text-decoration:underline;"><?php echo tms_t('label_terms', 'terms of service'); ?></a>,
+            <a href="page.php?type=privacy" target="_blank" rel="noopener" style="color:var(--secondary);text-decoration:underline;"><?php echo tms_t('label_privacy_policy', 'privacy policy'); ?></a>,
             <?php echo tms_t('label_accept_terms_post', 'and I understand the booking starts as pending until confirmed.'); ?></span>
         </label>
       </div>

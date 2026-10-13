@@ -145,7 +145,7 @@ if (in_array($pagetype, ['aboutus', 'contact'], true) && tms_active_language() !
             'why_1'            => 'Locally vetted packages, no hidden fees',
             'why_2'            => 'Live weather & nearby-places for every destination',
             'why_3'            => 'Secure booking with instant confirmation',
-            'why_4'            => 'Multilingual support, 24/7 human help',
+            'why_4'            => 'Multilingual support, with an AI travel assistant available any time',
         ], tms_active_language(), $dbh);
     } else {
         $T = tms_translate_batch([
@@ -225,7 +225,7 @@ function tms_page_t(array $T, string $key, string $fallback): string {
 			<div class="col-sm-6"><p style="color:#555;"><i class="fa fa-check-circle" style="color:#27ae60"></i> <?php echo htmlspecialchars(tms_page_t($T, 'why_1', 'Locally vetted packages, no hidden fees'), ENT_QUOTES, 'UTF-8'); ?></p></div>
 			<div class="col-sm-6"><p style="color:#555;"><i class="fa fa-check-circle" style="color:#27ae60"></i> <?php echo htmlspecialchars(tms_page_t($T, 'why_2', 'Live weather & nearby-places for every destination'), ENT_QUOTES, 'UTF-8'); ?></p></div>
 			<div class="col-sm-6"><p style="color:#555;"><i class="fa fa-check-circle" style="color:#27ae60"></i> <?php echo htmlspecialchars(tms_page_t($T, 'why_3', 'Secure booking with instant confirmation'), ENT_QUOTES, 'UTF-8'); ?></p></div>
-			<div class="col-sm-6"><p style="color:#555;"><i class="fa fa-check-circle" style="color:#27ae60"></i> <?php echo htmlspecialchars(tms_page_t($T, 'why_4', 'Multilingual support, 24/7 human help'), ENT_QUOTES, 'UTF-8'); ?></p></div>
+			<div class="col-sm-6"><p style="color:#555;"><i class="fa fa-check-circle" style="color:#27ae60"></i> <?php echo htmlspecialchars(tms_page_t($T, 'why_4', 'Multilingual support, with an AI travel assistant available any time'), ENT_QUOTES, 'UTF-8'); ?></p></div>
 		</div>
 	</div>
 
@@ -309,8 +309,9 @@ function tms_page_t(array $T, string $key, string $fallback): string {
 	</script>
 
 <?php elseif ($cms): ?>
-	<h3 class="wow fadeInDown"><?php echo htmlspecialchars($pagetype, ENT_QUOTES, 'UTF-8'); ?></h3>
-	<p><?php echo $cms->detail; ?></p>
+	<?php $cmsTitles = ['terms'=>'Terms of Service','privacy'=>'Privacy Policy']; ?>
+	<h3 class="wow fadeInDown"><?php echo htmlspecialchars($cmsTitles[$pagetype] ?? ucfirst($pagetype), ENT_QUOTES, 'UTF-8'); ?></h3>
+	<div class="cms-body" style="color:var(--text);line-height:1.7;"><?php echo $cms->detail; ?></div>
 <?php else: ?>
 	<div style="text-align:center;padding:60px 20px;">
 		<i class="fa fa-file-o" style="font-size:50px;color:#ddd;display:block;margin-bottom:16px;"></i>

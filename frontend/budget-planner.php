@@ -71,33 +71,33 @@ $packages = $q2->fetchAll(PDO::FETCH_OBJ);
 <script src="js/wow.min.js" defer></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
 <style>
-.budget-hero { background: linear-gradient(135deg,#134e5e,#71b280); color:#fff; padding:55px 0 30px; text-align:center; }
+.budget-hero { background: linear-gradient(135deg,#176B50,#104B3A); color:#fff; padding:55px 0 30px; text-align:center; }
 .budget-hero h1 { font-size:2.3em; }
 .budget-card { background:var(--white); border-radius:12px; box-shadow:0 4px 20px rgba(0,0,0,0.08); padding:28px; margin-bottom:25px; }
-.budget-card h4 { color:#333; font-size:1.1em; font-weight:700; border-bottom:2px solid #f0f0f0; padding-bottom:10px; margin-bottom:20px; }
-.form-control { border:2px solid #e0e0e0; border-radius:8px; padding:10px 14px; }
-.form-control:focus { border-color:#71b280; box-shadow:none; outline:none; }
+.budget-card h4 { color:var(--text); font-size:1.1em; font-weight:700; border-bottom:2px solid var(--border); padding-bottom:10px; margin-bottom:20px; }
+.form-control { border:2px solid var(--border); border-radius:8px; padding:10px 14px; }
+.form-control:focus { border-color:#176B50; box-shadow:none; outline:none; }
 .range-wrap { position:relative; }
-input[type=range] { width:100%; -webkit-appearance:none; height:6px; border-radius:3px; background:#e0e0e0; outline:none; cursor:pointer; }
-input[type=range]::-webkit-slider-thumb { -webkit-appearance:none; width:18px; height:18px; border-radius:50%; background:linear-gradient(135deg,#134e5e,#71b280); cursor:pointer; }
-.range-value { display:inline-block; background:linear-gradient(135deg,#134e5e,#71b280); color:#fff; padding:3px 10px; border-radius:5px; font-size:13px; font-weight:700; }
-.summary-box { background: linear-gradient(135deg,#134e5e,#71b280); color:#fff; border-radius:12px; padding:25px; }
+input[type=range] { width:100%; -webkit-appearance:none; height:6px; border-radius:3px; background:var(--border); outline:none; cursor:pointer; }
+input[type=range]::-webkit-slider-thumb { -webkit-appearance:none; width:18px; height:18px; border-radius:50%; background:linear-gradient(135deg,#176B50,#104B3A); cursor:pointer; }
+.range-value { display:inline-block; background:linear-gradient(135deg,#176B50,#104B3A); color:#fff; padding:3px 10px; border-radius:5px; font-size:13px; font-weight:700; }
+.summary-box { background: linear-gradient(135deg,#176B50,#104B3A); color:#fff; border-radius:12px; padding:25px; }
 .summary-box .total { font-size:2.5em; font-weight:700; }
 .summary-box .label { opacity:0.85; font-size:14px; }
 .summary-item { display:flex; justify-content:space-between; padding:8px 0; border-bottom:1px solid rgba(255,255,255,0.2); font-size:14px; }
 .summary-item:last-child { border:none; }
 .bar-item { display:flex; align-items:center; margin-bottom:10px; }
-.bar-label { min-width:120px; font-size:13px; color:#555; font-weight:600; }
+.bar-label { min-width:120px; font-size:13px; color:var(--text); font-weight:600; }
 html[data-theme="dark"] .budget-card h4 { color: var(--text) !important; }
 html[data-theme="dark"] .bar-label { color: var(--text-muted) !important; }
-.bar-track { flex:1; height:10px; background:#f0f0f0; border-radius:5px; overflow:hidden; }
+.bar-track { flex:1; height:10px; background:var(--border); border-radius:5px; overflow:hidden; }
 .bar-fill { height:100%; border-radius:5px; transition:width 0.8s ease; }
-.tip-box { background:#e8f5e9; border-radius:8px; padding:15px; border-left:4px solid #71b280; margin-top:15px; }
+.tip-box { background:#e8f5e9; border-radius:8px; padding:15px; border-left:4px solid #176B50; margin-top:15px; }
 .tip-box p { font-size:13px; color:#2e7d32; margin:0; }
-.btn-save { background: linear-gradient(135deg,#134e5e,#71b280); color:#fff; border:none; border-radius:8px; padding:12px 30px; font-weight:700; cursor:pointer; font-size:15px; width:100%; }
+.btn-save { background: linear-gradient(135deg,#176B50,#104B3A); color:#fff; border:none; border-radius:8px; padding:12px 30px; font-weight:700; cursor:pointer; font-size:15px; width:100%; }
 .btn-save:hover { opacity:0.9; color:#fff; }
-.saved-plan { background:#f8f9fa; border-radius:8px; padding:15px; margin-bottom:10px; border:1px solid #e0e0e0; }
-.saved-plan h5 { color:#134e5e; font-weight:700; margin:0 0 5px; font-size:14px; }
+.saved-plan { background:var(--bg); border-radius:8px; padding:15px; margin-bottom:10px; border:1px solid var(--border); }
+.saved-plan h5 { color:#176B50; font-weight:700; margin:0 0 5px; font-size:14px; }
 .saved-plan p { font-size:13px; color:var(--text-muted); margin:0; }
 .budget-status { padding:10px 15px; border-radius:8px; font-weight:700; font-size:14px; margin-top:15px; text-align:center; }
 .status-ok { background:#d4edda; color:#155724; }
@@ -122,7 +122,7 @@ html[data-theme="dark"] .bar-label { color: var(--text-muted) !important; }
         <!-- Input Form -->
         <div class="col-md-7">
             <div class="budget-card wow fadeInLeft">
-                <h4><i class="fa fa-pencil" style="color:#134e5e"></i> Set Your Budget</h4>
+                <h4><i class="fa fa-pencil" style="color:#176B50"></i> Set Your Budget</h4>
                 <form id="budgetForm" method="post">
                 <?php tms_csrf_field(); ?>
                     <div class="row">
@@ -165,15 +165,15 @@ html[data-theme="dark"] .bar-label { color: var(--text-muted) !important; }
                     </div>
 
                     <hr>
-                    <h5 style="color:#555;margin-bottom:15px;">Expense Breakdown</h5>
+                    <h5 style="color:var(--text);margin-bottom:15px;">Expense Breakdown</h5>
 
                     <?php
                     $expenses = [
-                        ['key'=>'accommodation','label'=>'Accommodation','icon'=>'fa-bed','color'=>'#3498db','default'=>1500],
-                        ['key'=>'food','label'=>'Food & Dining','icon'=>'fa-cutlery','color'=>'#e74c3c','default'=>800],
-                        ['key'=>'transport','label'=>'Transport','icon'=>'fa-plane','color'=>'#2ecc71','default'=>1200],
-                        ['key'=>'activities','label'=>'Activities & Tours','icon'=>'fa-camera','color'=>'#f39c12','default'=>800],
-                        ['key'=>'miscellaneous','label'=>'Miscellaneous','icon'=>'fa-shopping-bag','color'=>'#9b59b6','default'=>400],
+                        ['key'=>'accommodation','label'=>'Accommodation','icon'=>'fa-bed','color'=>'#1D5FA8','default'=>1500],
+                        ['key'=>'food','label'=>'Food & Dining','icon'=>'fa-cutlery','color'=>'#B03A2E','default'=>800],
+                        ['key'=>'transport','label'=>'Transport','icon'=>'fa-plane','color'=>'#157347','default'=>1200],
+                        ['key'=>'activities','label'=>'Activities & Tours','icon'=>'fa-camera','color'=>'#9A5B00','default'=>800],
+                        ['key'=>'miscellaneous','label'=>'Miscellaneous','icon'=>'fa-shopping-bag','color'=>'#7B3FA0','default'=>400],
                     ];
                     foreach($expenses as $exp): ?>
                     <div class="form-group">
@@ -202,7 +202,7 @@ html[data-theme="dark"] .bar-label { color: var(--text-muted) !important; }
         <!-- Summary & Chart -->
         <div class="col-md-5">
             <div class="budget-card wow fadeInRight">
-                <h4><i class="fa fa-pie-chart" style="color:#134e5e"></i> Budget Summary</h4>
+                <h4><i class="fa fa-pie-chart" style="color:#176B50"></i> Budget Summary</h4>
                 <canvas id="budgetChart" height="200"></canvas>
                 <div id="budgetStatus" class="budget-status status-ok">✓ Budget looks balanced!</div>
             </div>
@@ -228,14 +228,14 @@ html[data-theme="dark"] .bar-label { color: var(--text-muted) !important; }
             </div>
 
             <div class="tip-box wow fadeInRight" style="margin-top:15px;">
-                <p><i class="fa fa-lightbulb-o" style="color:#71b280"></i> <strong>Pro Tip:</strong> Keep 10–15% of your total budget as emergency reserve. Accommodation and transport usually make up 50–60% of travel costs.</p>
+                <p><i class="fa fa-lightbulb-o" style="color:#176B50"></i> <strong>Pro Tip:</strong> Keep 10–15% of your total budget as emergency reserve. Accommodation and transport usually make up 50–60% of travel costs.</p>
             </div>
         </div>
     </div>
 
     <?php if(count($savedPlans) > 0): ?>
     <div class="budget-card wow fadeInUp" style="margin-top:10px;">
-        <h4><i class="fa fa-history" style="color:#134e5e"></i> Your Saved Plans</h4>
+        <h4><i class="fa fa-history" style="color:#176B50"></i> Your Saved Plans</h4>
         <div class="row">
         <?php foreach($savedPlans as $plan): ?>
         <div class="col-md-4">
@@ -269,7 +269,7 @@ function tmsMoney(bdtAmount) {
 </script>
 <script>
 var chartInstance = null;
-var colors = ['#3498db','#e74c3c','#2ecc71','#f39c12','#9b59b6'];
+var colors = ['#1D5FA8','#B03A2E','#157347','#9A5B00','#7B3FA0'];
 var expenseKeys = ['accommodation','food','transport','activities','miscellaneous'];
 var expenseLabels = ['Accommodation','Food','Transport','Activities','Misc'];
 

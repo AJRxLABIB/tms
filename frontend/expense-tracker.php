@@ -74,18 +74,19 @@ $categoryColors = ['accommodation'=>'#3b82f6','food'=>'#f59e0b','transport'=>'#1
 <script src="js/bootstrap.min.js" defer></script>
 <style>
 .page-title{background:linear-gradient(135deg,var(--primary-dark),var(--primary));color:#fff;padding:40px 0;margin-bottom:30px;}
-.exp-card{background:#fff;border-radius:12px;box-shadow:0 3px 20px rgba(0,0,0,0.07);padding:20px;margin-bottom:24px;}
-.exp-card h4{font-size:15px;font-weight:700;margin:0 0 16px;color:#1f2937;}
+.exp-card{background:var(--white);border-radius:12px;box-shadow:0 3px 20px rgba(0,0,0,0.07);padding:20px;margin-bottom:24px;}
+.exp-card h4{font-size:15px;font-weight:700;margin:0 0 16px;color:var(--text);}
 .insight-box{background:#eff6ff;border:1px solid #bfdbfe;border-radius:10px;padding:14px 16px;font-size:13.5px;color:#1e40af;margin-bottom:24px;display:flex;gap:10px;align-items:flex-start;}
-.budget-bar{height:10px;border-radius:6px;background:#e5e7eb;overflow:hidden;margin:10px 0;}
+.budget-bar{height:10px;border-radius:6px;background:var(--border);overflow:hidden;margin:10px 0;}
 .budget-bar-fill{height:100%;border-radius:6px;transition:width .3s;}
-.cat-row{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid #f3f4f6;}
+.cat-row{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border);}
 .cat-row:last-child{border-bottom:none;}
 .cat-icon{width:32px;height:32px;border-radius:8px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:13px;flex-shrink:0;}
-.exp-list-row{display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid #f3f4f6;}
+.exp-list-row{display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--border);}
 .filter-tabs{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:20px;}
-.filter-tabs a{padding:6px 14px;border-radius:20px;font-size:12.5px;text-decoration:none;background:#f3f4f6;color:#4b5563;}
+.filter-tabs a{padding:6px 14px;border-radius:20px;font-size:12.5px;text-decoration:none;background:var(--bg);color:var(--text);border:1px solid var(--border);}
 .filter-tabs a.active{background:var(--secondary);color:#fff;}
+html[data-theme="dark"] .filter-tabs a.active{color:#0E3B2D;}
 </style>
 </head><body>
 <?php include('backend/header.php'); ?>
@@ -156,7 +157,7 @@ $categoryColors = ['accommodation'=>'#3b82f6','food'=>'#f59e0b','transport'=>'#1
     <div class="exp-card">
       <h4><i class="fa fa-pie-chart"></i> <?= $filterBookingId ? tms_t('label_budget_vs_actual','Budget vs Actual') : tms_t('heading_spending_by_category','Spending by Category') ?></h4>
       <?php if ($filterBookingId && $breakdown['budget'] > 0): ?>
-        <div style="font-size:13px;color:#6b7280;"><?php echo tms_t('label_spent_prefix','Spent'); ?> <strong><?= tms_currency($breakdown['spent']) ?></strong> <?php echo tms_t('label_spent_of_budget_suffix','of'); ?> <strong><?= tms_currency($breakdown['budget']) ?></strong> <?php echo tms_t('label_budget_word','budget'); ?></div>
+        <div style="font-size:13px;color:var(--text-muted);"><?php echo tms_t('label_spent_prefix','Spent'); ?> <strong><?= tms_currency($breakdown['spent']) ?></strong> <?php echo tms_t('label_spent_of_budget_suffix','of'); ?> <strong><?= tms_currency($breakdown['budget']) ?></strong> <?php echo tms_t('label_budget_word','budget'); ?></div>
         <div class="budget-bar"><div class="budget-bar-fill" style="width:<?= min(100,$breakdown['percent_used']) ?>%;background:<?= $breakdown['over_budget'] ? '#dc2626' : '#10b981' ?>;"></div></div>
         <div style="font-size:12px;color:<?= $breakdown['over_budget'] ? '#dc2626' : '#6b7280' ?>;">
           <?= $breakdown['percent_used'] ?>% <?php echo tms_t('label_used_suffix','used'); ?><?= $breakdown['over_budget'] ? ' ' . tms_t('dest_over_budget_by_prefix','— over budget by') . ' ' . tms_currency(abs($breakdown['remaining'])) : ', ' . tms_currency($breakdown['remaining']) . ' ' . tms_t('label_remaining_word','remaining') ?>

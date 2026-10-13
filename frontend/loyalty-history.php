@@ -48,6 +48,9 @@ $history = $hist->fetchAll(PDO::FETCH_OBJ);
 .pager a,.pager span{padding:7px 13px;border-radius:6px;font-size:13px;text-decoration:none;color:var(--secondary);border:1px solid #e2e8f0;}
 .pager .current{background:var(--secondary);color:#fff;border-color:var(--secondary);}
 .pager a:hover{background:#f1f5f9;}
+.pts-pos{color:#0B6B2E;}.pts-neg{color:#B3302B;}
+html[data-theme="dark"] .pts-pos{color:#5CC79C;}html[data-theme="dark"] .pts-neg{color:#FCA5A5;}
+.table-responsive:focus-visible{outline:2px solid var(--secondary);outline-offset:2px;}
 </style>
 </head><body>
 <?php include('backend/header.php'); ?>
@@ -62,14 +65,14 @@ $history = $hist->fetchAll(PDO::FETCH_OBJ);
     <?php if (empty($history)): ?>
       <p style="color:var(--text-muted);text-align:center;padding:30px;">No points activity yet. Book a tour, write a review, or refer a friend to start earning!</p>
     <?php else: ?>
-    <div class="table-responsive"><table class="table table-striped">
+    <div class="table-responsive" tabindex="0" role="region" aria-label="Points history"><table class="table table-striped">
       <thead><tr><th>Date</th><th>Description</th><th style="text-align:right;">Points</th></tr></thead>
       <tbody>
       <?php foreach ($history as $h): ?>
       <tr>
         <td><?= date('d M Y, g:i A', strtotime($h->CreatedAt)) ?></td>
         <td><?= htmlspecialchars($h->Description) ?></td>
-        <td style="text-align:right;"><span style="color:<?= $h->Points > 0 ? 'green' : 'red' ?>;font-weight:700;"><?= ($h->Points > 0 ? '+' : '') . $h->Points ?> pts</span></td>
+        <td style="text-align:right;"><span class="<?= $h->Points > 0 ? 'pts-pos' : 'pts-neg' ?>" style="font-weight:700;"><?= ($h->Points > 0 ? '+' : '') . $h->Points ?> pts</span></td>
       </tr>
       <?php endforeach; ?>
       </tbody>

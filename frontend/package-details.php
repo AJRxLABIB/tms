@@ -485,8 +485,8 @@ if ($pkg) {
 .pkg-card .pkg-gallery-thumb:hover{opacity:.9;}
 .pkg-card .pkg-gallery-thumb.active{opacity:1;border-color:var(--secondary);}
 .pkg-body{padding:28px;}
-.pkg-body h2{font-size:1.6em;font-weight:700;color:#333;margin-bottom:6px;}
-.meta-row{display:flex;flex-wrap:wrap;gap:18px;margin:14px 0;font-size:14px;color:#666;}
+.pkg-body h2{font-size:1.6em;font-weight:700;color:var(--text);margin-bottom:6px;}
+.meta-row{display:flex;flex-wrap:wrap;gap:18px;margin:14px 0;font-size:14px;color:var(--text-muted);}
 .meta-row span i{margin-right:5px;color:var(--secondary);}
 .price-box{background:linear-gradient(135deg,var(--primary-dark),var(--primary));color:#fff;border-radius:10px;padding:18px 22px;margin-bottom:22px;text-align:center;}
 .price-box .price{font-size:2.2em;font-weight:700;}
@@ -495,8 +495,9 @@ if ($pkg) {
 .form-control:focus{border-color:var(--secondary);box-shadow:none;outline:none;}
 .btn-book{background:var(--secondary);color:#fff;border:none;border-radius:8px;padding:12px 34px;font-weight:700;font-size:15px;cursor:pointer;transition:.2s;width:100%;}
 .btn-book:hover{background:#2d6a97;}
-.review-mini{background:#f8f9fa;border-radius:8px;padding:14px;margin-bottom:12px;}
-.review-mini h6{font-size:13px;font-weight:700;color:#333;margin:0 0 4px;}
+.btn-book-outline{background:var(--white);color:var(--secondary);border:2px solid var(--secondary);border-radius:8px;padding:12px 34px;font-weight:700;font-size:15px;cursor:pointer;transition:.2s;width:100%;margin-top:8px;}
+.review-mini{background:var(--bg);border-radius:8px;padding:14px;margin-bottom:12px;}
+.review-mini h6{font-size:13px;font-weight:700;color:var(--text);margin:0 0 4px;}
 .stars-sm{color:var(--brass);font-size:13px;}
 </style>
 </head>
@@ -690,11 +691,11 @@ if ($pkg) {
 
                         <!-- Live crowd insights (Phase 2e): loads async, grounded in real
                              booking history when enough exists — see CrowdPredictor.php -->
-                        <div id="crowdInsightsBox" style="display:none;margin-top:6px;margin-bottom:12px;padding:14px 16px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;font-size:13.5px;color:#4a5568;"></div>
+                        <div id="crowdInsightsBox" style="display:none;margin-top:6px;margin-bottom:12px;padding:14px 16px;background:var(--white);border:1px solid var(--border);border-radius:10px;font-size:13.5px;color:var(--text);"></div>
 
                         <!-- Carbon footprint / sustainability (Phase 2i): loads async,
                              real distance-based estimate — see SustainabilityCalculator.php -->
-                        <div id="sustainabilityBox" style="display:none;margin-top:6px;margin-bottom:18px;padding:14px 16px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;font-size:13.5px;color:#166534;"></div>
+                        <div id="sustainabilityBox" style="display:none;margin-top:6px;margin-bottom:18px;padding:14px 16px;background:var(--white);border:1px solid var(--border);border-left:4px solid var(--primary);border-radius:10px;font-size:13.5px;color:var(--text);"></div>
 
                         <?php
                         $suitLabels = ['adventure_level'=>'Adventure Level','family_suitability'=>'Family','couple_suitability'=>'Couple','solo_suitability'=>'Solo Traveler'];
@@ -852,7 +853,7 @@ if ($pkg) {
                             <h6><?php echo htmlspecialchars($rev->UserName,ENT_QUOTES,'UTF-8'); ?></h6>
                             <div class="stars-sm"><?php for ($i=1;$i<=5;$i++) echo $i<=$rev->Rating?'★':'☆'; ?></div>
                         </div>
-                        <p style="font-size:13px;color:#666;margin:4px 0 0;"><?php echo htmlspecialchars(substr($rev->ReviewText,0,150),ENT_QUOTES,'UTF-8'); ?>…</p>
+                        <p style="font-size:13px;color:var(--text-muted);margin:4px 0 0;"><?php echo htmlspecialchars(substr($rev->ReviewText,0,150),ENT_QUOTES,'UTF-8'); ?>…</p>
                     </div>
                     <?php endforeach; ?>
                     <a href="reviews.php?pkg=<?php echo (int)$pkg->PackageId; ?>" style="font-size:13px;color:var(--secondary);">
@@ -968,7 +969,7 @@ if ($pkg) {
                 .nearby-item{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid #f0f0f0;cursor:pointer;transition:background .15s;border-radius:6px;}
                 .nearby-item:hover{background:var(--bg);padding-left:6px;padding-right:6px;}
                 .nearby-item:last-child{border-bottom:none;}
-                .nearby-item .name{font-weight:600;color:#333;font-size:13.5px;}
+                .nearby-item .name{font-weight:600;color:var(--text);font-size:13.5px;}
                 .nearby-item .addr{font-size:11.5px;color:var(--text-muted);margin-top:2px;}
                 .nearby-item .dist{font-family:var(--font-mono);font-size:11.5px;color:var(--secondary);font-weight:700;white-space:nowrap;}
 html[data-theme="dark"] .pkg-body h2,
@@ -1449,7 +1450,7 @@ html[data-theme="dark"] .meta-row { color: var(--text-muted) !important; }
                             <button type="submit" name="submit2" class="btn-book">
                                 <i class="fa fa-check-circle"></i> <?php echo tms_t('btn_book_now','Book Now'); ?>
                             </button>
-                            <button type="submit" name="addcart" class="btn-book" style="background:var(--white);color:var(--secondary);border:2px solid var(--secondary);margin-top:8px;">
+                            <button type="submit" name="addcart" class="btn-book-outline">
                                 <i class="fa fa-cart-plus"></i> Add to Cart
                             </button>
                             <?php else: ?>
