@@ -66,7 +66,11 @@ if (empty($bookingIds)) {
     }
 }
 
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+$sandboxOk = PaymentService::sandboxAllowed();
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && !$sandboxOk) {
+    tms_csrf_validate();
+    $error = tms_t('msg_online_payment_unavailable', 'Online payment is not available yet. Your booking is saved as Pending and our team will contact you to arrange payment.');
+} elseif ($_SERVER['REQUEST_METHOD'] === 'POST') {
     tms_csrf_validate(); // exits with 403 on a bad/missing token -- see backend/config.php
     if (!empty($bookings)) {
         $allOk = true;
@@ -120,9 +124,11 @@ html[data-theme="dark"] .pay-total{color:var(--text) !important;}
 <?php include('backend/header.php'); ?>
 <div class="page-title"><div class="container"><h2 style="margin:0;"><i class="fa fa-credit-card"></i> <?php echo tms_t('heading_payment','Payment'); ?></h2></div></div>
 <div class="container" style="margin-bottom:60px;">
+  <?php if ($sandboxOk): ?>
   <div class="sandbox-banner">
     <i class="fa fa-flask"></i> <?php echo tms_t('dest_sandbox_payment_banner', '<strong>Sandbox payment mode.</strong> No real payment provider is connected yet (no merchant account exists for this project), so no real money moves here. This is a fully working test-mode flow so booking confirmation isn\'t purely a manual admin step anymore.'); ?>
   </div>
+  <?php endif; ?>
   <?php if ($error): ?>
     <div class="alert alert-danger"><?php echo htmlspecialchars($error, ENT_QUOTES, 'UTF-8'); ?></div>
     <p><a href="tour-history.php"><?php echo tms_t('link_go_to_my_trips','Go to My Trips'); ?></a></p>
@@ -132,10 +138,14 @@ html[data-theme="dark"] .pay-total{color:var(--text) !important;}
       <div class="pay-row"><span><?php echo htmlspecialchars($b->PackageName ?: ('Booking #'.$b->BookingId), ENT_QUOTES, 'UTF-8'); ?> (<?php echo (int)$b->NoOfPersons; ?> <?php echo tms_t('label_traveller_word','traveler(s)'); ?>)</span><span><?php echo tms_currency((int)$b->TotalCost); ?></span></div>
     <?php endforeach; ?>
     <div class="pay-total"><span><?php echo tms_t('label_total','Total'); ?></span><span><?php echo tms_currency($totalAmount); ?></span></div>
+    <?php if ($sandboxOk): ?>
     <form method="POST">
       <?php tms_csrf_field(); ?>
       <button type="submit" class="btn-pay"><i class="fa fa-flask"></i> <?php echo tms_t('label_pay_prefix','Pay'); ?> <?php echo tms_currency($totalAmount); ?> <?php echo tms_t('label_sandbox_suffix','(Sandbox)'); ?></button>
     </form>
+    <?php else: ?>
+    <div class="alert alert-info" style="margin-top:18px;"><?php echo htmlspecialchars(tms_t('msg_online_payment_unavailable', 'Online payment is not available yet. Your booking is saved as Pending and our team will contact you to arrange payment.'), ENT_QUOTES, 'UTF-8'); ?></div>
+    <?php endif; ?>
     <p style="font-size:12px;color:#888;margin-top:14px;text-align:center;"><?php echo tms_t('dest_skip_payment_note', 'You can also skip this — your booking stays Pending and our team can confirm it manually, exactly like before.'); ?></p>
   </div>
   <?php endif; ?>

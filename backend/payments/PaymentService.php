@@ -39,6 +39,27 @@ class PaymentService
         return new SandboxProvider();
     }
 
+    /**
+     * Whether the SANDBOX "Pay" button may actually mark a booking as paid.
+     *
+     * The sandbox never moves money, so on a public site it would let anyone
+     * confirm a booking for free. It is therefore allowed only when:
+     *   - TMS_ALLOW_SANDBOX_PAYMENTS is explicitly true in .env, or
+     *   - the request comes from this machine itself (REMOTE_ADDR is loopback
+     *     and no X-Forwarded-For header is present, i.e. not via a proxy).
+     * REMOTE_ADDR is set by the web server and cannot be spoofed by the client
+     * (unlike the Host header, which is deliberately NOT used here).
+     */
+    public static function sandboxAllowed(): bool
+    {
+        $flag = strtolower(trim((string)tms_env('TMS_ALLOW_SANDBOX_PAYMENTS', '')));
+        if ($flag !== '') {
+            return in_array($flag, ['1', 'true', 'yes', 'on'], true);
+        }
+        $ip = (string)($_SERVER['REMOTE_ADDR'] ?? '');
+        return in_array($ip, ['127.0.0.1', '::1'], true) && empty($_SERVER['HTTP_X_FORWARDED_FOR']);
+    }
+
     /** ৳ (or any currency) float amount -> integer minor units, the only
      *  representation tblpayments.AmountMinor accepts (Rule 8). */
     public static function toMinorUnits(float $amount): int
@@ -108,6 +129,9 @@ class PaymentService
         $stmt->execute([':id' => $paymentId]);
         $payment = $stmt->fetch(PDO::FETCH_ASSOC);
 
+        if (!self::sandboxAllowed()) {
+            return false; // sandbox cannot confirm payments on a public site
+        }
         if (!$payment || $payment['Provider'] !== 'sandbox') {
             return false;
         }
@@ -121,6 +145,16 @@ class PaymentService
 
         $this->dbh->beginTransaction();
         try {
+            // Lock the booking row and refuse to touch a cancelled booking:
+            // without this, paying a cancelled booking set status=1 and
+            // silently resurrected it.
+            $lock = $this->dbh->prepare("SELECT status FROM tblbooking WHERE BookingId = :bid FOR UPDATE");
+            $lock->execute([':bid' => $payment['BookingId']]);
+            $bStatus = $lock->fetchColumn();
+            if ($bStatus === false || (int)$bStatus === 2) {
+                $this->dbh->rollBack();
+                return false;
+            }
             $this->dbh->prepare("UPDATE tblpayments SET Status='paid', RawResponse=:raw WHERE PaymentId=:id")
                 ->execute([':id' => $paymentId, ':raw' => json_encode(['confirmed_at' => date('c'), 'mode' => 'sandbox'])]);
             $this->dbh->prepare("UPDATE tblbooking SET PaymentStatus='paid', status=1 WHERE BookingId=:bid")
