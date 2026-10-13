@@ -9,7 +9,7 @@
  * print dialog (window.print() -> "Save as PDF" destination), which every
  * modern browser supports natively and reliably, with zero new dependencies.
  */
-session_start();
+require_once __DIR__ . '/../backend/session-boot.php';
 error_reporting(E_ALL); ini_set('display_errors', '0'); ini_set('log_errors', '1');
 include('backend/config.php');
 tms_require_user();

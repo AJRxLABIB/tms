@@ -16,7 +16,7 @@
  * project's existing tblactivity_log audit trail via tms_log_activity()
  * (Rule 47), viewable at admin/activity-log.php.
  */
-session_start();
+require_once __DIR__ . '/../backend/session-boot.php';
 error_reporting(E_ALL); ini_set('display_errors', '0'); ini_set('log_errors', '1');
 include('backend/config.php');
 require_once('backend/wallet-crypto.php');

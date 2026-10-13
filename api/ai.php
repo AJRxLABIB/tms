@@ -23,7 +23,7 @@
  *   POST /api/ai.php?action=weather_replan_apply    (Round 115, item 12)
  */
 
-session_start();
+require_once __DIR__ . '/../backend/session-boot.php';
 require_once dirname(__DIR__) . '/backend/config.php';
 require_once dirname(__DIR__) . '/backend/ai/AIClient.php';
 require_once dirname(__DIR__) . '/backend/ai/TravelRecommender.php';

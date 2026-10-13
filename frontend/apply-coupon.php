@@ -10,7 +10,7 @@
  * old UI would have needed to call this. Left in place, unchanged, in case
  * anything external depends on it — but nothing in this codebase calls it.
  */
-session_start();
+require_once __DIR__ . '/../backend/session-boot.php';
 error_reporting(E_ALL); ini_set('display_errors', '0'); ini_set('log_errors', '1');
 include('backend/config.php');
 header('Content-Type: application/json');

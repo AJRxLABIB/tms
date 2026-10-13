@@ -55,7 +55,7 @@
  * tms_api_rate_limit_check() below.
  */
 
-session_start();
+require_once __DIR__ . '/../backend/session-boot.php';
 require_once dirname(__DIR__) . '/backend/config.php';
 require_once dirname(__DIR__) . '/backend/services/TripReadinessScore.php';
 require_once dirname(__DIR__) . '/backend/ai/ExpenseAnalyst.php';

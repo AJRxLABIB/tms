@@ -4,7 +4,7 @@
  * Returns an HTML snippet shown inline in the signup form.
  * Now validates CSRF and uses tms_validate_email().
  */
-session_start();
+require_once __DIR__ . '/../backend/session-boot.php';
 require_once 'backend/config.php';
 
 // Only accept POST

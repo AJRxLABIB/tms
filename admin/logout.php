@@ -1,5 +1,5 @@
 <?php
-session_start();
+require_once __DIR__ . '/../backend/session-boot.php';
 
 // Audit log coverage (Round 52): admin/index.php already logs every
 // 'Admin Login' (and failed login/2FA attempt), so a session ending with no

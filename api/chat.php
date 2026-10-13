@@ -17,7 +17,7 @@
  *   GET  ?action=threads                     (admin only — list all customer threads)
  */
 
-session_start();
+require_once __DIR__ . '/../backend/session-boot.php';
 require_once dirname(__DIR__) . '/backend/config.php';
 
 header('Content-Type: application/json; charset=utf-8');

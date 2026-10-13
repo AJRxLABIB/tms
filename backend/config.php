@@ -382,6 +382,30 @@ function tms_ensure_columns(PDO $dbh, string $table, array $colDefs): void {
 }
 
 /**
+ * Widens a text column that an old schema made too narrow. Never shrinks, never touches data.
+ * Real defect this fixes: tms.sql created tblusers.MobileNumber as CHAR(10) and EmailId as VARCHAR(70), but
+ * Bangladeshi mobile numbers have 11 digits, so on strict-mode MySQL/MariaDB (the XAMPP default) signup died with
+ * "Data too long" (HTTP 500). tblenquiry.MobileNumber had the same problem.
+ * @param array<string,array{0:int,1:string}> $cols column => [minimum length, full column definition]
+ */
+function tms_widen_columns(PDO $dbh, string $table, array $cols): void {
+    try {
+        $st = $dbh->prepare("SELECT COLUMN_NAME, CHARACTER_MAXIMUM_LENGTH FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ?");
+        $st->execute([$table]);
+        $have = [];
+        foreach ($st->fetchAll(PDO::FETCH_NUM) as [$n, $len]) $have[strtolower($n)] = $len === null ? null : (int)$len;
+    } catch (Exception $e) { error_log("[TMS Schema] Could not inspect `$table`: " . $e->getMessage()); return; }
+    foreach ($cols as $col => [$min, $def]) {
+        $len = $have[strtolower($col)] ?? null;
+        if ($len === null || $len >= $min) continue;
+        try {
+            $dbh->exec("ALTER TABLE `$table` MODIFY COLUMN $def");
+            error_log("[TMS Schema] Widened `$table`.`$col` from $len to $min+ characters.");
+        } catch (Exception $e) { error_log("[TMS Schema] FAILED widening `$table`.`$col`: " . $e->getMessage()); }
+    }
+}
+
+/**
  * Repairs the specific "phantom column" drift discovered in the July 2026
  * audit: tables that pre-existed from tms.sql (with a narrower schema) so
  * later `CREATE TABLE IF NOT EXISTS` calls with more columns silently never
@@ -846,6 +870,12 @@ function _tms_repair_schema_drift(PDO $dbh): void {
         'TwoFASecret'  => 'TwoFASecret VARCHAR(64) DEFAULT NULL',
         'TwoFAEnabled' => 'TwoFAEnabled TINYINT(1) DEFAULT 0',
     ]);
+    tms_widen_columns($dbh, 'tblusers', [
+        'MobileNumber' => [20, 'MobileNumber VARCHAR(20) DEFAULT NULL'],
+        'EmailId'      => [100, 'EmailId VARCHAR(100) DEFAULT NULL'],
+        'Password'     => [255, 'Password VARCHAR(255) DEFAULT NULL'],
+    ]);
+    tms_widen_columns($dbh, 'tblenquiry', ['MobileNumber' => [20, 'MobileNumber VARCHAR(20) DEFAULT NULL']]);
     try {
         $dbh->exec("UPDATE admin SET Role='superadmin' WHERE Role IS NULL OR Role=''");
     } catch (Exception $e) { /* column may not exist yet on first-ever run — fine, next request repairs it */ }

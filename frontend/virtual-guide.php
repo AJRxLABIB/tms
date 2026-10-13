@@ -3,7 +3,7 @@
  * virtual-guide.php — AI Virtual Tour Guide
  * Users can ask any question about any destination and get expert local knowledge.
  */
-session_start();
+require_once __DIR__ . '/../backend/session-boot.php';
 error_reporting(E_ALL); ini_set('display_errors', '0'); ini_set('log_errors', '1');
 include('backend/config.php');
 // LIVE BUG FIX (customer-facing audit): this page is real browsing/

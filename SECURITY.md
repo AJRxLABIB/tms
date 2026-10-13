@@ -96,6 +96,22 @@ without having tested it).
   protection now has it, would be scope beyond what's broken today (Rule
   73) — revisit if real abuse is ever observed in logs.
 
+## Hardening in place (verified in a PHP 8.3 + MariaDB test copy; not yet on Apache/XAMPP)
+
+- Sessions start through `backend/session-boot.php`: HttpOnly, SameSite=Lax, Secure on HTTPS, strict mode (the server
+  refuses a session id chosen by the client, which blocks session fixation).
+- `uploads/.htaccess` and `admin/pacakgeimages/.htaccess` stop script files (php, phtml, phar, py, sh, ...) from
+  executing if one ever lands there. These only work where Apache honours `.htaccess` (`AllowOverride All`); on
+  nginx/IIS add the equivalent rule. Uploads are also signature-checked in PHP.
+- Wallet documents are served only by `wallet-document.php` after an ownership check.
+- `tests/security/run.php <base-url>` exercises real HTTP: cross-account access (IDOR), wallet, group-trip, pay-now,
+  CSRF, admin/supplier gating, open-redirect probes and cookie flags. It creates and removes its own test accounts.
+- Registration used to fail (HTTP 500) for mobile numbers over 10 characters because of a narrow column; `config.php`
+  now widens it additively (never narrows or deletes).
+
+Not done yet: exact-decimal money columns, payment webhook idempotency audit, security event logging, document
+retention/consent rules.
+
 ## If you find a real vulnerability
 
 Rotate any exposed credential immediately at its provider (don't wait for a

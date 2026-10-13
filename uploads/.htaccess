@@ -1,0 +1,12 @@
+# Defense in depth: nothing uploaded by a user may ever run as a script, even if a bad file got through validation.
+# Subfolders inherit this. uploads/wallet/ additionally denies ALL direct access (see its own .htaccess).
+<FilesMatch "(?i)\.(php[0-9s]?|phtml|phar|pl|py|cgi|sh|exe)$">
+    <IfModule mod_authz_core.c>
+        Require all denied
+    </IfModule>
+    <IfModule !mod_authz_core.c>
+        Order allow,deny
+        Deny from all
+    </IfModule>
+</FilesMatch>
+Options -ExecCGI

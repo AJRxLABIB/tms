@@ -2,7 +2,7 @@
 /**
  * ai-copilot.php — Trip Copilot: 24/7 AI Travel Companion
  */
-session_start();
+require_once __DIR__ . '/../backend/session-boot.php';
 error_reporting(E_ALL); ini_set('display_errors', '0'); ini_set('log_errors', '1');
 include('backend/config.php');
 tms_require_user();

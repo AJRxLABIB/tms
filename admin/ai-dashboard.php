@@ -3,7 +3,7 @@
  * admin/ai-dashboard.php — AI Analytics & Monitoring Dashboard
  * Admin-only view of AI system health, usage, insights, and fraud flags.
  */
-session_start();
+require_once __DIR__ . '/../backend/session-boot.php';
 error_reporting(E_ALL); ini_set('display_errors', '0'); ini_set('log_errors', '1');
 include('../backend/config.php');
 tms_require_admin();

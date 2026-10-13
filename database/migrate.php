@@ -51,9 +51,27 @@ $statusOnly = in_array('--status', $argv ?? [], true) || isset($_GET['status']);
 
 function tms_migration_error_is_benign(PDOException $e): bool
 {
-    $benignCodes = ['1050', '1060', '1061', '1091'];
-    $sqlState = $e->errorInfo[1] ?? null;
-    return $sqlState !== null && in_array((string)$sqlState, $benignCodes, true);
+    // 1826/3822 = duplicate FOREIGN KEY / CHECK constraint name; 1005 + "errno: 121" is MariaDB's way of
+    // reporting the same thing (the constraint is already there from an earlier, partly-applied run).
+    $benignCodes = ['1050', '1060', '1061', '1091', '1826', '3822'];
+    $code = $e->errorInfo[1] ?? null;
+    if ($code !== null && in_array((string)$code, $benignCodes, true)) {
+        return true;
+    }
+    return (string)$code === '1005' && strpos((string)($e->errorInfo[2] ?? ''), 'errno: 121') !== false;
+}
+
+/**
+ * A constraint (FOREIGN KEY / CHECK) that cannot be added because EXISTING rows already violate it (error 1452,
+ * 3819, 4025). We never delete or edit customer data to make a constraint fit, so this is "deferred": reported
+ * loudly, the migration is NOT recorded as applied (so the next run retries it once the data is fixed), and the
+ * remaining statements and later migrations still run. Previously this stopped the whole chain, which left later
+ * migrations (for example the API refresh-token table) unapplied and the REST login returning HTTP 500.
+ */
+function tms_migration_error_is_deferrable_constraint(PDOException $e, string $stmt): bool
+{
+    $code = (string)($e->errorInfo[1] ?? '');
+    return in_array($code, ['1452', '3819', '4025'], true) && (bool)preg_match('/\bADD\s+(CONSTRAINT|FOREIGN\s+KEY|CHECK)\b/i', $stmt);
 }
 
 function tms_split_sql_statements(string $sql): array
@@ -106,6 +124,7 @@ $appliedStmt = $dbh->prepare("SELECT 1 FROM tblmigrations WHERE migration = :m")
 $recordStmt = $dbh->prepare("INSERT INTO tblmigrations(migration, checksum) VALUES(:m, :c)");
 
 $pendingCount = 0;
+$deferred = [];
 foreach ($files as $file) {
     $name = basename($file);
     $appliedStmt->execute([':m' => $name]);
@@ -126,6 +145,7 @@ foreach ($files as $file) {
     $statements = tms_split_sql_statements($sql);
     $okCount = 0;
     $warnCount = 0;
+    $deferredHere = 0;
     foreach ($statements as $stmt) {
         if ($stmt === '') continue;
         try {
@@ -135,11 +155,19 @@ foreach ($files as $file) {
             if (tms_migration_error_is_benign($e)) {
                 $warnCount++;
                 echo "    (already applied) " . substr(preg_replace('/\s+/', ' ', $stmt), 0, 80) . "...\n";
+            } elseif (tms_migration_error_is_deferrable_constraint($e, $stmt)) {
+                $deferredHere++;
+                $deferred[] = $name . ': ' . substr(preg_replace('/\s+/', ' ', $stmt), 0, 140);
+                echo "    DEFERRED (existing rows violate this constraint; no data was changed): " . substr(preg_replace('/\s+/', ' ', $stmt), 0, 140) . "\n";
             } else {
                 echo "    FAILED: " . $e->getMessage() . "\n    Statement: " . substr($stmt, 0, 200) . "\n";
                 die("\nMigration {$name} failed on a non-benign error. Stopping here so later migrations don't run against an inconsistent schema. Fix the issue above and re-run.\n");
             }
         }
+    }
+    if ($deferredHere > 0) {
+        echo "    -> NOT recorded as applied: {$deferredHere} constraint(s) deferred ({$okCount} statement(s) run, {$warnCount} already present). It will be retried on the next run.\n";
+        continue;
     }
     $recordStmt->execute([':m' => $name, ':c' => hash('sha256', $sql)]);
     echo "    -> recorded as applied ({$okCount} statement(s) run, {$warnCount} already present)\n";
@@ -152,4 +180,9 @@ if ($pendingCount === 0) {
 } else {
     echo "\nDone.\n";
 }
+if ($deferred) {
+    echo "\nWARNING: " . count($deferred) . " constraint(s) could not be added because existing data violates them:\n  - " . implode("\n  - ", $deferred) . "\n"
+       . "Find the offending rows (for example: SELECT child.* FROM child LEFT JOIN parent ON ... WHERE parent.key IS NULL), fix or remove them yourself, then re-run this script.\n";
+}
 echo ($isCli ? "" : "</pre>");
+if ($isCli && $deferred) exit(2);

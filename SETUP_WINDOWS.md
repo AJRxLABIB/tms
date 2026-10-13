@@ -23,7 +23,13 @@ Without changing PATH you can always run `D:\XAMPP\php\php.exe tools\create-admi
 3. Import `database\legacy-sql\v6_migration.sql` the same way.
    (Or in PowerShell from the project folder:
    `cmd /c "mysql -u root tms < database\legacy-sql\tms.sql"` then the same for `v6_migration.sql`.)
-The app creates the remaining tables itself the first time it runs (AI, Explore, payments, suppliers, notices, ...).
+The app creates many remaining tables itself the first time it runs (AI, Explore, payments, suppliers, notices, ...),
+but a few (for example the API token tables) come from tracked migrations. Run them once, and again after every update:
+
+    php database\migrate.php
+
+If it prints a WARNING about constraints, your old data has orphaned rows (e.g. reviews for a deleted user). Nothing is
+deleted for you; fix those rows and re-run.
 
 ## 4. Configure `.env` (project root; already open in your editor)
 The defaults match a fresh XAMPP, so you can leave the `DB_*` lines **empty**: user `root`, no password, database `tms`.
@@ -77,6 +83,8 @@ Admin -> AI Safety & Evaluation runs the built-in checks. Never expose port 1143
     php tests\payments\run.php
     php tests\suppliers\run.php
     php tests\notices\run.php
+    php tests\security\run.php http://localhost/tms
+    php tests\run.php
 
 ## Common problems
 | Symptom | Fix |
