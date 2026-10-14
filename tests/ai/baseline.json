@@ -1,0 +1,5 @@
+{
+  "min_cases": 63,
+  "min_pass": 63,
+  "note": "Regression gate for tests/ai/run_eval.php. The case count may only go up: deleting a failing case would otherwise hide a regression. Raise with: php tests/ai/run_eval.php --update-baseline (only succeeds when everything passes)."
+}

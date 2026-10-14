@@ -177,6 +177,8 @@ if ($activeProviderName === 'openai') {
 // Read-only; never shows keys or request contents.
 $chainNames = array_values(array_unique(array_filter(array_merge([$activeProviderName], array_map('trim', explode(',', defined('AI_FALLBACK_PROVIDERS') ? (string)AI_FALLBACK_PROVIDERS : ''))))));
 $providerHealth = ProviderHealth::snapshot($dbh, $chainNames);
+require_once dirname(__DIR__) . '/backend/ai/AITurnLog.php';
+$turnStats = AITurnLog::summary($dbh, 7);
 $providerStats = [];
 try {
     foreach ($dbh->query("SELECT provider, COUNT(*) calls, SUM(success) ok, AVG(latency_ms) avg_ms, SUM(CASE WHEN error_message LIKE '%circuit_open%' THEN 1 ELSE 0 END) skipped
@@ -546,6 +548,30 @@ html[data-theme="dark"] [style*="background:#fff"], html[data-theme="dark"] [sty
         </tbody>
       </table>
       <p class="hp-note" style="font-size:12px;margin:10px 0 0;">Fallbacks are off unless <code>AI_FALLBACK_PROVIDERS</code> is set. A cloud fallback needs <code>AI_FALLBACK_ALLOW_EXTERNAL=1</code> (conversation text would be sent to that vendor). "Open" means the provider is being skipped until the retry time.</p>
+    </div>
+  </div>
+
+  <div class="panel" style="margin-bottom:20px;">
+    <div class="panel-header"><div class="panel-title"><i class="fa fa-stethoscope"></i> Assistant quality signals (last 7 days)</div></div>
+    <div class="panel-body">
+      <?php if ($turnStats === null || (int)$turnStats['turns'] === 0): ?>
+        <p class="hp-note" style="margin:0;font-size:13px;">No assistant turns recorded yet<?= $turnStats === null ? ' (turn log unavailable)' : '' ?>. Figures appear after visitors use the chat assistant.</p>
+      <?php else: $T = $turnStats; $n = max(1, (int)$T['answered']); $pc = fn($x, $d) => $d > 0 ? round(100 * $x / $d) . '%' : '—'; ?>
+      <table class="ai-table">
+        <caption class="sr-only">Counts per assistant turn, no message text stored</caption>
+        <thead><tr><th scope="col">Measure</th><th scope="col">Value</th><th scope="col">What it means</th></tr></thead>
+        <tbody>
+          <tr><td>Turns</td><td><?= (int)$T['turns'] ?></td><td>Answered <?= (int)$T['answered'] ?>, blocked by the safety guard <?= (int)$T['blocked'] ?>, memory commands <?= (int)$T['memcmd'] ?>, model errors <?= (int)$T['errors'] ?></td></tr>
+          <tr><td>Answers with an unverified price</td><td><?= (int)$T['unverified'] ?> (<?= $pc($T['unverified'], $n) ?>)</td><td>The model quoted a price not found in the catalogue data; a caution line was shown. Should stay near zero.</td></tr>
+          <tr><td>Multi-step answers</td><td><?= (int)$T['multistep'] ?> (<?= $pc($T['multistep'], $n) ?>)</td><td>Average <?= number_format((float)$T['avg_steps'], 2) ?> tool steps per answer; stopped early by a limit: <?= (int)$T['stopped_early'] ?></td></tr>
+          <tr><td>Turns with a failed tool call</td><td><?= (int)$T['tool_err'] ?></td><td>A tool was unavailable or got invalid input</td></tr>
+          <tr><td>Answers showing sources</td><td><?= (int)$T['with_sources'] ?> (<?= $pc($T['with_sources'], $n) ?>)</td><td>Invented citation markers removed: <?= (int)$T['markers'] ?></td></tr>
+          <tr><td>Bengali turns</td><td><?= (int)$T['bn'] ?> (<?= $pc($T['bn'], $T['turns']) ?>)</td><td>Signed-in <?= $pc($T['signed'], $T['turns']) ?>; used saved memory in <?= (int)$T['used_memory'] ?> turn(s)</td></tr>
+          <tr><td>Tools used</td><td colspan="2"><?php $tl = []; foreach ($T['tools'] as $tn => $c) $tl[] = htmlspecialchars($tn) . ' ' . (int)$c; echo $tl ? implode(' &middot; ', $tl) : '—'; ?></td></tr>
+        </tbody>
+      </table>
+      <p class="hp-note" style="font-size:12px;margin:10px 0 0;">Counts only: no message text, email or user id is stored, and rows are deleted after 90 days. These figures show how the engine behaved, not whether answers were good.</p>
+      <?php endif; ?>
     </div>
   </div>
 

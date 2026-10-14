@@ -44,9 +44,15 @@ provider calls (Gemini / OpenAI / Ollama) have NOT been tested; the sandbox had 
 
 `CitationVerifier` checks each assistant answer in code against the tool results: money figures (next to ৳/Tk/BDT/taka/টাকা, Bangla digits understood) must appear in the retrieved facts or in what the user wrote (a whole multiple x2..x20 of a verified price is accepted as group arithmetic). An unverifiable figure gets a plain caution line (English or Bangla); the answer is not rewritten or regenerated. Invented `[pkg:N]` markers are stripped. The chat widget shows "Sources" links, taken only from retrieved citations whose title the answer names. Limits: it checks numbers and source existence, not whether prose claims are true, and a model that mentions a price without a currency marker is not checked. Unverified/removed counts go to the PHP error log only; there is no analytics table yet.
 
+## 3d. Stage 4 delivered: analytics and an evaluation regression gate
+
+- `AITurnLog` (`tbl_ai_turn_log`): one anonymous row per assistant turn: outcome, language, step and follow-up counts, tool names, stop reason, unverified-price and removed-marker counts, sources shown, memory items used, provider. It stores no message text, email or user id, is best-effort (a storage failure never affects a reply) and is pruned after 90 days. The admin AI dashboard has an "Assistant quality signals (last 7 days)" panel built on it.
+- `tests/ai/baseline.json` + `run_eval.php`: CI now fails if the eval suite has fewer cases or fewer passes than the recorded baseline, so a failing case cannot be hidden by deleting it. `php tests/ai/run_eval.php --update-baseline` raises it, and only when everything passes. The gate was proven to fail by removing a case.
+- Limits: these figures describe engine behaviour (how often tools, verification and limits fire), not answer quality. Quality needs a labelled set run against a real model, which does not exist yet.
+
 ## 4. Verification actually run (sandbox: PHP 8.3, MariaDB, stubbed HTTP transport)
 
-engine 103/103, resilience 27/27, memory HTTP 18/18, eval 63/63, rerank 11/11, Ollama unit, autopilot 40/40 + 19/19, payments 18/18, suppliers 72/72, notices 32/32, security 26/26, `tests/run.php` 20/20, e2e 14/14. axe WCAG A/AA clean on `ai-memory.php` (desktop/mobile, light/dark) and the dashboard panel (light/dark).
+engine 110/110, resilience 27/27, memory HTTP 18/18, eval 63/63, rerank 11/11, Ollama unit, autopilot 40/40 + 19/19, payments 18/18, suppliers 72/72, notices 32/32, security 26/26, `tests/run.php` 20/20, e2e 14/14. axe WCAG A/AA clean on `ai-memory.php` (desktop/mobile, light/dark) and the dashboard panel (light/dark).
 
 ## 5. NOT verified
 
@@ -54,7 +60,7 @@ Real provider calls and answer quality; failover against a real outage; Apache/X
 
 ## 6. Not implemented yet (do not assume these exist)
 
-LLM-driven planning and multi-step tasks beyond the two rule-based follow-ups above; persistent embeddings with hybrid fusion; weather-aware replanning beyond Autopilot; routing/geographic intelligence; booking-preparation tools; multimodal/OCR; per-task model routing; cache isolation measurement; richer admin control centre; evaluation trend tracking with regression gating; analytics; conversation-summary memory (deliberately omitted).
+LLM-driven planning and multi-step tasks beyond the two rule-based follow-ups above; persistent embeddings with hybrid fusion; weather-aware replanning beyond Autopilot; routing/geographic intelligence; booking-preparation tools; multimodal/OCR; per-task model routing; cache isolation measurement; richer admin control centre; trend charts over time; conversation-summary memory (deliberately omitted).
 
 ## 7. Rollback
 

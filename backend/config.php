@@ -268,9 +268,9 @@ if (!in_array(strtolower((string)tms_env('TMS_FORCE_SCHEMA_CHECK', '')), ['1', '
     } catch (Throwable $e) { $tmsSchemaOk = false; } // table not created yet
 }
 if ($tmsSchemaOk) {
-    foreach (['tms_db_init', 'tms_ai_tables', 'tms_explore_tables', 'tms_api_tables', 'tms_marketplace_tables', 'tms_supplier_tables', 'tms_notice_tables', 'tms_autopilot_tables', 'tms_memory_tables'] as $_k) { $_SESSION[$_k] = true; }
+    foreach (['tms_db_init', 'tms_ai_tables', 'tms_explore_tables', 'tms_api_tables', 'tms_marketplace_tables', 'tms_supplier_tables', 'tms_notice_tables', 'tms_autopilot_tables', 'tms_memory_tables', 'tms_turnlog_tables'] as $_k) { $_SESSION[$_k] = true; }
 } else {
-    foreach (['tms_db_init', 'tms_ai_tables', 'tms_explore_tables', 'tms_api_tables', 'tms_marketplace_tables', 'tms_supplier_tables', 'tms_notice_tables', 'tms_autopilot_tables', 'tms_memory_tables'] as $_k) { unset($_SESSION[$_k]); }
+    foreach (['tms_db_init', 'tms_ai_tables', 'tms_explore_tables', 'tms_api_tables', 'tms_marketplace_tables', 'tms_supplier_tables', 'tms_notice_tables', 'tms_autopilot_tables', 'tms_memory_tables', 'tms_turnlog_tables'] as $_k) { unset($_SESSION[$_k]); }
 }
 
 // ─── Core table setup (CREATE TABLE IF NOT EXISTS calls — safe/idempotent,
@@ -325,6 +325,12 @@ if (empty($_SESSION['tms_memory_tables'])) {
     require_once __DIR__ . '/ai/TravelMemory.php';
     TravelMemory::migrate($dbh);
     $_SESSION['tms_memory_tables'] = true;
+}
+// Anonymous per-turn assistant metrics (see backend/ai/AITurnLog.php).
+if (empty($_SESSION['tms_turnlog_tables'])) {
+    require_once __DIR__ . '/ai/AITurnLog.php';
+    AITurnLog::migrate($dbh);
+    $_SESSION['tms_turnlog_tables'] = true;
 }
 
 // ─── Schema-drift repair (NOT session-gated — see note below) ─────────────────
