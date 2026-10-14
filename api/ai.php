@@ -299,7 +299,7 @@ function handleChatbot(PDO $dbh, string $email): void {
     // widget can offer them instead of always showing the same 4 static
     // buttons. Empty array is a completely normal result (nothing sensible
     // followed on) and the widget already falls back to its own defaults.
-    apiSuccess(['reply' => $result['reply'], 'suggestions' => $result['suggestions'] ?? []]);
+    apiSuccess(['reply' => $result['reply'], 'suggestions' => $result['suggestions'] ?? [], 'sources' => $result['sources'] ?? []]);
 }
 
 function handleTrackQuickReply(PDO $dbh): void {

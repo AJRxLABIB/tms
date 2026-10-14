@@ -132,6 +132,8 @@
 .msg-bot .msg-bubble { background:#fff; color:#333; box-shadow:0 1px 5px rgba(0,0,0,0.08); border-radius:0 12px 12px 12px; }
 .msg-user .msg-bubble { background:linear-gradient(135deg,#176B50,#104B3A); color:#fff; border-radius:12px 0 12px 12px; }
 .msg-time { font-size:10px; color:#aaa; margin-top:3px; }
+.msg-sources { font-size:12px; color:#4a5568; margin-top:4px; }
+.msg-sources a { color:#0b5cab; text-decoration:underline; }
 .msg-bot .msg-time { text-align:left; }
 .msg-user .msg-time { text-align:right; }
 .bot-name { font-size:11px; color:#176B50; font-weight:700; margin-bottom:3px; }
@@ -372,7 +374,7 @@ function chatFormat(text) {
         );
 }
 
-function addMessage(type, text, quickReplies) {
+function addMessage(type, text, quickReplies, sources) {
     var msgs = document.getElementById('tmsWidgetChatMessages');
     var div = document.createElement('div');
     div.className = 'msg msg-' + type;
@@ -382,6 +384,12 @@ function addMessage(type, text, quickReplies) {
     var html = (type === 'bot' ? '<div class="bot-name">🤖 TMS Assistant</div>' : '') +
         '<div class="msg-bubble">' + chatFormat(text) + '</div>' +
         '<div class="msg-time">' + time + '</div>';
+
+    // Sources come from the server's verified citations (real published packages only); same-site relative links only.
+    var srcLinks = (sources || []).filter(function (x) { return x && /^package-details\.php\?pkgid=\d+$/.test(x.url); }).map(function (x) {
+        return '<a href="' + chatEscape(x.url) + '">' + chatEscape(x.title) + '</a>';
+    });
+    if (srcLinks.length) html += '<div class="msg-sources">Sources: ' + srcLinks.join(' &middot; ') + '</div>';
 
     if(quickReplies && quickReplies.length > 0) {
         html += '<div class="quick-replies">';
@@ -485,7 +493,7 @@ function askAI(text) {
             // respondTo() below can offer THOSE instead of the same fixed 4
             // buttons after every message. An empty/missing array here is
             // normal (no natural follow-up) and falls back to the defaults.
-            return { ok: true, text: data.data.reply, suggestions: Array.isArray(data.data.suggestions) ? data.data.suggestions : [] };
+            return { ok: true, text: data.data.reply, suggestions: Array.isArray(data.data.suggestions) ? data.data.suggestions : [], sources: Array.isArray(data.data.sources) ? data.data.sources : [] };
         }
         // Keep the reason. It used to be discarded, so "the AI is switched off",
         // "you've hit the rate limit" and "the network is down" were all
@@ -518,7 +526,7 @@ function respondTo(text, appendUserTurn, matchText) {
             // (a page-navigation quick-reply row is still better than none).
             var qr = (result.suggestions && result.suggestions.length) ? result.suggestions
                    : ['Show Packages','AI Recommender','Budget Planner','Contact Us'];
-            addMessage('bot', result.text, qr);
+            addMessage('bot', result.text, qr, result.sources);
             speakChatReply(result.text);
             return;
         }

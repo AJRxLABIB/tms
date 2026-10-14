@@ -183,6 +183,47 @@ $ob = ToolRouter::run($reg2, ToolRouter::plan('how much for 2 people? tea', []),
 t('avoid list also stops a follow-up budget from being built on a hidden package', !array_filter($ob['trace'], fn($x) => $x['tool'] === 'calculate_trip_budget'));
 t('follow-ups are read-only tools only', (function () use ($reg2) { foreach (['how much for 2 people visa safe'] as $m) { $o = ToolRouter::run($reg2, ToolRouter::plan($m, []), [], [], $m); foreach ($o['trace'] as $x) if (!preg_match('/^(search_|get_|calculate_|my_)/', $x['tool'])) return false; } return true; })());
 
+// ── CitationVerifier ──
+require_once 'backend/ai/CitationVerifier.php';
+$cites = [['id' => 'pkg:7', 'title' => 'Sylhet Tea Weekend', 'url' => 'package-details.php?pkgid=7']];
+$facts = 'search_packages: [{"id":7,"title":"Sylhet Tea Weekend","price_bdt":12000}]';
+$v = CitationVerifier::verify('Sylhet Tea Weekend costs ৳12,000 per person.', $facts, $cites, '');
+t('verify: a price that is in the facts passes untouched', $v['unverified_amounts'] === [] && !str_contains($v['reply'], 'Note:') && $v['sources'][0]['url'] === 'package-details.php?pkgid=7');
+$v = CitationVerifier::verify('It costs 9,500 Tk per person.', $facts, $cites, '');
+t('verify: an invented price is flagged and a caution is appended (answer not rewritten)', $v['unverified_amounts'] === [9500] && str_contains($v['reply'], 'could not be verified') && str_contains($v['reply'], '9,500'));
+$v = CitationVerifier::verify('৯৫০০ টাকা লাগবে', $facts, $cites, '', 'bn');
+t('verify: Bangla digits and Bangla caution', $v['unverified_amounts'] === [9500] && str_contains($v['reply'], 'যাচাই'));
+$v = CitationVerifier::verify('For 3 people that is about ৳36,000 in total.', $facts, $cites, '');
+t('verify: small multiple of a verified price (per person -> group) is accepted', $v['unverified_amounts'] === []);
+$v = CitationVerifier::verify('Your 30k budget is fine; costs ৳30,000.', $facts, $cites, 'my budget is 30k');
+t('verify: amounts the user wrote themselves count as grounded', $v['unverified_amounts'] === []);
+$v = CitationVerifier::verify('Book by 2027 for room 4521, call 01711223344.', $facts, $cites, '');
+t('verify: numbers without a currency marker (years, rooms, phones) are not treated as prices', $v['unverified_amounts'] === [] && $v['checked'] === 0);
+$v = CitationVerifier::verify('Great choice [pkg:7] and also [pkg:99].', $facts, $cites, '');
+t('verify: invented citation marker removed, no marker left in text', $v['removed_markers'] === 1 && !str_contains($v['reply'], '[pkg:'));
+$v = CitationVerifier::verify('Try the Bandarban Hills trip.', $facts, $cites, '');
+t('verify: sources only for retrieved packages the answer actually names', $v['sources'] === []);
+$v = CitationVerifier::verify('Prices are ৳500 off.', '', [], '');
+t('verify: no facts at all -> price flagged (cannot be grounded)', $v['unverified_amounts'] === [500]);
+
+// end to end through the assistant with a stubbed model that lies about a price
+$say = '';
+$ai3 = new AIClient($dbh, null, new GeminiProvider('k', 'm')); $ai3->setProviderChain([new GeminiProvider('k', 'm')]);
+$ai3->setTransport(function ($req, $p, $to) use (&$say) { return [200, json_encode(['candidates' => [['content' => ['parts' => [['text' => json_encode(['reply' => $say, 'suggestions' => []])]]]]]]), null]; });
+$asst3 = new SiteAssistant($dbh, $ai3);
+$real = KnowledgeIndex::fromDb($dbh)->search('beach', 1, []);
+if ($real) {
+    $title = $real[0]['meta']['title']; $price = (int)$real[0]['meta']['price'];
+    $say = $title . ' is available for ৳' . $price . ' per person.';
+    $dbh->exec("DELETE FROM tbl_ai_usage_log WHERE user_email='guest'");
+    $r = $asst3->reply('show me a beach package', [], 'guest', '', 'en');
+    t('assistant e2e: true price passes, source link is a real package', $r['success'] && !str_contains($r['reply'], 'could not be verified') && ($r['sources'][0]['url'] ?? '') === $real[0]['citation']['url']);
+    $say = $title . ' is available for ৳' . ($price + 1234) . ' per person.';
+    $dbh->exec("DELETE FROM tbl_ai_usage_log WHERE user_email='guest'");
+    $r = $asst3->reply('show me a beach package', [], 'guest', '', 'en');
+    t('assistant e2e: a wrong price from the model is caught', str_contains($r['reply'], 'could not be verified'));
+} else { t('assistant e2e skipped: no published beach package in the test DB', true); }
+
 $clean(); foreach ([$A, $B] as $e) $dbh->prepare('DELETE FROM tblusers WHERE EmailId=?')->execute([$e]);
 $dbh->exec("DELETE FROM tblusers WHERE EmailId LIKE 'deleted-user-%@deleted.invalid' AND FullName='Deleted User' AND id=$uid");
 $dbh->exec("DELETE FROM tbl_ai_telemetry WHERE user_email IN ('$A','$B','guest') AND feature='site_assistant'");
