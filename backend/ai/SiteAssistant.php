@@ -60,7 +60,7 @@ class SiteAssistant {
         if ($guard['block']) {
             error_log('[TMS AI guard] blocked flags=' . implode(',', $guard['flags']));
             AITurnLog::record($this->db, ['outcome' => 'guard_blocked', 'signed_in' => $email !== 'guest' && $email !== '', 'language' => $language]);
-            return ['success' => true, 'reply' => InjectionGuard::refusal($language), 'suggestions' => [], 'error' => ''];
+            return ['success' => true, 'reply' => InjectionGuard::refusal($language), 'suggestions' => [], 'error' => '', 'meta' => ['outcome' => 'guard_blocked', 'tools' => [], 'unverified_prices' => 0]];
         }
 
         // Explicit memory commands ("remember ...", "forget ...", "মনে রাখো ...") are handled by code and answered with a fixed
@@ -144,7 +144,8 @@ class SiteAssistant {
         if ($v['unverified_amounts'] || $v['removed_markers']) error_log('[TMS AI verify] unverified=' . json_encode($v['unverified_amounts']) . ' removed_markers=' . $v['removed_markers']);
 
         AITurnLog::record($this->db, ['outcome' => 'answered', 'unverified_prices' => count($v['unverified_amounts']), 'removed_markers' => $v['removed_markers'], 'sources' => count($v['sources'])] + $turn);
-        return ['success' => true, 'reply' => $v['reply'], 'suggestions' => $parsed['suggestions'], 'sources' => $v['sources'], 'error' => ''];
+        return ['success' => true, 'reply' => $v['reply'], 'suggestions' => $parsed['suggestions'], 'sources' => $v['sources'], 'error' => '',
+                'meta' => ['outcome' => 'answered', 'tools' => array_column($runTrace, 'tool'), 'unverified_prices' => count($v['unverified_amounts']), 'stopped' => $runStopped, 'provider' => $this->ai->lastProvider()]];
     }
 
     /**

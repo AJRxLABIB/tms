@@ -7,6 +7,8 @@
 final class AITurnLog
 {
     public const RETENTION_DAYS = 90;
+    /** Set by the quality-eval runner so synthetic questions never reach the production metrics. */
+    public static bool $suppress = false;
     private const OUTCOMES = ['answered', 'guard_blocked', 'memory_command', 'model_error'];
 
     public static function migrate(PDO $dbh): void
@@ -35,7 +37,7 @@ final class AITurnLog
     /** @param array<string,mixed> $d */
     public static function record(?PDO $dbh, array $d): void
     {
-        if (!$dbh) return;
+        if (!$dbh || self::$suppress) return;
         try {
             $trace = is_array($d['trace'] ?? null) ? $d['trace'] : [];
             $tools = implode(',', array_map(fn($x) => preg_replace('/[^a-z_]/', '', (string)($x['tool'] ?? '')), $trace));

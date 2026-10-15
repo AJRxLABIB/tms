@@ -4,7 +4,7 @@
  *   php tests/ai/run_eval.php
  * Fixture packages below are TEST DATA ONLY and never shown to customers.
  * This verifies the retrieval, routing, guard, tool-validation and sanitising
- * layers. It does NOT measure model answer quality — see tests/ai/live_ollama.php.
+ * layers. It does NOT measure model answer quality — see tests/ai/live_quality.php.
  */
 declare(strict_types=1);
 require_once __DIR__ . '/../../backend/ai/SafetyEval.php';

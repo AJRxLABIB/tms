@@ -7,7 +7,7 @@
  * (2) the real tool-call audit trail written by ToolRegistry.
  *
  * What this page does NOT show: answer quality. Measuring that needs a real model
- * (see tests/ai/live_ollama.php and the live suite on ai-dashboard.php).
+ * (see tests/ai/live_quality.php).
  */
 require('includes/config.php');
 tms_require_admin();

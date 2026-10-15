@@ -4,10 +4,12 @@
 # User uploads (documents, wallet files, package images added at runtime)
 uploads/*
 !uploads/.gitkeep
-!uploads/.htaccess
 !uploads/*/.htaccess
 
 # Local/editor noise
 Thumbs.db
 .DS_Store
 *.log
+
+# Live AI quality run outputs (local measurements)
+tests/ai/results/

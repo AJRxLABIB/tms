@@ -23,6 +23,11 @@ final class InjectionGuard
         ['/(পূর্বের|আগের|উপরের)\s*(সব\s*)?(নির্দেশ|নির্দেশনা|নিয়ম).{0,20}(উপেক্ষা|ভুলে|এড়িয়ে)|(নির্দেশ|নির্দেশনা).{0,15}(উপেক্ষা|ভুলে)\s*(যাও|যান|করো|করুন)/u', 'override_instructions', 0.7],
         ['/(সিস্টেম\s*প্রম্পট|গোপন\s*নির্দেশ|তোমার\s*নির্দেশনা).{0,25}(দেখাও|বলো|প্রকাশ|লেখো|জানাও)/u', 'prompt_exfiltration', 0.8],
         ['/(অন্য\s*(কারো|ব্যবহারকারীর|কাস্টমারের)).{0,25}(বুকিং|ইমেইল|তথ্য|ফোন)/u', 'other_user_data', 0.7],
+        // Asking the assistant to disclose secrets or its own prompt in question form ("what is your system prompt?", "give me the API key").
+        ['/\b(what(?:\'?s| is| are)|tell me)\b.{0,15}\b(your |the )?(system prompt|initial prompt|hidden instructions|instructions you were given)\b/iu', 'prompt_exfiltration', 0.8],
+        ['/\b(reveal|show|give|tell|print|leak|share|what(?:\'?s| is))\b.{0,30}\b(api[ -]?keys?|secret keys?|access tokens?|admin(?:istrator)? (?:password|login|credentials)|database (?:password|credentials)|server credentials|\.env)\b/iu', 'secret_exfiltration', 0.8],
+        ['/\b(admin(?:istrator)?|database|db|server|root)\s+(?:password|credentials?)\b.{0,25}\b(you|your|use|uses)\b|\b(your|the)\s+(admin(?:istrator)?|database|db|server|root)\s+(?:password|credentials?)\b/iu', 'secret_exfiltration', 0.8],
+        ['/(এপিআই\s*কী|এপিআই\s*কি|সিক্রেট\s*কী|অ্যাডমিন(?:ের)?\s*পাসওয়ার্ড|ডাটাবেস\s*পাসওয়ার্ড).{0,25}(দেখাও|বলো|জানাও|দাও|প্রকাশ)|(দেখাও|বলো|জানাও|দাও).{0,15}(এপিআই\s*কী|অ্যাডমিন(?:ের)?\s*পাসওয়ার্ড)/u', 'secret_exfiltration', 0.8],
     ];
 
     /** @return array{risk:float,flags:string[],block:bool} */
