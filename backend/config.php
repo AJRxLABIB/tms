@@ -330,6 +330,8 @@ if (empty($_SESSION['tms_memory_tables'])) {
 if (empty($_SESSION['tms_turnlog_tables'])) {
     require_once __DIR__ . '/ai/AITurnLog.php';
     AITurnLog::migrate($dbh);
+    require_once __DIR__ . '/ai/AIConfig.php';
+    AIConfig::migrate($dbh);
     $_SESSION['tms_turnlog_tables'] = true;
 }
 

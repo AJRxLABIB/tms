@@ -102,5 +102,17 @@ $c = new AIClient($dbh, null, new GeminiProvider('', 'm'));
 $r = $c->call('s', [['role' => 'user', 'content' => 'hi']], '', 'rt@example.test', 10, 5, 'resilience_test');
 t('no provider configured -> "not switched on" (unchanged behaviour)', !$r['success'] && stripos($r['error'], 'not switched on') !== false);
 
+// 10. administrator switch: failover off -> only the primary is ever tried
+require_once 'backend/ai/AIConfig.php';
+$reset(); AIConfig::set($dbh, 'failover_enabled', 0, 'test-admin'); AIConfig::clearCache();
+$c = $mk(['gemini' => fn($n) => [503, '{}', null], 'openai' => fn($n) => [200, $okO, null]]);
+$r = $ask($c);
+t('failover switched off by admin: primary outage is NOT rerouted to another provider', !$r['success'] && !isset($calls['openai']));
+AIConfig::set($dbh, 'failover_enabled', 1, 'test-admin'); AIConfig::clearCache();
+$reset(); $c = $mk(['gemini' => fn($n) => [503, '{}', null], 'openai' => fn($n) => [200, $okO, null]]);
+$r = $ask($c);
+t('failover switched back on: rerouting works again', $r['success'] && $r['provider'] === 'openai');
+AIConfig::reset($dbh, 'failover_enabled', 'test-admin'); $dbh->exec("DELETE FROM tbl_ai_config_log WHERE changed_by='test-admin'"); AIConfig::clearCache();
+
 $reset(); $dbh->exec("DELETE FROM tbl_ai_telemetry WHERE feature='resilience_test'"); $dbh->exec("DELETE FROM tbl_ai_usage_log WHERE user_email='rt@example.test'");
 echo "\n$pass passed, $fail failed\n"; exit($fail ? 1 : 0);

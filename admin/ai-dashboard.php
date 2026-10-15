@@ -14,6 +14,27 @@ require_once '../backend/ai/SentimentAnalyser.php';
 require_once '../backend/ai/FraudDetector.php';
 require_once '../backend/ai/AIEvaluator.php';
 
+
+// ── Engine controls (AIConfig). Admin-only, CSRF-protected, bounded and logged; post/redirect/get. ──
+require_once '../backend/ai/AIConfig.php';
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['ai_cfg_action'])) {
+    tms_csrf_validate();
+    $by = (string)($_SESSION['alogin'] ?? 'admin'); $errs = [];
+    if ($_POST['ai_cfg_action'] === 'reset') {
+        foreach (array_keys(AIConfig::SPEC) as $n) AIConfig::reset($dbh, $n, $by);
+        $_SESSION['ai_cfg_flash'] = 'All engine controls restored to defaults.';
+    } else {
+        foreach (AIConfig::SPEC as $n => $sp) {
+            $raw = $sp[0] === 'bool' ? (isset($_POST['cfg'][$n]) ? '1' : '0') : ($_POST['cfg'][$n] ?? '');
+            $r = AIConfig::set($dbh, $n, $raw, $by);
+            if (!$r['ok']) $errs[] = $sp[4] . ': ' . $r['error'];
+        }
+        $_SESSION['ai_cfg_flash'] = $errs ? 'Some values were rejected (' . implode('; ', $errs) . '); the others were saved.' : 'Engine controls saved.';
+    }
+    header('Location: ai-dashboard.php'); exit;
+}
+$cfgFlash = (string)($_SESSION['ai_cfg_flash'] ?? ''); unset($_SESSION['ai_cfg_flash']);
+
 // Round 35 (item 22, "AI Evaluation suite"), extended Round 95 with 3 more
 // content-accuracy cases and Round 98 with a 4th (weather_accuracy):
 // admin-triggered only, never automatic -- this makes 13 real AI calls
@@ -459,6 +480,9 @@ body { background:#f0f4f8; }
 .tms-theme-toggle-mini { background:rgba(255,255,255,.1); border:1px solid rgba(255,255,255,.2); color:#fff; width:28px; height:28px; border-radius:50%; cursor:pointer; display:inline-flex; align-items:center; justify-content:center; font-size:13px; margin-left:8px; }
 .tms-theme-toggle-mini:hover { background:rgba(255,255,255,.2); }
 .hp-note{color:#4a5568;}
+.cfg-num{width:80px;padding:4px 8px;border:1px solid #94a3b8;border-radius:6px;background:#fff;color:#1a202c;}
+html[data-theme="dark"] .cfg-num{background:#10151c !important;color:#eef2f7 !important;border-color:#64748b !important;}
+html[data-theme="dark"] .ai-table label{color:#eef2f7 !important;}
 html[data-theme="dark"] .hp-note{color:#cbd5e0 !important;}
 html[data-theme="dark"] body { background:#10151c !important; }
 html[data-theme="dark"] .ai-page-header,
@@ -552,6 +576,46 @@ html[data-theme="dark"] [style*="background:#fff"], html[data-theme="dark"] [sty
   </div>
 
   <div class="panel" style="margin-bottom:20px;">
+    <div class="panel-header"><div class="panel-title"><i class="fa fa-sliders"></i> Engine controls</div></div>
+    <div class="panel-body">
+      <?php if ($cfgFlash !== ''): ?><div role="status" class="hp-note" style="font-size:13px;font-weight:700;margin-bottom:10px;"><?= htmlspecialchars($cfgFlash) ?></div><?php endif; ?>
+      <form method="post" action="ai-dashboard.php">
+        <?php tms_csrf_field(); ?>
+        <input type="hidden" name="ai_cfg_action" value="save">
+        <table class="ai-table">
+          <caption class="sr-only">Runtime settings for the AI assistant</caption>
+          <thead><tr><th scope="col">Setting</th><th scope="col">Value</th><th scope="col">Default</th></tr></thead>
+          <tbody>
+          <?php foreach (AIConfig::SPEC as $cn => $sp): $cv = AIConfig::get($dbh, $cn); ?>
+            <tr>
+              <td><label for="cfg_<?= $cn ?>"><?= htmlspecialchars($sp[4]) ?></label></td>
+              <td><?php if ($sp[0] === 'bool'): ?>
+                    <input type="checkbox" id="cfg_<?= $cn ?>" name="cfg[<?= $cn ?>]" value="1" <?= $cv === 1 ? 'checked' : '' ?>> <?= $cv === 1 ? 'On' : 'Off' ?>
+                  <?php else: ?>
+                    <input type="number" id="cfg_<?= $cn ?>" name="cfg[<?= $cn ?>]" value="<?= (int)$cv ?>" min="<?= (int)$sp[2] ?>" max="<?= (int)$sp[3] ?>" class="cfg-num">
+                  <?php endif; ?></td>
+              <td><?= $sp[0] === 'bool' ? ($sp[1] ? 'On' : 'Off') : (int)$sp[1] . ' (allowed ' . (int)$sp[2] . '–' . (int)$sp[3] . ')' ?></td>
+            </tr>
+          <?php endforeach; ?>
+          </tbody>
+        </table>
+        <div style="margin-top:12px;display:flex;gap:10px;flex-wrap:wrap;">
+          <button type="submit" class="btn btn-primary">Save controls</button>
+          <button type="submit" name="ai_cfg_action" value="reset" class="btn btn-default" onclick="return confirm('Restore every engine control to its default?');">Restore defaults</button>
+        </div>
+      </form>
+      <p class="hp-note" style="font-size:12px;margin:10px 0 0;">Switching the assistant off makes the chat widget show its standard non-AI answers. Failover, provider keys and the cloud-fallback opt-in (<code>AI_FALLBACK_ALLOW_EXTERNAL</code>) are configured in <code>.env</code> only, and price/source verification and the safety guard cannot be switched off. Every change is logged below.</p>
+      <?php $cfgLog = AIConfig::recentChanges($dbh, 8); if ($cfgLog): ?>
+      <table class="ai-table" style="margin-top:12px;">
+        <caption class="sr-only">Recent changes to engine controls</caption>
+        <thead><tr><th scope="col">When</th><th scope="col">Setting</th><th scope="col">Change</th><th scope="col">By</th></tr></thead>
+        <tbody><?php foreach ($cfgLog as $cl): ?><tr><td><?= htmlspecialchars($cl['changed_at']) ?></td><td><?= htmlspecialchars($cl['setting']) ?></td><td><?= htmlspecialchars($cl['old_value']) ?> → <?= htmlspecialchars($cl['new_value']) ?></td><td><?= htmlspecialchars($cl['changed_by']) ?></td></tr><?php endforeach; ?></tbody>
+      </table>
+      <?php endif; ?>
+    </div>
+  </div>
+
+  <div class="panel" style="margin-bottom:20px;">
     <div class="panel-header"><div class="panel-title"><i class="fa fa-stethoscope"></i> Assistant quality signals (last 7 days)</div></div>
     <div class="panel-body">
       <?php if ($turnStats === null || (int)$turnStats['turns'] === 0): ?>
@@ -571,6 +635,15 @@ html[data-theme="dark"] [style*="background:#fff"], html[data-theme="dark"] [sty
         </tbody>
       </table>
       <p class="hp-note" style="font-size:12px;margin:10px 0 0;">Counts only: no message text, email or user id is stored, and rows are deleted after 90 days. These figures show how the engine behaved, not whether answers were good.</p>
+      <?php $recentTurns = AITurnLog::recent($dbh, 20); if ($recentTurns): ?>
+      <table class="ai-table" style="margin-top:12px;">
+        <caption class="sr-only">Most recent assistant turns, counts only</caption>
+        <thead><tr><th scope="col">Time</th><th scope="col">Outcome</th><th scope="col">Lang</th><th scope="col">Tools run</th><th scope="col">Flags</th></tr></thead>
+        <tbody><?php foreach ($recentTurns as $rt): $fl = []; if ($rt['stopped']) $fl[] = 'stopped: ' . $rt['stopped']; if ((int)$rt['unverified_prices'] > 0) $fl[] = 'unverified price'; if ((int)$rt['removed_markers'] > 0) $fl[] = 'marker removed'; ?>
+          <tr><td><?= htmlspecialchars($rt['created_at']) ?></td><td><?= htmlspecialchars($rt['outcome']) ?></td><td><?= htmlspecialchars($rt['language']) ?></td><td><?= htmlspecialchars($rt['tools'] !== '' ? $rt['tools'] : '—') ?></td><td><?= htmlspecialchars($fl ? implode(', ', $fl) : '—') ?></td></tr>
+        <?php endforeach; ?></tbody>
+      </table>
+      <?php endif; ?>
       <?php endif; ?>
     </div>
   </div>

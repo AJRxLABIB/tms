@@ -26,6 +26,7 @@ require_once __DIR__ . '/providers/AIProviderInterface.php';
 require_once __DIR__ . '/providers/GeminiProvider.php';
 require_once __DIR__ . '/providers/OpenAIProvider.php';
 require_once __DIR__ . '/providers/OllamaProvider.php';
+require_once __DIR__ . '/AIConfig.php';
 require_once __DIR__ . '/ProviderHealth.php';
 
 class AIClient {
@@ -192,7 +193,7 @@ class AIClient {
         // JSON shape -- exactly the gap that suite was built to catch.
         // Fixed by actually routing through $this->provider, as the Round 34
         // docblock always claimed this method did.
-        $chain = array_merge([$this->provider], $this->fallbacks);
+        $chain = AIConfig::failoverEnabled($this->db) ? array_merge([$this->provider], $this->fallbacks) : [$this->provider];
         if (!array_filter($chain, fn($p) => $p->isConfigured())) {
             error_log('[TMS AI] Provider "' . $this->provider->name() . '" is not configured -- set its API key in .env (see .env.example).');
             return $this->fallback('The AI assistant is not switched on for this site yet.');

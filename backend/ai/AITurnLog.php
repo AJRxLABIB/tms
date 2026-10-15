@@ -83,4 +83,11 @@ final class AITurnLog
             return $r;
         } catch (Throwable $e) { return null; }
     }
+
+    /** Most recent turns, counts only (no text, no user). @return array<int,array<string,mixed>> */
+    public static function recent(PDO $dbh, int $limit = 25): array
+    {
+        try { return $dbh->query('SELECT created_at, outcome, language, steps, follow_ups, stopped, tools, unverified_prices, removed_markers, sources, memory_items, provider FROM tbl_ai_turn_log ORDER BY id DESC LIMIT ' . max(1, min(100, $limit)))->fetchAll(PDO::FETCH_ASSOC); }
+        catch (Throwable $e) { return []; }
+    }
 }

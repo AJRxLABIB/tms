@@ -246,6 +246,47 @@ try { $asst3->reply('hello again', [], 'guest', '', 'en'); $sOk = AITurnLog::sum
 t('turnlog: storage outage never breaks the reply; summary degrades to null', $sOk);
 $dbh->exec('DELETE FROM tbl_ai_turn_log');
 
+// ── AIConfig (admin runtime controls) ──
+require_once 'backend/ai/AIConfig.php';
+$cfgClean = function () use ($dbh) { $dbh->exec("DELETE FROM tbl_app_meta WHERE k LIKE 'ai_cfg_%'"); $dbh->exec("DELETE FROM tbl_ai_config_log WHERE changed_by='eng-test'"); AIConfig::clearCache(); };
+$cfgClean();
+t('config: defaults when nothing is stored', AIConfig::get($dbh, 'max_steps') === 4 && AIConfig::get($dbh, 'deadline_sec') === 8 && AIConfig::enabled($dbh, 'assistant_enabled') && AIConfig::enabled($dbh, 'memory_enabled'));
+t('config: out-of-range and junk values are rejected and nothing is stored', AIConfig::set($dbh, 'max_steps', 99, 'eng-test')['error'] === 'out_of_range_1_6' && AIConfig::set($dbh, 'max_steps', '3; DROP', 'eng-test')['error'] === 'not_a_number' && AIConfig::set($dbh, 'nope', 1, 'eng-test')['error'] === 'unknown_setting' && AIConfig::get($dbh, 'max_steps') === 4);
+$r = AIConfig::set($dbh, 'max_steps', 2, 'eng-test');
+t('config: valid change is stored, returned and audited (who, old, new)', $r['ok'] && AIConfig::get($dbh, 'max_steps') === 2 && ($lg = AIConfig::recentChanges($dbh, 1)[0] ?? null) && $lg['setting'] === 'max_steps' && $lg['old_value'] === '4' && $lg['new_value'] === '2' && $lg['changed_by'] === 'eng-test');
+AIConfig::set($dbh, 'max_steps', 2, 'eng-test');
+t('config: saving an unchanged value writes no log row', (int)$dbh->query("SELECT COUNT(*) FROM tbl_ai_config_log WHERE changed_by='eng-test'")->fetchColumn() === 1);
+$dbh->exec("INSERT INTO tbl_app_meta (k,v) VALUES ('ai_cfg_max_steps','500') ON DUPLICATE KEY UPDATE v='500'"); AIConfig::clearCache();
+t('config: a tampered stored value is clamped to the allowed range', AIConfig::get($dbh, 'max_steps') === 6);
+AIConfig::reset($dbh, 'max_steps', 'eng-test'); t('config: reset restores the default', AIConfig::get($dbh, 'max_steps') === 4);
+t('config: there is no setting that can disable the guard, price verification or enable cloud fallback', !array_intersect(array_keys(AIConfig::SPEC), ['guard_enabled', 'verify_enabled', 'allow_external', 'fallback_allow_external', 'api_key']));
+
+// Behaviour of the assistant under the switches
+$sent2 = 0; $say2 = 'Here you go.';
+$ai5 = new AIClient($dbh, null, new GeminiProvider('k', 'm')); $ai5->setProviderChain([new GeminiProvider('k', 'm')]);
+$ai5->setTransport(function ($req, $p, $to) use (&$sent2, &$say2) { $sent2++; return [200, json_encode(['candidates' => [['content' => ['parts' => [['text' => json_encode(['reply' => $say2, 'suggestions' => []])]]]]]]), null]; });
+$asst5 = new SiteAssistant($dbh, $ai5);
+$rl = fn() => $dbh->exec("DELETE FROM tbl_ai_usage_log WHERE user_email IN ('guest','$A')");
+AIConfig::set($dbh, 'assistant_enabled', 0, 'eng-test'); $rl();
+$r = $asst5->reply('show me a beach package', [], 'guest', '', 'en');
+t('assistant switched off: no model call, clear error for the widget fallback', !$r['success'] && $sent2 === 0 && str_contains($r['error'], 'switched off'));
+AIConfig::set($dbh, 'assistant_enabled', 1, 'eng-test');
+AIConfig::set($dbh, 'memory_enabled', 0, 'eng-test'); $rl();
+TravelMemory::clearAll($dbh, $A); TravelMemory::add($dbh, $A, 'preference', 'I love lighthouse stays');
+$sent2 = 0; $r = $asst5->reply('remember that I like boats', [], $A, '', 'en');
+t('memory switched off: "remember" saves nothing, says so, model not called', $sent2 === 0 && str_contains($r['reply'], 'switched off') && !array_filter(TravelMemory::all($dbh, $A), fn($m) => str_contains($m['Content'], 'boats')));
+$sent3 = []; $ai5->setTransport(function ($req, $p, $to) use (&$sent3, &$say2) { $sent3[] = $req['body']; return [200, json_encode(['candidates' => [['content' => ['parts' => [['text' => json_encode(['reply' => $say2, 'suggestions' => []])]]]]]]), null]; });
+$r = $asst5->reply('any lighthouse ideas for me?', [], $A, '', 'en');
+t('memory switched off: saved items are not sent to the model, and are kept untouched', $sent3 && !str_contains($sent3[0], 'I love lighthouse stays') && !str_contains($sent3[0], 'USER-SAVED') && count(TravelMemory::all($dbh, $A)) === 1);
+AIConfig::set($dbh, 'memory_enabled', 1, 'eng-test'); $rl();
+$sent3 = []; $r = $asst5->reply('any lighthouse ideas for me?', [], $A, '', 'en');
+t('memory switched back on: items reach the prompt again', $sent3 && str_contains($sent3[0], 'I love lighthouse stays'));
+TravelMemory::clearAll($dbh, $A);
+AIConfig::set($dbh, 'max_steps', 1, 'eng-test'); $rl(); AITurnLog::$suppress = false; $dbh->exec('DELETE FROM tbl_ai_turn_log');
+$r = $asst5->reply('How much would a trip for 3 people to a tea hill cost? budget 60k', [], 'guest', 'package-details.php?pkgid=' . ((int)$dbh->query('SELECT MIN(PackageId) FROM tbltourpackages WHERE Status=1')->fetchColumn()), 'en');
+t('max_steps=1 from admin config really limits the tool steps of an answer', (int)$dbh->query('SELECT MAX(steps) FROM tbl_ai_turn_log')->fetchColumn() === 1);
+$dbh->exec('DELETE FROM tbl_ai_turn_log'); $cfgClean();
+
 $clean(); foreach ([$A, $B] as $e) $dbh->prepare('DELETE FROM tblusers WHERE EmailId=?')->execute([$e]);
 $dbh->exec("DELETE FROM tblusers WHERE EmailId LIKE 'deleted-user-%@deleted.invalid' AND FullName='Deleted User' AND id=$uid");
 $dbh->exec("DELETE FROM tbl_ai_telemetry WHERE user_email IN ('$A','$B','guest') AND feature='site_assistant'");
