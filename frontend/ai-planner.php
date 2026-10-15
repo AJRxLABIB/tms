@@ -567,6 +567,14 @@ function renderItinerary(itin) {
         </div>
     </div>`;
 
+    if (itin.plan_check) {
+        const pc = itin.plan_check, items = pc.issues || [];
+        html += `<div role="note" style="background:#f1f5f9;color:#1f2937;border:1px solid #cbd5e1;border-radius:12px;padding:16px;margin-top:20px;font-size:13px;">
+            <strong>Plan check:</strong> ${items.length ? items.length + ' thing' + (items.length === 1 ? '' : 's') + ' to look at before you rely on this plan.' : 'no timing, date or cost contradictions found by our automatic checks. That does not guarantee the plan works in practice.'}
+            ${items.length ? '<ul style="margin:6px 0 0 18px;padding:0;color:#92400e;">' + items.slice(0, 8).map(i => '<li>' + (i.day != null ? 'Day ' + esc(String(i.day)) + ': ' : '') + esc(i.message) + '</li>').join('') + '</ul>' : ''}
+            <div style="margin-top:6px;color:#475569;font-size:12px;">Automatic checks of the plan's own times, dates and costs. They cannot tell whether the plan is good, only where it contradicts itself.</div></div>`;
+    }
+
     if (itin.ai_notes) {
         html += `<div style="background:#fffbeb;border-radius:12px;padding:16px;margin-top:20px;font-size:13px;color:#744210;border-left:4px solid #f6ad55;">
             <strong>🤖 AI Notes:</strong> ${esc(itin.ai_notes)}</div>`;

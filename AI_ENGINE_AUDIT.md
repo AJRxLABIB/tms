@@ -65,9 +65,15 @@ Deliberately NOT controllable from the browser: provider API keys, the cloud-fal
 The dashboard also lists the 20 most recent turns (time, outcome, language, tools run, flags): counts only, HTML-escaped, no message text.
 Limits: settings apply per request from the database (no cache across requests); a storage failure falls back to the defaults. Failover can only be disabled here; whether a fallback exists at all is still set in `.env`.
 
+## 3g. Stage 7 delivered: itinerary plan checks
+
+`ItineraryChecker` runs deterministic self-consistency checks on a generated plan (no AI, no network): times going backwards, overlaps (10 min tolerance), days over 12 h of activities or a 16 h span, starts before 05:00 or past midnight, entry costs far above the day's own budget, day count / numbering / date sequence, cost total vs its parts, estimated total vs the stated budget, and a distance check. The distance check only fires when two consecutive activities at different places with KNOWN coordinates are farther apart in a straight line than the gap between them could cover at 120 km/h (a straight line is a lower bound, so this can only flag the impossible; flights are not modelled). Coordinates come from the Explore destination cache already in the database; places without them are skipped and counted, never guessed. **No travel time is ever estimated or invented.**
+The result is attached to new plans (`plan_check`, never to the AI-unavailable fallback template), shown on the planner page, on My Trip (computed fresh from the stored plan) and on the Autopilot suggestion card. It never edits the plan.
+Limits: a clean result means "no contradictions found", not "the plan works" (opening hours, queues, real travel times, weather suitability are not checked, and AI-written durations like "half day" are skipped). The distance check will usually cover few pairs until more destinations are cached; the check reports what it skipped.
+
 ## 4. Verification actually run (sandbox: PHP 8.3, MariaDB, stubbed HTTP transport)
 
-engine 122/122, quality scorer 16/16, admin controls over HTTP 14/14, resilience 29/29, memory HTTP 18/18, eval 75/75, rerank 11/11, Ollama unit, autopilot 40/40 + 19/19, payments 18/18, suppliers 72/72, notices 32/32, security 26/26, `tests/run.php` 20/20, e2e 14/14. axe WCAG A/AA clean on `ai-memory.php` (desktop/mobile, light/dark) and the dashboard panel (light/dark).
+engine 122/122, itinerary checker 30/30, autopilot HTTP 23/23, quality scorer 16/16, admin controls over HTTP 14/14, resilience 29/29, memory HTTP 18/18, eval 75/75, rerank 11/11, Ollama unit, autopilot 40/40, payments 18/18, suppliers 72/72, notices 32/32, security 26/26, `tests/run.php` 20/20, e2e 14/14. axe WCAG A/AA clean on `ai-memory.php` (desktop/mobile, light/dark) and the dashboard panel (light/dark).
 
 ## 5. NOT verified
 
@@ -75,7 +81,7 @@ Real provider calls and answer quality (the harness exists but has never run aga
 
 ## 6. Not implemented yet (do not assume these exist)
 
-LLM-driven planning and multi-step tasks beyond the two rule-based follow-ups above; persistent embeddings with hybrid fusion; weather-aware replanning beyond Autopilot; routing/geographic intelligence; booking-preparation tools; multimodal/OCR; per-task model routing; cache isolation measurement; trend charts over time; conversation-summary memory (deliberately omitted).
+LLM-driven planning and multi-step tasks beyond the two rule-based follow-ups above; persistent embeddings with hybrid fusion; weather-aware replanning beyond Autopilot; real routing and travel-time data (only straight-line impossibility checks exist); booking-preparation tools; multimodal/OCR; per-task model routing; cache isolation measurement; trend charts over time; conversation-summary memory (deliberately omitted).
 
 ## 7. Rollback
 

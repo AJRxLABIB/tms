@@ -83,6 +83,7 @@ jobs:
           php tests/ai/resilience_test.php
           php tests/ai/engine_test.php
           php tests/ai/quality_scorer_test.php
+          php tests/ai/itinerary_checker_test.php
           php tests/payments/run.php
           php tests/suppliers/run.php
           php tests/notices/run.php

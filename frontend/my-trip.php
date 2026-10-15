@@ -351,7 +351,8 @@ html[data-theme="dark"] .mt-sched-item{color:var(--text-muted) !important;}
                         </div>
                     <?php endforeach; ?>
                     <?php if ($apProposal['proposed']): ?>
-                        <p style="font-size:13px;margin:10px 0 4px;"><strong>Suggested change</strong> &mdash; <?php echo (int)count($apDiff); ?> day(s). This is an AI suggestion, not a confirmed booking or a staff-verified plan. Prices and venues in it are not part of your booking.</p>
+                        <p style="font-size:13px;margin:10px 0 4px;"><strong>Suggested change</strong>
+                        <?php require_once dirname(__DIR__) . '/backend/ai/ItineraryChecker.php'; echo ItineraryChecker::summaryHtml(ItineraryChecker::check($apProposal['proposed'], [], ItineraryChecker::cachedGeocoder($dbh)), 'Check of the suggested plan'); ?> &mdash; <?php echo (int)count($apDiff); ?> day(s). This is an AI suggestion, not a confirmed booking or a staff-verified plan. Prices and venues in it are not part of your booking.</p>
                         <ul style="font-size:13px;">
                         <?php foreach ($apDiff as $d): ?>
                             <li>Day <?php echo (int)$d['day']; ?> (<?php echo $apE($d['status']); ?>): <?php echo $apE($d['old_title'] ?? '—'); ?> &rarr; <strong><?php echo $apE($d['new_title'] ?? '—'); ?></strong></li>
@@ -377,6 +378,11 @@ html[data-theme="dark"] .mt-sched-item{color:var(--text-muted) !important;}
                     <div class="mt-ai-disclosure">
                         <i class="fa fa-info-circle"></i> <?php echo htmlspecialchars(tms_t('msg_ai_itinerary_disclosure',"This is an AI-generated trip plan — a suggestion to help you plan, not a confirmed itinerary booked or verified by TMS staff. Hotel/restaurant names and prices here are AI suggestions, not part of your actual booking."), ENT_QUOTES, 'UTF-8'); ?>
                     </div>
+                    <?php
+                    require_once dirname(__DIR__) . '/backend/ai/ItineraryChecker.php';
+                    // Own-plan consistency only (no requested duration/budget passed: those could be misread against stored plans).
+                    echo ItineraryChecker::summaryHtml(ItineraryChecker::check($itinerary, [], ItineraryChecker::cachedGeocoder($dbh)));
+                    ?>
                     <?php foreach ($itinerary['days'] as $day): ?>
                     <div class="mt-day">
                         <h5><?php echo htmlspecialchars(tms_t('label_day_prefix','Day'), ENT_QUOTES, 'UTF-8'); ?> <?php echo (int)($day['day'] ?? 0); ?><?php if (!empty($day['title'])): ?> — <?php echo htmlspecialchars($day['title'], ENT_QUOTES, 'UTF-8'); ?><?php endif; ?></h5>

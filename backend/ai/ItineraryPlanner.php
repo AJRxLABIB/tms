@@ -252,6 +252,13 @@ MSG;
             $itinerary['restaurant_recommendations'] ?? [], $nearbyContext['real_restaurant_names']
         );
 
+        // Deterministic self-consistency check (times, overlaps, dates, cost totals, budget, known distances). Never changes the plan;
+        // reported next to it. See ItineraryChecker for exactly what is and is not checked.
+        try {
+            require_once __DIR__ . '/ItineraryChecker.php';
+            $itinerary['plan_check'] = ItineraryChecker::check($itinerary, $tripData, ItineraryChecker::cachedGeocoder($this->db));
+        } catch (Throwable $e) { error_log('[TMS planner check] ' . $e->getMessage()); }
+
         // Save to database for future reference -- unless this is a
         // preview-only call (Round 115, weather replanning), which must not
         // touch tbl_ai_itineraries until the traveler explicitly approves it

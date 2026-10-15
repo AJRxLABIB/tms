@@ -49,6 +49,15 @@ $a = login($base, $A, $PW); $b = login($base, $B, $PW); $anon = new Client();
 $page = "$base/my-trip.php?id=$bid";
 $body = $a->req($page)['body'];
 t('owner sees Trip Autopilot card with the check button', str_contains($body, 'Trip Autopilot') && str_contains($body, 'mtApCheck'));
+t('clean stored plan shows a Plan check note with the honest "does not guarantee" wording', str_contains($body, 'Plan check:') && str_contains($body, 'does not guarantee'));
+$flawed = json_encode(['days' => [['day' => 1, 'title' => 'Flawed', 'schedule' => [
+    ['time' => '09:00', 'duration' => '3 hours', 'activity' => '<img src=x onerror=alert(1)> Tour A', 'location' => 'A', 'type' => 'sightseeing'],
+    ['time' => '10:00', 'duration' => '2 hours', 'activity' => 'Tour B', 'location' => 'B', 'type' => 'sightseeing']]]]]);
+$dbh->prepare('UPDATE tbl_ai_itineraries SET itinerary_json=? WHERE booking_id=?')->execute([$flawed, $bid]);
+$fb = $a->req($page)['body'];
+t('overlapping plan: the page lists the contradiction with exact numbers', str_contains($fb, 'thing to look at') && str_contains($fb, 'overlaps the next item at 10:00 by 120 min'));
+t('plan text inside the check is HTML-escaped (no stored XSS)', !str_contains($fb, '<img src=x onerror') && str_contains($fb, '&lt;img src=x onerror'));
+$dbh->prepare('UPDATE tbl_ai_itineraries SET itinerary_json=? WHERE booking_id=?')->execute([json_encode(['days' => [['day' => 1, 'title' => 'Original beach day', 'schedule' => [['activity' => 'Beach']]]]]), $bid]);
 t('no proposal yet -> no approve button', !str_contains($body, 'id="mtApApprove"'));
 $tokA = $a->token($page); $tokB = $b->token("$base/cart.php");
 $post = fn(Client $c, string $act, array $p) => json_decode($c->req("$base/api/ai.php?action=$act", $p)['body'], true);
@@ -72,6 +81,7 @@ $sig = TripAutopilot::buildSignals([TravelNoticeService::find($dbh, $nid)]);
 $prop = TripAutopilot::createProposal($dbh, $bid, $A, $sig, ['days' => [['day' => 1, 'title' => 'Indoor museum day', 'schedule' => [['activity' => 'Museum']]]]], '1 day(s) changed')['id'];
 $body = $a->req($page)['body'];
 t('owner sees the proposal, source link and approve button', str_contains($body, 'id="mtApApprove"') && str_contains($body, 'https://example.gov/x') && str_contains($body, 'Indoor museum day'));
+t('the suggested plan is checked too', str_contains($body, 'Check of the suggested plan'));
 t('notice text is HTML-escaped (no stored XSS)', !str_contains($body, '<script>alert(1)</script>') && str_contains($body, '&lt;b&gt;Rail strike'));
 t('page says nothing changes unless approved', str_contains($body, 'never changed here') || str_contains($body, 'Nothing has been changed'));
 t("other customer's my-trip page does not show it", !str_contains($b->req($page)['body'], 'Indoor museum day'));
