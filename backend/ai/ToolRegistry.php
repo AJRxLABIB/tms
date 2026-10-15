@@ -10,6 +10,8 @@
 require_once __DIR__ . '/rag/KnowledgeIndex.php';
 require_once __DIR__ . '/TripBudget.php';
 require_once __DIR__ . '/rag/EmbeddingReranker.php';
+require_once __DIR__ . '/rag/EmbeddingStore.php';
+require_once __DIR__ . '/rag/HybridSearch.php';
 
 final class ToolRegistry
 {
@@ -112,16 +114,42 @@ final class ToolRegistry
         }
     }
 
+    /** How the last search_packages call retrieved: 'hybrid', 'rerank' or 'bm25' (for tests and analytics). */
+    public string $lastRetrieval = 'bm25';
+    /** @var ?array<int,string> */ private ?array $packedCache = null;
+
+    /** Hybrid (BM25 + stored embeddings) when persistent vectors cover at least 80% of the catalogue; null otherwise. */
+    private function hybridHits(string $query, int $limit, array $filters): ?array
+    {
+        if (!$this->reranker || !$this->db || trim($query) === '') return null;
+        $docs = []; foreach ($this->index->all() as $id => $m) $docs[$id] = EmbeddingStore::textFor($m);
+        if (!$docs) return null;
+        $key = $this->reranker->modelKey();
+        if ($this->packedCache === null) $this->packedCache = EmbeddingStore::load($this->db, $docs, $key);
+        if (count($this->packedCache) < 0.8 * count($docs)) return null;      // not (yet) indexed well enough: do not mix half a catalogue
+        $v = $this->reranker->embed([$query]);
+        $q = ($v && isset($v[0]) && is_array($v[0])) ? EmbeddingStore::normalize($v[0]) : null;
+        if ($q === null) return null;
+        $minSim = defined('AI_EMBED_MIN_SIM') ? (float)AI_EMBED_MIN_SIM : 0.5;
+        return HybridSearch::search($this->index, $this->packedCache, $q, $query, $limit, $filters, $minSim);
+    }
+
     private function searchPackages(array $a): array
     {
         $f = [];
         if (isset($a['max_price'])) $f['max_price'] = $a['max_price'];
         if (!empty($a['country'])) $f['country'] = $a['country'];
         $limit = (int)($a['limit'] ?? 5);
-        if ($this->reranker) {
+        $this->lastRetrieval = 'bm25';
+        $hits = null;
+        try { $hits = $this->hybridHits((string)$a['query'], $limit ?: 5, $f); } catch (Throwable $e) { error_log('[TMS AI hybrid] ' . $e->getMessage()); }
+        if ($hits !== null) { $this->lastRetrieval = 'hybrid'; }
+        elseif ($this->reranker) {
             // Optional semantic re-rank of a wider BM25 candidate pool; falls back to BM25 order on any failure.
             $pool = $this->index->search($a['query'], max($limit, 15), $f);
-            $hits = array_slice($this->reranker->rerank((string)$a['query'], $pool)['hits'], 0, max(1, min(20, $limit)));
+            $rr = $this->reranker->rerank((string)$a['query'], $pool);
+            $hits = array_slice($rr['hits'], 0, max(1, min(20, $limit)));
+            if (!empty($rr['reranked'])) $this->lastRetrieval = 'rerank';
         } else {
             $hits = $this->index->search($a['query'], $limit ?: 5, $f);
         }

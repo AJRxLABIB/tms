@@ -52,6 +52,9 @@ define('OLLAMA_MODEL',    tms_env('OLLAMA_MODEL', 'qwen2.5:3b-instruct'));
 // Optional semantic re-ranking of assistant search results (see backend/ai/rag/EmbeddingReranker.php).
 // Empty = off (BM25 only). Example: AI_EMBED_MODEL=nomic-embed-text after `ollama pull nomic-embed-text`.
 define('AI_EMBED_MODEL',  trim((string) tms_env('AI_EMBED_MODEL', '')));
+// Minimum cosine similarity for a package found ONLY by meaning (no keyword match) to be returned by hybrid search. Tune per model; 0.5 is a
+// starting point that has not been measured against your catalogue.
+define('AI_EMBED_MIN_SIM', max(0.0, min(0.95, (float) tms_env('AI_EMBED_MIN_SIM', '0.5'))));
 // Provider failover (off by default). Comma list tried in order when AI_PROVIDER fails, e.g. AI_FALLBACK_PROVIDERS=ollama
 // (local, no data leaves the machine). Another CLOUD vendor is used only if AI_FALLBACK_ALLOW_EXTERNAL=1 (privacy opt-in).
 define('AI_FALLBACK_PROVIDERS', trim((string) tms_env('AI_FALLBACK_PROVIDERS', '')));
@@ -332,6 +335,8 @@ if (empty($_SESSION['tms_turnlog_tables'])) {
     AITurnLog::migrate($dbh);
     require_once __DIR__ . '/ai/AIConfig.php';
     AIConfig::migrate($dbh);
+    require_once __DIR__ . '/ai/rag/EmbeddingStore.php';
+    EmbeddingStore::migrate($dbh);
     $_SESSION['tms_turnlog_tables'] = true;
 }
 

@@ -61,6 +61,7 @@ t('admin without the AI role cannot change settings by POSTing directly', AIConf
 
 $sa = $adminLogin('cfg-test-super'); $page = $sa->req($url)['body'];
 t('superadmin sees the controls, current values and the privacy note', str_contains($page, 'Engine controls') && str_contains($page, 'name="cfg[max_steps]"') && str_contains($page, 'cannot be switched off'));
+t('embedding panel renders, and without AI_EMBED_MODEL says keyword-only (no fake coverage)', str_contains($page, 'Embedding index') && (str_contains($page, 'Search uses keyword (BM25)') || str_contains($page, 'packages indexed for model')) && !str_contains($page, 'Index now') === !getenv('AI_EMBED_MODEL'));
 $tok = ($m = preg_match('/name="csrf_token" value="([^"]+)"/', $page, $mm)) ? $mm[1] : '';
 $r = $sa->req($url, ['ai_cfg_action' => 'save', 'cfg' => ['max_steps' => '2', 'deadline_sec' => '8', 'assistant_enabled' => '1', 'memory_enabled' => '1', 'failover_enabled' => '1']], false); AIConfig::clearCache();
 t('POST without a CSRF token is rejected (403) and changes nothing', $r['code'] === 403 && AIConfig::get($dbh, 'max_steps') === 4);

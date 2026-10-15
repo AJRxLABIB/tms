@@ -109,6 +109,21 @@ final class KnowledgeIndex
 
     public function size(): int { return count($this->docs); }
 
+    /** Same filter rules for every retrieval path (BM25 and dense). */
+    public static function passes(array $meta, array $filters): bool
+    {
+        if (isset($filters['max_price']) && $filters['max_price'] > 0 && $meta['price'] > $filters['max_price']) return false;
+        if (isset($filters['min_price']) && $filters['min_price'] > 0 && $meta['price'] < $filters['min_price']) return false;
+        if (!empty($filters['country']) && stripos($meta['country'], (string)$filters['country']) === false) return false;
+        return true;
+    }
+
+    /** @return array<int,array> id => meta, for every published package (used to build embeddings and dense retrieval) */
+    public function all(): array
+    {
+        $o = []; foreach ($this->docs as $id => $d) $o[$id] = $d['meta']; return $o;
+    }
+
     /**
      * @param array{max_price?:int,min_price?:int,country?:string} $filters
      * @return array<int,array> hits sorted by score, each with citation
@@ -121,9 +136,7 @@ final class KnowledgeIndex
         $hits = [];
         foreach ($this->docs as $d) {
             $m = $d['meta'];
-            if (isset($filters['max_price']) && $filters['max_price'] > 0 && $m['price'] > $filters['max_price']) continue;
-            if (isset($filters['min_price']) && $filters['min_price'] > 0 && $m['price'] < $filters['min_price']) continue;
-            if (!empty($filters['country']) && stripos($m['country'], (string)$filters['country']) === false) continue;
+            if (!self::passes($m, $filters)) continue;
             $score = 0.0;
             foreach (array_unique($q) as $t) {
                 $f = $d['tf'][$t] ?? 0;

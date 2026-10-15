@@ -24,6 +24,7 @@ final class EmbeddingReranker
     /** @var callable(array<int,string>):?array<int,array<int,float>> */
     private $embed;
     private string $cacheFile;
+    private string $cacheId;
     /** @var array<string,array<int,float>> */
     private array $cache = [];
     private bool $cacheDirty = false;
@@ -33,6 +34,7 @@ final class EmbeddingReranker
     public function __construct(callable $embed, string $cacheId = 'default')
     {
         $this->embed = $embed;
+        $this->cacheId = $cacheId;
         $this->cacheFile = sys_get_temp_dir() . '/tms_emb_' . sha1($cacheId) . '.json';
         $raw = @file_get_contents($this->cacheFile);
         $arr = $raw ? json_decode($raw, true) : null;
@@ -46,13 +48,25 @@ final class EmbeddingReranker
         @file_put_contents($this->cacheFile, json_encode($this->cache), LOCK_EX);
     }
 
+    /** Identifies provider+model; stored with persisted vectors so vectors from another model are never mixed in. */
+    public function modelKey(): string { return mb_substr($this->cacheId, 0, 80); }
+
+    /** @return ?array<int,array<int,float>> one vector per text (query embeddings use the local cache), or null on any failure */
+    public function embed(array $texts): ?array
+    {
+        try { return $this->vectorsFor(array_values($texts)); } catch (Throwable $e) { return null; }
+    }
+
+    /** The raw embedder (for batch indexing; bypasses the small on-disk cache on purpose). @return callable */
+    public function embedder(): callable { return $this->embed; }
+
     /** Returns a reranker when AI_EMBED_MODEL is configured, otherwise null. */
-    public static function fromEnv(): ?self
+    public static function fromEnv(int $timeoutSec = 6): ?self
     {
         $model = defined('AI_EMBED_MODEL') ? trim((string)AI_EMBED_MODEL) : '';
         if ($model === '') return null;
         $base = defined('OLLAMA_BASE_URL') ? (string)OLLAMA_BASE_URL : 'http://127.0.0.1:11434';
-        return new self(self::ollamaEmbedder($base, $model), 'ollama|' . $base . '|' . $model);
+        return new self(self::ollamaEmbedder($base, $model, $timeoutSec), 'ollama|' . $base . '|' . $model);
     }
 
     /** Embedder against Ollama's POST /api/embed (batched input). */

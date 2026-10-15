@@ -33,6 +33,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['ai_cfg_action'])) {
     }
     header('Location: ai-dashboard.php'); exit;
 }
+// ── Embedding index (bounded, admin-triggered). Needs AI_EMBED_MODEL; never runs on page load. ──
+require_once '../backend/ai/rag/EmbeddingStore.php';
+require_once '../backend/ai/rag/EmbeddingReranker.php';
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['ai_embed_action'])) {
+    tms_csrf_validate();
+    $rrx = EmbeddingReranker::fromEnv(15);
+    if (!$rrx) { $_SESSION['ai_cfg_flash'] = 'No embedding model is configured (AI_EMBED_MODEL in .env), so there is nothing to index.'; }
+    else {
+        $sr = EmbeddingStore::syncCatalogue($dbh, $rrx, 40, 20.0);
+        $_SESSION['ai_cfg_flash'] = 'Indexed ' . (int)$sr['embedded'] . ' package(s), ' . (int)$sr['unchanged'] . ' already current, ' . (int)$sr['failed'] . ' failed, ' . (int)$sr['remaining'] . ' remaining' . (!empty($sr['stopped']) ? ' (stopped: ' . $sr['stopped'] . ')' : '') . '.';
+    }
+    header('Location: ai-dashboard.php'); exit;
+}
 $cfgFlash = (string)($_SESSION['ai_cfg_flash'] ?? ''); unset($_SESSION['ai_cfg_flash']);
 
 // Round 35 (item 22, "AI Evaluation suite"), extended Round 95 with 3 more
@@ -611,6 +624,22 @@ html[data-theme="dark"] [style*="background:#fff"], html[data-theme="dark"] [sty
         <thead><tr><th scope="col">When</th><th scope="col">Setting</th><th scope="col">Change</th><th scope="col">By</th></tr></thead>
         <tbody><?php foreach ($cfgLog as $cl): ?><tr><td><?= htmlspecialchars($cl['changed_at']) ?></td><td><?= htmlspecialchars($cl['setting']) ?></td><td><?= htmlspecialchars($cl['old_value']) ?> → <?= htmlspecialchars($cl['new_value']) ?></td><td><?= htmlspecialchars($cl['changed_by']) ?></td></tr><?php endforeach; ?></tbody>
       </table>
+      <?php endif; ?>
+    </div>
+  </div>
+
+  <div class="panel" style="margin-bottom:20px;">
+    <div class="panel-header"><div class="panel-title"><i class="fa fa-database"></i> Embedding index</div></div>
+    <div class="panel-body">
+      <?php $embRr = EmbeddingReranker::fromEnv(15); $embCov = null; if ($embRr) { try { $embCov = EmbeddingStore::catalogueCoverage($dbh, $embRr); } catch (Throwable $e) { $embCov = null; } } ?>
+      <?php if (!$embRr): ?>
+        <p class="hp-note" style="margin:0;font-size:13px;">No embedding model configured (<code>AI_EMBED_MODEL</code> in <code>.env</code>). Search uses keyword (BM25) retrieval only.</p>
+      <?php elseif ($embCov === null): ?>
+        <p class="hp-note" style="margin:0;font-size:13px;">Index status unavailable.</p>
+      <?php else: $embPct = $embCov['total'] > 0 ? (int)floor(100 * $embCov['indexed'] / $embCov['total']) : 0; ?>
+        <p style="margin:0 0 8px;font-size:13px;"><?= (int)$embCov['indexed'] ?> of <?= (int)$embCov['total'] ?> packages indexed for model <code><?= htmlspecialchars($embRr->modelKey()) ?></code> (<?= $embPct ?>%<?= (int)$embCov['stale'] > 0 ? ', ' . (int)$embCov['stale'] . ' out of date' : '' ?>). Hybrid search is used only at 80% or more; below that, keyword search is used.</p>
+        <form method="post" action="ai-dashboard.php"><?php tms_csrf_field(); ?><input type="hidden" name="ai_embed_action" value="sync"><button type="submit" class="btn btn-default">Index now (up to 40 packages, 20 s)</button></form>
+        <p class="hp-note" style="font-size:12px;margin:10px 0 0;">Uses your configured embedding model. Run again until all packages are indexed, or use <code>php scripts/sync_embeddings.php</code> for the full catalogue.</p>
       <?php endif; ?>
     </div>
   </div>

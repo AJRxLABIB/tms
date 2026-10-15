@@ -12,7 +12,7 @@ provider calls (Gemini / OpenAI / Ollama) have NOT been tested; the sandbox had 
 | `providers/*` | Gemini, OpenAI, Ollama HTTP adapters | `AIClient` | Errors now carry a `kind` |
 | `ToolRegistry` | Read-only, schema-validated tools, audited (`tbl_ai_tool_audit`) | `ToolRouter` | No write tools by design |
 | `ToolRouter` | Rule-based routing, produces wrapped FACTS and citations | `SiteAssistant` | Rules, not an LLM planner |
-| `KnowledgeIndex` | BM25 over published packages | router tools | Index is rebuilt per request, no persistent embeddings |
+| `KnowledgeIndex` | BM25 over published packages | router tools | Index is rebuilt per request; vectors are persisted separately (`EmbeddingStore`) |
 | `EmbeddingReranker` | Optional rerank | `KnowledgeIndex` | Only when an embedding provider exists |
 | `InjectionGuard`, `SafetyEval` | Input screening, eval cases (`tests/ai/eval_cases.json`) | assistant, CI | Pattern based |
 | `SiteAssistant` | Chatbot | `api/ai.php handleChatbot` | Single-turn tool use, no multi-step planning |
@@ -71,6 +71,14 @@ Limits: settings apply per request from the database (no cache across requests);
 The result is attached to new plans (`plan_check`, never to the AI-unavailable fallback template), shown on the planner page, on My Trip (computed fresh from the stored plan) and on the Autopilot suggestion card. It never edits the plan.
 Limits: a clean result means "no contradictions found", not "the plan works" (opening hours, queues, real travel times, weather suitability are not checked, and AI-written durations like "half day" are skipped). The distance check will usually cover few pairs until more destinations are cached; the check reports what it skipped.
 
+## 3h. Stage 8 delivered: persistent embeddings and hybrid retrieval
+
+- `tbl_ai_embeddings` stores one L2-normalised float32 vector per package with model key and a sha1 of the indexed text, so changed packages are detected as stale and re-embedded only when needed (`EmbeddingStore`, `scripts/sync_embeddings.php`, bounded "Index now" button on the AI dashboard).
+- `HybridSearch` fuses BM25 top-20 with dense cosine using Reciprocal Rank Fusion (k=60). Dense-only hits must reach `AI_EMBED_MIN_SIM` (default 0.5).
+- Safety rules: hybrid is used only when at least 80% of the current catalogue is indexed for the current model; any embedding failure at query time falls back to the previous rerank/BM25 path; the tool schema seen by the model is unchanged; filters and the user's avoid-list still apply.
+- Verified: `tests/ai/hybrid_test.php` (33 checks) with a deterministic stub embedder, plus unchanged results for all earlier suites.
+- NOT verified: any real embedding model. Whether hybrid improves answers is unmeasured; `AI_EMBED_MIN_SIM=0.5` is an untuned guess; `nomic-embed-text` is English-centric, so Bangla queries need a multilingual model (for example bge-m3, not tested here).
+
 ## 4. Verification actually run (sandbox: PHP 8.3, MariaDB, stubbed HTTP transport)
 
 engine 122/122, itinerary checker 30/30, autopilot HTTP 23/23, quality scorer 16/16, admin controls over HTTP 14/14, resilience 29/29, memory HTTP 18/18, eval 75/75, rerank 11/11, Ollama unit, autopilot 40/40, payments 18/18, suppliers 72/72, notices 32/32, security 26/26, `tests/run.php` 20/20, e2e 14/14. axe WCAG A/AA clean on `ai-memory.php` (desktop/mobile, light/dark) and the dashboard panel (light/dark).
@@ -81,7 +89,7 @@ Real provider calls and answer quality (the harness exists but has never run aga
 
 ## 6. Not implemented yet (do not assume these exist)
 
-LLM-driven planning and multi-step tasks beyond the two rule-based follow-ups above; persistent embeddings with hybrid fusion; weather-aware replanning beyond Autopilot; real routing and travel-time data (only straight-line impossibility checks exist); booking-preparation tools; multimodal/OCR; per-task model routing; cache isolation measurement; trend charts over time; conversation-summary memory (deliberately omitted).
+LLM-driven planning and multi-step tasks beyond the two rule-based follow-ups above; weather-aware replanning beyond Autopilot; real routing and travel-time data (only straight-line impossibility checks exist); booking-preparation tools; multimodal/OCR; per-task model routing; cache isolation measurement; trend charts over time; conversation-summary memory (deliberately omitted).
 
 ## 7. Rollback
 
