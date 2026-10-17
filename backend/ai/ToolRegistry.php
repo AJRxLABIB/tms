@@ -59,6 +59,8 @@ final class ToolRegistry
                 'end_date' => ['type' => 'string', 'max' => 10],
             ]],
             'my_bookings' => ['auth' => true, 'params' => []],
+            // Side-by-side of 2-4 published packages, from catalogue fields only. Differences are computed in code.
+            'compare_packages' => ['auth' => false, 'params' => ['package_ids' => ['type' => 'string', 'required' => true, 'max' => 40]]],
             // Staff-entered, sourced, dated notices only (see TRAVEL_NOTICES.md). Never a live feed.
             'get_travel_notices' => ['auth' => false, 'params' => [
                 'query'   => ['type' => 'string', 'required' => true, 'max' => 200],
@@ -113,6 +115,7 @@ final class ToolRegistry
                 'search_packages' => $this->searchPackages($a),
                 'get_package' => $this->index->get($a['package_id']) ?? ['not_found' => true],
                 'get_cancellation_policy' => $this->policy($a['package_id']),
+                'compare_packages' => $this->comparePackages($a),
                 'my_bookings' => $this->myBookings((string)($ctx['email'] ?? '')),
                 'get_travel_notices' => $this->travelNotices($a),
                 'calculate_trip_budget' => $this->tripBudget($a),
@@ -265,6 +268,36 @@ final class ToolRegistry
         $txt = trim($p['cancellation']);
         return ['package' => $p['title'], 'policy' => $txt !== '' ? $txt : null,
                 'note' => $txt === '' ? 'No package-specific cancellation policy is recorded.' : null, 'citation' => $p['citation']];
+    }
+
+    /** Published package meta by id (null when not published); used by callers that need a price without a tool call. */
+    public function package(int $id): ?array { return $this->index->get($id); }
+
+    private function comparePackages(array $a): array
+    {
+        $ids = [];
+        foreach (preg_split('/[\s,;]+/', (string)$a['package_ids'], -1, PREG_SPLIT_NO_EMPTY) as $x) {
+            if (!ctype_digit($x)) throw new InvalidArgumentException('bad_type:package_ids');
+            $x = (int)$x; if ($x > 0 && !in_array($x, $ids, true)) $ids[] = $x;
+        }
+        if (count($ids) < 2 || count($ids) > 4) throw new InvalidArgumentException('out_of_range:package_ids');
+        $items = []; $missing = [];
+        foreach ($ids as $id) {
+            $p = $this->index->get($id);
+            if (!$p) { $missing[] = $id; continue; }
+            $pol = trim((string)$p['cancellation']);
+            $items[] = ['id' => $id, 'title' => $p['title'], 'location' => $p['location'], 'country' => $p['country'], 'price_bdt' => (int)$p['price'],
+                'duration' => $p['duration'], 'rating' => $p['rating'] ?? null, 'cancellation' => $pol !== '' ? mb_substr($pol, 0, 160) : 'none recorded', 'citation' => $p['citation']];
+        }
+        $out = ['packages' => $items];
+        if ($missing) $out['not_published'] = $missing;
+        if (count($items) >= 2) {
+            $by = $items; usort($by, fn($x, $y) => $x['price_bdt'] <=> $y['price_bdt']);
+            if ($by[0]['price_bdt'] < $by[1]['price_bdt']) { $out['cheapest_id'] = $by[0]['id']; $out['cheapest_saves_bdt_vs_next'] = $by[1]['price_bdt'] - $by[0]['price_bdt']; }
+            else $out['cheapest_id'] = null;
+            $out['note'] = 'Prices are per person and come from the catalogue. Differences listed here are computed by code; do not add facts that are not in this list.';
+        }
+        return $out;
     }
 
     private function myBookings(string $email): array

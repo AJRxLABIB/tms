@@ -8,14 +8,19 @@
 require_once __DIR__ . '/ToolRegistry.php';
 require_once __DIR__ . '/BanglaNormalizer.php';
 require_once __DIR__ . '/QueryParser.php';
+require_once __DIR__ . '/FollowUp.php';
 
 final class ToolRouter
 {
     /** @return array<int,array{tool:string,args:array}> */
-    public static function plan(string $message, array $pageContext = []): array
+    public static function plan(string $message, array $pageContext = [], array $recentIds = [], array $prices = []): array
     {
         $m = mb_strtolower($message, 'UTF-8'); $calls = [];
         $pkgId = isset($pageContext['package_id']) ? (int)$pageContext['package_id'] : 0;
+        // References to the previous answer ("the second one", "compare them") are resolved by code from ids the server saved.
+        $fu = FollowUp::resolve($message, $recentIds, $prices);
+        if ($fu['kind'] === 'compare') $calls[] = ['tool' => 'compare_packages', 'args' => ['package_ids' => implode(',', $fu['ids'])]];
+        elseif ($fu['kind'] === 'single') $pkgId = (int)$fu['target'];
 
         if (preg_match('/\b(my (booking|trip|reservation)s?|my upcoming|am i booked)\b|আমার\s*(বুকিং|ট্রিপ|ভ্রমণ)/u', $m)) {
             $calls[] = ['tool' => 'my_bookings', 'args' => []];
@@ -44,7 +49,8 @@ final class ToolRouter
         }
         if ($pkgId > 0 && self::wantsBookingCheck($message)) $calls[] = ['tool' => 'check_booking_readiness', 'args' => self::bookingArgs($message, $pkgId)];
         $isCatalogue = preg_match('/\b(package|tour|trip|hotel|beach|hill|price|cheap|budget|family|honeymoon|visit|go to|best)\b|প্যাকেজ|ভ্রমণ|দাম|কক্সবাজার|সিলেট|সুন্দরবন|বান্দরবান/u', $m);
-        if ($isCatalogue || !$calls) {
+        if ($fu['kind'] === 'single' && !$calls) $calls[] = ['tool' => 'get_package', 'args' => ['package_id' => $pkgId]];
+        if (($isCatalogue && $fu['kind'] === 'none') || !$calls) {
             $args = ['query' => mb_substr($message, 0, 200), 'limit' => 5];
             if ($max) $args['max_price'] = $max;
             if ($qf['min_price']) $args['min_price'] = $qf['min_price'];

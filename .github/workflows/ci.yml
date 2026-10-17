@@ -88,6 +88,7 @@ jobs:
           php tests/ai/booking_readiness_test.php
           php tests/ai/query_parser_test.php
           php tests/ai/search_filters_test.php
+          php tests/ai/followup_test.php
           php tests/payments/run.php
           php tests/suppliers/run.php
           php tests/notices/run.php

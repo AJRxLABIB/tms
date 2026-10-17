@@ -94,9 +94,15 @@ Limits: a clean result means "no contradictions found", not "the plan works" (op
 Tests: `query_parser_test.php` 77, `search_filters_test.php` 32 (real DB), eval 85/85 (baseline raised to 85).
 Limits: season is parsed but nothing is filtered by it; nights are read as days; Banglish is understood only through the number words/cues listed in the tests; pattern screening is defence in depth, not a guarantee; no real model was involved.
 
+## 3k. Stage 12 delivered: follow-up resolution and package comparison
+
+`FollowUp` resolves references to the previous answer ("the second one", "3rd", "the last one", Bangla "দ্বিতীয়", "the cheaper one", "compare them", "compare the first and third") to real package ids in code. Ids come only from `package-details.php?pkgid=` links in the assistant turn the server itself saved (user turns can never plant ids). Anything ambiguous (ordinal beyond the list, a price tie for "cheaper", nothing to refer to, bare "that one") is NOT guessed: `SiteAssistant` tells the model to ask which package is meant. An explicit ordinal overrides the page the visitor is on. New read-only tool `compare_packages` (2-4 published packages; unpublished ones are listed as not_published and never shown; cheapest and price gap computed by code; equal prices give no winner; missing cancellation policy reported as "none recorded"). `ToolRouter::plan` takes the resolved ids; `SafetyEval` x1 allowlists exactly this tool.
+Test: `tests/ai/followup_test.php` (29, real DB).
+Limits: Bangla ordinals match whole words only (suffixed forms such as "দ্বিতীয়টির" are deliberately not guessed); only the latest list the assistant linked is remembered; comparison uses catalogue fields only (no hotels/activities data yet); no real model involved.
+
 ## 4. Verification actually run (sandbox: PHP 8.3, MariaDB, stubbed HTTP transport)
 
-engine 122/122, query parser 77/77, search filters 32/32, itinerary checker 30/30, autopilot HTTP 23/23, quality scorer 16/16, admin controls over HTTP 14/14, resilience 29/29, memory HTTP 18/18, eval 85/85, rerank 11/11, Ollama unit, autopilot 40/40, payments 18/18, suppliers 72/72, notices 32/32, security 26/26, `tests/run.php` 20/20, e2e 14/14. axe WCAG A/AA clean on `ai-memory.php` (desktop/mobile, light/dark) and the dashboard panel (light/dark).
+engine 122/122, query parser 77/77, follow-up 29/29, search filters 32/32, itinerary checker 30/30, autopilot HTTP 23/23, quality scorer 16/16, admin controls over HTTP 14/14, resilience 29/29, memory HTTP 18/18, eval 85/85, rerank 11/11, Ollama unit, autopilot 40/40, payments 18/18, suppliers 72/72, notices 32/32, security 26/26, `tests/run.php` 20/20, e2e 14/14. axe WCAG A/AA clean on `ai-memory.php` (desktop/mobile, light/dark) and the dashboard panel (light/dark).
 
 ## 5. NOT verified
 
