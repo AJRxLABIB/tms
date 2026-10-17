@@ -52,8 +52,8 @@ on XAMPP/Apache, with a real payment gateway, or with a real AI model.
 19. Package index cache (10 min) can serve a repriced/unpublished package.
 
 **Performance / UX / SEO**
-20. `package-list.php`: about 20 extra queries per page (`tms_dynamic_price` per card), `SELECT *` including long text columns, uncached `AVG`/`GROUP BY`, no index for sort/search, duration filtered in PHP, 6 per page.
-21. Missing indexes (price/rating sort, `tblbooking (PackageId,status,RegDate)` and `(UserEmail,status)`, reviews, alerts, blog); three redundant `tblusers` email indexes.
+20. `package-list.php`: about 20 extra queries per page (`tms_dynamic_price` per card), `SELECT *` including long text columns, uncached `AVG`/`GROUP BY`, no index for sort/search, duration filtered in PHP, 6 per page. **Partly fixed (Stage 13):** per-card pricing now uses `tms_dynamic_price_batch` (2 grouped queries per page, proven identical to the single path in `tests/perf/listing_test.php`); still open: `SELECT *`, uncached `AVG`/`GROUP BY`, duration filtered in PHP.
+21. Missing indexes (price/rating sort, `tblbooking (PackageId,status,RegDate)` and `(UserEmail,status)`, reviews, alerts, blog); three redundant `tblusers` email indexes. **Partly fixed (Stage 13):** added `tblbooking (PackageId,status,RegDate)` and `tbltourpackages (Status,PackagePrice)`; the rest is still open.
 22. Schema migration gate hashes `config.php` on every request, ignores other migration sources, records failed migrations as done, and has no lock; sessions are never released (`session_write_close`) and are started for every bot hit.
 23. `.htaccess` has no compression or far-future caching; 288 KB `i18n.php` loaded each request; Leaflet loaded on every list view.
 24. SEO: no JSON-LD on list/hotel/activity pages, landing page has no meta description, `robots.txt` uses wrong paths for a `/tms/` install, sitemap has no `lastmod`.

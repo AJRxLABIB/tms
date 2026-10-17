@@ -185,6 +185,9 @@ if (!empty($_SESSION['login']) && count($results) > 0) {
     $wishlistIds = array_map('intval', $wQ->fetchAll(PDO::FETCH_COLUMN));
 }
 
+// Dynamic prices for the whole page in two grouped queries (was ~4 queries per card); same arithmetic as tms_dynamic_price().
+$listPrices = $results ? tms_dynamic_price_batch($dbh, array_map(fn($r) => ['PackageId' => $r->PackageId, 'PackagePrice' => $r->PackagePrice, 'SeatsAvailable' => $r->SeatsAvailable ?? null], $results)) : [];
+
 // Package types for filter dropdown
 $typesQ = $dbh->query("SELECT DISTINCT PackageType FROM tbltourpackages WHERE " . TMS_PKG_PUBLIC_SQL . " ORDER BY PackageType");
 $packageTypes = $typesQ->fetchAll(PDO::FETCH_COLUMN);
@@ -538,7 +541,7 @@ html[data-theme="dark"] .no-results { color: var(--text-light) !important; }
                         <?php endif; ?>
                     </div>
                     <div class="col-md-3 room-right">
-                        <?php $listPricing = ((float)$result->PackagePrice > 0) ? tms_dynamic_price($dbh, (int)$result->PackageId, (float)$result->PackagePrice) : null; ?>
+                        <?php $listPricing = ((float)$result->PackagePrice > 0) ? ($listPrices[(int)$result->PackageId] ?? tms_dynamic_price($dbh, (int)$result->PackageId, (float)$result->PackagePrice)) : null; ?>
                         <h5><?php echo tms_currency((float)($listPricing['final'] ?? $result->PackagePrice)); ?></h5>
                         <?php if (!empty($listPricing) && $listPricing['demand_pct'] > 0): ?>
                         <div style="font-size:10.5px;font-weight:600;color:#f97316;margin:-8px 0 8px;"><i class="fa fa-bolt"></i> High demand</div>

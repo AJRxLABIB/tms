@@ -131,13 +131,10 @@ function tms_coupon_discount(int $subtotal, float $percent): int {
 
 function tms_dynamic_price(PDO $dbh, int $packageId, float $basePrice, ?string $fromDate = null): array
 {
-    if ($basePrice <= 0) {
-        return ['base' => $basePrice, 'final' => (int) round($basePrice), 'multiplier' => 1.0,
-                'demand_pct' => 0, 'date_pct' => 0, 'weekend_pct' => 0, 'seats_pct' => 0, 'label' => ''];
-    }
+    if ($basePrice <= 0) return tms_price_from_signals($basePrice, 0, null, 0, $fromDate);
 
     // ── Demand signal: recent bookings for this exact package ──────────────
-    $demandPct = 0;
+    $recentBookings = 0;
     try {
         $dq = $dbh->prepare(
             "SELECT COUNT(*) FROM tblbooking
@@ -146,14 +143,74 @@ function tms_dynamic_price(PDO $dbh, int $packageId, float $basePrice, ?string $
         );
         $dq->execute([':pid' => $packageId]);
         $recentBookings = (int) $dq->fetchColumn();
-
-        if ($recentBookings >= 10)      $demandPct = 12;
-        elseif ($recentBookings >= 5)   $demandPct = 6;
-        elseif ($recentBookings >= 2)   $demandPct = 2;
     } catch (Exception $e) {
         error_log('[TMS Pricing] Demand lookup failed: ' . $e->getMessage());
-        $demandPct = 0;
+        $recentBookings = 0;
     }
+
+    // ── Scarcity signal inputs: only when this package actually tracks capacity ──
+    $remainingSeats = tms_remaining_seats($dbh, $packageId);
+    $totalCapacity = 0;
+    if ($remainingSeats !== null) {
+        $capQ2 = $dbh->prepare("SELECT SeatsAvailable FROM tbltourpackages WHERE PackageId = :pid");
+        $capQ2->execute([':pid' => $packageId]);
+        $totalCapacity = (int) $capQ2->fetchColumn();
+    }
+    return tms_price_from_signals($basePrice, $recentBookings, $remainingSeats, $totalCapacity, $fromDate);
+}
+
+/**
+ * Dynamic prices for MANY packages with two grouped queries instead of ~4 per package (listing pages, search results).
+ * Uses exactly the same arithmetic as tms_dynamic_price() (both call tms_price_from_signals); tests/perf/listing_test.php proves
+ * the results are identical, including capacity-tracked packages.
+ * @param array<int,array{PackageId:int|string,PackagePrice:int|float|string,SeatsAvailable?:mixed}> $rows
+ * @return array<int,array> package id => same shape as tms_dynamic_price()
+ */
+function tms_dynamic_price_batch(PDO $dbh, array $rows, ?string $fromDate = null): array
+{
+    $ids = [];
+    foreach ($rows as $r) { $id = (int)$r['PackageId']; if ($id > 0 && (float)$r['PackagePrice'] > 0) $ids[$id] = true; }
+    $ids = array_keys($ids);
+    $recent = []; $booked = [];
+    if ($ids) {
+        $in = implode(',', array_fill(0, count($ids), '?'));
+        try {
+            $q = $dbh->prepare("SELECT PackageId, COUNT(*) FROM tblbooking WHERE PackageId IN ($in) AND status IN (0,1) AND RegDate >= (NOW() - INTERVAL 30 DAY) GROUP BY PackageId");
+            $q->execute($ids);
+            foreach ($q->fetchAll(PDO::FETCH_NUM) as [$pid, $n]) $recent[(int)$pid] = (int)$n;
+        } catch (Exception $e) { error_log('[TMS Pricing] Batch demand lookup failed: ' . $e->getMessage()); $recent = []; }
+        try {
+            $q = $dbh->prepare("SELECT PackageId, COALESCE(SUM(NoOfPersons),0) FROM tblbooking WHERE PackageId IN ($in) AND status IN (0,1) GROUP BY PackageId");
+            $q->execute($ids);
+            foreach ($q->fetchAll(PDO::FETCH_NUM) as [$pid, $n]) $booked[(int)$pid] = (int)$n;
+        } catch (Exception $e) { error_log('[TMS Pricing] Batch seat lookup failed: ' . $e->getMessage()); $booked = null; }
+    }
+    $out = [];
+    foreach ($rows as $r) {
+        $id = (int)$r['PackageId']; $base = (float)$r['PackagePrice'];
+        if ($base <= 0) { $out[$id] = tms_price_from_signals($base, 0, null, 0, $fromDate); continue; }
+        $cap = $r['SeatsAvailable'] ?? null;
+        $remaining = null; $total = 0;
+        if ($booked !== null && $cap !== null && $cap !== '') { $total = (int)$cap; $remaining = max(0, $total - ($booked[$id] ?? 0)); }
+        $out[$id] = tms_price_from_signals($base, $recent[$id] ?? 0, $remaining, $total, $fromDate);
+    }
+    return $out;
+}
+
+/**
+ * Pure pricing arithmetic (no database): demand, timing, weekend and scarcity signals -> final price and label.
+ * @return array{base:float, final:int, multiplier:float, demand_pct:int, date_pct:int, weekend_pct:int, seats_pct:int, label:string, remaining_seats?:?int}
+ */
+function tms_price_from_signals(float $basePrice, int $recentBookings, ?int $remainingSeats, int $totalCapacity, ?string $fromDate = null): array
+{
+    if ($basePrice <= 0) {
+        return ['base' => $basePrice, 'final' => (int) round($basePrice), 'multiplier' => 1.0,
+                'demand_pct' => 0, 'date_pct' => 0, 'weekend_pct' => 0, 'seats_pct' => 0, 'label' => ''];
+    }
+    $demandPct = 0;
+    if ($recentBookings >= 10)      $demandPct = 12;
+    elseif ($recentBookings >= 5)   $demandPct = 6;
+    elseif ($recentBookings >= 2)   $demandPct = 2;
 
     // ── Timing signal: only when a real departure date is known ────────────
     $datePct = 0;
@@ -192,17 +249,11 @@ function tms_dynamic_price(PDO $dbh, int $packageId, float $basePrice, ?string $
 
     // ── Scarcity signal: only when this package actually tracks capacity ───
     $seatsPct = 0;
-    $remainingSeats = tms_remaining_seats($dbh, $packageId);
-    if ($remainingSeats !== null) {
-        $capQ2 = $dbh->prepare("SELECT SeatsAvailable FROM tbltourpackages WHERE PackageId = :pid");
-        $capQ2->execute([':pid' => $packageId]);
-        $totalCapacity = (int) $capQ2->fetchColumn();
-        if ($totalCapacity > 0) {
-            $fillRatio = 1 - ($remainingSeats / $totalCapacity);
-            if ($remainingSeats <= 2)        $seatsPct = 18; // almost sold out
-            elseif ($fillRatio >= 0.8)       $seatsPct = 10;
-            elseif ($fillRatio >= 0.5)       $seatsPct = 4;
-        }
+    if ($remainingSeats !== null && $totalCapacity > 0) {
+        $fillRatio = 1 - ($remainingSeats / $totalCapacity);
+        if ($remainingSeats <= 2)        $seatsPct = 18; // almost sold out
+        elseif ($fillRatio >= 0.8)       $seatsPct = 10;
+        elseif ($fillRatio >= 0.5)       $seatsPct = 4;
     }
 
     $multiplier = (1 + $demandPct / 100) * (1 + $datePct / 100) * (1 + $weekendPct / 100) * (1 + $seatsPct / 100);

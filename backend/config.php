@@ -1698,6 +1698,9 @@ function _tms_run_core_migrations(PDO $dbh): void {
         // and that table only ever grows.
         "CREATE INDEX IF NOT EXISTS idx_booking_status ON tblbooking(status)",
         "CREATE INDEX IF NOT EXISTS idx_booking_package ON tblbooking(PackageId)",
+        // Listing/pricing: demand count (PackageId, status, RegDate) and the public catalogue filter + price sort.
+        "CREATE INDEX IF NOT EXISTS idx_booking_pkg_status_reg ON tblbooking(PackageId, status, RegDate)",
+        "CREATE INDEX IF NOT EXISTS idx_pkg_status_price ON tbltourpackages(Status, PackagePrice)",
     ] as $idx) { try { $dbh->exec($idx); } catch (Exception $e) {} }
 }
 

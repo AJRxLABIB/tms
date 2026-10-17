@@ -109,6 +109,7 @@ jobs:
         run: |
           php tests/security/run.php http://127.0.0.1:8000
           php tests/security/stage10_test.php http://127.0.0.1:8000
+          php tests/perf/listing_test.php http://127.0.0.1:8000
           node tests/pwa/sw_test.js
           php tests/autopilot/http.php http://127.0.0.1:8000
           php tests/ai/memory_http.php http://127.0.0.1:8000
