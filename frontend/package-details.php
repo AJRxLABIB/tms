@@ -36,12 +36,23 @@ if (isset($_POST['submit2']) || isset($_POST['addcart'])) {
         $mobile    = tms_clean($_POST['mobile'] ?? '');
         $couponRaw = tms_clean($_POST['couponCode'] ?? '');
 
+        // Double-submit / replay guard for "Book Now": each rendering of the form carries a one-time id (kept in the session). A second
+        // click, a browser re-POST after reload, or a replayed request finds it already consumed and creates nothing.
+        $bookNonceOk = true;
+        if (isset($_POST['submit2'])) {
+            $bn = (string)($_POST['booking_nonce'] ?? '');
+            $bookNonceOk = ($bn !== '' && isset($_SESSION['book_nonces'][$bn]));
+            if ($bookNonceOk) unset($_SESSION['book_nonces'][$bn]);
+        }
+
         // Date validation
         $from = DateTime::createFromFormat('d-m-Y', $fromdate) ?: DateTime::createFromFormat('Y-m-d', $fromdate);
         $to   = DateTime::createFromFormat('d-m-Y', $todate)   ?: DateTime::createFromFormat('Y-m-d', $todate);
         $now  = new DateTime();
 
-        if (!$from || !$to) {
+        if (!$bookNonceOk) {
+            $error = 'This booking form was already submitted or has expired. Please check My Tours before trying again.';
+        } elseif (!$from || !$to) {
             $error = 'Please enter valid dates in dd-mm-yyyy format.';
         } elseif ($from <= $now) {
             $error = 'Departure date must be in the future.';
@@ -105,6 +116,13 @@ if (isset($_POST['submit2']) || isset($_POST['addcart'])) {
             } elseif (($seatsAvail = tms_remaining_seats($dbh, $pid)) !== null && $persons > $seatsAvail) {
                 $error = "Sorry, only {$seatsAvail} seat" . ($seatsAvail===1?'':'s') . " left for this package, but you requested {$persons}. Please reduce the number of travelers.";
             } else {
+                // One real transaction: seat re-check under a row lock, coupon claim, booking, add-ons and loyalty either all happen or
+                // none do (a failed insert used to leave a personal coupon burned; two simultaneous requests could both pass a lock-free
+                // seat check for the last seats).
+                $dbh->beginTransaction();
+                try {
+                $lockedSeats = tms_remaining_seats_for_update($dbh, $pid);
+                if ($lockedSeats !== null && $persons > $lockedSeats) throw new RuntimeException('seats:' . $lockedSeats);
                 $pricing   = tms_dynamic_price($dbh, $pid, (float)$rawPrice, $from->format('Y-m-d'));
                 $unitPrice = (float)$pricing['final'];
                 $subtotal  = (int)round($unitPrice) * $persons; // whole units, exact
@@ -223,20 +241,24 @@ if (isset($_POST['submit2']) || isset($_POST['addcart'])) {
                             ]);
                         }
                     }
-                    // Award 100 loyalty points
-                    $email2 = $_SESSION['login'];
-                    $dbh->prepare("INSERT INTO tblloyalty(UserEmail,Points,TotalEarned) VALUES(:e,100,100)
-                        ON DUPLICATE KEY UPDATE Points=Points+100, TotalEarned=TotalEarned+100")->execute([':e'=>$email2]);
-                    try {
-                        $dbh->prepare("INSERT INTO tblloyalty_log(UserEmail,Points,Description) VALUES(:e,100,:d)")
-                            ->execute([':e'=>$email2,':d'=>'Booking #BK'.$newBkId.' confirmed']);
-                    } catch (Exception $e) {
-                        error_log('[TMS Loyalty] Log insert failed (booking still succeeded): ' . $e->getMessage());
-                    }
+                    // Award 100 loyalty points (recorded against this booking so a cancellation can reverse it)
+                    tms_loyalty_award_booking($dbh, (string)$_SESSION['login'], (int)$newBkId, 100);
+                    $dbh->commit();
                     $msg = ($error ?: '') . ' Package booked successfully! Check your booking in <a href="tour-history.php">My Tours</a>. You earned <strong>100 loyalty points!</strong>';
                     $error = '';
                 } else {
-                    $error = 'Something went wrong. Please try again.';
+                    throw new RuntimeException('insert_failed');
+                }
+                } catch (Throwable $bookEx) {
+                    if ($dbh->inTransaction()) $dbh->rollBack();
+                    $msg = '';
+                    if (str_starts_with($bookEx->getMessage(), 'seats:')) {
+                        $left = (int)substr($bookEx->getMessage(), 6);
+                        $error = "Sorry, only {$left} seat" . ($left === 1 ? '' : 's') . " left for this package, but you requested {$persons}. Please reduce the number of travelers.";
+                    } else {
+                        error_log('[TMS Booking] Book Now rolled back: ' . $bookEx->getMessage());
+                        $error = 'Something went wrong. Nothing was reserved or charged. Please try again.';
+                    }
                 }
             }
         }
@@ -1382,6 +1404,8 @@ html[data-theme="dark"] .meta-row { color: var(--text-muted) !important; }
                         <h5 style="font-weight:700;margin-bottom:18px;"><i class="fa fa-calendar-check-o" style="color:var(--secondary)"></i> <?php echo tms_t('heading_book_package','Book This Package'); ?></h5>
                         <form method="post">
                             <?php tms_csrf_field(); ?>
+                            <?php $bookNonce = bin2hex(random_bytes(12)); $_SESSION['book_nonces'] = array_slice(($_SESSION['book_nonces'] ?? []) + [$bookNonce => time()], -20, null, true); ?>
+                            <input type="hidden" name="booking_nonce" value="<?php echo $bookNonce; ?>">
                             <div class="form-group">
                                 <label style="font-weight:600;font-size:13px;" for="datepicker">Departure Date</label>
                                 <?php /* FIX (Round 14): these were bare text boxes with a

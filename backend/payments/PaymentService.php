@@ -74,6 +74,14 @@ class PaymentService
      */
     public function createPendingPayment(int $bookingId, float $amountFloat, string $currency = 'BDT'): array
     {
+        // Only a live, unpaid booking can be paid: no new payment for a cancelled or already-paid booking.
+        $bk = $this->dbh->prepare('SELECT status, PaymentStatus FROM tblbooking WHERE BookingId = :b');
+        $bk->execute([':b' => $bookingId]);
+        $bkRow = $bk->fetch(PDO::FETCH_ASSOC);
+        if (!$bkRow) throw new DomainException('booking_not_found');
+        if ((int)$bkRow['status'] === 2) throw new DomainException('booking_cancelled');
+        if (strtolower((string)$bkRow['PaymentStatus']) === 'paid') throw new DomainException('booking_already_paid');
+
         $provider = $this->getProvider();
         $amountMinor = self::toMinorUnits($amountFloat);
         $idempotencyKey = hash('sha256', $bookingId . '|' . $amountMinor . '|' . $provider->name() . '|' . date('Y-m-d'));

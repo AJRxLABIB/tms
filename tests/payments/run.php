@@ -55,10 +55,17 @@ t('owner confirms', $svc->confirmSandboxPayment((int)$p['PaymentId'], $E) === tr
 t('booking now paid + confirmed', row($dbh, $b1) === ['status' => 1, 'PaymentStatus' => 'paid']);
 t('second confirm idempotent', $svc->confirmSandboxPayment((int)$p['PaymentId'], $E) === true);
 $cnt = $dbh->prepare("SELECT COUNT(*) FROM tblpayments WHERE BookingId=?"); $cnt->execute([$b1]);
-t('createPendingPayment is idempotent', (int)$cnt->fetchColumn() === 1 && $svc->createPendingPayment($b1, 5000.0)['PaymentId'] == $p['PaymentId']);
+t('only one payment row exists for the booking', (int)$cnt->fetchColumn() === 1);
+$thr = function (callable $f): string { try { $f(); return ''; } catch (DomainException $e) { return $e->getMessage(); } };
+t('a booking that is already PAID cannot get a new payment', $thr(fn() => $svc->createPendingPayment($b1, 5000.0)) === 'booking_already_paid');
+t('a booking that does not exist cannot get a payment', $thr(fn() => $svc->createPendingPayment(999999999, 5000.0)) === 'booking_not_found');
 
 // 3. Cancelled booking must not be resurrected
-$b2 = mk($dbh, $E, 2); $p2 = $svc->createPendingPayment($b2, 5000.0);
+$bc = mk($dbh, $E, 2);
+t('a CANCELLED booking cannot get a new payment', $thr(fn() => $svc->createPendingPayment($bc, 5000.0)) === 'booking_cancelled');
+$b2 = mk($dbh, $E, 0); $p2 = $svc->createPendingPayment($b2, 5000.0);
+t('createPendingPayment is idempotent while the booking is unpaid', $svc->createPendingPayment($b2, 5000.0)['PaymentId'] == $p2['PaymentId']);
+$dbh->prepare('UPDATE tblbooking SET status=2 WHERE BookingId=?')->execute([$b2]);   // customer cancels after the payment row was created
 t('cancelled booking: confirm refused', $svc->confirmSandboxPayment((int)$p2['PaymentId'], $E) === false);
 t('cancelled booking stays cancelled & unpaid', row($dbh, $b2)['status'] == 2 && row($dbh, $b2)['PaymentStatus'] !== 'paid');
 

@@ -98,6 +98,15 @@ if (isset($_POST['confirm_checkout'])) {
     $dbh->beginTransaction();
     $capacityError = '';
     try {
+        // Double-submit guard: lock this customer's cart rows and make sure the cart is exactly what was shown. A second parallel
+        // POST (double click, retry) blocks here until the first commits, then finds the cart gone and creates nothing.
+        $lk = $dbh->prepare('SELECT id, PackageId, FromDate, ToDate, NoOfPersons, DynamicPrice FROM tblcart WHERE UserEmail = :e ORDER BY id FOR UPDATE');
+        $lk->execute([':e' => $email]);
+        $sig = fn(array $rows) => json_encode(array_map(fn($r) => [(int)$r->id, (int)$r->PackageId, (string)$r->FromDate, (string)$r->ToDate, (int)$r->NoOfPersons, $r->DynamicPrice === null ? null : (int)$r->DynamicPrice], $rows));
+        $shown = $items; usort($shown, fn($a, $b) => (int)$a->id <=> (int)$b->id);
+        if ($sig($lk->fetchAll(PDO::FETCH_OBJ)) !== $sig($shown)) {
+            throw new RuntimeException('cart_changed');
+        }
         // Supplier blackout dates: re-checked here, server-side, for every cart item.
         foreach ($items as $it) {
             if (!tms_package_bookable($dbh, (int)$it->PackageId)) { $capacityError .= "A package in your cart is no longer available. "; continue; }
@@ -119,9 +128,13 @@ if (isset($_POST['confirm_checkout'])) {
             }
         }
     } catch (Exception $e) {
-        $dbh->rollBack();
-        error_log('[TMS Checkout] Capacity lock check failed: ' . $e->getMessage());
-        $error = "Something went wrong checking availability. Please try again.";
+        if ($dbh->inTransaction()) $dbh->rollBack();
+        if ($e->getMessage() === 'cart_changed') {
+            $error = 'Your cart changed while you were checking out (it may already have been submitted). Please check My Tours and your cart before trying again.';
+        } else {
+            error_log('[TMS Checkout] Capacity lock check failed: ' . $e->getMessage());
+            $error = "Something went wrong checking availability. Please try again.";
+        }
         $capacityError = null; // signal: already handled, skip the block below
     }
 
@@ -196,14 +209,7 @@ if (isset($_POST['confirm_checkout'])) {
                     ]);
                 }
             }
-            $dbh->prepare("INSERT INTO tblloyalty(UserEmail,Points,TotalEarned) VALUES(:e,100,100)
-                ON DUPLICATE KEY UPDATE Points=Points+100, TotalEarned=TotalEarned+100")->execute([':e'=>$email]);
-            try {
-                $dbh->prepare("INSERT INTO tblloyalty_log(UserEmail,Points,Description) VALUES(:e,100,:d)")
-                    ->execute([':e'=>$email, ':d'=>'Booking #BK'.$newId.' confirmed']);
-            } catch (Exception $e) {
-                error_log('[TMS Loyalty] Log insert failed (booking still succeeded): ' . $e->getMessage());
-            }
+            tms_loyalty_award_booking($dbh, $email, (int)$newId, 100);
         }
     }
 

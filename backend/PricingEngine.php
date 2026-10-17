@@ -361,3 +361,57 @@ function tms_get_price_history(PDO $dbh, int $packageId, int $days = 90): array
         return [];
     }
 }
+
+/**
+ * Loyalty points for a booking, recorded against that booking so a cancellation can reverse exactly what it earned.
+ * Idempotent: awarding the same booking twice credits once. The log text ("Booking #BK<id> confirmed") is unchanged for
+ * compatibility with the loyalty page. Safe to call inside an open transaction. Never throws (a missed award is not a failed booking).
+ */
+function tms_loyalty_award_booking(PDO $dbh, string $email, int $bookingId, int $points = 100): bool
+{
+    if ($email === '' || $bookingId <= 0 || $points <= 0) return false;
+    $desc = 'Booking #BK' . $bookingId . ' confirmed';
+    try {
+        $dupe = $dbh->prepare('SELECT 1 FROM tblloyalty_log WHERE UserEmail = ? AND Description = ? LIMIT 1');
+        $dupe->execute([$email, $desc]);
+        if ($dupe->fetchColumn()) return false;
+        $dbh->prepare('INSERT INTO tblloyalty(UserEmail,Points,TotalEarned) VALUES(:e,:p,:p2) ON DUPLICATE KEY UPDATE Points=Points+:p3, TotalEarned=TotalEarned+:p4')
+            ->execute([':e' => $email, ':p' => $points, ':p2' => $points, ':p3' => $points, ':p4' => $points]);
+        $dbh->prepare('INSERT INTO tblloyalty_log(UserEmail,Points,Description) VALUES(?,?,?)')->execute([$email, $points, $desc]);
+        return true;
+    } catch (Throwable $e) {
+        error_log('[TMS Loyalty] award failed (booking unaffected): ' . $e->getMessage());
+        return false;
+    }
+}
+
+/**
+ * Take back the points a booking earned when it is cancelled. Deducts exactly what that booking awarded (the balance may go
+ * negative if the points were already spent - the customer then owes them, so earn-spend-cancel cannot farm points), once only.
+ * Bookings with no award record (older rows) are untouched. Returns the number of points reversed (0 if none).
+ */
+function tms_loyalty_reverse_booking(PDO $dbh, int $bookingId): int
+{
+    if ($bookingId <= 0) return 0;
+    $own = !$dbh->inTransaction();
+    try {
+        if ($own) $dbh->beginTransaction();
+        $em = $dbh->prepare('SELECT UserEmail FROM tblbooking WHERE BookingId = ?'); $em->execute([$bookingId]);
+        $email = (string)$em->fetchColumn();
+        if ($email === '') { if ($own) $dbh->commit(); return 0; }
+        $dbh->prepare('INSERT IGNORE INTO tblloyalty(UserEmail,Points,TotalEarned) VALUES(?,0,0)')->execute([$email]);
+        $dbh->prepare('SELECT Points FROM tblloyalty WHERE UserEmail = ? FOR UPDATE')->execute([$email]);   // serialises concurrent reversals
+        $aw = $dbh->prepare('SELECT COALESCE(SUM(Points),0) FROM tblloyalty_log WHERE UserEmail = ? AND Description = ?');
+        $aw->execute([$email, 'Booking #BK' . $bookingId . ' confirmed']); $awarded = (int)$aw->fetchColumn();
+        $aw->execute([$email, 'Booking #BK' . $bookingId . ' cancelled - points reversed']); $already = (int)$aw->fetchColumn();
+        if ($awarded <= 0 || $already !== 0) { if ($own) $dbh->commit(); return 0; }
+        $dbh->prepare('UPDATE tblloyalty SET Points = Points - ?, TotalEarned = GREATEST(0, TotalEarned - ?) WHERE UserEmail = ?')->execute([$awarded, $awarded, $email]);
+        $dbh->prepare('INSERT INTO tblloyalty_log(UserEmail,Points,Description) VALUES(?,?,?)')->execute([$email, -$awarded, 'Booking #BK' . $bookingId . ' cancelled - points reversed']);
+        if ($own) $dbh->commit();
+        return $awarded;
+    } catch (Throwable $e) {
+        if ($own && $dbh->inTransaction()) $dbh->rollBack();
+        error_log('[TMS Loyalty] reversal failed: ' . $e->getMessage());
+        return 0;
+    }
+}

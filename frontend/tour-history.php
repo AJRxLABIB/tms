@@ -55,12 +55,14 @@ if (isset($_POST['cancel_booking'])) {
                 " RequestedFromDate=NULL, RequestedToDate=NULL," .
                 " ModificationStatus=NULL, ModificationNote=NULL" .
                 ($wasConfirmed ? ", RefundStatus='requested'" : "") .
-                " WHERE BookingId=:bid AND UserEmail=:email"
+                " WHERE BookingId=:bid AND UserEmail=:email AND status<>2"
             );
             $upd->bindParam(':bid',   $bid,   PDO::PARAM_INT);
             $upd->bindParam(':email', $email, PDO::PARAM_STR);
             $upd->execute();
-            if ($wasConfirmed) {
+            $justCancelled = ($upd->rowCount() === 1);   // a second click / parallel request changes nothing and must not repeat side effects
+            if ($justCancelled) tms_loyalty_reverse_booking($dbh, (int)$bid);
+            if ($wasConfirmed && $justCancelled) {
                 // Links this booking-level refund request to the payment
                 // ledger too, if it was actually paid through payment.php's
                 // sandbox flow (no-ops otherwise -- see PaymentService::logRefundRequest()).

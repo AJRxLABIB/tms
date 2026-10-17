@@ -748,10 +748,7 @@ function api_book(PDO $dbh): void {
     $newId = (int)$dbh->lastInsertId();
     if (!$newId) { $dbh->rollBack(); api_error(500, 'Could not create booking.'); }
 
-    $dbh->prepare("INSERT INTO tblloyalty(UserEmail,Points,TotalEarned) VALUES(:e,100,100)
-        ON DUPLICATE KEY UPDATE Points=Points+100, TotalEarned=TotalEarned+100")->execute([':e' => $email]);
-    $dbh->prepare("INSERT INTO tblloyalty_log(UserEmail,Points,Description) VALUES(:e,100,:d)")
-        ->execute([':e' => $email, ':d' => 'Booking #BK' . $newId . ' confirmed']);
+    tms_loyalty_award_booking($dbh, $email, $newId, 100);
     $dbh->commit();
     } catch (Throwable $e) {
         if ($dbh->inTransaction()) $dbh->rollBack();
@@ -795,8 +792,9 @@ function api_cancel_booking(PDO $dbh): void {
     $wasConfirmed = ((int)$booking->status === 1);
     $dbh->prepare(
         "UPDATE tblbooking SET status=2, CancelledBy='u'" . ($wasConfirmed ? ", RefundStatus='requested'" : "") .
-        " WHERE BookingId=:bid AND UserEmail=:e"
+        " WHERE BookingId=:bid AND UserEmail=:e AND status<>2"
     )->execute([':bid' => $bid, ':e' => $email]);
+    tms_loyalty_reverse_booking($dbh, (int)$bid);
 
     api_json(['success' => true, 'data' => ['message' => 'Booking cancelled.', 'refund_requested' => $wasConfirmed]]);
 }

@@ -73,13 +73,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !$sandboxOk) {
 } elseif ($_SERVER['REQUEST_METHOD'] === 'POST') {
     tms_csrf_validate(); // exits with 403 on a bad/missing token -- see backend/config.php
     if (!empty($bookings)) {
-        $allOk = true;
+        $allOk = true; $refusedBooking = false;
         try {
             foreach ($bookings as $b) {
                 $payment = $paymentService->createPendingPayment((int)$b->BookingId, (float)$b->TotalCost);
                 $confirmed = $paymentService->confirmSandboxPayment((int)$payment['PaymentId'], $email);
                 $allOk = $allOk && $confirmed;
             }
+        } catch (DomainException $e) {
+            // cancelled / already paid / vanished booking: nothing is charged for it
+            error_log('[TMS Payments] payment.php refused: ' . $e->getMessage());
+            $allOk = false; $refusedBooking = true;
         } catch (PDOException $e) {
             error_log('[TMS Payments] payment.php: payment tables unavailable (run database/migrate.php): ' . $e->getMessage());
             $allOk = false;
@@ -90,7 +94,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !$sandboxOk) {
             header('Location: tour-history.php');
             exit;
         } else {
-            $error = 'Payment could not be processed right now, but your booking itself was already saved as Pending -- our team can confirm it manually. (Site operator: this usually means database/migrate.php has not been run yet.)';
+            $error = $refusedBooking ? 'One of these bookings is already paid or has been cancelled, so no payment was taken for it. Please check My Tours.' : 'Payment could not be processed right now, but your booking itself was already saved as Pending -- our team can confirm it manually. (Site operator: this usually means database/migrate.php has not been run yet.)';
         }
     }
 }

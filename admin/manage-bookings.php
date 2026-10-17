@@ -118,6 +118,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'], $_POST['id'
             break;
         case 'cancel':
             $dbh->prepare("UPDATE tblbooking SET status=2 WHERE BookingId=:id")->execute([':id'=>$bid]);
+            tms_loyalty_reverse_booking($dbh, (int)$bid);   // take back the points this booking earned
             $ref = 'BK'.str_pad($bid,3,'0',STR_PAD_LEFT);
             tms_notify_booking_owner(
                 $dbh, $bid, "Your booking #$ref has been cancelled by our team. Please contact support if you have questions.",
