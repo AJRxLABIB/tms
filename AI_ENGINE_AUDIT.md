@@ -79,6 +79,15 @@ Limits: a clean result means "no contradictions found", not "the plan works" (op
 - Verified: `tests/ai/hybrid_test.php` (33 checks) with a deterministic stub embedder, plus unchanged results for all earlier suites.
 - NOT verified: any real embedding model. Whether hybrid improves answers is unmeasured; `AI_EMBED_MIN_SIM=0.5` is an untuned guess; `nomic-embed-text` is English-centric, so Bangla queries need a multilingual model (for example bge-m3, not tested here).
 
+## 3i. Stage 9 delivered: booking-readiness check (read-only)
+
+- New tool `check_booking_readiness(package_id, travelers, start_date?, end_date?)` (`backend/ai/BookingReadiness.php`). It applies the booking form's own rules with the same functions: published and priced package, at most 20 travellers, departure in the future, return after departure, supplier blackout dates (`SupplierService::blackoutConflict`), remaining seats (`tms_remaining_seats`, cancelled bookings ignored) and the date-specific price (`tms_dynamic_price`).
+- It creates, holds and changes nothing: no booking, seat, coupon or payment. A test compares booking rows and seat counts before and after, and a static test checks the source has no write SQL. The assistant is told never to claim a booking was made.
+- Routed by code: on a package page, or as a follow-up on the top search result, when the message asks about booking or availability. Travellers and only unambiguous numeric dates (YYYY-MM-DD, DD-MM-YYYY, DD/MM/YYYY, Bangla digits accepted) are parsed; "next Friday" or "15 December" are never guessed.
+- The `x1_no_write_tools` guard now allowlists exactly this one name.
+- Verified: `tests/ai/booking_readiness_test.php` (31 checks) against the real sandbox database with temporary packages, bookings and blackouts; all earlier suites re-run green. Two live-quality cases (en, bn) were added to `quality_cases.json`; they only run with a real provider.
+- Limits: seats are a live read, not a reservation; the price excludes coupons and add-ons; without an end date the blackout check is reported as "not_checked". Whether a real model words the result well is NOT measured.
+
 ## 4. Verification actually run (sandbox: PHP 8.3, MariaDB, stubbed HTTP transport)
 
 engine 122/122, itinerary checker 30/30, autopilot HTTP 23/23, quality scorer 16/16, admin controls over HTTP 14/14, resilience 29/29, memory HTTP 18/18, eval 75/75, rerank 11/11, Ollama unit, autopilot 40/40, payments 18/18, suppliers 72/72, notices 32/32, security 26/26, `tests/run.php` 20/20, e2e 14/14. axe WCAG A/AA clean on `ai-memory.php` (desktop/mobile, light/dark) and the dashboard panel (light/dark).
@@ -89,7 +98,7 @@ Real provider calls and answer quality (the harness exists but has never run aga
 
 ## 6. Not implemented yet (do not assume these exist)
 
-LLM-driven planning and multi-step tasks beyond the two rule-based follow-ups above; weather-aware replanning beyond Autopilot; real routing and travel-time data (only straight-line impossibility checks exist); booking-preparation tools; multimodal/OCR; per-task model routing; cache isolation measurement; trend charts over time; conversation-summary memory (deliberately omitted).
+LLM-driven planning and multi-step tasks beyond the two rule-based follow-ups above; weather-aware replanning beyond Autopilot; real routing and travel-time data (only straight-line impossibility checks exist); multimodal/OCR; per-task model routing; cache isolation measurement; trend charts over time; conversation-summary memory (deliberately omitted).
 
 ## 7. Rollback
 

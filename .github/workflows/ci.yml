@@ -85,6 +85,7 @@ jobs:
           php tests/ai/quality_scorer_test.php
           php tests/ai/itinerary_checker_test.php
           php tests/ai/hybrid_test.php
+          php tests/ai/booking_readiness_test.php
           php tests/payments/run.php
           php tests/suppliers/run.php
           php tests/notices/run.php

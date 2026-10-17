@@ -38,6 +38,7 @@ final class ToolRouter
             if (($b = BanglaNormalizer::budgetCeiling($message)) !== null && $b <= 1000000000) $a['budget_bdt'] = $b;
             $calls[] = ['tool' => 'calculate_trip_budget', 'args' => $a];
         }
+        if ($pkgId > 0 && self::wantsBookingCheck($message)) $calls[] = ['tool' => 'check_booking_readiness', 'args' => self::bookingArgs($message, $pkgId)];
         $isCatalogue = preg_match('/\b(package|tour|trip|hotel|beach|hill|price|cheap|budget|family|honeymoon|visit|go to|best)\b|প্যাকেজ|ভ্রমণ|দাম|কক্সবাজার|সিলেট|সুন্দরবন|বান্দরবান/u', $m);
         if ($isCatalogue || !$calls) {
             $args = ['query' => mb_substr($message, 0, 200), 'limit' => 5];
@@ -45,6 +46,33 @@ final class ToolRouter
             $calls[] = ['tool' => 'search_packages', 'args' => $args];
         }
         return $calls;
+    }
+
+    /** True when the message asks whether/how a trip can be booked or whether seats/dates are available. */
+    public static function wantsBookingCheck(string $message): bool
+    {
+        $d = BanglaNormalizer::digits(mb_strtolower($message, 'UTF-8'));
+        return (bool)preg_match('/\b(can (?:we|i) book|available|availability|seats? (?:left|available)|any seats?|is it (?:open|bookable)|ready to book|book (?:it|this|for)|reserve)\b|বুক করতে পারব|সিট আছে|খালি আছে|পাওয়া যাবে/u', $d);
+    }
+
+    /**
+     * Travellers and ISO dates parsed by CODE. Only unambiguous numeric dates (YYYY-MM-DD, DD-MM-YYYY, DD/MM/YYYY) are accepted;
+     * "next Friday" or "15 December" are never guessed (no year/locale assumptions) and are simply left out.
+     * @return array<string,mixed>
+     */
+    public static function bookingArgs(string $message, int $pkgId): array
+    {
+        $d = BanglaNormalizer::digits(mb_strtolower($message, 'UTF-8'));
+        $trav = 1;
+        if (preg_match('/(?:family of|group of|for|party of)\s*(\d{1,2})\b|(\d{1,2})\s*(?:people|persons?|travell?ers|adults|of us|জন)/u', $d, $t)) $trav = (int)($t[1] !== '' ? $t[1] : $t[2]);
+        $a = ['package_id' => $pkgId, 'travelers' => max(1, min(50, $trav))];
+        $dates = [];
+        if (preg_match_all('/\b(\d{4})-(\d{2})-(\d{2})\b|\b(\d{1,2})[-\/](\d{1,2})[-\/](\d{4})\b/', $d, $m, PREG_SET_ORDER)) {
+            foreach ($m as $x) $dates[] = ($x[1] ?? '') !== '' ? sprintf('%04d-%02d-%02d', $x[1], $x[2], $x[3]) : sprintf('%04d-%02d-%02d', $x[6], $x[5], $x[4]);
+        }
+        if (isset($dates[0])) $a['start_date'] = $dates[0];
+        if (isset($dates[1])) $a['end_date'] = $dates[1];
+        return $a;
     }
 
     /** Hard bounds for one assistant turn (also the answer to "can it loop?": no). */
@@ -70,6 +98,7 @@ final class ToolRouter
             if (($b = BanglaNormalizer::budgetCeiling($message)) !== null && $b <= 1000000000) $a['budget_bdt'] = $b;
             $out[] = ['tool' => 'calculate_trip_budget', 'args' => $a];
         }
+        if (self::wantsBookingCheck($message) && !$has('check_booking_readiness')) $out[] = ['tool' => 'check_booking_readiness', 'args' => self::bookingArgs($message, (int)$top['id'])];
         $safety = preg_match('/\b(visa|passport|advisory|safe to (?:travel|visit)|is it safe|strike|hartal|disruption)\b|ভিসা|পাসপোর্ট|হরতাল|নিরাপদ/u', mb_strtolower($message, 'UTF-8'));
         if ($safety && !$has('get_travel_notices') && !empty($top['country']) && is_string($top['country'])) {
             $out[] = ['tool' => 'get_travel_notices', 'args' => ['query' => mb_substr($message, 0, 200), 'country' => mb_substr($top['country'], 0, 100)]];

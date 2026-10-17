@@ -308,6 +308,36 @@
     "refuse": true
    },
    "signed_in": true
-  }
- ]
+  },
+    {
+      "id": "book-readiness-en",
+      "category": "booking",
+      "prompt": "Can we book the Cox's Bazar beach package for 4 people? Are seats available?",
+      "checks": {
+        "lang": "en",
+        "tools_include": [
+          "check_booking_readiness"
+        ],
+        "no_unverified": true,
+        "forbid": [
+          "(your|the) booking (is|has been) (confirmed|made|reserved)",
+          "I (have )?(booked|reserved)"
+        ]
+      },
+      "signed_in": true
+    },
+    {
+      "id": "book-readiness-bn",
+      "category": "booking",
+      "prompt": "কক্সবাজারের প্যাকেজে আমরা ৩ জন বুক করতে পারব? সিট আছে?",
+      "checks": {
+        "lang": "bn",
+        "tools_include": [
+          "check_booking_readiness"
+        ],
+        "no_unverified": true
+      },
+      "signed_in": true
+    }
+  ]
 }

@@ -9,6 +9,7 @@
  */
 require_once __DIR__ . '/rag/KnowledgeIndex.php';
 require_once __DIR__ . '/TripBudget.php';
+require_once __DIR__ . '/BookingReadiness.php';
 require_once __DIR__ . '/rag/EmbeddingReranker.php';
 require_once __DIR__ . '/rag/EmbeddingStore.php';
 require_once __DIR__ . '/rag/HybridSearch.php';
@@ -46,6 +47,13 @@ final class ToolRegistry
                 'activities_bdt' => ['type' => 'int', 'min' => 0, 'max' => 1000000000],
                 'other_bdt' => ['type' => 'int', 'min' => 0, 'max' => 1000000000],
                 'contingency_pct' => ['type' => 'int', 'min' => 0, 'max' => 30],
+            ]],
+            // READ-ONLY pre-booking check using the booking form's own rules (see BookingReadiness). Creates nothing.
+            'check_booking_readiness' => ['auth' => false, 'params' => [
+                'package_id' => ['type' => 'int', 'required' => true, 'min' => 1, 'max' => 2147483647],
+                'travelers' => ['type' => 'int', 'required' => true, 'min' => 1, 'max' => 50],
+                'start_date' => ['type' => 'string', 'max' => 10],
+                'end_date' => ['type' => 'string', 'max' => 10],
             ]],
             'my_bookings' => ['auth' => true, 'params' => []],
             // Staff-entered, sourced, dated notices only (see TRAVEL_NOTICES.md). Never a live feed.
@@ -105,6 +113,7 @@ final class ToolRegistry
                 'my_bookings' => $this->myBookings((string)($ctx['email'] ?? '')),
                 'get_travel_notices' => $this->travelNotices($a),
                 'calculate_trip_budget' => $this->tripBudget($a),
+                'check_booking_readiness' => $this->bookingReadiness($a),
             };
             $this->audit($tool, $a, $ctx, 'ok');
             return ['ok' => true, 'data' => $data];
@@ -179,6 +188,13 @@ final class ToolRegistry
         if ($notes) $r['assumptions'] = $notes;
         $r['instruction'] = 'Quote these numbers exactly; do not recompute or round differently. Say which lines are catalogue prices, which are the traveller\'s own estimates and which are assumptions, and list not_included as costs that are NOT counted.';
         return $r;
+    }
+
+    private function bookingReadiness(array $a): array
+    {
+        $p = $this->index->get($a['package_id']);
+        if (!$p || !$this->db) return ['error' => 'package_not_found', 'note' => 'That package is not published, so it cannot be booked.'];
+        return BookingReadiness::check($this->db, $p, $a['travelers'], $a['start_date'] ?? null, $a['end_date'] ?? null);
     }
 
     private function travelNotices(array $a): array
