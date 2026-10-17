@@ -7,6 +7,8 @@
 if (PHP_SAPI !== 'cli') { http_response_code(404); exit; }
 chdir(__DIR__ . '/../..');
 require 'backend/config.php';
+// Stage 14: guest replies are cached by full model input; these tests count model calls, so start from an empty cache.
+$dbh->exec("DELETE FROM tblcache WHERE cache_key LIKE 'ai\_chat\_%'");
 require_once 'backend/ai/AIClient.php';
 require_once 'backend/ai/SiteAssistant.php';
 require_once 'backend/ai/BanglaNormalizer.php';
@@ -220,7 +222,7 @@ if ($real) {
     t('assistant e2e: true price passes, source link is a real package', $r['success'] && !str_contains($r['reply'], 'could not be verified') && ($r['sources'][0]['url'] ?? '') === $real[0]['citation']['url']);
     $say = $title . ' is available for ৳' . ($price + 1234) . ' per person.';
     $dbh->exec("DELETE FROM tbl_ai_usage_log WHERE user_email='guest'");
-    $r = $asst3->reply('show me a beach package', [], 'guest', '', 'en');
+    $r = $asst3->reply('show me a beach package please (uncached input: the model output is stubbed per call)', [], 'guest', '', 'en');
     t('assistant e2e: a wrong price from the model is caught', str_contains($r['reply'], 'could not be verified'));
 } else { t('assistant e2e skipped: no published beach package in the test DB', true); }
 

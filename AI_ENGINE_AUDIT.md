@@ -100,9 +100,15 @@ Limits: season is parsed but nothing is filtered by it; nights are read as days;
 Test: `tests/ai/followup_test.php` (29, real DB).
 Limits: Bangla ordinals match whole words only (suffixed forms such as "দ্বিতীয়টির" are deliberately not guessed); only the latest list the assistant linked is remembered; comparison uses catalogue fields only (no hotels/activities data yet); no real model involved.
 
+## 3l. Stage 14 delivered: suggestion chips, answer cache, database rate limits
+
+`Suggestions` builds quick-reply chips in code from what the turn really produced (several packages -> "Compare them", "Which is the cheaper one?", ...; one package -> policy/seats/cost; nothing found -> a way forward). Every English and Bangla chip is tested to route to the tool its label promises (this caught a Bangla chip whose suffixed form the resolver rightly refuses to guess). The model's free-text chips only fill remaining slots (max 4, no URLs/markup, de-duplicated). Answer cache: guest replies are cached for `AI_CHAT_CACHE_TTL` seconds (default 600, 0 disables, max 3600) under a key that hashes the COMPLETE model input (system prompt with live facts, page context, history, messages), so a changed price, package or conversation can never serve a stale answer; never used for signed-in visitors, when saved travel memory is in the prompt, or during quality runs. `AIRateLimit`: atomic per-hour counters in `tbl_ai_rate` keyed by SHA-1 of the client address (guests, default 60/h, `AI_GUEST_IP_HOURLY`) or account (default 300/h, `AI_USER_HOURLY`); the old session limit stays. Address = `REMOTE_ADDR` only (forwarding headers are client-controlled). Fails open if the database errors (logged).
+Tests: `tests/ai/conversation_test.php` (41), including 8 parallel PHP processes against one limit (exactly 30 allowed; a first version that read the count with a separate SELECT let only 29 through, now fixed with LAST_INSERT_ID).
+Limits: behind a reverse proxy every visitor shares the proxy's address until a trusted-proxy setting is added (the guest limit is then effectively global); the cache depends on identical input, so hit rates on free-text questions will be modest; the 300/h account limit is a new default behaviour; real model replies were not involved.
+
 ## 4. Verification actually run (sandbox: PHP 8.3, MariaDB, stubbed HTTP transport)
 
-engine 122/122, query parser 77/77, follow-up 29/29, search filters 32/32, itinerary checker 30/30, autopilot HTTP 23/23, quality scorer 16/16, admin controls over HTTP 14/14, resilience 29/29, memory HTTP 18/18, eval 85/85, rerank 11/11, Ollama unit, autopilot 40/40, payments 18/18, suppliers 72/72, notices 32/32, security 26/26, `tests/run.php` 20/20, e2e 14/14. axe WCAG A/AA clean on `ai-memory.php` (desktop/mobile, light/dark) and the dashboard panel (light/dark).
+engine 122/122, query parser 77/77, follow-up 29/29, conversation 41/41, search filters 32/32, itinerary checker 30/30, autopilot HTTP 23/23, quality scorer 16/16, admin controls over HTTP 14/14, resilience 29/29, memory HTTP 18/18, eval 85/85, rerank 11/11, Ollama unit, autopilot 40/40, payments 18/18, suppliers 72/72, notices 32/32, security 26/26, `tests/run.php` 20/20, e2e 14/14. axe WCAG A/AA clean on `ai-memory.php` (desktop/mobile, light/dark) and the dashboard panel (light/dark).
 
 ## 5. NOT verified
 

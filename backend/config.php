@@ -337,6 +337,8 @@ if (empty($_SESSION['tms_turnlog_tables'])) {
     AIConfig::migrate($dbh);
     require_once __DIR__ . '/ai/rag/EmbeddingStore.php';
     EmbeddingStore::migrate($dbh);
+    require_once __DIR__ . '/ai/AIRateLimit.php';
+    AIRateLimit::migrate($dbh);
     $_SESSION['tms_turnlog_tables'] = true;
 }
 

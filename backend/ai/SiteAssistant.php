@@ -24,6 +24,7 @@ require_once __DIR__ . '/ToolRouter.php';
 require_once __DIR__ . '/CitationVerifier.php';
 require_once __DIR__ . '/AITurnLog.php';
 require_once __DIR__ . '/AIConfig.php';
+require_once __DIR__ . '/Suggestions.php';
 require_once __DIR__ . '/TravelMemory.php';
 
 class SiteAssistant {
@@ -129,7 +130,13 @@ class SiteAssistant {
         // caching would mean two different visitors asking the same first
         // question get a stale reply from whichever one asked first, which
         // (unlike a static recommendation) reads as broken in a live chat.
-        $result = $this->ai->call($system, $messages, '', $email, feature: 'site_assistant');
+        // Identical model input -> identical cacheable reply. The key is a hash of the COMPLETE input (system prompt incl. live facts,
+        // page context and history, plus messages), so a changed price, package or conversation can never serve a stale answer.
+        // Never used for signed-in visitors or when saved travel memory is in the prompt (personal content).
+        $ttl = function_exists('tms_env') ? tms_env('AI_CHAT_CACHE_TTL', '600') : '600';
+        $ttl = ctype_digit((string)$ttl) ? min((int)$ttl, 3600) : 600;
+        $cacheKey = (!$signedIn && !$memItems && $ttl > 0 && !AITurnLog::$suppress) ? 'chat_' . hash('sha256', $system . "\n" . json_encode($messages, JSON_UNESCAPED_UNICODE)) : '';
+        $result = $this->ai->call($system, $messages, $cacheKey, $email, feature: 'site_assistant', cacheTtlSeconds: $cacheKey !== '' ? $ttl : null);
 
         $turn = ['signed_in' => $signedIn, 'language' => $language, 'trace' => $runTrace, 'stopped' => $runStopped, 'memory_items' => count($memItems), 'provider' => $this->ai->lastProvider()];
         if (!$result['success']) {
@@ -149,6 +156,7 @@ class SiteAssistant {
         // context-derived next steps instead of a static footer.
         $parsed = $this->parseStructuredReply(trim($result['content']));
         $parsed['reply'] = InjectionGuard::sanitizeReply($parsed['reply']);
+        $parsed['suggestions'] = Suggestions::merge(Suggestions::build($runTrace, $runCites, (BanglaNormalizer::language($message) === 'bn' || $language === 'bn') ? 'bn' : 'en'), $parsed['suggestions'] ?? []);
 
         // Check the answer against what the tools really returned (prices, invented citation markers) and attach real sources.
         $userText = $message; foreach ($history as $turn) if (($turn['role'] ?? '') !== 'assistant') $userText .= ' ' . (string)($turn['content'] ?? '');

@@ -26,6 +26,7 @@
 require_once __DIR__ . '/../backend/session-boot.php';
 require_once dirname(__DIR__) . '/backend/config.php';
 require_once dirname(__DIR__) . '/backend/ai/AIClient.php';
+require_once dirname(__DIR__) . '/backend/ai/AIRateLimit.php';
 require_once dirname(__DIR__) . '/backend/ai/TravelRecommender.php';
 require_once dirname(__DIR__) . '/backend/ai/ItineraryPlanner.php';
 require_once dirname(__DIR__) . '/backend/ai/TripCopilot.php';
@@ -71,6 +72,20 @@ if ($userEmail === 'guest' && in_array($action, TMS_AI_GUEST_ACTIONS, true)) {
     }
     if ($bucket['count'] > 30) {
         apiError(429, 'You have reached the hourly limit for guests. Please sign in to keep chatting.');
+    }
+}
+
+// Database-backed limits that survive cookie clearing: per guest address and per signed-in account (AIRateLimit).
+// Address = REMOTE_ADDR only (forwarding headers are client-controlled and are not trusted here).
+if (in_array($action, TMS_AI_GUEST_ACTIONS, true)) {
+    $isGuest = ($userEmail === 'guest');
+    $subject = $isGuest ? (string)($_SERVER['REMOTE_ADDR'] ?? 'unknown') : strtolower((string)$userEmail);
+    $rl = AIRateLimit::hit($dbh, AIRateLimit::key($isGuest ? 'guest-ip' : 'user', $subject), AIRateLimit::limit($isGuest ? 'guest' : 'user'));
+    if (!$rl['allowed']) {
+        header('Retry-After: ' . $rl['retry_after']);
+        apiError(429, $isGuest
+            ? 'Too many AI requests from this network in the last hour. Please sign in or try again later.'
+            : 'You have reached the hourly AI limit for your account. Please try again later.');
     }
 }
 
