@@ -344,7 +344,7 @@ function handleCopilotHistory(PDO $dbh, string $email): void {
     if (!$bookingId) apiError(400, 'Booking ID required.');
 
     $copilot = new TripCopilot($dbh);
-    $history = $copilot->getHistory($bookingId, 50);
+    $history = $copilot->getHistory($bookingId, 50, $email);
 
     apiSuccess(['history' => $history]);
 }

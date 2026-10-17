@@ -15,7 +15,7 @@ $cnt1    = safe_count($dbh, "SELECT COUNT(*) FROM tblbooking");
 $cnt2    = safe_count($dbh, "SELECT COUNT(*) FROM tblenquiry");
 $cnt3    = safe_count($dbh, "SELECT COUNT(*) FROM tbltourpackages");
 $cnt5    = safe_count($dbh, "SELECT COUNT(*) FROM tblissues");
-$rev     = safe_count($dbh, "SELECT COALESCE(SUM(p.PackagePrice),0) FROM tblbooking b JOIN tbltourpackages p ON p.PackageId=b.PackageId WHERE b.status=1");
+$rev     = safe_count($dbh, "SELECT COALESCE(SUM(COALESCE(b.TotalCost, p.PackagePrice * COALESCE(b.NoOfPersons,1))),0) FROM tblbooking b JOIN tbltourpackages p ON p.PackageId=b.PackageId WHERE b.status=1" /* what was actually charged (net of coupons, x travellers); list price only for legacy rows without TotalCost */);
 $pending = safe_count($dbh, "SELECT COUNT(*) FROM tblbooking WHERE status=0");
 // ACCESSIBILITY FIX (Round 68, master prompt item 32): the booking-status
 // donut below (#statusChart) had no accessible name at all -- a screen

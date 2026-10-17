@@ -131,9 +131,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !isset($_POST['btn-verify-2fa'])) {
             // app is hosted under) but block open-redirect vectors: a
             // protocol-relative URL ("//evil.com") or any absolute URL
             // ("https://evil.com").
-            $safeRedirect = (is_string($redirect) && $redirect !== ''
-                    && !str_starts_with($redirect, '//') && !str_contains($redirect, '://'))
-                ? $redirect : 'index.php';
+            $safeRedirect = tms_safe_redirect($redirect);
 
             if ($hasCustomer2fa && !empty($user->TwoFAEnabled) && !empty($user->TwoFASecret)) {
                 // Password correct, but this account requires a TOTP code

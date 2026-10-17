@@ -11,9 +11,14 @@ if (isset($_GET['remove'])) {
     // Round 91: no FK CASCADE in this project's convention (see config.php's
     // tblcartaddons comment), so a removed cart item's add-on selections
     // must be cleared explicitly here or they'd silently orphan.
-    $dbh->prepare("DELETE FROM tblcartaddons WHERE CartId=:id")->execute([':id' => $removeId]);
-    $dbh->prepare("DELETE FROM tblcart WHERE id=:id AND UserEmail=:e")
-        ->execute([':id' => $removeId, ':e' => $email]);
+    // Ownership first: add-ons are only cleared for a cart row that belongs to THIS user (was: any user could wipe anyone's by id).
+    $own = $dbh->prepare("SELECT 1 FROM tblcart WHERE id=:id AND UserEmail=:e");
+    $own->execute([':id' => $removeId, ':e' => $email]);
+    if ($own->fetchColumn()) {
+        $dbh->prepare("DELETE FROM tblcartaddons WHERE CartId=:id")->execute([':id' => $removeId]);
+        $dbh->prepare("DELETE FROM tblcart WHERE id=:id AND UserEmail=:e")
+            ->execute([':id' => $removeId, ':e' => $email]);
+    }
     header('Location: cart.php');
     exit;
 }

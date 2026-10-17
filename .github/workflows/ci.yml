@@ -93,7 +93,7 @@ jobs:
 
       - name: Start the app (PHP built-in server) for E2E testing
         run: |
-          php -S 127.0.0.1:8000 &
+          PHP_CLI_SERVER_WORKERS=8 php -S 127.0.0.1:8000 &   # several workers so the concurrency tests are real
           for i in $(seq 1 20); do
             curl -sf http://127.0.0.1:8000/index.php > /dev/null && break
             sleep 0.5
@@ -105,6 +105,8 @@ jobs:
       - name: Security and Trip Autopilot checks over real HTTP
         run: |
           php tests/security/run.php http://127.0.0.1:8000
+          php tests/security/stage10_test.php http://127.0.0.1:8000
+          node tests/pwa/sw_test.js
           php tests/autopilot/http.php http://127.0.0.1:8000
           php tests/ai/memory_http.php http://127.0.0.1:8000
           php tests/ai/admin_controls_http.php http://127.0.0.1:8000

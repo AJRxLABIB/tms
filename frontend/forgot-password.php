@@ -95,9 +95,7 @@ if (isset($_POST['submit_request'])) {
                                VALUES(:e, :h, DATE_ADD(NOW(), INTERVAL :ttl MINUTE))")
                     ->execute([':e' => $user->EmailId, ':h' => $tokenHash, ':ttl' => TMS_PWRESET_TOKEN_TTL_MINUTES]);
 
-                $scheme       = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
-                $host         = $_SERVER['HTTP_HOST'] ?? 'localhost';
-                $base         = $scheme . '://' . $host . rtrim(dirname($_SERVER['SCRIPT_NAME']), '/');
+                $base         = tms_public_base_url(); // never built from a raw Host header (reset-link poisoning)
                 $resetLink    = "$base/forgot-password.php?token=" . urlencode($rawToken);
 
                 tms_send_email($user->EmailId, $user->FullName, 'Reset your TMS password',

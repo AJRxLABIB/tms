@@ -144,7 +144,7 @@ $filterActivity = tms_int($_GET['activity'] ?? 0, 0);
 $filterType = $filterPkg ? 'package' : ($filterHotel ? 'hotel' : ($filterActivity ? 'activity' : ''));
 $filterId   = $filterPkg ?: ($filterHotel ?: $filterActivity);
 
-$packages   = $dbh->query("SELECT PackageId, PackageName FROM tbltourpackages ORDER BY PackageName")->fetchAll(PDO::FETCH_OBJ);
+$packages   = $dbh->query("SELECT PackageId, PackageName FROM tbltourpackages WHERE " . TMS_PKG_PUBLIC_SQL . " ORDER BY PackageName")->fetchAll(PDO::FETCH_OBJ);
 $hotelsList = $dbh->query("SELECT HotelId, HotelName FROM tblhotels WHERE Status=1 ORDER BY HotelName")->fetchAll(PDO::FETCH_OBJ);
 $activitiesList = $dbh->query("SELECT ActivityId, ActivityName FROM tblactivities WHERE Status=1 ORDER BY ActivityName")->fetchAll(PDO::FETCH_OBJ);
 

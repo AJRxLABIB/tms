@@ -43,7 +43,11 @@ class TripCopilot {
      */
     public function chat(int $bookingId, string $userMsg, string $email): array {
         $booking  = $this->getBookingContext($bookingId, $email);
-        $history  = $this->getHistory($bookingId, 10); // last 10 turns
+        // Ownership first: a booking that is not the caller's must never reach history, the model or the session table.
+        if ($booking === null) {
+            return ['reply' => "I can't find that booking on your account.", 'suggestions' => [], 'action' => 'none'];
+        }
+        $history  = $this->getHistory($bookingId, 10, $email); // last 10 turns
         $system   = $this->buildSystemPrompt($booking);
 
         // Build messages array with history
@@ -100,12 +104,12 @@ class TripCopilot {
      * situation (e.g. weather turning) still surfaces promptly.
      */
     public function generateProactiveAlert(int $bookingId, string $email): ?array {
-        $cacheKey = 'copilot_alert_' . $bookingId;
-        $cached = $this->cache->get($cacheKey);
-        if ($cached !== null) return $cached;
-
+        // Ownership BEFORE the cache read, and the key carries the owner, so one user can never be served another's alert.
         $booking = $this->getBookingContext($bookingId, $email);
         if (!$booking) return null;
+        $cacheKey = 'copilot_alert_' . $bookingId . '_' . substr(sha1(strtolower($email)), 0, 12);
+        $cached = $this->cache->get($cacheKey);
+        if ($cached !== null) return $cached;
 
         $system = "You are a proactive travel assistant. Given trip context, generate ONE relevant proactive alert for the traveler RIGHT NOW. Return JSON: {\"type\":\"weather|reminder|tip|warning\",\"title\":\"<short>\",\"message\":\"<2-3 sentences>\",\"urgency\":\"low|medium|high\"}. No other text.";
 
@@ -140,13 +144,16 @@ class TripCopilot {
     /**
      * Get full conversation history for a booking.
      */
-    public function getHistory(int $bookingId, int $limit = 50): array {
+    public function getHistory(int $bookingId, int $limit, string $email): array {
+        if ($email === '' || $email === 'guest') return [];
         try {
+            // Scoped to the owner: only rows for a booking that belongs to $email are readable.
             $stmt = $this->db->prepare(
-                "SELECT role, message, created_at FROM tbl_copilot_sessions
-                 WHERE booking_id = ? ORDER BY id DESC LIMIT " . (int)$limit
+                "SELECT s.role, s.message, s.created_at FROM tbl_copilot_sessions s
+                   JOIN tblbooking b ON b.BookingId = s.booking_id AND b.UserEmail = ?
+                  WHERE s.booking_id = ? ORDER BY s.id DESC LIMIT " . (int)$limit
             );
-            $stmt->execute([$bookingId]);
+            $stmt->execute([$email, $bookingId]);
             return array_reverse($stmt->fetchAll(PDO::FETCH_OBJ));
         } catch (Exception $e) {
             error_log('[TMS] ' . __METHOD__ . ' failed: ' . $e->getMessage());

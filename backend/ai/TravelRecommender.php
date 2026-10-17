@@ -135,7 +135,7 @@ For each recommendation return this exact JSON structure:
 Return a JSON array of exactly 5 objects. No other text.
 MSG;
 
-        $cacheKey = md5('recommend_' . json_encode($prefs));
+        $cacheKey = md5('recommend_v2_' . json_encode($prefs) . '|' . $profileContext); // personalised text must be part of the key
         $result = $this->ai->ask($system, $userMessage, $cacheKey, $email, feature: 'recommender');
 
         if (!$result['success']) {

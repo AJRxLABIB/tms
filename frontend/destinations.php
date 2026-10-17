@@ -21,19 +21,19 @@ $page     = tms_int($_GET['page'] ?? 1, 1, 9999);
 $offset   = ($page - 1) * $perPage;
 
 // ─── Cascading dropdown data ────────────────────────────────────────────────
-$countries = $dbh->query("SELECT DISTINCT Country FROM tbltourpackages WHERE Country IS NOT NULL AND Country<>'' ORDER BY (Country='Bangladesh') DESC, Country ASC")->fetchAll(PDO::FETCH_COLUMN);
+$countries = $dbh->query("SELECT DISTINCT Country FROM tbltourpackages WHERE " . TMS_PKG_PUBLIC_SQL . " AND Country IS NOT NULL AND Country<>'' ORDER BY (Country='Bangladesh') DESC, Country ASC")->fetchAll(PDO::FETCH_COLUMN);
 
 $regions = [];
 if ($country !== '') {
-    $rq = $dbh->prepare("SELECT DISTINCT Region FROM tbltourpackages WHERE Country=:c AND Region IS NOT NULL AND Region<>'' ORDER BY Region ASC");
+    $rq = $dbh->prepare("SELECT DISTINCT Region FROM tbltourpackages WHERE " . TMS_PKG_PUBLIC_SQL . " AND Country=:c AND Region IS NOT NULL AND Region<>'' ORDER BY Region ASC");
     $rq->execute([':c' => $country]);
     $regions = $rq->fetchAll(PDO::FETCH_COLUMN);
 }
 
-$categories = $dbh->query("SELECT DISTINCT PackageType FROM tbltourpackages WHERE PackageType IS NOT NULL AND PackageType<>'' ORDER BY PackageType ASC")->fetchAll(PDO::FETCH_COLUMN);
+$categories = $dbh->query("SELECT DISTINCT PackageType FROM tbltourpackages WHERE " . TMS_PKG_PUBLIC_SQL . " AND PackageType IS NOT NULL AND PackageType<>'' ORDER BY PackageType ASC")->fetchAll(PDO::FETCH_COLUMN);
 
 // ─── Build main query ───────────────────────────────────────────────────────
-$where  = [];
+$where  = [TMS_PKG_PUBLIC_SQL];
 $params = [];
 if ($country !== '')  { $where[] = "Country = :country";   $params[':country']  = $country; }
 if ($region !== '')   { $where[] = "Region = :region";     $params[':region']   = $region; }
@@ -66,15 +66,15 @@ if (!$hasFilters) {
     // Note: IsFeatured is indexed and only a small subset of rows match, so we fetch
     // a modest pool and shuffle in PHP rather than ORDER BY RAND() (which forces a
     // full filesort even on an indexed column and gets expensive as the catalog grows).
-    $featuredPool = $dbh->query("SELECT * FROM tbltourpackages WHERE IsFeatured=1 ORDER BY PackageId DESC LIMIT 30")->fetchAll(PDO::FETCH_OBJ);
+    $featuredPool = $dbh->query("SELECT * FROM tbltourpackages WHERE " . TMS_PKG_PUBLIC_SQL . " AND IsFeatured=1 ORDER BY PackageId DESC LIMIT 30")->fetchAll(PDO::FETCH_OBJ);
     shuffle($featuredPool);
     $featured = array_slice($featuredPool, 0, 6);
-    $popular  = $dbh->query("SELECT * FROM tbltourpackages ORDER BY ViewCount DESC, AvgRating DESC LIMIT 8")->fetchAll(PDO::FETCH_OBJ);
+    $popular  = $dbh->query("SELECT * FROM tbltourpackages WHERE " . TMS_PKG_PUBLIC_SQL . " ORDER BY ViewCount DESC, AvgRating DESC LIMIT 8")->fetchAll(PDO::FETCH_OBJ);
 
     if (!empty($_SESSION['recently_viewed'])) {
         $ids = array_map('intval', $_SESSION['recently_viewed']);
         $in  = implode(',', array_fill(0, count($ids), '?'));
-        $rq2 = $dbh->prepare("SELECT * FROM tbltourpackages WHERE PackageId IN ($in)");
+        $rq2 = $dbh->prepare("SELECT * FROM tbltourpackages WHERE " . TMS_PKG_PUBLIC_SQL . " AND PackageId IN ($in)");
         $rq2->execute($ids);
         $byId = [];
         foreach ($rq2->fetchAll(PDO::FETCH_OBJ) as $row) { $byId[(int)$row->PackageId] = $row; }

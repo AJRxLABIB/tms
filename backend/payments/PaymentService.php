@@ -314,6 +314,10 @@ class PaymentService
             }
         }
 
+        // Oversized bodies are refused before anything is stored (the endpoint is unauthenticated; the events table must not be floodable).
+        if (strlen($rawBody) > 262144) {
+            return ['status' => 413, 'body' => ['status' => 'error', 'message' => 'Payload too large.']];
+        }
         $providerEventId = $payload['event_id'] ?? $payload['id'] ?? $payload['transactionId']
             ?? $payload['tran_id'] ?? $payload['paymentID'] ?? null;
         if (!$providerEventId) {
@@ -329,10 +333,20 @@ class PaymentService
                 "SELECT EventId, ProcessingStatus FROM tblpayment_events WHERE Provider = :prov AND ProviderEventId = :peid LIMIT 1"
             );
             $existing->execute([':prov' => $providerName, ':peid' => $providerEventId]);
-            if ($dupe = $existing->fetch(PDO::FETCH_ASSOC)) {
+            $dupe = $existing->fetch(PDO::FETCH_ASSOC);
+            // Only an event that was fully PROCESSED is a true duplicate. A 'failed' / 'received' / 'rejected' row must not swallow the
+            // gateway's retry (otherwise one transient error, or an unsigned forged body reusing a real transaction id, would make the
+            // genuine signed callback answer "duplicate" forever and the payment would never reconcile).
+            if ($dupe && $dupe['ProcessingStatus'] === 'processed') {
                 return ['status' => 200, 'body' => ['status' => 'duplicate', 'already' => $dupe['ProcessingStatus']]];
             }
 
+            if ($dupe) {
+                // Reuse the existing row for this retry instead of inserting (the unique key would reject a second row).
+                $this->dbh->prepare("UPDATE tblpayment_events SET RetryCount = RetryCount + 1, ProcessingStatus = 'received', SignatureValid = 0, Signature = :sig, Payload = :payload WHERE EventId = :id")
+                    ->execute([':sig' => $signature, ':payload' => $rawBody !== '' ? $rawBody : json_encode($payload), ':id' => (int)$dupe['EventId']]);
+                $eventId = (int)$dupe['EventId'];
+            } else {
             // Log unconditionally, before verification -- a forged or
             // malformed request still leaves a record.
             $ins = $this->dbh->prepare(
@@ -347,6 +361,7 @@ class PaymentService
                 ':payload' => $rawBody !== '' ? $rawBody : json_encode($payload),
             ]);
             $eventId = (int)$this->dbh->lastInsertId();
+            }
         } catch (PDOException $e) {
             error_log("[TMS Webhooks] {$providerName}: failed to log inbound event -- " . $e->getMessage());
             return ['status' => 500, 'body' => ['status' => 'error', 'message' => 'Could not record event.']];

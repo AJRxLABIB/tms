@@ -37,8 +37,7 @@ if (isset($_GET['lang'])) {
         // visitor straight off-site from a trusted page. login.php already had
         // the correct guard; this reuses it.
         $redirect = isset($_GET['redirect']) ? (string)$_GET['redirect'] : 'index.php';
-        $safeRedirect = ($redirect !== '' && !str_starts_with($redirect, '//') && !str_contains($redirect, '://'))
-            ? $redirect : 'index.php';
+        $safeRedirect = tms_safe_redirect($redirect);
         header('location: ' . $safeRedirect);
         exit;
     }

@@ -58,6 +58,7 @@
 require_once __DIR__ . '/../backend/session-boot.php';
 require_once dirname(__DIR__) . '/backend/config.php';
 require_once dirname(__DIR__) . '/backend/services/TripReadinessScore.php';
+require_once dirname(__DIR__) . '/backend/services/SupplierService.php';
 require_once dirname(__DIR__) . '/backend/ai/ExpenseAnalyst.php';
 
 header('Content-Type: application/json; charset=utf-8');
@@ -251,7 +252,7 @@ function api_packages(PDO $dbh): void {
     $sortBy    = in_array($_GET['sort'] ?? '', ['price_asc','price_desc','name']) ? $_GET['sort'] : 'default';
     $offset    = ($page - 1) * $limit;
 
-    $where  = [];
+    $where  = [TMS_PKG_PUBLIC_SQL]; // published packages only
     $params = [];
     if ($search !== '') {
         $where[]           = "(PackageName LIKE :s OR PackageLocation LIKE :s2)";
@@ -302,7 +303,7 @@ function api_package(PDO $dbh): void {
     $q = $dbh->prepare("SELECT p.*,
         (SELECT AVG(r.Rating) FROM tblreviews r WHERE r.PackageId=p.PackageId AND r.Status=1) as ReviewAvg,
         (SELECT COUNT(*)      FROM tblreviews r WHERE r.PackageId=p.PackageId AND r.Status=1) as ReviewCount
-        FROM tbltourpackages p WHERE p.PackageId=:id LIMIT 1");
+        FROM tbltourpackages p WHERE p.PackageId=:id AND p.Status=1 AND (p.ApprovalStatus IS NULL OR p.ApprovalStatus='approved') LIMIT 1");
     $q->bindParam(':id', $id, PDO::PARAM_INT);
     $q->execute();
     $pkg = $q->fetch(PDO::FETCH_ASSOC);
@@ -312,7 +313,7 @@ function api_package(PDO $dbh): void {
 }
 
 function api_types(PDO $dbh): void {
-    $q    = $dbh->query("SELECT DISTINCT PackageType FROM tbltourpackages ORDER BY PackageType");
+    $q    = $dbh->query("SELECT DISTINCT PackageType FROM tbltourpackages WHERE " . TMS_PKG_PUBLIC_SQL . " ORDER BY PackageType");
     $data = $q->fetchAll(PDO::FETCH_COLUMN);
     api_json(['success' => true, 'data' => $data]);
 }
@@ -357,13 +358,28 @@ function api_login(PDO $dbh): void {
         api_error(429, "Too many failed sign-in attempts. Please try again in {$waitMinutes} minute" . ($waitMinutes === 1 ? '' : 's') . '.');
     }
 
-    $q = $dbh->prepare("SELECT id, FullName, EmailId, Password FROM tblusers WHERE EmailId=:e LIMIT 1");
+    $has2fa = tms_customer_2fa_columns_exist($dbh);
+    $q = $dbh->prepare("SELECT id, FullName, EmailId, Password" . ($has2fa ? ", TwoFAEnabled, TwoFASecret" : "") . " FROM tblusers WHERE EmailId=:e LIMIT 1");
     $q->execute([':e' => $email]);
     $user = $q->fetch(PDO::FETCH_OBJ);
 
     if (!$user || !tms_verify_password($pass, $user->Password, (int)$user->id, $dbh)) {
         tms_record_failed_login($dbh, $email, $ip);
         api_error(401, 'Invalid email or password.');
+    }
+    // SECURITY FIX: the website asks for the authenticator code when TwoFAEnabled, but this endpoint issued a 30-day token on the
+    // password alone, so 2FA could be bypassed through the REST API. Accounts with 2FA must now also send `totp_code`.
+    if ($has2fa && !empty($user->TwoFAEnabled) && !empty($user->TwoFASecret)) {
+        $tk = '2fa-user:' . strtolower($email);
+        $wait = tms_login_lockout_minutes_remaining($dbh, $tk, $ip);
+        if ($wait > 0) { api_error(429, "Too many failed attempts. Please try again in {$wait} minute" . ($wait === 1 ? '' : 's') . '.'); }
+        $code = trim((string)($_POST['totp_code'] ?? ''));
+        if ($code === '') { api_error(401, 'Two-factor code required. Send the 6-digit code from your authenticator app as totp_code.'); }
+        if (!tms_totp_verify((string)$user->TwoFASecret, $code)) {
+            tms_record_failed_login($dbh, $tk, $ip);
+            api_error(401, 'Invalid or expired two-factor code.');
+        }
+        tms_clear_login_attempts($dbh, $tk, $ip);
     }
     tms_clear_login_attempts($dbh, $email, $ip);
 
@@ -642,10 +658,10 @@ function api_book(PDO $dbh): void {
     if ($from <= $now) { api_error(400, 'from_date must be in the future.'); }
     if ($to <= $from) { api_error(400, 'to_date must be after from_date.'); }
 
-    $priceQ = $dbh->prepare("SELECT PackagePrice FROM tbltourpackages WHERE PackageId=:pid LIMIT 1");
+    $priceQ = $dbh->prepare("SELECT PackagePrice FROM tbltourpackages WHERE PackageId=:pid AND " . TMS_PKG_PUBLIC_SQL . " LIMIT 1");
     $priceQ->execute([':pid' => $pid]);
     $rawPrice = $priceQ->fetchColumn();
-    if ($rawPrice === false) { api_error(404, 'Package not found.'); }
+    if ($rawPrice === false) { api_error(404, 'Package not found.'); } // also: unpublished / pending-review packages are not bookable
     if ($rawPrice === null || (float)$rawPrice <= 0) {
         api_error(422, "This package doesn't have a price set yet and can't be booked.");
     }
@@ -656,23 +672,41 @@ function api_book(PDO $dbh): void {
     // round(...,2) percentage arithmetic, unchanged here to stay mirrored
     // with package-details.php's identical, pre-existing coupon logic
     // (not touched this round -- Rule 73).
-    $unitPrice = (int)$rawPrice;
+    // Same guards and same price as the website's Book Now (package-details.php): supplier blackout dates, the date-specific
+    // dynamic price, and a LOCKED seat check inside one transaction (was: none of these, so the API could oversell, book blacked-out
+    // dates and charge the raw list price).
+    $blk = SupplierService::blackoutConflict($dbh, $pid, $from->format('Y-m-d'), $to->format('Y-m-d'));
+    if ($blk !== null) { api_error(409, $blk); }
+    $pricing   = tms_dynamic_price($dbh, $pid, (float)$rawPrice, $from->format('Y-m-d'));
+    $unitPrice = (int)$pricing['final'];
+    $subtotal  = $unitPrice * $persons;
 
-    $subtotal = $unitPrice * $persons;
-    $discountAmt = 0.0;
+    $dbh->beginTransaction();
+    try {
+    $seatsLeft = tms_remaining_seats_for_update($dbh, $pid);
+    if ($seatsLeft !== null && $persons > $seatsLeft) {
+        $dbh->rollBack();
+        api_error(409, $seatsLeft === 0 ? 'Sorry, this package is sold out.' : "Only {$seatsLeft} seat" . ($seatsLeft === 1 ? '' : 's') . " left, but {$persons} requested.");
+    }
+    $discountAmt = 0;
     $couponCode  = null;
     $couponNote  = null;
     if ($couponRaw !== '') {
-        $cq = $dbh->prepare("SELECT * FROM tblcoupons WHERE Code=:c AND (UserEmail=:e OR UserEmail IS NULL) AND IsUsed=0 AND ExpiryDate >= CURDATE() LIMIT 1");
+        $cq = $dbh->prepare("SELECT * FROM tblcoupons WHERE Code=:c AND (UserEmail=:e OR UserEmail IS NULL) AND IsUsed=0 AND (ExpiryDate IS NULL OR ExpiryDate >= CURDATE()) LIMIT 1");
         $cq->execute([':c' => $couponRaw, ':e' => $email]);
         $coupon = $cq->fetch(PDO::FETCH_OBJ);
         if ($coupon) {
-            // Atomic claim — see package-details.php for why this isn't a
-            // plain UPDATE after the SELECT.
-            $claim = $dbh->prepare("UPDATE tblcoupons SET IsUsed=1 WHERE id=:id AND IsUsed=0");
-            $claim->execute([':id' => $coupon->id]);
-            if ($claim->rowCount() === 1) {
-                $discountAmt = round($subtotal * ((float)$coupon->DiscountPercent / 100), 2);
+            // Same rule as the website: a coupon with no owner is a site-wide promo and is NOT consumed (was: the first API booking
+            // burned WELCOME10/SUMMER20 for every customer). Personal coupons are claimed atomically.
+            $isGlobal = ($coupon->UserEmail === null || $coupon->UserEmail === '');
+            $claimed  = true;
+            if (!$isGlobal) {
+                $claim = $dbh->prepare("UPDATE tblcoupons SET IsUsed=1 WHERE id=:id AND IsUsed=0");
+                $claim->execute([':id' => $coupon->id]);
+                $claimed = ($claim->rowCount() === 1);
+            }
+            if ($claimed) {
+                $discountAmt = tms_coupon_discount($subtotal, (float)$coupon->DiscountPercent); // clamped, integer-exact
                 $couponCode  = $couponRaw;
             } else {
                 $couponNote = 'Coupon code was just used by another request — booking created without a discount.';
@@ -712,12 +746,18 @@ function api_book(PDO $dbh): void {
         ':frate' => $fx['rate'], ':fsrc' => $fx['source'], ':fts' => $fx['rate_timestamp'],
     ] : []));
     $newId = (int)$dbh->lastInsertId();
-    if (!$newId) { api_error(500, 'Could not create booking.'); }
+    if (!$newId) { $dbh->rollBack(); api_error(500, 'Could not create booking.'); }
 
     $dbh->prepare("INSERT INTO tblloyalty(UserEmail,Points,TotalEarned) VALUES(:e,100,100)
         ON DUPLICATE KEY UPDATE Points=Points+100, TotalEarned=TotalEarned+100")->execute([':e' => $email]);
     $dbh->prepare("INSERT INTO tblloyalty_log(UserEmail,Points,Description) VALUES(:e,100,:d)")
         ->execute([':e' => $email, ':d' => 'Booking #BK' . $newId . ' confirmed']);
+    $dbh->commit();
+    } catch (Throwable $e) {
+        if ($dbh->inTransaction()) $dbh->rollBack();
+        error_log('[TMS API] booking failed: ' . $e->getMessage());
+        api_error(500, 'Could not create booking.');
+    }
 
     api_json(['success' => true, 'data' => [
         'booking_id'        => $newId,

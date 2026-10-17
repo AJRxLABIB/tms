@@ -100,6 +100,7 @@ if (isset($_POST['confirm_checkout'])) {
     try {
         // Supplier blackout dates: re-checked here, server-side, for every cart item.
         foreach ($items as $it) {
+            if (!tms_package_bookable($dbh, (int)$it->PackageId)) { $capacityError .= "A package in your cart is no longer available. "; continue; }
             $blk = SupplierService::blackoutConflict($dbh, (int)$it->PackageId, (string)$it->FromDate, (string)$it->ToDate);
             if ($blk !== null) $capacityError .= "A package in your cart is not available on the dates you chose. ";
         }
@@ -128,7 +129,7 @@ if (isset($_POST['confirm_checkout'])) {
         // already set $error above and rolled back -- fall through to render
     } elseif ($capacityError !== '') {
         $dbh->rollBack();
-        $error = trim($capacityError) . (strpos($capacityError, 'not available on the dates') !== false ? " Please remove it from your cart or choose other dates." : " Please adjust the traveler count in your cart.");
+        $error = trim($capacityError) . ((strpos($capacityError, 'not available on the dates') !== false || strpos($capacityError, 'no longer available') !== false) ? " Please remove it from your cart or choose other dates." : " Please adjust the traveler count in your cart.");
     } else {
     $createdIds = [];
     try {

@@ -2772,6 +2772,43 @@ function tms_package_image_src(?string $packageImage): string {
     return 'admin/pacakgeimages/' . $img;
 }
 
+/**
+ * Same-site redirect target only. Rejects absolute URLs, protocol-relative URLs ("//x"), backslash tricks ("/\\x" is read as
+ * "//x" by browsers), control characters and anything that is not a plain relative path/query.
+ */
+function tms_safe_redirect($target, string $default = 'index.php'): string {
+    if (!is_string($target)) return $default;
+    $t = trim($target);
+    if ($t === '' || strlen($t) > 500) return $default;
+    if (preg_match('/[\x00-\x1f\x7f\\\\]/', $t)) return $default;          // control chars and backslashes
+    if (str_starts_with($t, '//') || str_contains($t, '://') || preg_match('/^[a-z][a-z0-9+.\-]*:/i', $t)) return $default;
+    return preg_match('#^[A-Za-z0-9_./?=&%+,:;@~\-\#]+$#', $t) ? $t : $default;
+}
+
+/**
+ * Host to use when building absolute links that are EMAILED (password reset, etc.). The Host header is attacker-controlled,
+ * so a link built from it can be pointed at an attacker's server. Prefer the configured APP_URL; otherwise accept the Host
+ * header only if it is a syntactically valid hostname.
+ */
+function tms_public_base_url(): string {
+    $configured = trim((string) tms_env('APP_URL', ''));
+    if ($configured !== '' && preg_match('#^https?://[A-Za-z0-9.\-]+(:\d+)?(/[^\s]*)?$#', $configured)) return rtrim($configured, '/');
+    $scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
+    $host = (string)($_SERVER['HTTP_HOST'] ?? '');
+    if (!preg_match('/^[A-Za-z0-9.\-]{1,253}(:\d{1,5})?$/', $host)) $host = 'localhost';
+    return $scheme . '://' . $host . rtrim(dirname($_SERVER['SCRIPT_NAME'] ?? ''), '/');
+}
+
+/** SQL fragment: a package the public may see and book (published; supplier packages must also be approved). */
+const TMS_PKG_PUBLIC_SQL = "Status=1 AND (ApprovalStatus IS NULL OR ApprovalStatus='approved')";
+function tms_package_bookable(PDO $dbh, int $packageId): bool {
+    try {
+        $st = $dbh->prepare('SELECT 1 FROM tbltourpackages WHERE PackageId = ? AND ' . TMS_PKG_PUBLIC_SQL . ' LIMIT 1');
+        $st->execute([$packageId]);
+        return (bool)$st->fetchColumn();
+    } catch (Throwable $e) { error_log('[TMS] bookable check failed: ' . $e->getMessage()); return false; }
+}
+
 function tms_clean(string $val): string {
     return trim(strip_tags($val));
 }
@@ -3402,7 +3439,9 @@ function tms_record_failed_login(PDO $dbh, string $email, string $ip): void {
 
 function tms_clear_login_attempts(PDO $dbh, string $email, string $ip): void {
     try {
-        $dbh->prepare("DELETE FROM tbl_login_attempts WHERE Email = :e OR IPAddress = :ip")
+        // Exact key AND ip only. (Was "OR ip": a correct password from an attacker's IP also wiped that IP's '2fa-user:' failure rows,
+        // resetting the TOTP guess counter on every login.)
+        $dbh->prepare("DELETE FROM tbl_login_attempts WHERE Email = :e AND IPAddress = :ip")
             ->execute([':e' => $email, ':ip' => $ip]);
     } catch (Exception $e) {
         error_log('[TMS Login] Could not clear attempts: ' . $e->getMessage());

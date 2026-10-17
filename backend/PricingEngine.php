@@ -119,6 +119,16 @@ function tms_remaining_seats_for_update(PDO $dbh, int $packageId): ?int {
     return max(0, (int)$capacity - $booked);
 }
 
+/**
+ * Coupon discount in whole currency units, exact integer arithmetic, half-up. Percent is clamped to [0, TMS_MAX_LOYALTY_DISCOUNT].
+ * (Was float round(x,2) written into INT columns: 13,665 at 10% became discount 1,367 but total 12,299 - off by one.)
+ */
+function tms_coupon_discount(int $subtotal, float $percent): int {
+    $pct = max(0.0, min($percent, (float)TMS_MAX_LOYALTY_DISCOUNT));
+    $bp  = (int) round($pct * 100);                       // basis points, e.g. 12.5% -> 1250
+    return max(0, min($subtotal, intdiv($subtotal * $bp + 5000, 10000)));
+}
+
 function tms_dynamic_price(PDO $dbh, int $packageId, float $basePrice, ?string $fromDate = null): array
 {
     if ($basePrice <= 0) {

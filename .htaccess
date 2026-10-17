@@ -5,7 +5,7 @@
 # 1. Never serve secrets, dumps, or internal notes over HTTP.
 #    .env sits inside the document root, so without this rule anyone could read
 #    the API keys at http://<host>/tms/.env
-<FilesMatch "^\.env|\.(env|sql|md|log|ini|bak|old|orig)$">
+<FilesMatch "^\.env|\.(env|sql|md|log|ini|bak|old|orig|py|sh|yml|yaml)$">
     <IfModule mod_authz_core.c>
         Require all denied
     </IfModule>

@@ -1,4 +1,5 @@
-const CACHE = 'tms-cache-v1';
+// v2: bumping this name makes `activate` delete the old generic cache, which (v1) had stored logged-in pages.
+const CACHE = 'tms-cache-v2';
 // Round 83 (master prompt item 52 -- "PWA / Offline"): the spec names a
 // specific list of things offline mode should prioritize -- itinerary,
 // booking confirmation, tickets, emergency contacts, hotel information,
@@ -53,7 +54,8 @@ const TRIPKIT_STATIC_ASSETS = [
 ];
 
 self.addEventListener('install', e => {
-  e.waitUntil(caches.open(CACHE).then(c => c.addAll(PRECACHE).catch(()=>{})));
+  // One missing URL must not silently disable all precaching (addAll is all-or-nothing), so add each on its own.
+  e.waitUntil(caches.open(CACHE).then(c => Promise.allSettled(PRECACHE.map(u => c.add(u)))));
   self.skipWaiting();
 });
 
@@ -98,20 +100,52 @@ self.addEventListener('fetch', e => {
   // behavior below (generic CACHE, offline.html fallback, TRIPKIT_CACHE
   // via the message handler) is unchanged, since none of it ever
   // targeted cross-origin URLs in the first place.
-  if (new URL(e.request.url).origin !== self.location.origin) return;
+  const url = new URL(e.request.url);
+  if (url.origin !== self.location.origin) return;
+
+  // PRIVACY: logging out wipes every cache (generic AND saved-trip kit), so the next person on a shared phone cannot open the
+  // previous traveller's pages offline. The logout request itself passes through untouched.
+  if (/\/logout\.php$/.test(url.pathname)) {
+    e.waitUntil(caches.keys().then(keys => Promise.all(keys.map(k => caches.delete(k)))));
+    return;
+  }
+
+  // Pages that show a signed-in person's data (or run an action) are NEVER written to the generic cache and are not served from it.
+  // They stay available offline only if the traveller explicitly saved them with "Save for Offline" (TRIPKIT_CACHE, matched below).
+  const PRIVATE = /\/(dashboard|profile|wallet|wallet-document|tour-history|ticket|my-trip|payment|pay-now|checkout|cart|export-my-data|notifications|alerts|loyalty|loyalty-history|referral|group-trip|group-trips|expense-tracker|travel-memory|ai-memory|ai-copilot|two-factor-setup|change-password|login|logout|register|forgot-password|thankyou|my-marketplace-bookings|wishlist|mark-notifications-read|admin|supplier|api)(\/|\.php|$)/i;
+  const isPrivate = PRIVATE.test(url.pathname) || url.pathname.indexOf('/api/') !== -1;
+  const isStatic = /\/(css|js|fonts|images)\//.test(url.pathname) && /\.(css|js|woff2?|ttf|png|jpe?g|gif|svg|webp|ico)$/i.test(url.pathname);
+
+  if (isPrivate) {
+    e.respondWith(
+      fetch(e.request).catch(() => caches.match(e.request, { cacheName: TRIPKIT_CACHE }).then(r => r || caches.match('/tms/offline.html')))
+    );
+    return;
+  }
+
+  if (isStatic) {
+    // stale-while-revalidate: instant from cache, refreshed in the background.
+    e.respondWith(caches.open(CACHE).then(cache => cache.match(e.request).then(hit => {
+      const refresh = fetch(e.request).then(res => { if (res && res.status === 200) cache.put(e.request, res.clone()); return res; }).catch(() => hit);
+      return hit || refresh;
+    })));
+    return;
+  }
+
+  // Public pages: network first, remember the last good copy for offline, never keep responses marked private/no-store, cap the size.
   e.respondWith(
     fetch(e.request).then(res => {
-      if (res && res.status === 200) {
+      const cc = (res && res.headers && res.headers.get('Cache-Control')) || '';
+      if (res && res.status === 200 && !/no-store|private/i.test(cc)) {
         const clone = res.clone();
-        caches.open(CACHE).then(c => c.put(e.request, clone));
+        caches.open(CACHE).then(async c => {
+          await c.put(e.request, clone);
+          const keys = await c.keys();
+          if (keys.length > 80) await Promise.all(keys.slice(0, keys.length - 80).map(k => c.delete(k)));
+        });
       }
       return res;
     }).catch(() => caches.match(e.request).then(r => r || caches.match('/tms/offline.html')))
-    // Note: caches.match() here (the global CacheStorage.match, not a single
-    // Cache's match) searches every cache under this origin, TRIPKIT_CACHE
-    // included -- so a page saved via the message handler below is found
-    // here automatically the moment the network fetch fails, with no
-    // special-casing needed in this handler.
   );
 });
 

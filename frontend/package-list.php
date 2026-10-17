@@ -89,7 +89,7 @@ try {
 }
 
 // ─── Build query ──────────────────────────────────────────────────────────────
-$where  = [];
+$where  = [TMS_PKG_PUBLIC_SQL]; // never list unpublished / pending-review supplier packages
 $params = [];
 
 if ($search !== '') {
@@ -186,7 +186,7 @@ if (!empty($_SESSION['login']) && count($results) > 0) {
 }
 
 // Package types for filter dropdown
-$typesQ = $dbh->query("SELECT DISTINCT PackageType FROM tbltourpackages ORDER BY PackageType");
+$typesQ = $dbh->query("SELECT DISTINCT PackageType FROM tbltourpackages WHERE " . TMS_PKG_PUBLIC_SQL . " ORDER BY PackageType");
 $packageTypes = $typesQ->fetchAll(PDO::FETCH_COLUMN);
 
 // Translate package names for the active language (cached after first request —

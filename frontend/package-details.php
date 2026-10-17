@@ -49,6 +49,8 @@ if (isset($_POST['submit2']) || isset($_POST['addcart'])) {
             $error = 'Return date must be after the departure date.';
         } elseif ($pid === 0) {
             $error = 'Invalid package.';
+        } elseif (!tms_package_bookable($dbh, $pid)) {
+            $error = 'This package is not available for booking.'; // unpublished / pending review / removed
         } elseif (($blackoutMsg = SupplierService::blackoutConflict($dbh, $pid, $from->format('Y-m-d'), $to->format('Y-m-d'))) !== null) {
             $error = $blackoutMsg; // supplier blackout dates are enforced server-side
         } elseif (isset($_POST['addcart'])) {
@@ -105,9 +107,9 @@ if (isset($_POST['submit2']) || isset($_POST['addcart'])) {
             } else {
                 $pricing   = tms_dynamic_price($dbh, $pid, (float)$rawPrice, $from->format('Y-m-d'));
                 $unitPrice = (float)$pricing['final'];
-                $subtotal  = $unitPrice * $persons;
+                $subtotal  = (int)round($unitPrice) * $persons; // whole units, exact
 
-                $discountAmt = 0.0;
+                $discountAmt = 0;
                 $couponCode  = null;
                 if ($couponRaw !== '') {
                     $cq = $dbh->prepare("SELECT * FROM tblcoupons WHERE Code=:c AND (UserEmail=:e OR UserEmail IS NULL) AND IsUsed=0 AND (ExpiryDate IS NULL OR ExpiryDate >= CURDATE()) LIMIT 1");
@@ -135,8 +137,7 @@ if (isset($_POST['submit2']) || isset($_POST['addcart'])) {
                         if ($claimed) {
                             // Clamp: never trust a stored percentage. A legacy row
                             // written before the cap existed could be 100 or 120.
-                            $pct = max(0, min((float)$coupon->DiscountPercent, (float)TMS_MAX_LOYALTY_DISCOUNT));
-                            $discountAmt = round($subtotal * ($pct / 100), 2);
+                            $discountAmt = tms_coupon_discount((int)$subtotal, (float)$coupon->DiscountPercent); // clamped, integer-exact
                             $couponCode  = $couponRaw;
                         } else {
                             $error = 'Note: coupon code was just used by another request, so it was not applied.';
@@ -243,7 +244,7 @@ if (isset($_POST['submit2']) || isset($_POST['addcart'])) {
 }
 
 $pid = tms_int($_GET['pkgid'] ?? 0, 1);
-$q   = $dbh->prepare("SELECT * FROM tbltourpackages WHERE PackageId=:pid LIMIT 1");
+$q   = $dbh->prepare("SELECT * FROM tbltourpackages WHERE PackageId=:pid AND " . TMS_PKG_PUBLIC_SQL . " LIMIT 1");
 $q->bindParam(':pid', $pid, PDO::PARAM_INT);
 $q->execute();
 $pkg = $q->fetch(PDO::FETCH_OBJ);

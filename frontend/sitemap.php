@@ -68,7 +68,7 @@ try {
 
 // Tour packages
 try {
-    $pkgs = $dbh->query("SELECT PackageId FROM tbltourpackages ORDER BY PackageId DESC")->fetchAll(PDO::FETCH_COLUMN);
+    $pkgs = $dbh->query("SELECT PackageId FROM tbltourpackages WHERE " . TMS_PKG_PUBLIC_SQL . " ORDER BY PackageId DESC")->fetchAll(PDO::FETCH_COLUMN);
     foreach ($pkgs as $pid) {
         echo tms_sitemap_url("$base/package-details.php?pkgid=" . (int)$pid, 'weekly', 0.8);
     }

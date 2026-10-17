@@ -18,24 +18,46 @@ if (!$loyalty) {
 
 // Redeem coupon
 $msg = ''; $error = '';
-if (isset($_POST['redeem']) && $loyalty->Points >= 500) {
-    tms_csrf_validate();
-    $coupon = 'TMS-' . strtoupper(bin2hex(random_bytes(4)));
-    // FIX (Round 14): this was uncapped — 5,000 points minted a 100%-off coupon
-    // (a free booking) and 6,000 points produced DiscountPercent = 120. Points
-    // are farmable (20 per review, one review per package, 400+ packages), so
-    // this was reachable in minutes. Capped at a sane maximum.
-    $discount = min(TMS_MAX_LOYALTY_DISCOUNT, floor($loyalty->Points / 500) * 10);
-    $dbh->prepare("UPDATE tblloyalty SET Points=Points-:used WHERE UserEmail=:e")
-        ->execute([':used'=>floor($loyalty->Points/500)*500, ':e'=>$email]);
-    $dbh->prepare("INSERT INTO tblcoupons(Code,DiscountPercent,UserEmail,ExpiryDate,IsUsed) VALUES(:c,:d,:e,DATE_ADD(NOW(),INTERVAL 30 DAY),0)")
-        ->execute([':c'=>$coupon,':d'=>$discount,':e'=>$email]);
-    // The message used to say "use it at checkout" — but checkout.php has no
-    // coupon field at all; the only place a code can be entered is a package's
-    // own booking form. Point people where the feature actually is.
-    $msg = "Coupon <strong>$coupon</strong> generated! {$discount}% off — valid for 30 days. "
-         . "Enter it in the <em>Coupon code</em> box on any package's booking form.";
-    $q->execute([':e'=>$email]);
+if (isset($_POST['redeem'])) {
+    tms_csrf_validate(); // before anything is read or changed
+    // FIX: the balance was read first and deducted later without a lock, so two parallel requests could both pass the check
+    // (two coupons, balance negative), and the deduction ignored the 40% cap (5,000 points paid for what 2,000 buy).
+    // Now: lock the row, compute the discount from the CURRENT balance, deduct only the points that discount needs, and do the
+    // deduction, the coupon and the history entry in one transaction.
+    try {
+        $dbh->beginTransaction();
+        $bal = $dbh->prepare("SELECT Points FROM tblloyalty WHERE UserEmail=:e FOR UPDATE");
+        $bal->execute([':e' => $email]);
+        $points = (int)$bal->fetchColumn();
+        if ($points < 500) {
+            $dbh->rollBack();
+            $error = 'You need at least 500 points to redeem a coupon.';
+        } else {
+            $discount = (int)min(TMS_MAX_LOYALTY_DISCOUNT, intdiv($points, 500) * 10);
+            $used     = (int)(ceil($discount / 10) * 500);          // only what this discount actually costs
+            $upd = $dbh->prepare("UPDATE tblloyalty SET Points=Points-:used WHERE UserEmail=:e AND Points>=:used2");
+            $upd->execute([':used' => $used, ':used2' => $used, ':e' => $email]);
+            if ($upd->rowCount() !== 1) { $dbh->rollBack(); $error = 'Could not redeem right now. Please try again.'; }
+            else {
+                $coupon = 'TMS-' . strtoupper(bin2hex(random_bytes(4)));
+                $dbh->prepare("INSERT INTO tblcoupons(Code,DiscountPercent,UserEmail,ExpiryDate,IsUsed) VALUES(:c,:d,:e,DATE_ADD(NOW(),INTERVAL 30 DAY),0)")
+                    ->execute([':c' => $coupon, ':d' => $discount, ':e' => $email]);
+                $dbh->prepare("INSERT INTO tblloyalty_log(UserEmail,Points,Description) VALUES(:e,:p,:d)")
+                    ->execute([':e' => $email, ':p' => -$used, ':d' => "Redeemed {$used} points for coupon {$coupon} ({$discount}% off)"]);
+                $dbh->commit();
+                // The message used to say "use it at checkout" — but checkout.php has no
+                // coupon field at all; the only place a code can be entered is a package's
+                // own booking form. Point people where the feature actually is.
+                $msg = "Coupon <strong>$coupon</strong> generated! {$discount}% off — valid for 30 days ({$used} points used). "
+                     . "Enter it in the <em>Coupon code</em> box on any package's booking form.";
+            }
+        }
+    } catch (Throwable $e) {
+        if ($dbh->inTransaction()) $dbh->rollBack();
+        error_log('[TMS Loyalty] redeem failed: ' . $e->getMessage());
+        $error = 'Could not redeem right now. Please try again.';
+    }
+    $q->execute([':e' => $email]);
     $loyalty = $q->fetch(PDO::FETCH_OBJ);
 }
 
