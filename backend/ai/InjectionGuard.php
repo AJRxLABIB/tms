@@ -28,6 +28,12 @@ final class InjectionGuard
         ['/\b(reveal|show|give|tell|print|leak|share|what(?:\'?s| is))\b.{0,30}\b(api[ -]?keys?|secret keys?|access tokens?|admin(?:istrator)? (?:password|login|credentials)|database (?:password|credentials)|server credentials|\.env)\b/iu', 'secret_exfiltration', 0.8],
         ['/\b(admin(?:istrator)?|database|db|server|root)\s+(?:password|credentials?)\b.{0,25}\b(you|your|use|uses)\b|\b(your|the)\s+(admin(?:istrator)?|database|db|server|root)\s+(?:password|credentials?)\b/iu', 'secret_exfiltration', 0.8],
         ['/(এপিআই\s*কী|এপিআই\s*কি|সিক্রেট\s*কী|অ্যাডমিন(?:ের)?\s*পাসওয়ার্ড|ডাটাবেস\s*পাসওয়ার্ড).{0,25}(দেখাও|বলো|জানাও|দাও|প্রকাশ)|(দেখাও|বলো|জানাও|দাও).{0,15}(এপিআই\s*কী|অ্যাডমিন(?:ের)?\s*পাসওয়ার্ড)/u', 'secret_exfiltration', 0.8],
+        // Rephrasings found by the Stage 10 audit.
+        ['/\b(ignore|disregard|forget|override|bypass|skip)\b.{0,30}\b(the |all |any |your |these |those |previous |prior )*(rules|guidelines|restrictions|instructions|guardrails|safety)\b/iu', 'override_instructions', 0.7],
+        ['/\b(print|repeat|output|show|display|recite|echo|copy|paste|write out)\b.{0,30}\b(the )?(text|words|message|content|prompt|instructions?)\b.{0,15}\b(above|before this|prior to this|at the (top|start|beginning))\b/iu', 'prompt_exfiltration', 0.8],
+        ['/\b(repeat|print|show|output)\b.{0,25}\b(your|the)\b.{0,12}\b(initial|original|first|starting|full)\b.{0,12}\b(instructions?|prompt|message|configuration)\b/iu', 'prompt_exfiltration', 0.8],
+        ['/\b(from now on|new (rules|instructions))\b.{0,60}\b(you (will|must|should|are)|answer|respond|ignore)\b/iu', 'role_hijack', 0.5],
+        ['/\bbegin\s+(system|new)\s+(prompt|instructions?)\b|\[\s*(system|inst)\s*\]|<\|\s*(im_start|system)\s*\|>/iu', 'fake_role_marker', 0.7],
     ];
 
     /** @return array{risk:float,flags:string[],block:bool} */
@@ -35,12 +41,35 @@ final class InjectionGuard
     {
         $risk = 0.0; $flags = [];
         // Normalise zero-width / odd spacing tricks before matching.
-        $t = preg_replace('/[\x{200B}-\x{200D}\x{FEFF}]/u', '', $text) ?? $text;
+        $t = self::normalise($text);
         foreach (self::RULES as [$re, $flag, $w]) {
             if (@preg_match($re, $t) === 1) { $flags[] = $flag; $risk += $w; }
         }
         $risk = min(1.0, $risk);
         return ['risk' => round($risk, 2), 'flags' => array_values(array_unique($flags)), 'block' => $risk >= 0.7];
+    }
+
+    /**
+     * Fold the usual obfuscations so the rules see plain text: zero-width and
+     * soft-hyphen characters, fullwidth/compat forms (NFKC, when intl exists),
+     * runs of punctuation/underscores used as spacers, and common leetspeak
+     * digits inside otherwise alphabetic words ("1gn0re"). Only the copy used
+     * for matching is changed; the visitor's text is never rewritten.
+     */
+    public static function normalise(string $text): string
+    {
+        $t = preg_replace('/[\x{200B}-\x{200F}\x{202A}-\x{202E}\x{2060}\x{00AD}\x{FEFF}]/u', '', $text) ?? $text;
+        if (class_exists('Normalizer')) {
+            $n = Normalizer::normalize($t, Normalizer::FORM_KC);
+            if (is_string($n)) { $t = $n; }
+        }
+        // i.g.n.o.r.e / i_g_n_o_r_e -> ignore (single letters separated by . _ - *)
+        $t = preg_replace_callback('/\b(?:[a-z][._*\-]){3,}[a-z]\b/iu', fn($m) => preg_replace('/[._*\-]/', '', $m[0]), $t) ?? $t;
+        // leetspeak digits inside letter words ("1gn0re"); never touches e-mail addresses, URLs or plain numbers
+        $t = preg_replace_callback('/(?<![@.\/\w-])(?=[a-z0-9]*[a-z]{2})(?=[a-z0-9]*[0-9])[a-z0-9]{4,}(?![@.\/\w-])/iu', function ($m) {
+            return strtr($m[0], ['0' => 'o', '1' => 'i', '3' => 'e', '4' => 'a', '5' => 's', '7' => 't']);
+        }, $t) ?? $t;
+        return preg_replace('/[ \t]{2,}/u', ' ', $t) ?? $t;
     }
 
     /** Canned, model-free refusal. */

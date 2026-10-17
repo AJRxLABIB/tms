@@ -7,6 +7,7 @@
  */
 require_once __DIR__ . '/ToolRegistry.php';
 require_once __DIR__ . '/BanglaNormalizer.php';
+require_once __DIR__ . '/QueryParser.php';
 
 final class ToolRouter
 {
@@ -28,14 +29,17 @@ final class ToolRouter
             $calls[] = ['tool' => 'get_travel_notices', 'args' => $a];
         }
         // Budget ceiling parsed by code (Bangla digits, "50k", "১.৫ লাখ" ...), never by the model.
-        $max = BanglaNormalizer::budgetCeiling($message);
+        // Budget, price floor, trip length and travellers are parsed by CODE (QueryParser), never by the model. An explicit TOTAL budget for N
+        // travellers becomes a per-person ceiling because package prices are per person.
+        $qf = QueryParser::parse($message);
+        $max = QueryParser::perPersonCeiling($qf);
         // Cost / affordability question about the package the visitor is looking at -> deterministic budget tool.
         $d = BanglaNormalizer::digits($m);
         if ($pkgId > 0 && preg_match('/\b(total cost|how much (?:will|would|does|for)|can (?:we|i) afford|afford|enough|cost for|price for|within (?:my )?budget)\b|মোট খরচ|খরচ কত|কত পড়বে|কত লাগবে|বাজেটে হবে/u', $d)) {
             $trav = 1;
             if (preg_match('/(?:family of|group of|for|party of)\s*(\d{1,2})\b|(\d{1,2})\s*(?:people|persons?|travell?ers|adults|of us|জন)/u', $d, $t)) $trav = (int)($t[1] !== '' ? $t[1] : $t[2]);
             $a = ['travelers' => max(1, min(50, $trav)), 'package_id' => $pkgId];
-            if (($b = BanglaNormalizer::budgetCeiling($message)) !== null && $b <= 1000000000) $a['budget_bdt'] = $b;
+            if ($qf['max_price'] !== null && $qf['max_price'] <= 1000000000) $a['budget_bdt'] = $qf['max_price'];
             $calls[] = ['tool' => 'calculate_trip_budget', 'args' => $a];
         }
         if ($pkgId > 0 && self::wantsBookingCheck($message)) $calls[] = ['tool' => 'check_booking_readiness', 'args' => self::bookingArgs($message, $pkgId)];
@@ -43,6 +47,8 @@ final class ToolRouter
         if ($isCatalogue || !$calls) {
             $args = ['query' => mb_substr($message, 0, 200), 'limit' => 5];
             if ($max) $args['max_price'] = $max;
+            if ($qf['min_price']) $args['min_price'] = $qf['min_price'];
+            if ($qf['days_min']) { $args['days_min'] = $qf['days_min']; $args['days_max'] = $qf['days_max'] ?? $qf['days_min']; }
             $calls[] = ['tool' => 'search_packages', 'args' => $args];
         }
         return $calls;
@@ -73,6 +79,21 @@ final class ToolRouter
         if (isset($dates[0])) $a['start_date'] = $dates[0];
         if (isset($dates[1])) $a['end_date'] = $dates[1];
         return $a;
+    }
+
+    /** Plain-language notes about HOW a package search was filtered, so the answer can be honest about it. @return string[] */
+    public static function searchNotes(ToolRegistry $reg, array $args, int $returned): array
+    {
+        $m = $reg->lastSearchMeta; $f = $m['filters'] ?? []; $n = [];
+        $parts = [];
+        if (isset($f['max_price'])) $parts[] = 'price at most ' . $f['max_price'] . ' BDT per person';
+        if (isset($f['min_price'])) $parts[] = 'price at least ' . $f['min_price'] . ' BDT per person';
+        if (isset($f['days_min'])) $parts[] = 'length ' . ($f['days_min'] === $f['days_max'] ? $f['days_min'] : $f['days_min'] . '-' . $f['days_max']) . ' days';
+        if ($parts) $n[] = 'filters_applied: ' . implode('; ', $parts) . '. Package prices are per person; if the traveller\'s budget might be a group total, say which you assumed.';
+        if (!empty($m['relaxed'])) $n[] = 'note: no package matches the requested ' . implode(' and ', $m['relaxed']) . ' exactly, so these are the closest by the other criteria. Say this plainly; do not present them as exact matches.';
+        if (!empty($m['browse'])) $n[] = 'note: results are the best-rated packages that satisfy the filters (the request named no destination or theme).';
+        if ($returned === 0) $n[] = 'note: no published package matches' . ($parts ? ' (' . implode('; ', $parts) . ')' : '') . '. Say none were found and suggest loosening the filters; do not invent packages or prices.';
+        return $n;
     }
 
     /** Hard bounds for one assistant turn (also the answer to "can it loop?": no). */
@@ -138,6 +159,7 @@ final class ToolRouter
                 if (count($r['data']) < $before) $blocks[] = 'note: ' . ($before - count($r['data'])) . ' matching package(s) were hidden because the user asked not to be shown them; do not mention or suggest them.';
             }
             $blocks[] = $c['tool'] . ': ' . json_encode($r['data'], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+            if ($c['tool'] === 'search_packages') foreach (self::searchNotes($reg, $c['args'], is_array($r['data']) ? count($r['data']) : 0) as $nt) $blocks[] = $nt;
             if ($message !== null) foreach (self::followUps($message, $c, $r['data'], $done) as $f) $queue[] = $f;
             $walk = function ($v) use (&$walk, &$cites) {
                 if (is_array($v)) { if (isset($v['citation']['id'])) $cites[$v['citation']['id']] = $v['citation']; foreach ($v as $x) $walk($x); }

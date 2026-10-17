@@ -61,22 +61,8 @@ final class BanglaNormalizer
      */
     public static function budgetCeiling(string $text): ?int
     {
-        $t = mb_strtolower(self::digits($text), 'UTF-8');
-        $num = self::NUM_RE . '\s*(' . self::MULT_RE . ')?';
-        $cur = '(?:\s*(?:taka|tk|bdt|টাকা|টাকার|৳))?';
-        $patterns = [
-            '/(?:under|below|less than|within|upto|up to|max(?:imum)?|budget(?: of| is)?|around|about)\D{0,8}' . $num . '/u',
-            '/(?:বাজেট|সর্বোচ্চ)\D{0,6}' . $num . '/u',
-            '/৳\s*' . $num . '/u',
-            '/' . $num . $cur . '\s*(?:এর\s*|র\s*)?(?:নিচে|কম|মধ্যে|বাজেট|বাজেটে)/u',
-            '/' . $num . '\s*(?:taka|tk|bdt)\s*(?:budget|max|or less)/u',
-        ];
-        foreach ($patterns as $re) {
-            if (preg_match($re, $t, $m)) {
-                $v = self::toTaka($m[1], $m[2] ?? null);
-                if ($v !== null && $v >= 500) return $v;
-            }
-        }
-        return null;
+        // One implementation for every caller: QueryParser scans ALL amounts and classifies each by its context (was: first regex match only).
+        require_once __DIR__ . '/QueryParser.php';
+        return QueryParser::parse($text)['max_price'];
     }
 }

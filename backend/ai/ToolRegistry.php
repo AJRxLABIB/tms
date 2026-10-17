@@ -30,6 +30,9 @@ final class ToolRegistry
                 'params' => [
                     'query'     => ['type' => 'string', 'required' => true, 'max' => 200],
                     'max_price' => ['type' => 'int', 'min' => 0, 'max' => 10000000],
+                    'min_price' => ['type' => 'int', 'min' => 0, 'max' => 10000000],
+                    'days_min'  => ['type' => 'int', 'min' => 1, 'max' => 60],
+                    'days_max'  => ['type' => 'int', 'min' => 1, 'max' => 60],
                     'country'   => ['type' => 'string', 'max' => 60],
                     'limit'     => ['type' => 'int', 'min' => 1, 'max' => 8],
                 ],
@@ -147,8 +150,43 @@ final class ToolRegistry
     {
         $f = [];
         if (isset($a['max_price'])) $f['max_price'] = $a['max_price'];
+        if (isset($a['min_price'])) $f['min_price'] = $a['min_price'];
+        if (isset($a['days_min']) || isset($a['days_max'])) { $f['days_min'] = $a['days_min'] ?? $a['days_max']; $f['days_max'] = $a['days_max'] ?? $a['days_min']; if ($f['days_min'] > $f['days_max']) [$f['days_min'], $f['days_max']] = [$f['days_max'], $f['days_min']]; }
         if (!empty($a['country'])) $f['country'] = $a['country'];
         $limit = (int)($a['limit'] ?? 5);
+        $this->lastSearchMeta = ['filters' => $f, 'relaxed' => [], 'count' => 0, 'browse' => false];
+        $rows = $this->searchWith($a, $f, $limit);
+        if (!$rows && $f) { $rows = $this->browse($f, $limit); if ($rows) $this->lastSearchMeta['browse'] = true; }
+        // Trip length is a soft preference: if nothing is exactly that long, show the closest by the other criteria and SAY so
+        // (the model is told through the facts). Budget and country stay hard limits - never show something over budget.
+        if (!$rows && isset($f['days_min'])) {
+            $g = $f; unset($g['days_min'], $g['days_max']);
+            $rows = $this->searchWith($a, $g, $limit);
+            if (!$rows && $g) { $rows = $this->browse($g, $limit); if ($rows) $this->lastSearchMeta['browse'] = true; }
+            if ($rows) $this->lastSearchMeta['relaxed'] = ['days'];
+        }
+        $this->lastSearchMeta['count'] = count($rows);
+        return $rows;
+    }
+
+    /** What the last search_packages call applied / relaxed (for the facts block and analytics). @var array{filters:array,relaxed:array,count:int} */
+    public array $lastSearchMeta = ['filters' => [], 'relaxed' => [], 'count' => 0, 'browse' => false];
+
+    /** Filter-only listing for requests that are pure constraints ("under 20k for 3 days"): best rated first, then cheapest, then id. */
+    private function browse(array $f, int $limit): array
+    {
+        $m = array_filter($this->index->all(), fn($meta) => KnowledgeIndex::passes($meta, $f));
+        uasort($m, fn($x, $y) => [-($x['rating'] ?? 0), $x['price'], $x['id'] ?? 0] <=> [-($y['rating'] ?? 0), $y['price'], $y['id'] ?? 0]);
+        $out = [];
+        foreach (array_slice($m, 0, max(1, min(8, $limit ?: 5)), true) as $id => $meta) {
+            $p = $this->index->get((int)$id); if (!$p) continue;
+            $out[] = ['id' => (int)$id, 'title' => $p['title'], 'location' => $p['location'], 'country' => $p['country'], 'price_bdt' => $p['price'], 'duration' => $p['duration'], 'citation' => $p['citation']];
+        }
+        return $out;
+    }
+
+    private function searchWith(array $a, array $f, int $limit): array
+    {
         $this->lastRetrieval = 'bm25';
         $hits = null;
         try { $hits = $this->hybridHits((string)$a['query'], $limit ?: 5, $f); } catch (Throwable $e) { error_log('[TMS AI hybrid] ' . $e->getMessage()); }

@@ -573,7 +573,9 @@ class AIClient {
     private function sanitizePromptInput(string $input, string $role = 'user'): string {
         $input = trim($input);
         if ($role !== 'assistant') {
-            $input = strip_tags($input);
+            // Remove real markup only. strip_tags() also ate text after a bare
+            // "<" ("budget < 20000 and 3 days" lost everything after the "<").
+            $input = preg_replace('/<\s*\/?\s*[a-z][^>]*>/i', '', $input) ?? $input;
         }
         return mb_substr($input, 0, 4000);
     }

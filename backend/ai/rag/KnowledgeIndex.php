@@ -115,7 +115,21 @@ final class KnowledgeIndex
         if (isset($filters['max_price']) && $filters['max_price'] > 0 && $meta['price'] > $filters['max_price']) return false;
         if (isset($filters['min_price']) && $filters['min_price'] > 0 && $meta['price'] < $filters['min_price']) return false;
         if (!empty($filters['country']) && stripos($meta['country'], (string)$filters['country']) === false) return false;
+        if (isset($filters['days_min'], $filters['days_max']) && !self::durationOverlaps((string)($meta['duration'] ?? ''), (int)$filters['days_min'], (int)$filters['days_max'])) return false;
         return true;
+    }
+
+    /**
+     * Does the package's free-text length ("3 Days/2 Nights", "3-4 Days", "Half Day") overlap the requested day range? Same rule as
+     * NLSearchParser::durationOverlaps (kept here so retrieval has no dependency on the search-page parser).
+     */
+    public static function durationOverlaps(string $text, int $reqMin, int $reqMax): bool
+    {
+        preg_match_all('/\d+/', $text, $m); $n = array_map('intval', $m[0] ?? []);
+        if (!$n) { $lo = 0; $hi = 1; }                       // "Half Day"
+        elseif (preg_match('/(\d+)\s*days?\s*[\/,&-]?\s*(\d+)\s*nights?/i', $text, $dn)) { $lo = $hi = (int)$dn[1]; }   // "3 Days/2 Nights" is a 3-day trip
+        else { $lo = min($n); $hi = max($n); }
+        return $lo <= $reqMax && $hi >= $reqMin;
     }
 
     /** @return array<int,array> id => meta, for every published package (used to build embeddings and dense retrieval) */

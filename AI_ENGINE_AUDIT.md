@@ -88,9 +88,15 @@ Limits: a clean result means "no contradictions found", not "the plan works" (op
 - Verified: `tests/ai/booking_readiness_test.php` (31 checks) against the real sandbox database with temporary packages, bookings and blackouts; all earlier suites re-run green. Two live-quality cases (en, bn) were added to `quality_cases.json`; they only run with a real provider.
 - Limits: seats are a live read, not a reservation; the price excludes coupons and add-ons; without an end date the blackout check is reported as "not_checked". Whether a real model words the result well is NOT measured.
 
+## 3j. Stage 11 delivered: query understanding, filters and injection hardening
+
+`QueryParser` (code, not the model) reads budget ceilings/floors/ranges, trip length and traveller count from English, Bangla and common Banglish phrasing (k, lakh, hajar, Bangla digits, number words such as "ek lakh"). A stated TOTAL for N travellers becomes a per-person ceiling because package prices are per person. `ToolRouter` passes `max_price`, `min_price`, `days_min/days_max` to `search_packages`; `KnowledgeIndex::passes()` filters on them ("3 Days/2 Nights" counts as a 3-day trip). Budget and country are hard limits and are never relaxed; trip length is relaxed only when nothing matches exactly, and that is reported in the facts block. A request that is only constraints falls back to a filter-only listing (best rated, then cheapest). `ToolRouter::searchNotes` tells the model what was applied/relaxed and to say "none found" instead of inventing packages. `NLSearchParser` heuristics and `BanglaNormalizer::budgetCeiling` use the same parser ("under 1.5 lakh" was read as 1). `InjectionGuard` now matches on a normalised copy (NFKC, zero-width/bidi characters, spaced letters, leetspeak digits; e-mails/URLs untouched) and has rules for "disregard the rules", "print the text above", "repeat your initial instructions", fake chat-template markers. `AIClient::sanitizePromptInput` strips real tags only (`strip_tags` dropped text after a bare "<").
+Tests: `query_parser_test.php` 77, `search_filters_test.php` 32 (real DB), eval 85/85 (baseline raised to 85).
+Limits: season is parsed but nothing is filtered by it; nights are read as days; Banglish is understood only through the number words/cues listed in the tests; pattern screening is defence in depth, not a guarantee; no real model was involved.
+
 ## 4. Verification actually run (sandbox: PHP 8.3, MariaDB, stubbed HTTP transport)
 
-engine 122/122, itinerary checker 30/30, autopilot HTTP 23/23, quality scorer 16/16, admin controls over HTTP 14/14, resilience 29/29, memory HTTP 18/18, eval 75/75, rerank 11/11, Ollama unit, autopilot 40/40, payments 18/18, suppliers 72/72, notices 32/32, security 26/26, `tests/run.php` 20/20, e2e 14/14. axe WCAG A/AA clean on `ai-memory.php` (desktop/mobile, light/dark) and the dashboard panel (light/dark).
+engine 122/122, query parser 77/77, search filters 32/32, itinerary checker 30/30, autopilot HTTP 23/23, quality scorer 16/16, admin controls over HTTP 14/14, resilience 29/29, memory HTTP 18/18, eval 85/85, rerank 11/11, Ollama unit, autopilot 40/40, payments 18/18, suppliers 72/72, notices 32/32, security 26/26, `tests/run.php` 20/20, e2e 14/14. axe WCAG A/AA clean on `ai-memory.php` (desktop/mobile, light/dark) and the dashboard panel (light/dark).
 
 ## 5. NOT verified
 
