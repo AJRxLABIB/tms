@@ -137,7 +137,7 @@ $currentPage = basename($_SERVER['PHP_SELF']);
             <?php endif; ?>
             <?php if(isset($_SESSION['login']) && !empty($_SESSION['login'])): ?>
             <span class="tms-topbar-welcome" style="color:rgba(255,255,255,0.85);font-size:12.5px;"><?php echo tms_t('nav_welcome','Welcome'); ?>, <?php echo htmlspecialchars(explode('@',$_SESSION['login'])[0]); ?>!</span>
-            <a href="logout.php" class="btn-topbar-login"><i class="fa fa-sign-out"></i> <?php echo tms_t('nav_logout','Logout'); ?></a>
+            <a href="logout.php?t=<?php echo urlencode(tms_csrf_token()); ?>" class="btn-topbar-login"><i class="fa fa-sign-out"></i> <?php echo tms_t('nav_logout','Logout'); ?></a>
             <?php else: ?>
             <a href="javascript:void(0)" onclick="openModal('signupModal')" class="btn-topbar-signup"><i class="fa fa-user-plus"></i> <?php echo tms_t('nav_signup','Sign Up'); ?></a>
             <a href="javascript:void(0)" onclick="openModal('signinModal')" class="btn-topbar-login"><i class="fa fa-sign-in"></i> <?php echo tms_t('nav_signin','Sign In'); ?></a>

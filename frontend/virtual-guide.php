@@ -196,6 +196,7 @@ async function askGuide() {
 
     const fd = new FormData();
     fd.append('action', 'virtual_guide');
+    fd.append('csrf_token', <?php echo json_encode(tms_csrf_token()); ?>);
     fd.append('destination', currentDest);
     fd.append('question', q);
 

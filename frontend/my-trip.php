@@ -642,6 +642,7 @@ function mtApDecide(kind, id) {
     });
 }
 
+function mtEsc(v) { return String(v == null ? '' : v).replace(/[&<>"']/g, function (c) { return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
 function mtCsrf() { return (document.querySelector('[name="csrf_token"]') || {}).value || ''; }
 
 function mtCheckWeatherReplan() {
@@ -662,7 +663,7 @@ function mtCheckWeatherReplan() {
             btn.disabled = false;
             btn.innerHTML = '<i class="fa fa-cloud"></i> <?php echo addslashes(tms_t('btn_check_weather_impact','Check Weather Impact on My Itinerary')); ?>';
             if (!res || !res.success) {
-                resultBox.innerHTML = '<p style="color:#c0392b;font-size:13px;">' + ((res && res.error) || '<?php echo addslashes(tms_t('msg_could_not_check_weather','Could not check weather right now.')); ?>') + '</p>';
+                resultBox.innerHTML = '<p style="color:#c0392b;font-size:13px;">' + (mtEsc(res && res.error) || '<?php echo addslashes(tms_t('msg_could_not_check_weather','Could not check weather right now.')); ?>') + '</p>';
                 return;
             }
             var data = res.data;
@@ -674,10 +675,10 @@ function mtCheckWeatherReplan() {
                 var html = '<p style="font-size:13px;color:#c0392b;font-weight:600;"><i class="fa fa-exclamation-triangle"></i> ' + data.flagged_days.length + ' <?php echo addslashes(tms_t('dest_days_may_need_look_suffix','day(s) may need a look:')); ?></p>';
                 data.flagged_days.forEach(function (d) {
                     html += '<div class="mt-day" style="border-left-color:#e74c3c;">'
-                        + '<h5><?php echo addslashes(tms_t('label_day_prefix','Day')); ?> ' + d.day + ' — ' + d.date + '</h5>'
-                        + '<div class="mt-sched-item"><?php echo addslashes(tms_t('label_forecast_prefix','Forecast:')); ?> ' + d.rain_chance + '<?php echo addslashes(tms_t('dest_rain_chance_suffix','% chance of rain,')); ?> ' + d.temp_range + '</div>'
-                        + (d.itinerary_title ? '<div class="mt-sched-item"><?php echo addslashes(tms_t('label_planned_prefix','Planned:')); ?> ' + d.itinerary_title + '</div>' : '')
-                        + '<button type="button" class="mt-generate-btn" style="margin-top:8px;font-size:12px;padding:6px 14px;" onclick="mtPreviewReplan(' + d.day + ', \'' + d.date + '\', ' + d.rain_chance + ', this)"><?php echo addslashes(tms_t('btn_suggest_alternative_prefix','Suggest an alternative for Day')); ?> ' + d.day + '</button>'
+                        + '<h5><?php echo addslashes(tms_t('label_day_prefix','Day')); ?> ' + mtEsc(d.day) + ' — ' + mtEsc(d.date) + '</h5>'
+                        + '<div class="mt-sched-item"><?php echo addslashes(tms_t('label_forecast_prefix','Forecast:')); ?> ' + mtEsc(d.rain_chance) + '<?php echo addslashes(tms_t('dest_rain_chance_suffix','% chance of rain,')); ?> ' + mtEsc(d.temp_range) + '</div>'
+                        + (d.itinerary_title ? '<div class="mt-sched-item"><?php echo addslashes(tms_t('label_planned_prefix','Planned:')); ?> ' + mtEsc(d.itinerary_title) + '</div>' : '')
+                        + '<button type="button" class="mt-generate-btn" style="margin-top:8px;font-size:12px;padding:6px 14px;" onclick="mtPreviewReplan(' + (parseInt(d.day, 10) || 0) + ', \'' + mtEsc(d.date) + '\', ' + (parseFloat(d.rain_chance) || 0) + ', this)"><?php echo addslashes(tms_t('btn_suggest_alternative_prefix','Suggest an alternative for Day')); ?> ' + d.day + '</button>'
                         + '<div class="mt-replan-preview" style="margin-top:10px;"></div>'
                         + '</div>';
                 });
@@ -710,14 +711,14 @@ function mtPreviewReplan(day, date, rainChance, btnEl) {
         .then(function (res) {
             btnEl.style.display = 'none';
             if (!res || !res.success) {
-                previewBox.innerHTML = '<p style="color:#c0392b;font-size:13px;">' + ((res && res.error) || '<?php echo addslashes(tms_t('msg_could_not_generate_proposal','Could not generate a proposal right now.')); ?>') + '</p>';
+                previewBox.innerHTML = '<p style="color:#c0392b;font-size:13px;">' + (mtEsc(res && res.error) || '<?php echo addslashes(tms_t('msg_could_not_generate_proposal','Could not generate a proposal right now.')); ?>') + '</p>';
                 return;
             }
             var itin = res.data.itinerary;
             var html = '<div style="background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:12px;">'
                 + '<p style="font-size:12px;color:#92400e;font-weight:700;margin-bottom:8px;"><i class="fa fa-info-circle"></i> <?php echo addslashes(tms_t('msg_proposed_change_banner','PROPOSED CHANGE — not saved yet. Review the full itinerary below, then choose.')); ?></p>';
             (itin.days || []).forEach(function (d) {
-                html += '<div class="mt-day"><h5><?php echo addslashes(tms_t('label_day_prefix','Day')); ?> ' + (d.day || '') + (d.title ? ' — ' + d.title : '') + '</h5>';
+                html += '<div class="mt-day"><h5><?php echo addslashes(tms_t('label_day_prefix','Day')); ?> ' + mtEsc(d.day || '') + (d.title ? ' — ' + mtEsc(d.title) : '') + '</h5>';
                 (d.schedule || []).forEach(function (item) {
                     html += '<div class="mt-sched-item"><strong>' + (item.time || '') + '</strong> — ' + (item.activity || '') + (item.location ? ' @ ' + item.location : '') + '</div>';
                 });

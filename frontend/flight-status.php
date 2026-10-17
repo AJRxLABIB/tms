@@ -68,6 +68,7 @@ tms_require_user(); // Batch 1 (landing/auth gating): whole app now requires log
 <?php include('backend/footer.php'); ?>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
+function esc(v) { return String(v == null ? "" : v).replace(/[&<>"']/g, function (c) { return {"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c]; }); }
 let flightMap = null, flightMarker = null;
 
 async function trackFlight(e) {
@@ -91,25 +92,25 @@ async function trackFlight(e) {
     btn.innerHTML = '<i class="fa fa-search"></i> Track';
 
     if (!data.success) {
-      resultBox.innerHTML = '<div class="alert alert-warning" style="margin-top:16px;">' + (data.error || data.message || 'Could not check flight status right now.') + '</div>';
+      resultBox.innerHTML = '<div class="alert alert-warning" style="margin-top:16px;">' + esc(data.error || data.message || 'Could not check flight status right now.') + '</div>';
       return false;
     }
 
     if (!data.data.found) {
-      resultBox.innerHTML = '<div class="alert alert-info" style="margin-top:16px;"><i class="fa fa-info-circle"></i> ' + data.data.message + '</div>';
+      resultBox.innerHTML = '<div class="alert alert-info" style="margin-top:16px;"><i class="fa fa-info-circle"></i> ' + esc(data.data.message) + '</div>';
       return false;
     }
 
     const f = data.data.flight;
     let statusHtml = '<div class="alert alert-success" style="margin-top:16px;">';
-    statusHtml += '<strong><i class="fa fa-plane"></i> ' + f.callsign + '</strong> — ';
+    statusHtml += '<strong><i class="fa fa-plane"></i> ' + esc(f.callsign) + '</strong> — ';
     statusHtml += f.on_ground ? 'On the ground' : (f.climbing ? 'Climbing' : (f.descending ? 'Descending' : 'Cruising'));
-    if (f.origin_country) statusHtml += ' &middot; Operator country: ' + f.origin_country;
+    if (f.origin_country) statusHtml += ' &middot; Operator country: ' + esc(f.origin_country);
     statusHtml += '</div>';
     statusHtml += '<div class="stat-grid">';
-    statusHtml += '<div class="stat-box"><div class="val">' + (f.altitude_ft !== null ? f.altitude_ft.toLocaleString() : '—') + '</div><div class="lbl">Altitude (ft)</div></div>';
-    statusHtml += '<div class="stat-box"><div class="val">' + (f.speed_kmh !== null ? f.speed_kmh : '—') + '</div><div class="lbl">Speed (km/h)</div></div>';
-    statusHtml += '<div class="stat-box"><div class="val">' + (f.heading_deg !== null ? Math.round(f.heading_deg) + '°' : '—') + '</div><div class="lbl">Heading</div></div>';
+    statusHtml += '<div class="stat-box"><div class="val">' + (f.altitude_ft != null ? esc(Number(f.altitude_ft).toLocaleString()) : '—') + '</div><div class="lbl">Altitude (ft)</div></div>';
+    statusHtml += '<div class="stat-box"><div class="val">' + (f.speed_kmh != null ? esc(f.speed_kmh) : '—') + '</div><div class="lbl">Speed (km/h)</div></div>';
+    statusHtml += '<div class="stat-box"><div class="val">' + (f.heading_deg != null ? Math.round(Number(f.heading_deg)) + '°' : '—') + '</div><div class="lbl">Heading</div></div>';
     statusHtml += '</div>';
     // Master prompt item 64 (source provenance): this is a live, perishable
     // position -- the aircraft has moved on by the time it's read -- so show
@@ -119,7 +120,7 @@ async function trackFlight(e) {
     // result.
     if (f.source || f.fetched_at) {
       statusHtml += '<p style="font-size:10.5px;margin-top:10px;opacity:0.75;">';
-      statusHtml += 'Source: ' + (f.source === 'opensky' ? 'OpenSky Network' : (f.source || 'unknown'));
+      statusHtml += 'Source: ' + (f.source === 'opensky' ? 'OpenSky Network' : esc(f.source || 'unknown'));
       if (f.fetched_at) {
         const t = new Date(f.fetched_at);
         if (!isNaN(t.getTime())) {

@@ -204,6 +204,7 @@ async function generatePacking() {
 
     const fd = new FormData();
     fd.append('action', 'packing_list');
+    fd.append('csrf_token', <?php echo json_encode(tms_csrf_token()); ?>);
     fd.append('destination', dest);
     fd.append('duration', document.getElementById('p_days').value);
     fd.append('climate', document.getElementById('p_climate').value);

@@ -56,8 +56,16 @@ class PaymentService
         if ($flag !== '') {
             return in_array($flag, ['1', 'true', 'yes', 'on'], true);
         }
+        // Never implicit in production, and never when the request carries any sign of having come through a proxy or a public host
+        // name: a reverse proxy on the same machine shows up as loopback, which used to open the sandbox to everyone.
+        if (in_array(strtolower((string)tms_env('APP_ENV', '')), ['production', 'prod', 'live'], true)) return false;
+        foreach (['HTTP_X_FORWARDED_FOR', 'HTTP_X_FORWARDED_HOST', 'HTTP_X_FORWARDED_PROTO', 'HTTP_X_REAL_IP', 'HTTP_FORWARDED', 'HTTP_VIA', 'HTTP_CF_CONNECTING_IP'] as $h) {
+            if (!empty($_SERVER[$h])) return false;
+        }
+        $host = strtolower((string)preg_replace('/:\d+$/', '', (string)($_SERVER['HTTP_HOST'] ?? '')));
+        $localHost = in_array($host, ['localhost', '127.0.0.1', '[::1]', '::1'], true) || str_ends_with($host, '.localhost') || str_ends_with($host, '.test');
         $ip = (string)($_SERVER['REMOTE_ADDR'] ?? '');
-        return in_array($ip, ['127.0.0.1', '::1'], true) && empty($_SERVER['HTTP_X_FORWARDED_FOR']);
+        return $localHost && in_array($ip, ['127.0.0.1', '::1'], true);
     }
 
     /** ৳ (or any currency) float amount -> integer minor units, the only

@@ -192,6 +192,7 @@ document.getElementById('iaForm').addEventListener('submit', function(e){
 
     var fd = new FormData();
     fd.append('photo', selectedFile);
+    fd.append('csrf_token', <?php echo json_encode(tms_csrf_token()); ?>);
 
     fetch('api/ai.php?action=image_analyze', { method: 'POST', body: fd })
         .then(function(r){ return r.json(); })

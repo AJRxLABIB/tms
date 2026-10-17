@@ -19,8 +19,11 @@ if(isset($_POST['submit1']))
     $mobile      = tms_clean($_POST['mobileno'] ?? '');
     $subject     = tms_clean($_POST['subject'] ?? '');
     $description = tms_clean($_POST['description'] ?? '');
+    $fname = mb_substr($fname, 0, 100); $mobile = mb_substr($mobile, 0, 20); $subject = mb_substr($subject, 0, 100); $description = mb_substr($description, 0, 5000);
 
-    if (empty($fname) || empty($email) || empty($subject) || empty($description)) {
+    if (!tms_rate_limit($dbh, 'enquiry', tms_client_ip(), 5)) {
+        $error = "Too many messages from this network in the last hour. Please try again later.";
+    } elseif (empty($fname) || empty($email) || empty($subject) || empty($description)) {
         $error = "Please fill in all required fields.";
     } else {
         $sql = "INSERT INTO tblenquiry(FullName,EmailId,MobileNumber,Subject,Description) VALUES(:fname,:email,:mobile,:subject,:description)";
@@ -30,7 +33,7 @@ if(isset($_POST['submit1']))
         $query->bindParam(':mobile',      $mobile,      PDO::PARAM_STR);
         $query->bindParam(':subject',     $subject,     PDO::PARAM_STR);
         $query->bindParam(':description', $description, PDO::PARAM_STR);
-        $query->execute();
+        try { $query->execute(); } catch (PDOException $e) { error_log('[TMS enquiry] ' . $e->getMessage()); }
         if ($dbh->lastInsertId()) {
             $msg = "Enquiry successfully submitted!";
         } else {

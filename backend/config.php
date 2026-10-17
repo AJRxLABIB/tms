@@ -344,6 +344,9 @@ if (empty($_SESSION['tms_turnlog_tables'])) {
     // Stage 17: room for encrypted 2FA secrets; per-user "password changed at" marker used to end older sessions.
     foreach (['tblusers', 'admin'] as $t17) { try { $dbh->exec("ALTER TABLE `$t17` MODIFY `TwoFASecret` VARCHAR(255) DEFAULT NULL"); } catch (Throwable $e) {} }
     tms_ensure_columns($dbh, 'tblusers', ['PwChangedTs' => 'PwChangedTs INT UNSIGNED DEFAULT NULL']);
+    // Stage 18: contact-form enquiries from people WITHOUT an account were crashing (tblenquiry.EmailId had a foreign key to tblusers),
+    // so only registered customers could use the contact form. Visitors are allowed to write to us; drop that key.
+    try { $dbh->exec('ALTER TABLE tblenquiry DROP FOREIGN KEY fk_enquiry_user'); } catch (Throwable $e) { /* already gone */ }
     $_SESSION['tms_turnlog_tables'] = true;
 }
 
@@ -3168,6 +3171,16 @@ function tms_validate_upload_signature(string $tmpPath, array $allowedExtensions
 function tms_int(mixed $val, int $min = 0, int $max = PHP_INT_MAX): int {
     return max($min, min($max, (int)$val));
 }
+
+/**
+ * Count one event for (namespace, subject) in the current hour and say whether it is still within $limit.
+ * Database-backed and atomic (AIRateLimit); fails OPEN if the counter is unavailable. Subject is hashed, never stored raw.
+ */
+function tms_rate_limit(PDO $dbh, string $namespace, string $subject, int $limit): bool {
+    require_once __DIR__ . '/ai/AIRateLimit.php';
+    return AIRateLimit::hit($dbh, AIRateLimit::key('rl-' . $namespace, $subject), $limit)['allowed'];
+}
+function tms_client_ip(): string { return (string)($_SERVER['REMOTE_ADDR'] ?? 'unknown'); }
 
 /** Minimum length for new passwords (registration, change, reset). */
 const TMS_MIN_PASSWORD = 8;

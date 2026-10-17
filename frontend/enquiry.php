@@ -39,8 +39,8 @@ if (isset($_POST['submit1'])) {
         $error = 'Please enter a valid email address.';
     } elseif (!preg_match('/^\+?[0-9]{7,15}$/', $mobile)) {
         $error = 'Please enter a valid mobile number.';
-    } elseif (strlen($subject) > 200) {
-        $error = 'Subject is too long (max 200 characters).';
+    } elseif (mb_strlen($subject) > 100) {
+        $error = 'Subject is too long (max 100 characters).';
     } else {
         $sql = "INSERT INTO tblenquiry(FullName,EmailId,MobileNumber,Subject,Description)
                 VALUES(:fname,:email,:mobile,:subject,:description)";
@@ -50,7 +50,7 @@ if (isset($_POST['submit1'])) {
         $query->bindParam(':mobile',      $mobile,      PDO::PARAM_STR);
         $query->bindParam(':subject',     $subject,     PDO::PARAM_STR);
         $query->bindParam(':description', $description, PDO::PARAM_STR);
-        $query->execute();
+        try { $query->execute(); } catch (PDOException $e) { error_log('[TMS enquiry] ' . $e->getMessage()); }
 
         if ($dbh->lastInsertId()) {
             $msg = 'Your enquiry has been submitted successfully. We will get back to you soon!';

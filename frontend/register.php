@@ -31,7 +31,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $password = $_POST['Password']  ?? '';
     $confirm  = $_POST['CPassword'] ?? '';
 
-    if (empty($fullName) || empty($mobile) || !$email || empty($password)) {
+    if (!tms_rate_limit($dbh, 'register', tms_client_ip(), 10)) {
+        $error = 'Too many sign-up attempts from this network. Please try again in an hour.';
+    } elseif (empty($fullName) || empty($mobile) || !$email || empty($password)) {
         $error = 'All fields are required.';
     } elseif (strlen($fullName) < 3) {
         $error = 'Full name must be at least 3 characters.';
