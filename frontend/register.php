@@ -11,6 +11,7 @@
  * work correctly.
  */
 require_once 'backend/config.php';
+require_once 'backend/auth/GoogleAuth.php';
 
 // Redirect if already logged in
 if (!empty($_SESSION['login'])) {
@@ -252,6 +253,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
       <?php endif; ?>
 
+      <?php echo GoogleAuth::button('', 'Sign up with Google'); ?>
       <div class="signin-link">
         Already have an account? <a href="index.php">Sign In</a>
       </div>

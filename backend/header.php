@@ -394,6 +394,7 @@ $currentPage = basename($_SERVER['PHP_SELF']);
             <div style="text-align:right;margin-bottom:20px;"><a href="forgot-password.php" style="font-size:13px;color:var(--secondary);"><?php echo tms_t('link_forgot_password','Forgot password?'); ?></a></div>
             <button type="submit" name="signin" class="tms-btn-modal"><?php echo tms_t('nav_signin','Sign In'); ?> <i class="fa fa-arrow-right"></i></button>
         </form>
+        <?php require_once __DIR__ . '/auth/GoogleAuth.php'; echo GoogleAuth::button((string)($_SESSION['post_login_redirect'] ?? ($_SERVER['PHP_SELF'] ?? ''))); ?>
         <p class="tms-modal-switch"><?php echo tms_t('msg_no_account_yet','No account yet?'); ?> <a href="javascript:void(0)" onclick="closeModal('signinModal');openModal('signupModal')"><?php echo tms_t('link_create_account','Create one free'); ?> →</a></p>
     </div>
 </div>
@@ -440,6 +441,7 @@ $currentPage = basename($_SERVER['PHP_SELF']);
             </div>
             <button type="submit" name="submit" id="regSubmitBtn" class="tms-btn-modal" style="background:linear-gradient(135deg,var(--secondary),var(--primary));"><?php echo tms_t('btn_create_account','Create My Account'); ?> <i class="fa fa-arrow-right"></i></button>
         </form>
+        <?php require_once __DIR__ . '/auth/GoogleAuth.php'; echo GoogleAuth::button('', 'Sign up with Google'); ?>
         <p class="tms-modal-switch"><?php echo tms_t('msg_already_have_account','Already have an account?'); ?> <a href="javascript:void(0)" onclick="closeModal('signupModal');openModal('signinModal')"><?php echo tms_t('nav_signin','Sign In'); ?> →</a></p>
     </div>
 </div>

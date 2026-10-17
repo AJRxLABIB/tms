@@ -339,6 +339,8 @@ if (empty($_SESSION['tms_turnlog_tables'])) {
     EmbeddingStore::migrate($dbh);
     require_once __DIR__ . '/ai/AIRateLimit.php';
     AIRateLimit::migrate($dbh);
+    require_once __DIR__ . '/auth/GoogleAuth.php';
+    GoogleAuth::migrate($dbh);
     $_SESSION['tms_turnlog_tables'] = true;
 }
 

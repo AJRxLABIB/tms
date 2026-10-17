@@ -13,6 +13,7 @@
  * and the same field names, so either form works correctly.
  */
 require_once 'backend/config.php';
+require_once 'backend/auth/GoogleAuth.php';
 
 // Already logged in
 if (!empty($_SESSION['login'])) {
@@ -27,6 +28,7 @@ if (isset($_GET['cancel_2fa'])) {
 }
 
 $error = '';
+if (!empty($_SESSION['login_error'])) { $error = (string)$_SESSION['login_error']; unset($_SESSION['login_error']); }
 
 /**
  * FEATURE (Round 115 continuation, master prompt item 8 -- Auth & Security
@@ -290,6 +292,7 @@ $showingTwoFactorPrompt = !empty($_SESSION['u2fa_pending']);
         </button>
       </form>
 
+      <?php echo GoogleAuth::button((string)($_GET['redirect'] ?? ($_SESSION['post_login_redirect'] ?? ''))); ?>
       <div class="divider">or</div>
 
       <div class="bottom-links">

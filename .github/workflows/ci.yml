@@ -90,6 +90,7 @@ jobs:
           php tests/ai/search_filters_test.php
           php tests/ai/followup_test.php
           php tests/ai/conversation_test.php
+          php tests/auth/google_test.php "" http://127.0.0.1:8000
           php tests/payments/run.php
           php tests/suppliers/run.php
           php tests/notices/run.php
