@@ -2,6 +2,7 @@
 require_once __DIR__ . '/../backend/session-boot.php';
 error_reporting(E_ALL); ini_set('display_errors', '0'); ini_set('log_errors', '1');
 include('backend/config.php');
+require_once __DIR__ . '/../backend/HtmlSanitizer.php';
 // LIVE BUG FIX (customer-facing audit): this page is real browsing/
 // marketing content -- it's explicitly allowed in robots.txt and listed
 // in sitemap.php for search engines -- but a blanket "require login
@@ -174,7 +175,7 @@ function tms_page_t(array $T, string $key, string $fallback): string {
 <?php if ($pagetype === 'aboutus'): ?>
 	<h3 class="wow fadeInDown"><i class="fa fa-info-circle" style="color:var(--secondary)"></i> <?php echo htmlspecialchars(tms_page_t($T, 'heading', 'About Us'), ENT_QUOTES, 'UTF-8'); ?></h3>
 	<?php if ($cms && trim(strip_tags($cms->detail)) !== ''): ?>
-	<p><?php echo $cms->detail; ?></p>
+	<p><?php echo HtmlSanitizer::clean((string)$cms->detail); ?></p>
 	<?php else: ?>
 	<p><?php echo htmlspecialchars(tms_page_t($T, 'intro', "TMS (Tourism Management System) helps travellers discover, plan and book unforgettable trips across Bangladesh and beyond — from the sandy shores of Cox's Bazar to the hill tracts of Bandarban and destinations worldwide."), ENT_QUOTES, 'UTF-8'); ?></p>
 	<?php endif; ?>
@@ -232,7 +233,7 @@ function tms_page_t(array $T, string $key, string $fallback): string {
 <?php elseif ($pagetype === 'contact'): ?>
 	<h3 class="wow fadeInDown"><i class="fa fa-envelope" style="color:var(--secondary)"></i> <?php echo htmlspecialchars(tms_page_t($T, 'heading', 'Contact Us'), ENT_QUOTES, 'UTF-8'); ?></h3>
 	<?php if ($cms && trim(strip_tags($cms->detail)) !== ''): ?>
-	<p><?php echo $cms->detail; ?></p>
+	<p><?php echo HtmlSanitizer::clean((string)$cms->detail); ?></p>
 	<?php else: ?>
 	<p><?php echo htmlspecialchars(tms_page_t($T, 'intro', 'Questions about a package, a booking, or planning a custom trip? Send us a message and our team will get back to you shortly.'), ENT_QUOTES, 'UTF-8'); ?></p>
 	<?php endif; ?>
@@ -311,7 +312,7 @@ function tms_page_t(array $T, string $key, string $fallback): string {
 <?php elseif ($cms): ?>
 	<?php $cmsTitles = ['terms'=>'Terms of Service','privacy'=>'Privacy Policy']; ?>
 	<h3 class="wow fadeInDown"><?php echo htmlspecialchars($cmsTitles[$pagetype] ?? ucfirst($pagetype), ENT_QUOTES, 'UTF-8'); ?></h3>
-	<div class="cms-body" style="color:var(--text);line-height:1.7;"><?php echo $cms->detail; ?></div>
+	<div class="cms-body" style="color:var(--text);line-height:1.7;"><?php echo HtmlSanitizer::clean((string)$cms->detail); ?></div>
 <?php else: ?>
 	<div style="text-align:center;padding:60px 20px;">
 		<i class="fa fa-file-o" style="font-size:50px;color:#ddd;display:block;margin-bottom:16px;"></i>

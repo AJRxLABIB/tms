@@ -53,7 +53,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['confirm_enable'])) {
         $msg = "That code didn't match. Make sure your authenticator app's clock is correct and try the latest code."; $msgType = 'error';
     } else {
         $dbh->prepare("UPDATE tblusers SET TwoFASecret = :s, TwoFAEnabled = 1 WHERE id = :id")
-            ->execute([':s' => $pendingSecret, ':id' => $me->id]);
+            ->execute([':s' => tms_2fa_seal($pendingSecret), ':id' => $me->id]);
         unset($_SESSION['pending_u2fa_secret']);
         $msg = 'Two-factor authentication is now enabled on your account.'; $msgType = 'success';
         $me->TwoFAEnabled = 1;

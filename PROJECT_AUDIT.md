@@ -37,12 +37,12 @@ on XAMPP/Apache, with a real payment gateway, or with a real AI model.
 8. Pricing engine: unpaid pending bookings hold seats and raise prices forever (no expiry job); comment says the multiplier cap is 1.35, code uses 1.45.
 
 **Security**
-9. 2FA secrets are stored in plaintext; the TOTP QR code is rendered by a third-party site (`api.qrserver.com`) so the secret leaves the server.
-10. `tms_admin_role()` returns `superadmin` when the admin row is missing; no idle/absolute session timeout anywhere.
-11. `api/chat.php` lets any admin role read every customer thread; `frontend/page.php` echoes CMS HTML unsanitised (stored XSS escalation by a content editor).
+9. 2FA secrets are stored in plaintext; the TOTP QR code is rendered by a third-party site (`api.qrserver.com`) so the secret leaves the server. **Partly fixed (Stage 17):** secrets are encrypted at rest (AES-256-GCM) when `TMS_2FA_KEY` is set (opt-in; `scripts/encrypt_2fa_secrets.php` converts existing rows). Still open: the QR image is still rendered by `api.qrserver.com`.
+10. `tms_admin_role()` returns `superadmin` when the admin row is missing; no idle/absolute session timeout anywhere. **Fixed (Stage 17):** a missing admin row now gets no role (fail closed); sessions end after 120 min idle (admins 30) or 24 h total, configurable.
+11. `api/chat.php` lets any admin role read every customer thread; `frontend/page.php` echoes CMS HTML unsanitised (stored XSS escalation by a content editor). **Partly fixed (Stage 17):** `page.php` runs CMS HTML through an allow-list sanitiser (`backend/HtmlSanitizer.php`) on output. Still open: chat RBAC.
 12. Guest AI/explore rate limits are keyed to the session cookie (cookie-less clients are unlimited); `isRateLimited` fails open and is not atomic; some AI endpoints have no CSRF check or input bounds (`proactive_alert`, `packing_list`, `image_analyze`, `virtual_guide`).
-13. Password reset does not revoke other sessions/API tokens; minimum password length is 6; no rate limits on enquiry/register/chat; email enumeration on register/availability checks.
-14. `APP_DEBUG` defaults to true; jQuery 1.12.0 (known CVEs); some `innerHTML` uses without escaping (`my-trip.php`, `flight-status.php`); GET logout.
+13. Password reset does not revoke other sessions/API tokens; minimum password length is 6; no rate limits on enquiry/register/chat; email enumeration on register/availability checks. **Partly fixed (Stage 17):** minimum is now 8 everywhere; a reset or change ends the customer's other sessions and API tokens. Still open: rate limits on enquiry/register/chat, email enumeration.
+14. `APP_DEBUG` defaults to true; jQuery 1.12.0 (known CVEs); some `innerHTML` uses without escaping (`my-trip.php`, `flight-status.php`); GET logout. **Partly fixed (Stage 17):** `APP_DEBUG` defaults to false. Still open: jQuery 1.12.0, `innerHTML` uses, GET logout.
 
 **AI layer** (details in `AI_ENGINE_AUDIT.md` section 6 and the list below)
 15. `InjectionGuard` misses spacing/leetspeak/fullwidth variants and "disregard the rules"/"print the text above" phrasings; chat history and `page_context` are not screened; `virtual_guide` interpolates raw input into the system prompt and caches the answer for everyone.

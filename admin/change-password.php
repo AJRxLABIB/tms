@@ -37,8 +37,8 @@ if (isset($_POST['submit'])) {
 
     if (empty($currentPass) || empty($newPass) || empty($confirmPass)) {
         $error = 'All fields are required.';
-    } elseif (strlen($newPass) < 6) {
-        $error = 'New password must be at least 6 characters.';
+    } elseif (($pwErr = tms_password_error($newPass)) !== null) {
+        $error = $pwErr;
     } elseif ($newPass !== $confirmPass) {
         $error = 'New password and confirm password do not match.';
     } else {
@@ -85,7 +85,7 @@ if (isset($_POST['submit'])) {
                         <input type="password" id="cpw_currentpassword" name="currentpassword" class="form-control" required autocomplete="current-password">
                     </div>
                     <div class="form-group">
-                        <label for="cpw_newpassword">New Password * <small class="text-muted">(min 6 characters)</small></label>
+                        <label for="cpw_newpassword">New Password * <small class="text-muted">(min 8 characters)</small></label>
                         <input type="password" id="cpw_newpassword" name="newpassword" class="form-control" required autocomplete="new-password">
                     </div>
                     <div class="form-group">

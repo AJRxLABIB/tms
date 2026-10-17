@@ -35,8 +35,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $error = 'All fields are required.';
     } elseif (strlen($fullName) < 3) {
         $error = 'Full name must be at least 3 characters.';
-    } elseif (strlen($password) < 6) {
-        $error = 'Password must be at least 6 characters.';
+    } elseif (($pwErr = tms_password_error($password)) !== null) {
+        $error = $pwErr;
     } elseif ($password !== $confirm) {
         $error = 'Passwords do not match.';
     } else {
@@ -223,7 +223,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             <i class="fa fa-lock fi"></i>
             <input type="password" name="Password" id="passField" class="form-control"
                    placeholder="Min. 6 characters"
-                   required minlength="6" maxlength="100"
+                   required minlength="8" maxlength="100"
                    oninput="checkStrength(this.value)"
                    aria-describedby="strengthFill">
             <button type="button" class="eye-btn" onclick="togglePass('passField',this)" aria-label="Show password">
@@ -239,7 +239,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             <i class="fa fa-lock fi"></i>
             <input type="password" name="CPassword" id="cpassField" class="form-control"
                    placeholder="Repeat your password"
-                   required minlength="6" maxlength="100">
+                   required minlength="8" maxlength="100">
             <button type="button" class="eye-btn" onclick="togglePass('cpassField',this)" aria-label="Show password">
               <i class="fa fa-eye" aria-hidden="true"></i>
             </button>

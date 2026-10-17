@@ -137,7 +137,7 @@ define('DB_NAME', tms_env('DB_NAME', 'tms'));
 define('APP_NAME',    tms_env('APP_NAME', 'TMS AI Travel Copilot'));
 define('APP_VERSION', '7.0');
 define('APP_ENV',     tms_env('APP_ENV', 'local'));
-define('APP_DEBUG',   (bool) tms_env('APP_DEBUG', true));
+define('APP_DEBUG',   (bool) tms_env('APP_DEBUG', false));   // safe default: raw PHP errors are never shown unless APP_DEBUG=true is set explicitly
 define('APP_URL',     tms_env('APP_URL', 'http://localhost/tms'));
 
 // ─── Debug/error-display wiring (Round 115 security hardening) ────────────────
@@ -341,6 +341,9 @@ if (empty($_SESSION['tms_turnlog_tables'])) {
     AIRateLimit::migrate($dbh);
     require_once __DIR__ . '/auth/GoogleAuth.php';
     GoogleAuth::migrate($dbh);
+    // Stage 17: room for encrypted 2FA secrets; per-user "password changed at" marker used to end older sessions.
+    foreach (['tblusers', 'admin'] as $t17) { try { $dbh->exec("ALTER TABLE `$t17` MODIFY `TwoFASecret` VARCHAR(255) DEFAULT NULL"); } catch (Throwable $e) {} }
+    tms_ensure_columns($dbh, 'tblusers', ['PwChangedTs' => 'PwChangedTs INT UNSIGNED DEFAULT NULL']);
     $_SESSION['tms_turnlog_tables'] = true;
 }
 
@@ -3166,7 +3169,66 @@ function tms_int(mixed $val, int $min = 0, int $max = PHP_INT_MAX): int {
     return max($min, min($max, (int)$val));
 }
 
+/** Minimum length for new passwords (registration, change, reset). */
+const TMS_MIN_PASSWORD = 8;
+function tms_password_error(string $p): ?string {
+    if (strlen($p) < TMS_MIN_PASSWORD) return 'Password must be at least ' . TMS_MIN_PASSWORD . ' characters.';
+    if (strlen($p) > 200) return 'Password is too long (200 characters at most).';
+    return null;
+}
+
+/**
+ * Session lifetime rules, run before every login check: a signed-in session ends after SESSION_IDLE_MINUTES (default 120; admins
+ * SESSION_ADMIN_IDLE_MINUTES, default 30) without a request or SESSION_ABSOLUTE_HOURS (default 24) in total, and a customer session
+ * that started before the account's last password change/reset is ended. Cheap: one indexed lookup at most every 5 seconds.
+ */
+function tms_session_guard(?int $now = null, bool $force = false): bool {
+    if ((PHP_SAPI === 'cli' && !$force) || (session_status() !== PHP_SESSION_ACTIVE && !$force)) return false;
+    $now = $now ?? time();
+    if (empty($_SESSION['login']) && empty($_SESSION['alogin'])) return false;
+    $_SESSION['auth_at'] = $_SESSION['auth_at'] ?? $now;
+    $idleMin = !empty($_SESSION['alogin']) ? (int)tms_env('SESSION_ADMIN_IDLE_MINUTES', 30) : (int)tms_env('SESSION_IDLE_MINUTES', 120);
+    $absH    = (int)tms_env('SESSION_ABSOLUTE_HOURS', 24);
+    $last    = (int)($_SESSION['last_seen'] ?? $now);
+    $expired = ($idleMin > 0 && $now - $last > $idleMin * 60) || ($absH > 0 && $now - (int)$_SESSION['auth_at'] > $absH * 3600);
+    if (!$expired && !empty($_SESSION['login']) && $now - (int)($_SESSION['pw_checked'] ?? 0) >= 5) {
+        $_SESSION['pw_checked'] = $now;
+        try {
+            global $dbh;
+            if ($dbh instanceof PDO) {
+                $q = $dbh->prepare('SELECT PwChangedTs FROM tblusers WHERE EmailId = ? LIMIT 1'); $q->execute([$_SESSION['login']]);
+                $ts = $q->fetchColumn();
+                if ($ts !== false && $ts !== null && (int)$ts > (int)$_SESSION['auth_at']) $expired = true;
+            }
+        } catch (Throwable $e) { /* column not migrated yet: do not lock anyone out */ }
+    }
+    if ($expired) {
+        $_SESSION = [];
+        if (ini_get('session.use_cookies')) { $p = session_get_cookie_params(); @setcookie(session_name(), '', time() - 3600, $p['path'], $p['domain'], $p['secure'], $p['httponly']); }
+        @session_destroy();
+        if (session_status() !== PHP_SESSION_ACTIVE && PHP_SAPI !== 'cli') { @session_start(); }
+        $_SESSION['login_error'] = 'You were signed out (inactive for a while, or your password changed). Please sign in again.';
+        return true;
+    }
+    $_SESSION['last_seen'] = $now;
+    return false;
+}
+
+/** After a password change/reset: end every other session and API token of this customer. Pass keepSession=true to keep the current one. */
+function tms_revoke_user_sessions(PDO $dbh, string $email, bool $keepSession = false): void {
+    $ts = time();
+    try { $dbh->prepare('UPDATE tblusers SET PwChangedTs = ? WHERE EmailId = ?')->execute([$ts, $email]); } catch (Throwable $e) {}
+    foreach (['tblapi_refresh_tokens' => null, 'tblapi_tokens' => 'UserEmail'] as $tbl => $col) {
+        try {
+            if ($col) $dbh->prepare("DELETE FROM `$tbl` WHERE `$col` = ?")->execute([$email]);
+            else $dbh->prepare('DELETE FROM tblapi_refresh_tokens WHERE ApiTokenId IN (SELECT id FROM tblapi_tokens WHERE UserEmail = ?)')->execute([$email]);
+        } catch (Throwable $e) {}
+    }
+    if ($keepSession) { $_SESSION['auth_at'] = $ts; $_SESSION['pw_checked'] = $ts; }
+}
+
 function tms_require_user(): void {
+    tms_session_guard();
     if (empty($_SESSION['login'])) {
         $_SESSION['login_error'] = 'Please sign in to continue — this page requires an account.';
         // Remember where the visitor was actually headed (Batch 1: whole-app
@@ -3212,6 +3274,7 @@ function tms_track_recently_viewed(PDO $dbh, int $packageId, int $keep = 12): vo
 }
 
 function tms_require_admin(): void {
+    tms_session_guard();
     if (empty($_SESSION['alogin'])) {
         header('Location: index.php');
         exit;
@@ -3253,6 +3316,9 @@ function tms_admin_role(PDO $dbh): string {
         // deliberate, narrow compatibility decision so that pre-existing
         // installation never silently loses its one working admin account
         // (Rule 2) -- NOT a general license to fail open below.
+        // Stage 17: a MISSING admin row (deleted account, stale session) is no longer treated as superadmin - only an existing row
+        // with an empty Role (the legacy seed account) is.
+        if ($role === false) return '';
         return $role ?: 'superadmin';
     } catch (Exception $e) {
         // Round 97 security fix (item 44/46): a *query failure* is not the
@@ -3885,3 +3951,6 @@ function tms_default_policy_pages(): array {
         . '<p>Use the contact page for any privacy question.</p>';
     return ['terms' => $terms, 'privacy' => $privacy];
 }
+
+// Stage 17: idle/absolute session timeout and 'password changed' session revocation, for every page that loads config.
+tms_session_guard();

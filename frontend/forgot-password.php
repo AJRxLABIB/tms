@@ -138,8 +138,8 @@ if (isset($_POST['submit_reset'])) {
     } elseif (empty($newPass) || empty($confirmPass)) {
         $error = 'Please enter and confirm your new password.';
         $token = $postedToken;
-    } elseif (strlen($newPass) < 6) {
-        $error = 'New password must be at least 6 characters.';
+    } elseif (($pwErr = tms_password_error($newPass)) !== null) {
+        $error = $pwErr;
         $token = $postedToken;
     } elseif ($newPass !== $confirmPass) {
         $error = 'New password and confirm password do not match.';
@@ -148,6 +148,7 @@ if (isset($_POST['submit_reset'])) {
         $newHash = tms_hash_password($newPass);
         $dbh->prepare("UPDATE tblusers SET Password = :pwd WHERE EmailId = :email")
             ->execute([':pwd' => $newHash, ':email' => $row->UserEmail]);
+        tms_revoke_user_sessions($dbh, (string)$row->UserEmail);   // a reset ends every other session and API token
 
         // This token, and any other outstanding reset links for the same
         // account, are now spent -- an old email link can't be replayed
@@ -238,9 +239,9 @@ if (isset($_POST['submit_reset'])) {
                     <?php tms_csrf_field(); ?>
                     <input type="hidden" name="token" value="<?php echo htmlspecialchars($token, ENT_QUOTES, 'UTF-8'); ?>">
                     <div class="form-group">
-                        <label for="fld_newpassword">New Password * <small class="text-muted">(min 6 characters)</small></label>
+                        <label for="fld_newpassword">New Password * <small class="text-muted">(min 8 characters)</small></label>
                         <input type="password" name="newpassword" class="form-control"
-                               placeholder="New Password" required minlength="6" autocomplete="new-password" id="fld_newpassword">
+                               placeholder="New Password" required minlength="8" autocomplete="new-password" id="fld_newpassword">
                     </div>
                     <div class="form-group">
                         <label for="fld_confirmpassword">Confirm New Password *</label>

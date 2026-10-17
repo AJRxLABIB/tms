@@ -52,8 +52,8 @@ if (!$email) {
     echo json_encode(['success' => false, 'message' => tms_t('reg_err_invalid_email', 'Please enter a valid email address.')]);
     exit;
 }
-if (strlen($password) < 6) {
-    echo json_encode(['success' => false, 'message' => tms_t('reg_err_password_too_short', 'Password must be at least 6 characters.')]);
+if (tms_password_error($password) !== null) {
+    echo json_encode(['success' => false, 'message' => tms_t('reg_err_password_too_short', 'Password must be at least 8 characters.')]);
     exit;
 }
 if ($password !== $confirm) {

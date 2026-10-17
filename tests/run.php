@@ -343,7 +343,7 @@ tms_test('hotel/activity marketplace tables exist with the IsSampleData flag and
 
 // ── RBAC (Round 20, tested Round 39) ───────────────────────────────────────
 
-tms_test('tms_admin_role fails open to superadmin for an unrecognized session, never silently locking an admin out', function () use ($dbh) {
+tms_test('tms_admin_role fails CLOSED for a session whose admin row no longer exists (Stage 17); a legacy row with an empty Role is still superadmin', function () use ($dbh) {
     // tms_admin_role()'s own docblock/comments say a lookup miss must "fail
     // open" (return 'superadmin') rather than lock an admin out due to an
     // infra hiccup or a stale session pointing at a deleted account. This
@@ -356,11 +356,11 @@ tms_test('tms_admin_role fails open to superadmin for an unrecognized session, n
     try {
         $_SESSION['alogin'] = 'tms-test-nonexistent-admin-' . bin2hex(random_bytes(4));
         $role = tms_admin_role($dbh);
-        if ($role !== 'superadmin') {
-            throw new Exception("expected tms_admin_role() to fail open to 'superadmin' for an unrecognized username, got '$role'");
+        if ($role !== '') {
+            throw new Exception("expected tms_admin_role() to return '' for a deleted/unknown admin, got '$role'");
         }
-        if (!tms_admin_can($dbh, [])) {
-            throw new Exception('expected tms_admin_can() to return true when the resolved role is superadmin, even with an empty allowed-roles list');
+        if (tms_admin_can($dbh, ['superadmin', 'manager'])) {
+            throw new Exception('a deleted/unknown admin must not pass any role gate');
         }
         return true;
     } finally {

@@ -57,6 +57,31 @@ if (!function_exists('tms_totp_code_at')) {
     }
 }
 
+if (!function_exists('tms_2fa_key')) {
+    /** Key for encrypting stored 2FA secrets: TMS_2FA_KEY (>=16 chars) from the environment. Empty = encryption not configured (plaintext, as before). */
+    function tms_2fa_key(): string {
+        $k = function_exists('tms_env') ? (string)tms_env('TMS_2FA_KEY', '') : (string)getenv('TMS_2FA_KEY');
+        return strlen($k) >= 16 ? hash('sha256', 'tms-2fa|' . $k, true) : '';
+    }
+    /** Encrypt a secret for storage (AES-256-GCM, "enc1:" prefix). Returns it unchanged when no key is configured. */
+    function tms_2fa_seal(string $secret): string {
+        $key = tms_2fa_key();
+        if ($key === '' || $secret === '' || str_starts_with($secret, 'enc1:') || !function_exists('openssl_encrypt')) return $secret;
+        $iv = random_bytes(12); $tag = '';
+        $ct = openssl_encrypt($secret, 'aes-256-gcm', $key, OPENSSL_RAW_DATA, $iv, $tag);
+        return $ct === false ? $secret : 'enc1:' . rtrim(strtr(base64_encode($iv . $tag . $ct), '+/', '-_'), '=');
+    }
+    /** Read a stored secret back: decrypts "enc1:" values, passes legacy plaintext through. Returns '' if it cannot be decrypted (wrong/missing key). */
+    function tms_2fa_open(string $stored): string {
+        if (!str_starts_with($stored, 'enc1:')) return $stored;
+        $key = tms_2fa_key(); if ($key === '') return '';
+        $raw = base64_decode(strtr(substr($stored, 5), '-_', '+/'), true);
+        if ($raw === false || strlen($raw) < 29) return '';
+        $pt = openssl_decrypt(substr($raw, 28), 'aes-256-gcm', $key, OPENSSL_RAW_DATA, substr($raw, 0, 12), substr($raw, 12, 16));
+        return $pt === false ? '' : $pt;
+    }
+}
+
 if (!function_exists('tms_totp_verify')) {
     /**
      * Verifies a user-entered code against the secret, allowing ±1 time-step
@@ -67,6 +92,8 @@ if (!function_exists('tms_totp_verify')) {
     function tms_totp_verify(string $secret, string $code, int $window = 1): bool {
         $code = preg_replace('/\s+/', '', $code);
         if (!preg_match('/^\d{6}$/', $code)) return false;
+        $secret = tms_2fa_open($secret);          // stored secrets may be encrypted
+        if ($secret === '') return false;
         $now = time();
         for ($i = -$window; $i <= $window; $i++) {
             if (hash_equals(tms_totp_code_at($secret, $now + ($i * 30)), $code)) {

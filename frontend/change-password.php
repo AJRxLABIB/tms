@@ -16,8 +16,8 @@ if (isset($_POST['submit5'])) {
 
     if (empty($currentPass) || empty($newPass) || empty($confirmPass)) {
         $error = 'All fields are required.';
-    } elseif (strlen($newPass) < 6) {
-        $error = 'New password must be at least 6 characters.';
+    } elseif (($pwErr = tms_password_error($newPass)) !== null) {
+        $error = $pwErr;
     } elseif ($newPass !== $confirmPass) {
         $error = 'New password and confirm password do not match.';
     } else {
@@ -33,6 +33,7 @@ if (isset($_POST['submit5'])) {
             $upd->bindParam(':pwd',   $newHash, PDO::PARAM_STR);
             $upd->bindParam(':email', $email,   PDO::PARAM_STR);
             $upd->execute();
+            tms_revoke_user_sessions($dbh, (string)$email, true);   // other devices and API tokens are signed out; this session stays
             $msg = 'Your password has been changed successfully.';
         } else {
             $error = 'Your current password is incorrect.';
