@@ -34,6 +34,8 @@ header('X-Frame-Options: SAMEORIGIN');
 try {
     $action    = tms_clean(is_string($_GET['action'] ?? null) ? $_GET['action'] : (is_string($_POST['action'] ?? null) ? $_POST['action'] : ''));
     $userEmail = $_SESSION['login'] ?? 'guest';
+    // Protected travel services: destination search, AI info, weather, nearby places, routing and chat need an account.
+    if ($userEmail === 'guest') apiError(401, 'Please sign in to use Explore.');
     $service   = new ExploreService($dbh);
 } catch (Throwable $e) {
     error_log('[TourBuddy Explore API] init: ' . $e->getMessage());

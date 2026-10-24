@@ -134,13 +134,44 @@ function goToDestination(name, lat, lng, country) {
         });
     }, 350);
 
-    input.addEventListener('input', function () { doSearch(this.value); });
+    input.addEventListener('input', function () {
+        doSearch(this.value);
+        try { sessionStorage.setItem('tms-explore-q', this.value.trim().slice(0, 100)); } catch (e) { /* storage blocked: ignore */ }
+    });
+    // Keyboard navigation (ARIA combobox): arrows move through the suggestions, Enter opens the highlighted one (or the first), Escape closes.
+    input.setAttribute('role', 'combobox'); input.setAttribute('aria-expanded', 'false'); input.setAttribute('aria-autocomplete', 'list'); input.setAttribute('aria-controls', 'exploreSuggestions');
+    box.setAttribute('role', 'listbox');
+    var activeIdx = -1;
+    function items() { return box.querySelectorAll('.explore-suggestion-item'); }
+    function setActive(i) {
+        var list = items(); if (!list.length) { activeIdx = -1; return; }
+        activeIdx = (i + list.length) % list.length;
+        Array.prototype.forEach.call(list, function (el, k) { el.setAttribute('aria-selected', k === activeIdx ? 'true' : 'false'); el.style.background = k === activeIdx ? 'var(--tms-surface-2, #f1f5f4)' : ''; });
+        list[activeIdx].scrollIntoView({ block: 'nearest' });
+    }
+    new MutationObserver(function () { activeIdx = -1; input.setAttribute('aria-expanded', box.style.display === 'block' ? 'true' : 'false'); }).observe(box, { childList: true, attributes: true, attributeFilter: ['style'] });
     input.addEventListener('keydown', function (e) {
-        if (e.key === 'Enter') {
-            var first = box.querySelector('.explore-suggestion-item');
-            if (first) first.click();
+        if (e.key === 'ArrowDown') { e.preventDefault(); setActive(activeIdx + 1); }
+        else if (e.key === 'ArrowUp') { e.preventDefault(); setActive(activeIdx - 1); }
+        else if (e.key === 'Escape') { box.style.display = 'none'; }
+        else if (e.key === 'Enter') {
+            var list = items(), target = (activeIdx >= 0 && list[activeIdx]) ? list[activeIdx] : list[0];
+            if (target) { e.preventDefault(); target.click(); }
         }
     });
+    // Clear button
+    var clearBtn = document.createElement('button');
+    clearBtn.type = 'button'; clearBtn.setAttribute('aria-label', 'Clear search'); clearBtn.innerHTML = '&times;';
+    clearBtn.style.cssText = 'position:absolute;right:44px;top:50%;transform:translateY(-50%);border:0;background:transparent;font-size:22px;line-height:1;cursor:pointer;color:var(--tms-muted,#555);display:none;padding:4px 8px';
+    input.parentNode.appendChild(clearBtn);
+    function syncClear() { clearBtn.style.display = input.value ? 'block' : 'none'; }
+    input.addEventListener('input', syncClear);
+    clearBtn.addEventListener('click', function () { input.value = ''; box.style.display = 'none'; box.innerHTML = ''; syncClear(); input.focus(); });
+    // Deep link from the homepage search: explore.php?q=Cox%27s+Bazar fills the box and shows suggestions.
+    try {
+        var q0 = new URLSearchParams(location.search).get('q');
+        if (q0 && q0.trim().length >= 2) { input.value = q0.trim().slice(0, 100); syncClear(); doSearch(input.value); }
+    } catch (e) { /* older browsers: ignore */ }
     document.addEventListener('click', function (e) {
         if (!box.contains(e.target) && e.target !== input) box.style.display = 'none';
     });
@@ -188,12 +219,23 @@ function goToDestination(name, lat, lng, country) {
         country: root.dataset.country || ''
     };
 
-    var state = { info: null, weather: null, userLoc: null, map: null, markers: [], routeLayer: null, navTarget: null, navMarker: null, currentPlaces: [], currentCategory: 'hotel', mapPlaces: [], mapCategory: 'attraction' };
+    // "Back to Explore" returns to the search page with the last searched text (?q=) preserved.
+    (function () {
+        var back = document.getElementById('exploreBackLink'), q = '';
+        try { q = sessionStorage.getItem('tms-explore-q') || ''; } catch (e) { q = ''; }
+        if (back && q.length >= 2) back.href = 'explore.php?q=' + encodeURIComponent(q);
+    })();
+
+    var state = { radius: 5000, sortBy: 'distance', indoorOnly: false, info: null, weather: null, userLoc: null, map: null, markers: [], routeLayer: null, navTarget: null, navMarker: null, currentPlaces: [], currentCategory: 'hotel', mapPlaces: [], mapCategory: 'attraction' };
 
     // ── Tabs ──────────────────────────────────────────────────
     window.exploreSwitchTab = function (tab) {
-        document.querySelectorAll('.explore-tab-btn').forEach(function (b) { b.classList.toggle('active', b.dataset.tab === tab); });
+        document.querySelectorAll('.explore-tab-btn').forEach(function (b) {
+            var on = b.dataset.tab === tab;
+            b.classList.toggle('active', on); b.setAttribute('aria-selected', on ? 'true' : 'false'); b.setAttribute('tabindex', on ? '0' : '-1');
+        });
         document.querySelectorAll('.explore-panel').forEach(function (p) { p.classList.toggle('active', p.id === 'panel-' + tab); });
+        if (window.TmsDest && TmsDest.onTab) TmsDest.onTab(tab);
         if (tab === 'map' && !state.mapStarting) initMap();
         if (tab === 'map' && state.ctl) setTimeout(function () { state.ctl.resize(); }, 100);
         if (tab === 'places' && !state.placesLoaded) loadPlaces('hotel');
@@ -238,16 +280,19 @@ function goToDestination(name, lat, lng, country) {
             // documented common case with no AI key configured).
             var inventory = res.success ? (res.data && res.data.local_inventory) : res.local_inventory;
             if (!res.success) {
-                elOverview.innerHTML = '<div class="explore-error"><i class="fa fa-exclamation-triangle"></i> ' + escapeHtml(res.error) + '</div>';
+                elOverview.innerHTML = '<div class="explore-error" role="alert"><i class="fa fa-exclamation-triangle"></i> ' + escapeHtml(res.error) + '</div>';
+                if (window.TmsDest && TmsDest.onInfo) TmsDest.onInfo(null, res.error);
                 renderLocalInventory(inventory);
                 return;
             }
             state.info = res.data.info;
             renderOverview(state.info);
+            if (window.TmsDest && TmsDest.onInfo) TmsDest.onInfo(state.info);
             renderLocalInventory(inventory);
             updateExploreContext();
         }).catch(function () {
-            elOverview.innerHTML = '<div class="explore-error"><i class="fa fa-exclamation-triangle"></i> Could not load destination information. Please check your connection and try again.</div>';
+            elOverview.innerHTML = '<div class="explore-error" role="alert"><i class="fa fa-exclamation-triangle"></i> Could not load destination information. Please check your connection and try again.</div>';
+            if (window.TmsDest && TmsDest.onInfo) TmsDest.onInfo(null, 'Could not load destination information.');
         });
     }
 
@@ -269,7 +314,7 @@ function goToDestination(name, lat, lng, country) {
 
         function row(href, img, title, meta, price, sample) {
             return '<a class="inventory-item" href="' + href + '">' +
-                '<img loading="lazy" src="' + (img || 'images/no-image-placeholder.jpg') + '" alt="">' +
+                '<img loading="lazy" decoding="async" width="56" height="56" src="' + escapeHtml(img || 'images/no-image-placeholder.jpg') + '" alt="' + escapeHtml(title) + '" onerror="this.onerror=null;this.src=\'images/no-image-placeholder.jpg\'">' +
                 '<div class="inventory-item-body"><strong>' + escapeHtml(title) + '</strong>' +
                 (sample ? ' <span class="tms-sample-badge"><i class="fa fa-flask"></i> Sample</span>' : '') +
                 '<span>' + escapeHtml(meta) + '</span></div>' +
@@ -338,28 +383,11 @@ function goToDestination(name, lat, lng, country) {
 
         el.innerHTML = noteHtml +
             '<div class="explore-card"><h4><i class="fa fa-info-circle"></i> Overview</h4><p>' + escapeHtml(info.overview) + '</p></div>' +
-            card('landmark', 'Popular Attractions', attractions, offline && !(info.attractions || []).length) +
+            // Popular Attractions now live in the Attractions tab; Best time / Getting there / Costs / Safety / Emergency in Travel info.
             card('scroll', 'Historical Background', '<p>' + escapeHtml(info.history) + '</p>', !info.history) +
-            card('calendar-check', 'Best Time to Visit', '<p>' + escapeHtml(info.best_time_to_visit) + '</p>', !info.best_time_to_visit) +
-            card('route', 'Getting There', '<p>' + escapeHtml(info.how_to_get_there) + '</p>', !info.how_to_get_there) +
             card('users', 'Local Culture', '<p>' + escapeHtml(info.local_culture) + '</p>', !info.local_culture) +
             card('utensils', 'Famous Foods', foods, offline && !(info.famous_foods || []).length) +
-            (info.estimated_costs ? (
-            '<div class="explore-card"><h4><i class="fa fa-wallet"></i> Estimated Travel Costs (per day)</h4>' +
-                '<div class="cost-grid">' +
-                    // DATA-ACCURACY FIX: these three fields are named
-                    // *_per_day_usd (see ExploreService::getDestinationInfo's
-                    // AI prompt) — they were being rendered with the site's
-                    // Taka symbol, misstating an actual USD estimate as if it
-                    // were ~80x smaller in BDT. Label them as USD instead of
-                    // silently relabeling the currency.
-                    '<div class="cost-box"><div class="lbl">Budget</div><div class="val">$' + escapeHtml(costs.budget_per_day_usd) + '<span class="cost-unit">/day USD</span></div></div>' +
-                    '<div class="cost-box"><div class="lbl">Mid-range</div><div class="val">$' + escapeHtml(costs.midrange_per_day_usd) + '<span class="cost-unit">/day USD</span></div></div>' +
-                    '<div class="cost-box"><div class="lbl">Luxury</div><div class="val">$' + escapeHtml(costs.luxury_per_day_usd) + '<span class="cost-unit">/day USD</span></div></div>' +
-                '</div><p style="font-size:12px;color:var(--text-muted);margin-top:10px;">' + escapeHtml(costs.currency_note || '') + ' Figures are approximate, in US dollars.</p></div>'
-            ) : '') +
-            card('shield-alt', 'Safety Tips', tips, offline && !tips) +
-            card('phone-alt', 'Emergency Contacts', emgHtml, offline && !emg);
+            '';
     }
 
     // ── Map & Navigation tab (MapLibre via js/tms-map-pages.js) ─────────────────
@@ -425,7 +453,7 @@ function goToDestination(name, lat, lng, country) {
         var t = document.createElement('strong'); t.className = 'tms-popup-title'; t.textContent = p.name || ''; w.appendChild(t);
         var kind = p.type || p.subtype || ''; if (kind) { var kd = document.createElement('div'); kd.className = 'tms-popup-sub'; kd.textContent = kind; w.appendChild(kd); }
         if (p.address) { var ad = document.createElement('div'); ad.className = 'tms-popup-sub'; ad.textContent = p.address; w.appendChild(ad); }
-        if (typeof p.distance_m === 'number') { var dm = document.createElement('div'); dm.className = 'tms-popup-sub'; dm.textContent = (p.distance_m >= 1000 ? (p.distance_m / 1000).toFixed(1) + ' km' : p.distance_m + ' m') + ' away'; w.appendChild(dm); }
+        if (typeof p.distance_m === 'number') { var dm = document.createElement('div'); dm.className = 'tms-popup-sub'; dm.textContent = (p.distance_m >= 1000 ? (p.distance_m / 1000).toFixed(1) + ' km' : p.distance_m + ' m') + ' straight-line from the destination centre'; w.appendChild(dm); }
         var row = document.createElement('div'); row.className = 'tms-popup-actions';
         var d = document.createElement('a'); d.href = '#'; d.textContent = 'View Details';
         d.className = 'tms-popup-link';
@@ -433,7 +461,13 @@ function goToDestination(name, lat, lng, country) {
         var g = document.createElement('a'); g.href = '#'; g.textContent = 'Get Directions';
         g.className = 'tms-popup-link';
         g.addEventListener('click', function (e) { e.preventDefault(); exploreNavigateToPlace(p.lat, p.lng, p.name || ''); });
-        row.appendChild(d); row.appendChild(g); w.appendChild(row);
+        row.appendChild(d); row.appendChild(g);
+        if (idx >= 0 && category === state.currentCategory) {   // map -> list sync: only when the list shows the same category
+            var l = document.createElement('a'); l.href = '#'; l.textContent = 'Show in list'; l.className = 'tms-popup-link';
+            l.addEventListener('click', function (e) { e.preventDefault(); if (window.TmsDest && TmsDest.focusPlaceCard) TmsDest.focusPlaceCard(p); });
+            row.appendChild(l);
+        }
+        w.appendChild(row);
         state.pinPopup = new maplibregl.Popup({ maxWidth: '260px', offset: 12 }).setLngLat([p.lng, p.lat]).setDOMContent(w).addTo(state.map);
     }
 
@@ -499,7 +533,7 @@ function goToDestination(name, lat, lng, country) {
         var status = document.getElementById('mapStatus');
         var token = state.mapToken = (state.mapToken || 0) + 1;
         if (status) { status.className = 'explore-source'; status.innerHTML = '<i class="fa fa-spinner fa-spin"></i> Loading ' + escapeHtml((PLACE_LABELS[category] || [category])[0].toLowerCase()) + ' on the map...'; }
-        exploreLivePlaces({ lat: DEST.lat, lng: DEST.lng, category: category, radius: 5000 }).then(function (res) {
+        exploreLivePlaces({ lat: DEST.lat, lng: DEST.lng, category: category, radius: state.radius }).then(function (res) {
             if (token !== state.mapToken) return;   // the visitor already picked another category
             if (!res.success) {
                 if (status) { status.className = 'explore-source is-warn'; status.innerHTML = '<i class="fa fa-exclamation-triangle"></i> ' + escapeHtml(res.error || 'Places are unavailable right now.') +
@@ -511,7 +545,7 @@ function goToDestination(name, lat, lng, country) {
             var plotted = list.filter(function (p) { return p.lat && p.lng; }).length;
             if (status) {
                 var note = exploreSourceNote(res);
-                if (!list.length) { status.className = 'explore-source'; status.innerHTML = '<i class="fa fa-info-circle"></i> No ' + escapeHtml((PLACE_LABELS[category] || [category])[0].toLowerCase()) + ' found within 5 km.'; }
+                if (!list.length) { status.className = 'explore-source'; status.innerHTML = '<i class="fa fa-info-circle"></i> No ' + escapeHtml((PLACE_LABELS[category] || [category])[0].toLowerCase()) + ' found within ' + (state.radius / 1000) + ' km.'; }
                 else { status.className = 'explore-source' + (note && res.data.origin !== 'cached' ? ' is-warn' : ''); status.innerHTML = '<i class="fa fa-map-pin"></i> ' + plotted + ' of ' + list.length + ' shown on the map.' + (note ? ' ' + note.replace(/<[^>]+>/g, '') : ''); }
             }
         }).catch(function (err) {
@@ -648,7 +682,7 @@ function goToDestination(name, lat, lng, country) {
         grid.innerHTML = '<p class="explore-loading" style="padding:8px 0 14px;" role="status"><i class="fa fa-spinner fa-spin"></i> Finding ' + label + ' nearby...</p>' + exploreSkeleton(6);
         var retry = "loadPlaces('" + category + "')";
 
-        exploreLivePlaces({ lat: DEST.lat, lng: DEST.lng, category: category }).then(function (res) {
+        exploreLivePlaces({ lat: DEST.lat, lng: DEST.lng, category: category, radius: state.radius }).then(function (res) {
             if (token !== state.placesToken) return;   // a newer category was chosen while this one was loading
             grid.removeAttribute('aria-busy');
             if (!res.success) {
@@ -656,12 +690,20 @@ function goToDestination(name, lat, lng, country) {
                 return;
             }
             var places = (res.data && (res.data.places || res.data.items)) || [];
+            // Sorted here so list order, card indexes and map pins agree (distance is straight-line from the destination centre).
+            places = places.slice().sort(state.sortBy === 'name'
+                ? function (a, b) { return String(a.name || '').localeCompare(String(b.name || '')); }
+                : function (a, b) { return (typeof a.distance_m === 'number' ? a.distance_m : 1e9) - (typeof b.distance_m === 'number' ? b.distance_m : 1e9); });
             state.currentPlaces = places;
+            state.lastSourceNote = exploreSourceNote(res);
             if (!places.length) {
-                grid.innerHTML = exploreSourceNote(res) + '<div class="explore-empty"><i class="fa fa-search"></i> No ' + escapeHtml(label) + ' found within 4 km. Try another category or <a href="#" onclick="' + retry + ';return false;">search again</a>.</div>';
-                return;
+                grid.innerHTML = state.lastSourceNote + '<div class="explore-empty"><i class="fa fa-search"></i> No ' + escapeHtml(label) + ' found within ' + (state.radius / 1000) + ' km. Try a larger radius, another category or <a href="#" onclick="' + retry + ';return false;">search again</a>.</div>';
+            } else {
+                grid.innerHTML = state.lastSourceNote + '<p class="tmsd-count" role="status">' + places.length + ' result' + (places.length === 1 ? '' : 's') + ' within ' + (state.radius / 1000) + ' km</p><div class="place-grid">' + places.map(renderPlaceCard).join('') + '</div>';
+                mountPlaceActions(grid);
             }
-            grid.innerHTML = exploreSourceNote(res) + '<div class="place-grid">' + places.map(renderPlaceCard).join('') + '</div>';
+            // list -> map sync: keep the Map tab's pins in step with the list (same category, same radius)
+            if (state.mapReady && state.mapCategory === category) exploreLoadMapCategory(category);
         }).catch(function (err) {
             if (token !== state.placesToken) return;
             grid.removeAttribute('aria-busy');
@@ -677,6 +719,13 @@ function goToDestination(name, lat, lng, country) {
             if (p2) openPlaceDetails(p2, state.currentCategory);
             return;
         }
+        var onMap = e.target.closest('.place-card-onmap');
+        if (onMap) {
+            e.preventDefault();
+            var p3 = state.currentPlaces[parseInt(onMap.dataset.idx, 10)];
+            if (p3 && window.TmsDest && TmsDest.showOnMap) TmsDest.showOnMap(p3, state.currentCategory);
+            return;
+        }
         var link = e.target.closest('.nav-link');
         if (link) {
             e.preventDefault();
@@ -685,11 +734,28 @@ function goToDestination(name, lat, lng, country) {
         }
     });
 
+    // Save (heart) + Add to trip buttons from js/tms-trips.js. Only places with a real location get them; failures never break the cards.
+    function tripCtx(category) { return { destination: DEST.name, country: DEST.country, category: category || undefined }; }
+    function mountPlaceActions(grid) {
+        if (!window.TmsTrips) return;
+        try { window.TmsTrips.mountActions(grid, function (el) {
+                var p = state.currentPlaces[parseInt(el.dataset.idx, 10)]; if (!p) return null;
+                var q = Object.assign({}, p); if (!q.category) q.category = state.currentCategory; return q;
+            }, tripCtx(null)); }
+        catch (e) { if (window.console) console.error(e); }
+    }
+    function mountDetailActions(body, p, category) {
+        if (!window.TmsTrips || !p) return;
+        var head = body.querySelector('.pd-header'); if (!head) return;
+        var q = Object.assign({}, p); if (!q.category) q.category = category || 'other';
+        try { head.appendChild(window.TmsTrips.actions(q, tripCtx(null))); } catch (e) { if (window.console) console.error(e); }
+    }
+
     function renderPlaceCard(p, idx) {
-        var distKm = (typeof p.distance_m === 'number') ? (p.distance_m / 1000).toFixed(1) + ' km away' : '';
-        return '<div class="place-card">' +
+        var distKm = (typeof p.distance_m === 'number') ? (p.distance_m >= 1000 ? (p.distance_m / 1000).toFixed(1) + ' km' : p.distance_m + ' m') + ' straight-line' : '';
+        return '<div class="place-card" data-idx="' + idx + '">' +
             '<a href="#" class="place-card-open" data-idx="' + idx + '">' +
-            (p.photo ? '<img class="photo" src="' + p.photo + '" alt="' + escapeHtml(p.name) + '" loading="lazy" onerror="this.style.display=\'none\'">' : '') +
+            (p.photo ? '<img class="photo" src="' + escapeHtml(p.photo) + '" alt="' + escapeHtml('Photo of ' + (p.name || 'this place')) + '" loading="lazy" decoding="async" width="320" height="110" onerror="this.onerror=null;this.src=\'images/no-image-placeholder.jpg\'">' : '') +
             // PROVENANCE (Round 73, master prompt item 65): Google's Places API
             // terms require showing each photo's attribution whenever the photo
             // itself is shown. This is Google's own html_attributions string
@@ -712,14 +778,17 @@ function goToDestination(name, lat, lng, country) {
                 p.is_open_now === false ? '<div class="pd-badge pd-closed" style="margin-bottom:6px;display:inline-flex;"><i class="fa fa-clock"></i> Closed now</div>' : '') +
             (p.address ? '<div class="meta"><i class="fa fa-map-marker"></i> ' + escapeHtml(p.address) + '</div>' : '') +
             (p.phone ? '<div class="meta"><i class="fa fa-phone"></i> ' + escapeHtml(p.phone) + '</div>' : '') +
-            (p.opening_hours ? '<div class="meta"><i class="fa fa-clock"></i> ' + escapeHtml(p.opening_hours) + '</div>' : '') +
+            (p.opening_hours ? '<div class="meta"><i class="fa fa-clock"></i> ' + escapeHtml(p.opening_hours) + '</div>'
+                : '<div class="meta tmsd-na"><i class="fa fa-clock"></i> Opening hours: not available</div>') +
             (distKm ? '<div class="meta"><i class="fa fa-route"></i> ' + distKm + '</div>' : '') +
             (p.source === 'local' ? '<div class="meta"><i class="fa fa-database"></i> From our catalogue' + (p.is_sample ? ' (sample listing)' : '') + '</div>' : '') +
             '<div class="place-card-actions">' +
             (p.source === 'local' && p.local_url
                 ? '<a class="nav-link" href="' + escapeHtml(p.local_url) + '"><i class="fa fa-arrow-right"></i> View on TourBuddy</a>'
                 : '<a class="nav-link place-card-details-link" href="#" data-idx="' + idx + '"><i class="fa fa-circle-info"></i> View Details</a>') +
+            (p.lat && p.lng ? '<a class="nav-link place-card-onmap" href="#" data-idx="' + idx + '"><i class="fa fa-map-pin"></i> Show on map</a>' : '') +
             (p.lat && p.lng ? '<a class="nav-link" href="#" data-idx="' + idx + '"><i class="fa fa-directions"></i> Get Directions</a>' : '') +
+            '</div><div class="place-card-save" data-tms-actions data-idx="' + idx + '">' +
             '</div>' +
             '</div>';
     }
@@ -772,6 +841,7 @@ function goToDestination(name, lat, lng, country) {
                 return;
             }
             body.innerHTML = renderPlaceDetail(res.data.place);
+            mountDetailActions(body, p, category);
         }).catch(function () {
             body.innerHTML = '<div class="explore-error"><i class="fa fa-exclamation-triangle"></i> Could not load details. Please try again.</div>';
         });
@@ -811,7 +881,7 @@ function goToDestination(name, lat, lng, country) {
                 : pl.is_open_now === false
                     ? '<span class="pd-badge pd-closed"><i class="fa fa-clock"></i> Closed now</span>'
                     : '') +
-            (pl.distance_km != null ? '<span class="pd-badge"><i class="fa fa-route"></i> ' + pl.distance_km + ' km away</span>' : '') +
+            (pl.distance_km != null ? '<span class="pd-badge"><i class="fa fa-route"></i> ' + pl.distance_km + ' km straight-line</span>' : '') +
             '</div>';
 
         function row(icon, value, missingText) {
@@ -937,9 +1007,14 @@ function goToDestination(name, lat, lng, country) {
                     aqHtml +
                 '</div>' +
             '</div>' +
-            (alerts ? '<div class="explore-card"><h4><i class="fa fa-bell"></i> Weather Alerts</h4>' + alerts + '</div>' : '') +
+            '<div id="weatherTips"></div>' +
+            (alerts ? '<div class="explore-card"><h4><i class="fa fa-bell"></i> Forecast notes</h4><p class="tmsd-note" style="margin-top:0">Calculated from the forecast numbers below, not official warnings.</p>' + alerts + '</div>' : '') +
             '<div class="explore-card"><h4><i class="fa fa-clock"></i> Hourly Forecast</h4><div class="hourly-scroll">' + hourly + '</div></div>' +
-            '<div class="explore-card"><h4><i class="fa fa-calendar-week"></i> 7-Day Forecast</h4>' + daily + '</div>';
+            '<div class="explore-card"><h4><i class="fa fa-calendar-week"></i> 7-Day Forecast</h4>' + daily + '</div>' +
+            '<p class="tmsd-note" id="weatherMeta">' + escapeHtml('Forecast for ' + DEST.name + ' (destination coordinates)') +
+                (w.timezone ? escapeHtml(' · Time zone: ' + w.timezone) : '') +
+                escapeHtml(' · Loaded at ' + new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) + ' (your device time)') + '</p>';
+        if (window.TmsDest && TmsDest.onWeather) TmsDest.onWeather(w);
     }
 
     function weatherIcon(code) {
@@ -952,6 +1027,19 @@ function goToDestination(name, lat, lng, country) {
     }
 
     window.exploreRefreshPlaceCat = function (btn, cat) { loadPlaces(cat); };
+
+    // Hooks for js/tms-destination.js (tabs, itinerary panel, weather tips, map/list sync).
+    window.TmsExploreView = {
+        dest: DEST, state: state, loadPlaces: function (c) { window.loadPlaces(c); },
+        openPlaceDetails: openPlaceDetails, escapeHtml: escapeHtml,
+        focusMapPlace: function (p, category) {
+            withMap(function () {
+                state.ctl.flyTo(Number(p.lng), Number(p.lat), 16);
+                openPinPopup(p, state.mapPlaces.indexOf(p), category);
+            });
+        },
+        weatherIcon: weatherIcon
+    };
 
     // ── Init ──────────────────────────────────────────────────
     loadOverview();

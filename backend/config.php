@@ -3277,8 +3277,10 @@ function tms_require_user(): void {
         // Remember where the visitor was actually headed (Batch 1: whole-app
         // login gate) so the sign-in modal can send them back there instead
         // of always landing on the homepage after they authenticate.
-        $_SESSION['post_login_redirect'] = $_SERVER['REQUEST_URI'] ?? 'index.php';
-        header('Location: index.php');
+        // Only GET page views are remembered (a POST cannot be replayed); the target is validated again on the way back.
+        $_SESSION['post_login_redirect'] = (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'GET')
+            ? tms_safe_redirect($_SERVER['REQUEST_URI'] ?? '', 'index.php') : 'index.php';
+        header('Location: login.php');
         exit;
     }
 }

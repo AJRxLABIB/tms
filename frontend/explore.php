@@ -2,6 +2,7 @@
 require_once __DIR__ . '/../backend/session-boot.php';
 error_reporting(E_ALL); ini_set('display_errors', '0'); ini_set('log_errors', '1');
 include('backend/config.php');
+tms_require_user();   // protected travel service: sign in first, then return here (login.php?redirect=...)
 require_once dirname(__DIR__) . '/backend/ExploreService.php';
 
 // Explore Mode is a logged-in feature (matches "after a user logs in, show two options")

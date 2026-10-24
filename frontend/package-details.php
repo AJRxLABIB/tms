@@ -1290,7 +1290,9 @@ html[data-theme="dark"] .meta-row { color: var(--text-muted) !important; }
                         flushPins();
                     }
                     // Local catalogue first (verified records and imported OSM places, instant); live map data only when the catalogue has nothing here.
+                    var tbSignedIn = <?php echo !empty($_SESSION['login']) ? 'true' : 'false'; ?>;
                     function loadCategory(cat, label){
+                        if (!tbSignedIn) { document.getElementById('nearbyList').innerHTML = '<div style="padding:16px;text-align:center"><a href="login.php?redirect=' + encodeURIComponent(location.pathname + location.search) + '">Sign in</a> to see nearby places, maps and routes.</div>'; return; }
                         var token = ++nearbyToken;   // ignore answers for a category the visitor has already left
                         document.getElementById('nearbyList').innerHTML = '<div style="text-align:center;padding:16px;color:var(--text-muted);" role="status"><i class="fa fa-spinner fa-spin"></i> Loading ' + label + ' nearby…</div>';
                         clearMarkers();

@@ -193,7 +193,7 @@ if (isset($_POST['submit_reset'])) {
 </head>
 <body class="tms-auth-page">
 <main class="tms-auth">
-  <aside class="tms-auth-art" style="--auth-img:url('images/h2.jpg')">
+  <aside class="tms-auth-art" style="--auth-img:url('../images/h2.jpg')">
     <a class="brand" href="index.php"><?php require_once __DIR__ . '/../backend/brand.php'; echo tms_brand_mark_html('40'); ?></a>
     <h2>Locked out? It happens to every traveller.</h2>
     <p>We'll email you a secure link, and you'll be back on your way in a minute.</p>

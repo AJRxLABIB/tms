@@ -742,6 +742,8 @@
         on(bs, 'click', function () { copyLink(bs); });
         acts.appendChild(bs);
         elDetail.appendChild(acts);
+        // Save (heart) + Add to personal trip (js/tms-trips.js). Needs a real location; pseudo places use a coordinate key.
+        if (window.TmsTrips && SIGNED_IN) { try { elDetail.appendChild(window.TmsTrips.actions(p, { destination: p.locality || p.district || '' })); } catch (e) { /* optional */ } }
 
         if (!p._pseudo) {
             elDetail.appendChild(nearbySection(p));

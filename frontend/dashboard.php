@@ -152,7 +152,7 @@ $chipOf = function ($st) { $st=(int)$st; return $st===1 ? ['ok','check-circle'] 
   </div>
 
   <?php if ($nextTrip): ?>
-  <section class="tms-trip" style="--trip-img:url('<?php echo htmlspecialchars('images/' . basename((string)($nextTrip->PackageImage ?: 'h1.jpg')), ENT_QUOTES, 'UTF-8'); ?>')">
+  <section class="tms-trip" style="--trip-img:url('<?php echo htmlspecialchars('../images/' . basename((string)($nextTrip->PackageImage ?: 'h1.jpg')), ENT_QUOTES, 'UTF-8'); ?>')">
     <div>
       <div class="eyebrow"><?php echo htmlspecialchars(tms_t('dash_your_next_trip','Your next trip'), ENT_QUOTES, 'UTF-8'); ?></div>
       <h3><?php echo htmlspecialchars($nextTrip->PackageName, ENT_QUOTES, 'UTF-8'); ?></h3>

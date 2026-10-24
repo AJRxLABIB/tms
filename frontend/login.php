@@ -15,9 +15,15 @@
 require_once 'backend/config.php';
 require_once 'backend/auth/GoogleAuth.php';
 
+// A protected page sent the visitor here with ?redirect=: remember it (validated, same-site paths only) for after sign-in.
+if (isset($_GET['redirect']) && is_string($_GET['redirect'])) {
+    $tbRedirect = tms_safe_redirect($_GET['redirect'], '');
+    if ($tbRedirect !== '') $_SESSION['post_login_redirect'] = $tbRedirect;
+}
+
 // Already logged in
 if (!empty($_SESSION['login'])) {
-    header('Location: index.php');
+    header('Location: ' . tms_safe_redirect($_SESSION['post_login_redirect'] ?? '', 'index.php')); unset($_SESSION['post_login_redirect']);
     exit;
 }
 
@@ -198,7 +204,7 @@ $showingTwoFactorPrompt = !empty($_SESSION['u2fa_pending']);
 </head>
 <body class="tms-auth-page">
 <main class="tms-auth">
-  <aside class="tms-auth-art" style="--auth-img:url('images/h1.jpg')" aria-hidden="false">
+  <aside class="tms-auth-art" style="--auth-img:url('../images/h5.jpg')" aria-hidden="false">
     <a class="brand" href="index.php"><?php require_once __DIR__ . '/../backend/brand.php'; echo tms_brand_mark_html('40'); ?></a>
     <h2>Welcome back. Your next trip is waiting.</h2>
     <p>Pick up where you left off: your plans, tickets and saved places.</p>

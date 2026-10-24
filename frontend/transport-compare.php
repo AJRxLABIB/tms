@@ -2,6 +2,7 @@
 require_once __DIR__ . '/../backend/session-boot.php';
 error_reporting(E_ALL); ini_set('display_errors', '0'); ini_set('log_errors', '1');
 include('backend/config.php');
+tms_require_user();   // protected travel service: sign in first, then return here (login.php?redirect=...)
 // Public content (like ai-recommend.php/compare.php) -- this is a planning
 // tool, not an account feature, so it's intentionally not gated behind
 // tms_require_user().

@@ -8,12 +8,26 @@ $tmsnLogged = !empty($_SESSION['login']);
 $tmsnLanding = !empty($tms_landing_mode);
 $tmsnEmail = $tmsnLogged ? (string)$_SESSION['login'] : '';
 $tmsnName = $tmsnLogged ? explode('@', $tmsnEmail)[0] : '';
+// Primary links: [href, label, icon, pages that count as "this section"]. Logged-in visitors also get My Trips and Saved Places.
+// Explore / Map are protected pages: a signed-out click goes through the login gate (tms_require_user) and returns.
+$tmsnPkgPages = ['package-list.php', 'package-details.php', 'hotels.php', 'hotel-details.php', 'activities.php', 'activity-details.php'];
 $tmsnLinks = [
+    ['index.php', tms_t('nav_home', 'Home'), 'fa-home', ['index.php']],
+    ['explore.php', tms_t('nav_explore', 'Explore'), 'fa-compass', ['explore.php', 'explore-view.php', 'destinations.php']],
+    ['tour-map.php', tms_t('nav_map', 'Map'), 'fa-map-marker', ['tour-map.php']],
+];
+if ($tmsnLogged) {
+    $tmsnLinks[] = ['my-trips.php', tms_t('nav_my_trips', 'My Trips'), 'fa-suitcase', ['my-trips.php', 'trip-planner.php']];
+    $tmsnLinks[] = ['saved-places.php', tms_t('nav_saved_places', 'Saved Places'), 'fa-bookmark-o', ['saved-places.php']];
+}
+$tmsnPkgLabel = tms_t('nav_packages_short', 'Packages');
+// Packages menu: everything that is bookable, plus the planning-tools hub, so Hotels / Activities / tools stay reachable.
+$tmsnPkgMenu = [
     ['package-list.php', tms_t('nav_packages', 'Tour Packages'), 'fa-suitcase', ['package-list.php', 'package-details.php']],
     ['hotels.php', tms_t('nav_hotels', 'Hotels'), 'fa-bed', ['hotels.php', 'hotel-details.php']],
     ['activities.php', tms_t('nav_activities', 'Activities'), 'fa-ticket', ['activities.php', 'activity-details.php']],
-    ['explore.php', tms_t('nav_explore', 'Explore'), 'fa-compass', ['explore.php', 'explore-view.php', 'tour-map.php', 'destinations.php']],
 ];
+$tmsnPkgActive = in_array($currentPage, $tmsnPkgPages, true);
 $tmsnPlanLabel = tms_t('nav_plan', 'Plan a trip');
 $tmsnPlanActive = ($currentPage === 'plan.php');
 $tmsnAccount = [
@@ -66,7 +80,16 @@ $tmsnCurSelect = function ($id) use ($tmsnE) {
             <?php foreach ($tmsnLinks as $l): ?>
             <li><a href="<?php echo $l[0]; ?>"<?php echo in_array($currentPage, $l[3], true) ? ' aria-current="page"' : ''; ?>><?php echo $tmsnE($l[1]); ?></a></li>
             <?php endforeach; ?>
-            <li class="tmsn-plan"><a href="plan.php"<?php echo $tmsnPlanActive ? ' aria-current="page"' : ''; ?>><i class="fa fa-magic" aria-hidden="true" style="margin-right:7px"></i><?php echo $tmsnE($tmsnPlanLabel); ?></a></li>
+            <li class="tmsn-dd tmsn-dd-nav">
+                <button type="button" class="tmsn-navbtn" aria-haspopup="true" aria-expanded="false" aria-controls="tmsnPkgPanel"<?php echo ($tmsnPkgActive || $tmsnPlanActive) ? ' aria-current="page"' : ''; ?>><?php echo $tmsnE($tmsnPkgLabel); ?> <i class="fa fa-angle-down" aria-hidden="true"></i></button>
+                <div class="tmsn-panel tmsn-panel-left" id="tmsnPkgPanel">
+                    <?php foreach ($tmsnPkgMenu as $a): ?>
+                    <a class="tmsn-item" href="<?php echo $a[0]; ?>"<?php echo in_array($currentPage, $a[3], true) ? ' aria-current="page"' : ''; ?>><i class="fa <?php echo $a[2]; ?>" aria-hidden="true"></i><?php echo $tmsnE($a[1]); ?></a>
+                    <?php endforeach; ?>
+                    <div class="tmsn-sep"></div>
+                    <a class="tmsn-item" href="plan.php"<?php echo $tmsnPlanActive ? ' aria-current="page"' : ''; ?>><i class="fa fa-magic" aria-hidden="true"></i><?php echo $tmsnE($tmsnPlanLabel); ?></a>
+                </div>
+            </li>
         </ul>
 
         <div class="tmsn-right">
@@ -133,6 +156,9 @@ $tmsnCurSelect = function ($id) use ($tmsnE) {
                 <?php foreach ($tmsnLinks as $l): ?>
                 <a href="<?php echo $l[0]; ?>"<?php echo in_array($currentPage, $l[3], true) ? ' aria-current="page"' : ''; ?>><i class="fa <?php echo $l[2]; ?>" aria-hidden="true"></i><?php echo $tmsnE($l[1]); ?></a>
                 <?php endforeach; ?>
+                <?php foreach ($tmsnPkgMenu as $l): ?>
+                <a href="<?php echo $l[0]; ?>"<?php echo in_array($currentPage, $l[3], true) ? ' aria-current="page"' : ''; ?>><i class="fa <?php echo $l[2]; ?>" aria-hidden="true"></i><?php echo $tmsnE($l[1]); ?></a>
+                <?php endforeach; ?>
                 <a href="plan.php"<?php echo $tmsnPlanActive ? ' aria-current="page"' : ''; ?>><i class="fa fa-magic" aria-hidden="true"></i><?php echo $tmsnE($tmsnPlanLabel); ?></a>
                 <?php if ($tmsnLogged): ?>
                 <div class="tmsn-sep"></div>
@@ -155,4 +181,22 @@ $tmsnCurSelect = function ($id) use ($tmsnE) {
         <?php endif; ?>
     </div>
 </header>
+<?php if ($tmsnLogged && !$tmsnLanding): ?>
+<?php
+// Mobile bottom tab bar (signed-in only; hidden on desktop by css/tms-nav.css). Lives outside <header> because the header
+// gets a transform when it hides on scroll, which would break position:fixed for anything inside it.
+$tmsnTabs = [
+    ['index.php', tms_t('nav_home', 'Home'), 'fa-home', ['index.php']],
+    ['explore.php', tms_t('nav_explore', 'Explore'), 'fa-compass', ['explore.php', 'explore-view.php', 'destinations.php']],
+    ['tour-map.php', tms_t('nav_map', 'Map'), 'fa-map-marker', ['tour-map.php']],
+    ['my-trips.php', tms_t('nav_my_trips', 'My Trips'), 'fa-suitcase', ['my-trips.php', 'trip-planner.php']],
+    ['profile.php', tms_t('nav_tab_profile', 'Profile'), 'fa-user-circle-o', ['profile.php', 'dashboard.php']],
+];
+?>
+<nav class="tmsn-tabbar" id="tmsnTabbar" aria-label="<?php echo $tmsnE(tms_t('nav_main', 'Main')); ?>">
+    <?php foreach ($tmsnTabs as $tb): ?>
+    <a href="<?php echo $tb[0]; ?>"<?php echo in_array($currentPage, $tb[3], true) ? ' aria-current="page"' : ''; ?>><i class="fa <?php echo $tb[2]; ?>" aria-hidden="true"></i><span><?php echo $tmsnE($tb[1]); ?></span></a>
+    <?php endforeach; ?>
+</nav>
+<?php endif; ?>
 <script src="js/tms-nav.js" defer></script>

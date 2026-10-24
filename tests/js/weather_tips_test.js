@@ -1,0 +1,32 @@
+// node tests/js/weather_tips_test.js — js/tms-weather-tips.js only reacts to real forecast numbers
+'use strict';
+const tips = require('../../js/tms-weather-tips.js');
+let pass = 0, fail = 0;
+function t(name, ok, extra) { ok ? pass++ : fail++; console.log((ok ? 'PASS ' : 'FAIL ') + name + (ok ? '' : '  ' + (extra || ''))); }
+const has = (r, re) => r.some(x => re.test(x.text));
+
+let r = tips(null);
+t('null input -> empty array', Array.isArray(r) && r.length === 0);
+r = tips({ daily: [{ date: '2026-10-25', pop: 20, tmax: 28, wind: 10 }], current: { temp: 27, wind_speed: 8 } });
+t('calm day: only the estimates disclaimer', r.length === 1 && /estimates, not guarantees/.test(r[0].text));
+r = tips({ daily: [{ date: '2026-10-25', pop: 60, tmax: 28 }] });
+t('rain >= 60% -> warn + indoor filter action', r[0].level === 'warn' && r[0].action && r[0].action.type === 'filter-nearby' && r[0].action.categories.includes('shopping_mall'));
+r = tips({ daily: [{ date: 'd', pop: 59 }] });
+t('rain 59% -> no rain tip', !has(r, /Rain probability/));
+r = tips({ daily: [{ date: 'd', tmax: 35 }] });
+t('tmax >= 35 -> heat note flagged as general advice', has(r, /General heat advice/) && has(r, /not an official/));
+r = tips({ daily: [{ date: 'd', tmax: 34.9 }] });
+t('tmax 34.9 -> no heat note', !has(r, /heat/i));
+r = tips({ daily: [], current: { temp: 36 } });
+t('current temp >= 35 also triggers heat note', has(r, /currently 36/));
+r = tips({ daily: [], current: { wind_speed: 50 } });
+t('high wind -> outdoor note', has(r, /affect outdoor activities/));
+r = tips({ daily: [{ date: 'd', pop: null, tmax: null, wind: null }], current: {} });
+t('null numbers are skipped, not treated as 0', r.length === 1);
+r = tips({ daily: [], alerts: [{ severity: 'warning', message: 'Provider says X' }] });
+t('provider alerts shown only when present', has(r, /Provider says X/) && r.find(x => /Provider/.test(x.text)).fromProvider === true);
+r = tips({ daily: [{ date: 'd', pop: 90 }] });
+t('never invents alerts', !r.some(x => x.fromProvider));
+t('last item is always the disclaimer', /not guarantees/.test(r[r.length - 1].text));
+console.log('\n' + pass + ' passed, ' + fail + ' failed');
+process.exit(fail ? 1 : 0);

@@ -108,7 +108,7 @@ html, body {
   font-family: var(--font-body);
   background:
     linear-gradient(rgba(247,248,245,0.96), rgba(247,248,245,0.98)),
-    url('images/7.jpg');
+    url('../images/7.jpg');
   background-size: auto, cover;
   background-position: center, center;
   background-attachment: scroll, fixed;
@@ -619,7 +619,7 @@ html[data-theme="dark"] .tms-notif-msg { color: #eef2f7; }
   background:
     radial-gradient(ellipse 80% 60% at 30% 0%, rgba(23,107,80,0.35), transparent 60%),
     linear-gradient(160deg, rgba(16,75,58,0.88) 0%, rgba(23,107,80,0.86) 55%, rgba(16,75,58,0.9) 100%),
-    url('images/6.jpg');
+    url('../images/6.jpg');
   background-size: auto, auto, cover;
   background-position: center, center, center 65%;
 }

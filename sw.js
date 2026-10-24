@@ -118,7 +118,7 @@ self.addEventListener('fetch', e => {
 
   // Pages that show a signed-in person's data (or run an action) are NEVER written to the generic cache and are not served from it.
   // They stay available offline only if the traveller explicitly saved them with "Save for Offline" (TRIPKIT_CACHE, matched below).
-  const PRIVATE = /\/(dashboard|profile|wallet|wallet-document|tour-history|ticket|my-trip|payment|pay-now|checkout|cart|export-my-data|notifications|alerts|loyalty|loyalty-history|referral|group-trip|group-trips|expense-tracker|travel-memory|ai-memory|ai-copilot|two-factor-setup|change-password|login|logout|register|forgot-password|thankyou|my-marketplace-bookings|wishlist|mark-notifications-read|admin|supplier|api)(\/|\.php|$)/i;
+  const PRIVATE = /\/(dashboard|profile|my-trips|saved-places|trip-planner|explore-view|tour-map|wallet|wallet-document|tour-history|ticket|my-trip|payment|pay-now|checkout|cart|export-my-data|notifications|alerts|loyalty|loyalty-history|referral|group-trip|group-trips|expense-tracker|travel-memory|ai-memory|ai-copilot|two-factor-setup|change-password|login|logout|register|forgot-password|thankyou|my-marketplace-bookings|wishlist|mark-notifications-read|admin|supplier|api)(\/|\.php|$)/i;
   const isPrivate = PRIVATE.test(url.pathname) || url.pathname.indexOf('/api/') !== -1;
   const isStatic = /\/(css|js|fonts|images)\//.test(url.pathname) && /\.(css|js|woff2?|ttf|png|jpe?g|gif|svg|webp|ico)$/i.test(url.pathname);
 

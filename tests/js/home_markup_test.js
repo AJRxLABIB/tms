@@ -28,7 +28,7 @@ for (const [page, extra] of Object.entries(pages)) {
   ok(missing.size === 0, page + ' JS ids present' + (missing.size ? ' — missing: ' + [...missing].join(', ') : ''));
 }
 // ids the redesign must keep
-const keep = { 'backend/home-sections.php': ['heroDestInput', 'heroMicBtn', 'heroDateInput'], 'frontend/package-details.php': ['datepicker1', 'crowdInsightsBox', 'sustainabilityBox', 'pkgGallery'], 'frontend/package-list.php': ['nlSearchInput', 'nlSearchBtn', 'nlSearchStatus', 'pkgListSearch', 'pkgListType', 'pkgListDuration', 'pkgListSort', 'pkgListView', 'viewListBtn', 'viewMapBtn'] };
+const keep = { 'backend/home-sections.php': ['heroDestInput', 'heroMicBtn'], 'frontend/package-details.php': ['datepicker1', 'crowdInsightsBox', 'sustainabilityBox', 'pkgGallery'], 'frontend/package-list.php': ['nlSearchInput', 'nlSearchBtn', 'nlSearchStatus', 'pkgListSearch', 'pkgListType', 'pkgListDuration', 'pkgListSort', 'pkgListView', 'viewListBtn', 'viewMapBtn'] };
 for (const [f, ids] of Object.entries(keep)) { const s = rd(f); for (const id of ids) ok(new RegExp('id=["\']' + id + '["\']').test(s), f + ' keeps #' + id); }
 // filter param names still present
 const pl = rd('frontend/package-list.php'); for (const n of ['search', 'type', 'dur', 'sort']) ok(new RegExp('name="' + n + '"').test(pl), 'package-list keeps filter name=' + n);

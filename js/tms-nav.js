@@ -83,6 +83,9 @@
 
     if (!header) return;
 
+    /* signed-in mobile tab bar: lets CSS add body padding and lift the floating chat buttons */
+    if (document.getElementById('tmsnTabbar')) document.body.classList.add('tmsn-has-tabbar');
+
     /* dropdowns */
     var dds = Array.prototype.slice.call(header.querySelectorAll('.tmsn-dd'));
     function setOpen(dd, open) {

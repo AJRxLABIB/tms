@@ -11,6 +11,9 @@
  *   GET  ?action=route&mode=driving|walking|cycling&coords=lng,lat;lng,lat
  *   GET  ?action=itinerary_list | itinerary_get&id=      signed-in users, their own itineraries (never cached)
  *   POST ?action=itinerary_save | itinerary_delete       signed-in users, CSRF required
+ *   POST ?action=itinerary_create | itinerary_duplicate_trip | itinerary_duplicate_day | itinerary_move_stop   personal trips (plans, never bookings)
+ *   GET  ?action=saved_list[&category=]                  the signed-in user's saved places
+ *   POST ?action=saved_save | saved_remove               signed-in users, CSRF required (owner always comes from the session)
  *   POST ?action=suggest_correction                      queued for moderator review, never edits a place
  *
  * Every response is JSON: {ok:true,...} or {ok:false,error:{code,message,request_id}}.
@@ -75,9 +78,13 @@ try {
     if (!in_array($method, ['GET', 'HEAD', 'POST'], true)) mapFail(405, 'method_not_allowed', 'Method not allowed.', ['Allow: GET, POST']);
 
     $userEmail = isset($_SESSION['login']) && is_string($_SESSION['login']) ? $_SESSION['login'] : '';
+    // Every map/place/route/itinerary service needs an account. Only the config call (styles + attribution + CSRF token) is open,
+    // so public pages can still draw a basemap preview. The check runs on the server; hidden buttons are not a control.
+    if ($userEmail === '' && $action !== 'config') mapFail(401, 'auth_required', 'Please sign in to use the map and place services.');
     $lang      = (($_GET['lang'] ?? '') === 'bn') ? 'bn' : 'en';
     $csrf      = tms_csrf_token();   // creates the session token if needed, so it must run before the session lock is released
-    $isWrite   = in_array($action, ['itinerary_save', 'itinerary_delete', 'suggest_correction'], true);
+    $isWrite   = in_array($action, ['itinerary_save', 'itinerary_delete', 'itinerary_create', 'itinerary_duplicate_trip', 'itinerary_duplicate_day', 'itinerary_move_stop',
+        'saved_save', 'saved_remove', 'suggest_correction'], true);
 
     if ($isWrite) {
         if ($method !== 'POST') mapFail(405, 'method_not_allowed', 'This action needs POST.', ['Allow: POST']);
@@ -134,9 +141,9 @@ try {
             $etag = '"' . md5((string)json_encode($payload)) . '"';
             header('ETag: ' . $etag);
             if (isset($_SERVER['HTTP_IF_NONE_MATCH']) && trim((string)$_SERVER['HTTP_IF_NONE_MATCH']) === $etag) {
-                http_response_code(304); header('Cache-Control: public, max-age=60'); exit;
+                http_response_code(304); header('Cache-Control: private, max-age=60'); exit;
             }
-            mapOut($payload, 200, 'public, max-age=60');
+            mapOut($payload, 200, 'private, max-age=60');
 
         // ───────────────────────────────────────────── one place
         case 'place':
@@ -149,7 +156,7 @@ try {
             $one = $places->toPlaces([$row])[0];
             $one['gallery'] = $places->gallery((int)$row['PlaceId']);
             $one['related'] = $places->related($row, 6);
-            mapOut(['ok' => true] + $one, 200, 'public, max-age=60');
+            mapOut(['ok' => true] + $one, 200, 'private, max-age=60');
 
         // ───────────────────────────────────────────── autocomplete (own database only)
         case 'search':
@@ -159,7 +166,7 @@ try {
             $near = null;
             if (isset($_GET['lat'], $_GET['lng']) && MapPlaces::validCoords($_GET['lat'], $_GET['lng'])) $near = [(float)$_GET['lat'], (float)$_GET['lng']];
             $items = $places->search($q, $near, mapInt($_GET['limit'] ?? null, 8, 1, 20), ['categories' => MapPlaces::parseCategories(mapStr($_GET['categories'] ?? '', 400))]);
-            mapOut(['ok' => true, 'items' => $items, 'source' => 'local'], 200, 'public, max-age=30');
+            mapOut(['ok' => true, 'items' => $items, 'source' => 'local'], 200, 'private, max-age=30');
 
         // ───────────────────────────────────────────── nearby
         case 'nearby':
@@ -175,7 +182,7 @@ try {
             $radius = mapInt($_GET['radius_m'] ?? null, 5000, 100, 50000);
             $items = $places->nearby($lat, $lng, (float)$radius, ['categories' => MapPlaces::parseCategories(mapStr($_GET['categories'] ?? '', 400))],
                 mapInt($_GET['limit'] ?? null, 30, 1, 100), $exclude);
-            mapOut(['ok' => true, 'radius_m' => $radius, 'items' => $items], 200, 'public, max-age=60');
+            mapOut(['ok' => true, 'radius_m' => $radius, 'items' => $items], 200, 'private, max-age=60');
 
         // ───────────────────────────────────────────── wider-web geocoder (explicit submit)
         case 'geocode':
@@ -218,6 +225,10 @@ try {
         case 'itinerary_get':
         case 'itinerary_save':
         case 'itinerary_delete':
+        case 'itinerary_create':
+        case 'itinerary_duplicate_trip':
+        case 'itinerary_duplicate_day':
+        case 'itinerary_move_stop':
             if ($userEmail === '') mapFail(401, 'auth_required', 'Please sign in to use saved itineraries.');
             mapLimit($dbh, 'itinerary', 300);
             require_once dirname(__DIR__) . '/backend/MapItinerary.php';
@@ -234,17 +245,70 @@ try {
                 if (!$it) mapFail(404, 'not_found', 'Itinerary not found.');
                 mapOut(['ok' => true, 'itinerary' => $it] + $it);
             }
+            $itinFail = static function (array $res): void {
+                $code = (string)($res['error']['code'] ?? 'save_failed');
+                mapFail(match ($code) { 'not_found' => 404, 'save_failed' => 500, 'limit_reached' => 409, 'planner_unavailable' => 503, default => 400 }, $code, (string)($res['error']['message'] ?? 'Could not save.'));
+            };
             if ($action === 'itinerary_save') {
                 $res = MapItinerary::save($userEmail, $body);
-                if (empty($res['ok'])) {
-                    $code = (string)($res['error']['code'] ?? 'save_failed');
-                    mapFail(match ($code) { 'not_found' => 404, 'save_failed' => 500, 'limit_reached' => 409, default => 400 }, $code, (string)($res['error']['message'] ?? 'Could not save.'));
-                }
+                if (empty($res['ok'])) $itinFail($res);
                 mapOut(['ok' => true, 'id' => (int)$res['id']]);
+            }
+            if ($action === 'itinerary_create') {
+                $res = MapItinerary::create($userEmail, $body);
+                if (empty($res['ok'])) $itinFail($res);
+                mapOut(['ok' => true, 'id' => (int)$res['id']], 201);
+            }
+            if (in_array($action, ['itinerary_duplicate_trip', 'itinerary_duplicate_day', 'itinerary_move_stop'], true)) {
+                $tid = isset($body['id']) && is_numeric($body['id']) ? (int)$body['id'] : 0;
+                if ($tid <= 0) mapFail(404, 'not_found', 'Trip not found.');
+                if ($action === 'itinerary_duplicate_trip') {
+                    $res = MapItinerary::duplicateTrip($userEmail, $tid, is_string($body['title'] ?? null) ? mapStr($body['title'], 120) : null);
+                } elseif ($action === 'itinerary_duplicate_day') {
+                    $res = MapItinerary::duplicateDay($userEmail, $tid, (int)($body['from_day'] ?? 0), (int)($body['to_day'] ?? 0));
+                } else {
+                    $op = isset($body['day']) && is_numeric($body['day']) ? ['day' => (int)$body['day']] : ['dir' => mapStr($body['dir'] ?? '', 6)];
+                    $res = MapItinerary::moveStop($userEmail, $tid, (int)($body['position'] ?? 0), $op);
+                }
+                if (empty($res['ok'])) $itinFail($res);
+                $out = ['ok' => true, 'id' => (int)$res['id']];
+                if ($action !== 'itinerary_duplicate_trip') $out['itinerary'] = MapItinerary::get($userEmail, (int)$res['id']);
+                mapOut($out, $action === 'itinerary_duplicate_trip' ? 201 : 200);
             }
             $id = isset($body['id']) && is_numeric($body['id']) ? (int)$body['id'] : 0;
             if ($id <= 0 || !MapItinerary::delete($userEmail, $id)) mapFail(404, 'not_found', 'Itinerary not found.');
             mapOut(['ok' => true]);
+
+        // ───────────────────────────────────────────── saved places (signed-in owners only; owner = session, never the body)
+        case 'saved_list':
+        case 'saved_save':
+        case 'saved_remove':
+            if ($userEmail === '') mapFail(401, 'auth_required', 'Please sign in to use saved places.');
+            mapLimit($dbh, 'saved', 600);
+            require_once dirname(__DIR__) . '/backend/SavedPlaces.php';
+            SavedPlaces::useDb($dbh);
+            try {
+                if ($action === 'saved_list') {
+                    $cat = strtolower(mapStr($_GET['category'] ?? '', 30));
+                    if ($cat !== '' && !in_array($cat, SavedPlaces::CATEGORIES, true)) mapFail(400, 'invalid_category', 'Unknown place category.');
+                    mapOut(['ok' => true, 'items' => SavedPlaces::list($userEmail, $cat !== '' ? $cat : null, mapInt($_GET['limit'] ?? null, 200, 1, SavedPlaces::MAX_PER_USER))]);
+                }
+                if ($action === 'saved_save') {
+                    $res = SavedPlaces::save($userEmail, $body);
+                    if (empty($res['ok'])) {
+                        $code = (string)($res['error']['code'] ?? 'save_failed');
+                        mapFail(match ($code) { 'save_failed' => 500, 'limit_reached' => 409, default => 400 }, $code, (string)($res['error']['message'] ?? 'Could not save.'));
+                    }
+                    mapOut(['ok' => true, 'saved' => true, 'created' => !empty($res['created'])], !empty($res['created']) ? 201 : 200);
+                }
+                $key = is_string($body['place_key'] ?? null) ? trim($body['place_key']) : '';
+                if (!SavedPlaces::validKey($key)) mapFail(400, 'invalid_key', 'Invalid place key.');
+                SavedPlaces::remove($userEmail, $key);   // removing something that is already gone is fine (idempotent)
+                mapOut(['ok' => true, 'saved' => false]);
+            } catch (PDOException $e) {
+                error_log('[TourBuddy map API] saved places: ' . $e->getMessage());
+                mapFail(503, 'saved_unavailable', 'Saved places are not available yet. Please try again later.');
+            }
 
         // ───────────────────────────────────────────── suggested corrections (queued only)
         case 'suggest_correction':

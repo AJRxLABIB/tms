@@ -2,6 +2,7 @@
 require_once __DIR__ . '/../backend/session-boot.php';
 error_reporting(E_ALL); ini_set('display_errors', '0'); ini_set('log_errors', '1');
 include('backend/config.php');
+tms_require_user();   // protected travel service: sign in first, then return here (login.php?redirect=...)
 /**
  * tour-map.php — the tourism map explorer (public page).
  *
@@ -106,11 +107,13 @@ $tmsJson = JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_UN
 <link rel="preconnect" href="https://tiles.openfreemap.org" crossorigin>
 <link rel="stylesheet" href="js/vendor/maplibre/maplibre-gl.css">
 <link rel="stylesheet" href="<?php echo tms_asset_ver('css/tms-map-ui.css'); ?>">
+<link rel="stylesheet" href="<?php echo tms_asset_ver('css/tms-trips.css'); ?>">
 <script src="js/jquery-1.12.0.min.js" defer></script>
 <script src="js/bootstrap.min.js" defer></script>
 <script src="js/vendor/maplibre/maplibre-gl-csp.js" defer></script>
 <script src="<?php echo tms_asset_ver('js/tms-maplibre.js'); ?>" defer></script>
 <script src="<?php echo tms_asset_ver('js/tms-poi-tiles.js'); ?>" defer></script>
+<script src="<?php echo tms_asset_ver('js/tms-trips.js'); ?>" defer></script>
 <script src="<?php echo tms_asset_ver('js/tms-explorer.js'); ?>" defer></script>
 </head>
 <body>

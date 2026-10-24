@@ -13,9 +13,15 @@
 require_once 'backend/config.php';
 require_once 'backend/auth/GoogleAuth.php';
 
+// A protected page sent the visitor here with ?redirect=: remember it (validated, same-site paths only) for after sign-in.
+if (isset($_GET['redirect']) && is_string($_GET['redirect'])) {
+    $tbRedirect = tms_safe_redirect($_GET['redirect'], '');
+    if ($tbRedirect !== '') $_SESSION['post_login_redirect'] = $tbRedirect;
+}
+
 // Redirect if already logged in
 if (!empty($_SESSION['login'])) {
-    header('Location: index.php');
+    header('Location: ' . tms_safe_redirect($_SESSION['post_login_redirect'] ?? '', 'index.php')); unset($_SESSION['post_login_redirect']);
     exit;
 }
 
@@ -125,7 +131,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 </head>
 <body class="tms-auth-page">
 <main class="tms-auth">
-  <aside class="tms-auth-art" style="--auth-img:url('images/h3.jpg')">
+  <aside class="tms-auth-art" style="--auth-img:url('../images/c2.jpg')">
     <a class="brand" href="index.php"><?php require_once __DIR__ . '/../backend/brand.php'; echo tms_brand_mark_html('40'); ?></a>
     <h2>Your next adventure starts with one small step.</h2>
     <p>Create a free account to plan trips, save places and keep every ticket in one spot.</p>

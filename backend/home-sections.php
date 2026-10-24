@@ -49,30 +49,28 @@ if ($tms_home_signed_in && !empty($recommended['packages'])) {
 $hs_ph = 'images/no-image-placeholder.jpg';
 $hs_way_img = [];
 foreach (['images/c1.jpg', 'images/c2.jpg', 'images/c3.jpg'] as $i => $p) { $hs_way_img[$i] = is_file($hs_root . '/' . $p) ? $p : $hs_ph; }
-$hs_cta_bg = is_file($hs_root . '/images/c4.jpg') ? 'images/c4.jpg' : '';
+// url() inside a CSS variable resolves against the stylesheet (css/), so give it a site-absolute path.
+$hs_cta_bg = is_file($hs_root . '/images/c4.jpg') ? (rtrim(str_replace('\\', '/', dirname((string)($_SERVER['SCRIPT_NAME'] ?? '/'))), '/') . '/images/c4.jpg') : '';
 ?>
 <!-- ═══ HERO ═══ -->
 <section class="tms-hero tms-hero-home" aria-labelledby="hsTitle">
     <?php if ($hs_slides): ?><div class="tms-hero-slides" aria-hidden="true" data-images="<?php echo $hs_e(implode(',', $hs_slides)); ?>"></div><?php endif; ?>
     <div class="tms-hero-content hs-hero-inner">
-        <h1 id="hsTitle" class="hs-title">Find your next trip,<br><span class="hs-title-em">simply.</span></h1>
-        <p class="hs-sub">Pick a place, pick a date, and see real packages from trusted agencies.</p>
+        <h1 id="hsTitle" class="hs-title">Discover more.<br><span class="hs-title-em">Travel your way.</span></h1>
+        <p class="hs-sub">Find destinations, nearby attractions, routes and weather, then plan your own trip. No package needed.</p>
 
-        <form class="hs-search" action="package-list.php" method="get" role="search" aria-label="Search tour packages">
+        <?php /* Destination discovery is a protected service: a visitor who searches is sent to sign in and returns to the results (login.php?redirect=). */ ?>
+        <form class="hs-search" action="explore.php" method="get" role="search" aria-label="Search destinations">
             <div class="hs-field hs-field-grow">
                 <label for="heroDestInput"><i class="fa fa-map-marker" aria-hidden="true"></i> Where to?</label>
                 <div class="hs-input-wrap">
-                    <input type="search" id="heroDestInput" name="search" maxlength="100" placeholder="Cox's Bazar, Sylhet, beach…" autocomplete="off">
+                    <input type="search" id="heroDestInput" name="q" maxlength="100" placeholder="Search destinations, landmarks, cities, or attractions..." autocomplete="off" required>
                     <button type="button" id="heroMicBtn" onclick="toggleHeroVoice()" title="Search by voice" aria-label="Search by voice" hidden><i class="fa fa-microphone" aria-hidden="true"></i></button>
                 </div>
             </div>
-            <div class="hs-field">
-                <label for="heroDateInput"><i class="fa fa-calendar" aria-hidden="true"></i> When? <span class="hs-opt">(optional)</span></label>
-                <input type="date" id="heroDateInput" name="date" min="<?php echo date('Y-m-d'); ?>">
-            </div>
-            <button type="submit" class="hs-go"><i class="fa fa-search" aria-hidden="true"></i> Search</button>
+            <button type="submit" class="hs-go"><i class="fa fa-compass" aria-hidden="true"></i> Explore destinations</button>
         </form>
-        <p class="hs-quiet"><a href="package-list.php">Browse packages</a><span aria-hidden="true">·</span><a href="ai-recommend.php">Plan with AI</a></p>
+        <p class="hs-quiet"><a href="plan.php">Plan your trip</a><span aria-hidden="true">·</span><a href="tour-map.php">Open the map</a><span aria-hidden="true">·</span><a href="package-list.php">Browse tour packages</a></p>
     </div>
     <?php if (!$hs_slides): ?><div class="tms-scene" aria-hidden="true"></div><?php endif; ?>
     <svg class="hs-plane tms-float" viewBox="0 0 64 64" width="44" height="44" aria-hidden="true"><path fill="currentColor" d="M60 8 4 30l16 6 6 18 8-12 14 10z" opacity=".9"/></svg>

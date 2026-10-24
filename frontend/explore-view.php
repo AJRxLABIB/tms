@@ -2,6 +2,7 @@
 require_once __DIR__ . '/../backend/session-boot.php';
 error_reporting(E_ALL); ini_set('display_errors', '0'); ini_set('log_errors', '1');
 include('backend/config.php');
+tms_require_user();   // protected travel service: sign in first, then return here (login.php?redirect=...)
 // LIVE BUG FIX (customer-facing audit): this page is real browsing/
 // marketing content -- it's explicitly allowed in robots.txt and listed
 // in sitemap.php for search engines -- but a blanket "require login
@@ -43,6 +44,8 @@ if ($destName === '' || $lat === null || $lng === null) {
 <link href="<?php echo tms_asset_ver('css/explore.css'); ?>" rel="stylesheet">
 <link rel="stylesheet" href="js/vendor/maplibre/maplibre-gl.css">
 <link rel="stylesheet" href="<?php echo tms_asset_ver('css/tms-map-ui.css'); ?>">
+<link rel="stylesheet" href="<?php echo tms_asset_ver('css/tms-trips.css'); ?>">
+<link rel="stylesheet" href="<?php echo tms_asset_ver('css/tms-destination.css'); ?>">
 <script src="js/jquery-1.12.0.min.js" defer></script>
 <script src="js/bootstrap.min.js" defer></script>
 <script src="js/wow.min.js" defer></script>
@@ -56,18 +59,21 @@ if ($destName === '' || $lat === null || $lng === null) {
 
 <section class="explore-view-hero">
     <div class="container">
-        <a href="explore.php" class="explore-back-btn"><i class="fa fa-arrow-left"></i> Back to Explore</a>
+        <a href="explore.php" class="explore-back-btn" id="exploreBackLink"><i class="fa fa-arrow-left" aria-hidden="true"></i> Back to Explore</a>
         <h1><i class="fa fa-map-marker-alt"></i> <?php echo htmlspecialchars($destName); ?></h1>
         <div class="sub"><?php echo htmlspecialchars($country ?: 'Explore this destination freely — no booking required'); ?></div>
     </div>
 </section>
 
 <div class="container">
-    <div class="explore-tabs">
-        <button class="explore-tab-btn active" data-tab="overview" onclick="exploreSwitchTab('overview')"><i class="fa fa-info-circle"></i> Overview</button>
-        <button class="explore-tab-btn" data-tab="map" onclick="exploreSwitchTab('map')"><i class="fa fa-map"></i> Map &amp; Navigation</button>
-        <button class="explore-tab-btn" data-tab="places" onclick="exploreSwitchTab('places')"><i class="fa fa-location-arrow"></i> Nearby Places</button>
-        <button class="explore-tab-btn" data-tab="weather" onclick="exploreSwitchTab('weather')"><i class="fa fa-cloud-sun"></i> Weather</button>
+    <div class="explore-tabs" role="tablist" aria-label="Destination sections" id="exploreTabList">
+        <button type="button" class="explore-tab-btn active" role="tab" id="tab-overview" aria-controls="panel-overview" aria-selected="true" data-tab="overview" onclick="exploreSwitchTab('overview')"><i class="fa fa-info-circle" aria-hidden="true"></i> Overview</button>
+        <button type="button" class="explore-tab-btn" role="tab" id="tab-attractions" aria-controls="panel-attractions" aria-selected="false" tabindex="-1" data-tab="attractions" onclick="exploreSwitchTab('attractions')"><i class="fa fa-landmark" aria-hidden="true"></i> Attractions</button>
+        <button type="button" class="explore-tab-btn" role="tab" id="tab-places" aria-controls="panel-places" aria-selected="false" tabindex="-1" data-tab="places" onclick="exploreSwitchTab('places')"><i class="fa fa-location-arrow" aria-hidden="true"></i> Nearby places</button>
+        <button type="button" class="explore-tab-btn" role="tab" id="tab-map" aria-controls="panel-map" aria-selected="false" tabindex="-1" data-tab="map" onclick="exploreSwitchTab('map')"><i class="fa fa-map" aria-hidden="true"></i> Map</button>
+        <button type="button" class="explore-tab-btn" role="tab" id="tab-weather" aria-controls="panel-weather" aria-selected="false" tabindex="-1" data-tab="weather" onclick="exploreSwitchTab('weather')"><i class="fa fa-cloud-sun" aria-hidden="true"></i> Weather</button>
+        <button type="button" class="explore-tab-btn" role="tab" id="tab-travel" aria-controls="panel-travel" aria-selected="false" tabindex="-1" data-tab="travel" onclick="exploreSwitchTab('travel')"><i class="fa fa-suitcase" aria-hidden="true"></i> Travel info</button>
+        <button type="button" class="explore-tab-btn" role="tab" id="tab-itinerary" aria-controls="panel-itinerary" aria-selected="false" tabindex="-1" data-tab="itinerary" onclick="exploreSwitchTab('itinerary')"><i class="fa fa-list-ol" aria-hidden="true"></i> My itinerary</button>
     </div>
 
     <div id="exploreViewRoot"
@@ -77,7 +83,7 @@ if ($destName === '' || $lat === null || $lng === null) {
          data-country="<?php echo htmlspecialchars($country, ENT_QUOTES); ?>">
 
         <!-- Overview Panel -->
-        <div class="explore-panel active" id="panel-overview">
+        <div class="explore-panel active" id="panel-overview" role="tabpanel" aria-labelledby="tab-overview" tabindex="0">
             <!-- NEW (Round 118, master prompt item 6 -- Destination System /
                  Rule 3 honesty): the overview/history/best-time-to-visit/
                  local-culture/estimated-costs content below is generated
@@ -104,8 +110,13 @@ if ($destName === '' || $lat === null || $lng === null) {
             <div id="localInventoryContent"></div>
         </div>
 
+        <!-- Attractions Panel (catalogue attractions from the destination info; filled by js/tms-destination.js) -->
+        <div class="explore-panel" id="panel-attractions" role="tabpanel" aria-labelledby="tab-attractions" tabindex="0">
+            <div id="attractionsContent" aria-live="polite"><div class="explore-loading"><i class="fa fa-spinner fa-spin spin" aria-hidden="true"></i>Loading attractions...</div></div>
+        </div>
+
         <!-- Map & Navigation Panel -->
-        <div class="explore-panel" id="panel-map">
+        <div class="explore-panel" id="panel-map" role="tabpanel" aria-labelledby="tab-map" tabindex="0">
             <div class="explore-card">
                 <h4><i class="fa fa-route"></i> Live Map &amp; Navigation</h4>
                 <button class="locate-btn" id="locateBtn" onclick="exploreLocateMe()"><i class="fa fa-location-arrow"></i> Locate Me</button>
@@ -160,10 +171,22 @@ if ($destName === '' || $lat === null || $lng === null) {
         </div>
 
         <!-- Nearby Places Panel -->
-        <div class="explore-panel" id="panel-places">
+        <div class="explore-panel" id="panel-places" role="tabpanel" aria-labelledby="tab-places" tabindex="0">
             <div class="explore-card">
                 <h4><i class="fa fa-location-arrow"></i> Nearby Places</h4>
-                <div class="place-cat-tabs">
+                <div class="tmsd-controls" id="nearbyControls">
+                    <label>Radius
+                        <select id="nearbyRadius" aria-label="Search radius">
+                            <option value="1000">1 km</option><option value="5000" selected>5 km</option><option value="10000">10 km</option>
+                        </select></label>
+                    <label>Sort
+                        <select id="nearbySort" aria-label="Sort places">
+                            <option value="distance" selected>Distance (nearest first)</option><option value="name">Name (A to Z)</option>
+                        </select></label>
+                    <button type="button" class="tmsd-chip" id="indoorChip" aria-pressed="false" hidden>Indoor-friendly only</button>
+                </div>
+                <p class="tmsd-note">Distances are straight-line distances from the destination centre, not driving or walking routes. Ratings, opening hours and phone numbers appear only when the map data provides them.</p>
+                <div class="place-cat-tabs" id="placeCatTabs" role="group" aria-label="Place categories">
                     <button class="place-cat-btn active" data-cat="hotel" onclick="loadPlaces('hotel')"><i class="fa fa-bed"></i> Hotels</button>
                     <button class="place-cat-btn" data-cat="restaurant" onclick="loadPlaces('restaurant')"><i class="fa fa-utensils"></i> Restaurants</button>
                     <button class="place-cat-btn" data-cat="hospital" onclick="loadPlaces('hospital')"><i class="fa fa-hospital"></i> Hospitals</button>
@@ -175,14 +198,32 @@ if ($destName === '' || $lat === null || $lng === null) {
                     <button class="place-cat-btn" data-cat="tourist_info" onclick="loadPlaces('tourist_info')"><i class="fa fa-info-circle"></i> Tourist Info</button>
                     <button class="place-cat-btn" data-cat="attraction" onclick="loadPlaces('attraction')"><i class="fa fa-landmark"></i> Attractions</button>
                 </div>
-                <div id="placesGrid"></div>
+                <div id="placesGrid" aria-live="polite"></div>
             </div>
         </div>
 
         <!-- Weather Panel -->
-        <div class="explore-panel" id="panel-weather">
-            <div id="weatherContent">
+        <div class="explore-panel" id="panel-weather" role="tabpanel" aria-labelledby="tab-weather" tabindex="0">
+            <div id="weatherContent" aria-live="polite">
                 <div class="explore-loading"><i class="fa fa-spinner fa-spin spin"></i>Fetching live weather...</div>
+            </div>
+        </div>
+
+        <!-- Travel info Panel (best time, getting there, costs, safety: same source as Overview; filled by js/tms-destination.js) -->
+        <div class="explore-panel" id="panel-travel" role="tabpanel" aria-labelledby="tab-travel" tabindex="0">
+            <div class="tms-sample-banner" style="margin-bottom:16px;">
+                <i class="fa fa-info-circle" aria-hidden="true"></i>
+                Travel information is a quick orientation, not an official source. Verify prices, entry rules, customs and safety before you travel.
+            </div>
+            <div id="travelContent" aria-live="polite"><div class="explore-loading"><i class="fa fa-spinner fa-spin spin" aria-hidden="true"></i>Loading travel information...</div></div>
+        </div>
+
+        <!-- My itinerary Panel: the signed-in user's own trips (api/map.php itinerary_list) -->
+        <div class="explore-panel" id="panel-itinerary" role="tabpanel" aria-labelledby="tab-itinerary" tabindex="0">
+            <div class="explore-card">
+                <h4><i class="fa fa-list-ol" aria-hidden="true"></i> My itinerary</h4>
+                <div id="itineraryStart"></div>
+                <div id="itineraryList" aria-live="polite"></div>
             </div>
         </div>
     </div>
@@ -199,7 +240,10 @@ if ($destName === '' || $lat === null || $lng === null) {
 <?php include('backend/footer.php'); ?>
 <?php include('backend/signin.php'); ?>
 <?php include('backend/write-us.php'); ?>
+<script src="<?php echo tms_asset_ver('js/tms-weather-tips.js'); ?>"></script>
+<script src="<?php echo tms_asset_ver('js/tms-trips.js'); ?>"></script>
 <script src="<?php echo tms_asset_ver('js/explore.js'); ?>"></script>
+<script src="<?php echo tms_asset_ver('js/tms-destination.js'); ?>"></script>
 <script>window.addEventListener("load",function(){if(typeof WOW!=="undefined")new WOW().init()});</script>
 </body>
 </html>
