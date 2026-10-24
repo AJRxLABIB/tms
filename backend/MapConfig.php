@@ -29,6 +29,25 @@ class MapConfig
         'cycling' => ['label' => 'Cycling', 'url' => 'https://routing.openstreetmap.de/routed-bike', 'profile' => 'driving', 'env' => 'MAP_ROUTE_CYCLING'],
     ];
 
+    /** MapTiler built-in map ids used for the four style buttons when MAPTILER_API_KEY is set (the key is a browser key: restrict it by origin in the MapTiler dashboard). */
+    private const MAPTILER_STYLES = ['liberty' => 'streets-v2', 'positron' => 'dataviz-light', 'bright' => 'bright-v2', 'dark' => 'dataviz-dark'];
+
+    public static function maptilerKey(): string
+    {
+        $k = self::env('MAPTILER_API_KEY');
+        return preg_match('/^[A-Za-z0-9_\-]{8,64}$/', $k) ? $k : '';
+    }
+
+    /** Attribution HTML for the active basemap. */
+    public static function attribution(): string
+    {
+        if (self::maptilerKey() !== '') {
+            return '<a href="https://www.maptiler.com/copyright/" target="_blank" rel="noopener">&copy; MapTiler</a> '
+                . '<a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">&copy; OpenStreetMap contributors</a>';
+        }
+        return self::ATTRIBUTION;
+    }
+
     private static function env(string $key, string $default = ''): string
     {
         if (function_exists('tms_env')) {
@@ -50,9 +69,11 @@ class MapConfig
     public static function styles(): array
     {
         $out = [];
+        $mt = self::maptilerKey();
         foreach (self::STYLE_DEFAULTS as $id => $d) {
             $override = self::safeUrl(self::env($d['env']));
             $url = $override !== '' ? $override : $d['url'];
+            if ($override === '' && $mt !== '' && isset(self::MAPTILER_STYLES[$id])) $url = 'https://api.maptiler.com/maps/' . self::MAPTILER_STYLES[$id] . '/style.json?key=' . rawurlencode($mt);
             if ($url === '') continue;
             $out[] = ['id' => $id, 'label' => $d['label'], 'url' => $url];
         }
@@ -142,7 +163,7 @@ class MapConfig
         return [
             'styles'        => self::styles(),
             'default_style' => self::defaultStyle(),
-            'attribution'   => self::ATTRIBUTION,
+            'attribution'   => self::attribution(),
             'center'        => self::center(),
             'zoom'          => self::zoom(),
             'home_bounds'   => self::homeBounds(),

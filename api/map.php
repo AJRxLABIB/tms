@@ -72,6 +72,36 @@ function mapLimit(PDO $dbh, string $bucket, int $perHour): void
     }
 }
 
+
+/**
+ * Built-in starter places for an empty map: until the places table is filled (scripts/map_sync_places.php, OSM import or the
+ * admin), the map still shows the destinations the TourBuddy Brain knows, with their coordinates. Read-only, nothing is stored.
+ * @return list<array<string,mixed>>
+ */
+function mapBuiltinPlaces(PDO $dbh, string $q, ?array $bbox, int $limit): array
+{
+    try { if ($dbh->query("SELECT 1 FROM tbl_map_places WHERE Status = 'active' LIMIT 1")->fetchColumn()) return []; } catch (Throwable $e) { return []; }
+    try {
+        require_once dirname(__DIR__) . '/backend/brain/BrainKnowledge.php';
+        $all = BrainKnowledge::all();
+        $ids = [];
+        if ($q !== '') { foreach (BrainKnowledge::find($q, 8) as $h) $ids[] = $h['id']; $qn = mb_strtolower($q, 'UTF-8'); foreach ($all as $id => $d) if (!in_array($id, $ids, true) && (mb_stripos($d['name'], $qn, 0, 'UTF-8') !== false || mb_stripos((string)$d['region'], $qn, 0, 'UTF-8') !== false)) $ids[] = $id; }
+        else $ids = array_keys($all);
+        $out = []; $n = 0;
+        foreach ($ids as $id) {
+            $d = $all[$id] ?? null; if (!$d) continue;
+            $lat = (float)$d['lat']; $lng = (float)$d['lng'];
+            if ($bbox && ($lat < $bbox[1] || $lat > $bbox[3] || $lng < $bbox[0] || $lng > $bbox[2])) continue;
+            $out[] = ['id' => -(++$n), 'slug' => $id, 'name' => $d['name'], 'name_bn' => $d['bn'] ?: null, 'category' => 'attraction', 'category_label' => 'Attraction',
+                'subcategory' => 'Destination', 'summary' => $d['summary'], 'locality' => null, 'district' => null, 'region' => $d['region'] ?: null, 'lat' => $lat, 'lng' => $lng,
+                'image' => null, 'verified' => false, 'source' => 'guide', 'is_demo' => false, 'rating' => null, 'opening_hours' => null, 'fee' => null, 'facilities' => [],
+                'accessibility' => null, 'family_friendly' => null, 'links' => ['details' => null, 'map' => 'tour-map.php']];
+            if (count($out) >= $limit) break;
+        }
+        return $out;
+    } catch (Throwable $e) { return []; }
+}
+
 try {
     $action = is_string($_GET['action'] ?? null) ? $_GET['action'] : (is_string($_POST['action'] ?? null) ? $_POST['action'] : '');
     $method = strtoupper((string)($_SERVER['REQUEST_METHOD'] ?? 'GET'));
@@ -125,6 +155,9 @@ try {
         case 'places':
             mapLimit($dbh, 'places', 1500);
             $bbox = MapPlaces::parseBbox(mapStr($_GET['bbox'] ?? '', 120), 30.0);
+            $qEarly = mapStr($_GET['q'] ?? '', 100);
+            // a text search from the list sends no bounding box: search everywhere instead of failing
+            if (!$bbox && ($_GET['bbox'] ?? '') === '' && $qEarly !== '') $bbox = [-180.0, -85.0, 180.0, 85.0];
             if (!$bbox) mapFail(400, 'invalid_bbox', 'bbox must be west,south,east,north in degrees.');
             $f = [
                 'categories' => MapPlaces::parseCategories(mapStr($_GET['categories'] ?? '', 400)),
@@ -137,6 +170,10 @@ try {
             $limit  = mapInt($_GET['limit'] ?? null, 200, 1, 300);
             $offset = mapInt($_GET['offset'] ?? null, 0, 0, 10000);
             $res = $places->inBbox($bbox, $f, $limit, $offset);
+            if ($res['total'] === 0 && $offset === 0 && !array_filter([$f['verified'], $f['family'], $f['accessible'], $f['free'], $f['categories']])) {
+                $bi = mapBuiltinPlaces($dbh, $f['q'], $bbox, $limit);
+                if ($bi) $res = ['total' => count($bi), 'items' => $bi];
+            }
             $payload = ['ok' => true, 'total' => $res['total'], 'items' => $res['items']];
             $etag = '"' . md5((string)json_encode($payload)) . '"';
             header('ETag: ' . $etag);
@@ -166,6 +203,7 @@ try {
             $near = null;
             if (isset($_GET['lat'], $_GET['lng']) && MapPlaces::validCoords($_GET['lat'], $_GET['lng'])) $near = [(float)$_GET['lat'], (float)$_GET['lng']];
             $items = $places->search($q, $near, mapInt($_GET['limit'] ?? null, 8, 1, 20), ['categories' => MapPlaces::parseCategories(mapStr($_GET['categories'] ?? '', 400))]);
+            if (!$items) $items = mapBuiltinPlaces($dbh, $q, null, mapInt($_GET['limit'] ?? null, 8, 1, 20));
             mapOut(['ok' => true, 'items' => $items, 'source' => 'local'], 200, 'private, max-age=30');
 
         // ───────────────────────────────────────────── nearby

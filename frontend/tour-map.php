@@ -2,6 +2,7 @@
 require_once __DIR__ . '/../backend/session-boot.php';
 error_reporting(E_ALL); ini_set('display_errors', '0'); ini_set('log_errors', '1');
 include('backend/config.php');
+require_once __DIR__ . '/../backend/MapConfig.php';
 tms_require_user();   // protected travel service: sign in first, then return here (login.php?redirect=...)
 /**
  * tour-map.php — the tourism map explorer (public page).
@@ -104,7 +105,7 @@ $tmsJson = JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_UN
 <link href="<?php echo tms_asset_ver('css/modern-theme.css'); ?>" rel="stylesheet">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="preconnect" href="https://tiles.openfreemap.org" crossorigin>
+<link rel="preconnect" href="<?php echo MapConfig::maptilerKey() !== '' ? 'https://api.maptiler.com' : 'https://tiles.openfreemap.org'; ?>" crossorigin>
 <link rel="stylesheet" href="js/vendor/maplibre/maplibre-gl.css">
 <link rel="stylesheet" href="<?php echo tms_asset_ver('css/tms-map-ui.css'); ?>">
 <link rel="stylesheet" href="<?php echo tms_asset_ver('css/tms-trips.css'); ?>">
@@ -152,7 +153,7 @@ $tmsJson = JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_UN
         <p class="tms-map-attrib-note">
             <?php echo htmlspecialchars(tms_t('map_attrib', 'Map data © OpenStreetMap contributors. Base map by OpenFreeMap. Routes by OSRM / FOSSGIS.'), ENT_QUOTES, 'UTF-8'); ?>
             <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">OpenStreetMap</a> ·
-            <a href="https://openfreemap.org/" target="_blank" rel="noopener noreferrer">OpenFreeMap</a>
+            <?php if (MapConfig::maptilerKey() !== '') { ?><a href="https://www.maptiler.com/copyright/" target="_blank" rel="noopener noreferrer">MapTiler</a><?php } else { ?><a href="https://openfreemap.org/" target="_blank" rel="noopener noreferrer">OpenFreeMap</a><?php } ?>
         </p>
     </div>
 </div>

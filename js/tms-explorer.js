@@ -582,7 +582,7 @@
         apiCall('geocode', { q: q, lang: LANG }, { timeout: 15000 }).then(function (j) {
             var items = (j.items || []).filter(function (g) { return U.validCoord(g.lat, g.lng); });
             clear(elGeoList);
-            elGeoList.appendChild(h('h3', { class: 'tms-h3', text: T('geo_title', 'Results from the wider web map') }));
+            elGeoList.appendChild(h('h3', { class: 'tms-h3', text: j.source === 'google' ? T('geo_title_google', 'Results from Google Places') : j.source === 'maptiler' ? T('geo_title_maptiler', 'Results from MapTiler') : T('geo_title', 'Results from the wider web map') }));
             if (!items.length) { elGeoList.appendChild(h('p', { class: 'tms-note', text: fmt(T('geo_none', 'Nothing found for “%1”. Check the spelling or try a nearby town.'), q) })); return; }
             elGeoList.appendChild(h('p', { class: 'tms-hint', text: T('geo_note', 'These are general map results, not verified TourBuddy destinations.') }));
             var ul = h('ul', { class: 'tms-geo-ul', role: 'list' });
