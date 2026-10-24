@@ -266,4 +266,5 @@ document.addEventListener('DOMContentLoaded', function() {
 include('backend/chatbot.php');
 ?>
 <script src="js/tms-a11y.js" defer></script>
+<script src="js/tms-suggest.js" defer></script>
 <?php /* Human "Chat with our team" widget removed per user request — Contact page covers this */ ?>

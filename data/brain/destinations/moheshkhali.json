@@ -1,0 +1,186 @@
+{
+ "id": "moheshkhali",
+ "name": "Moheshkhali",
+ "bn": "মহেশখালী",
+ "aliases": [
+  "moheshkhali",
+  "maheshkhali",
+  "moheshkhali island",
+  "mohishkhali",
+  "matarbari"
+ ],
+ "region": "Chattogram Division (Cox's Bazar)",
+ "lat": 21.5,
+ "lng": 91.95,
+ "summary": "A hilly island off Cox Bazar with the Adinath temple, a Buddhist pagoda, betel leaf farms and boat rides.",
+ "best_months": [
+  10,
+  11,
+  12,
+  1,
+  2,
+  3
+ ],
+ "season_note": "Winter is best for sea trips. Rough seas in monsoon.",
+ "tags": [
+  "spiritual",
+  "culture",
+  "nature",
+  "water",
+  "adventure"
+ ],
+ "days": {
+  "min": 1,
+  "ideal": 1
+ },
+ "reach": [
+  {
+   "mode": "Bus + boat",
+   "how": "Bus Dhaka to Cox Bazar, then boat to Moheshkhali (about 1 hr)",
+   "hours": 11,
+   "fare_min": 1000,
+   "fare_max": 2500,
+   "note": "Day trip from Cox Bazar."
+  }
+ ],
+ "local": [
+  {
+   "mode": "Boat from Cox Bazar",
+   "group_fare": "150-400 BDT per person",
+   "note": "Check schedules."
+  },
+  {
+   "mode": "Tom-tom / CNG on island",
+   "group_fare": "100-500 BDT",
+   "note": "Short trips."
+  }
+ ],
+ "attractions": [
+  {
+   "id": "adinath",
+   "name": "Adinath Temple",
+   "area": "Moheshkhali hill",
+   "tags": [
+    "spiritual",
+    "culture",
+    "photography"
+   ],
+   "mins": 60,
+   "fee": 0,
+   "what": "A Hindu temple on a hill with sea views.",
+   "tip": "Dress modestly.",
+   "best": "morning",
+   "indoor": false
+  },
+  {
+   "id": "buddhist",
+   "name": "Buddhist pagoda",
+   "area": "Moheshkhali",
+   "tags": [
+    "spiritual",
+    "culture"
+   ],
+   "mins": 45,
+   "fee": 0,
+   "what": "Peaceful Buddhist temple.",
+   "tip": "Remove shoes.",
+   "best": "afternoon",
+   "indoor": false
+  },
+  {
+   "id": "betel",
+   "name": "Betel leaf farms",
+   "area": "Village",
+   "tags": [
+    "culture",
+    "nature"
+   ],
+   "mins": 45,
+   "fee": 0,
+   "what": "Betel leaf cultivation is a local specialty.",
+   "tip": "Ask permission.",
+   "best": "morning",
+   "indoor": false
+  },
+  {
+   "id": "boat",
+   "name": "Boat crossing",
+   "area": "Channel",
+   "tags": [
+    "water",
+    "adventure"
+   ],
+   "mins": 60,
+   "fee": 0,
+   "what": "The crossing from Cox Bazar is scenic.",
+   "tip": "Wear a life jacket.",
+   "best": "morning",
+   "indoor": false
+  },
+  {
+   "id": "hill-walk",
+   "name": "Hill and forest walk",
+   "area": "Moheshkhali",
+   "tags": [
+    "nature"
+   ],
+   "mins": 90,
+   "fee": 0,
+   "what": "Short walks on island hills.",
+   "tip": "Wear shoes.",
+   "best": "morning",
+   "indoor": false
+  }
+ ],
+ "food": [
+  {
+   "dish": "Fresh seafood",
+   "where": "Local restaurants",
+   "cost": 400
+  },
+  {
+   "dish": "Dry fish curry",
+   "where": "Villages",
+   "cost": 250
+  },
+  {
+   "dish": "Tea",
+   "where": "Stalls",
+   "cost": 20
+  }
+ ],
+ "stay": {
+  "budget": {
+   "area": "Stay in Cox Bazar budget hotel",
+   "price_min": 1000,
+   "price_max": 2500,
+   "note": "Day-trip friendly."
+  },
+  "mid": {
+   "area": "Hotel in Cox Bazar",
+   "price_min": 3500,
+   "price_max": 7000,
+   "note": "Mid range."
+  },
+  "luxury": {
+   "area": "Resort in Cox Bazar",
+   "price_min": 8000,
+   "price_max": 15000,
+   "note": "See Cox Bazar."
+  }
+ },
+ "rules": [
+  "Dress modestly at temples.",
+  "Wear a life jacket on boats."
+ ],
+ "packing": [
+  "Sunscreen",
+  "Hat",
+  "Water"
+ ],
+ "nearby": [
+  "coxs-bazar",
+  "saint-martin"
+ ],
+ "country": "Bangladesh"
+}

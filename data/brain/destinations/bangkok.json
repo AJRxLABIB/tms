@@ -1,0 +1,259 @@
+{
+ "id": "bangkok",
+ "name": "Bangkok",
+ "bn": "ব্যাংকক",
+ "aliases": [
+  "bankok",
+  "bangkock",
+  "bangkok thailand",
+  "krung thep",
+  "thailand"
+ ],
+ "country": "Thailand",
+ "region": "Central Thailand",
+ "lat": 13.7563,
+ "lng": 100.5018,
+ "summary": "Thailand's vibrant capital: golden temples, floating markets, street food, shopping malls and nightlife.",
+ "best_months": [
+  11,
+  12,
+  1,
+  2,
+  3
+ ],
+ "season_note": "November to February is cool and dry. March-May is very hot; rainy season June-October.",
+ "avoid_note": "April is extremely hot (Songkran water festival 13-15 April).",
+ "tags": [
+  "city",
+  "culture",
+  "food",
+  "shopping",
+  "history",
+  "family",
+  "spiritual"
+ ],
+ "days": {
+  "min": 3,
+  "ideal": 4
+ },
+ "emergency": {
+  "police": "191 (police), 1155 tourist police",
+  "ambulance": "1669"
+ },
+ "entry_note": "Thailand: visa required for Bangladeshi passport holders (e-visa via the Thai e-visa portal); check the latest rules with the embassy before booking.",
+ "reach": [
+  {
+   "mode": "Flight",
+   "how": "Dhaka to Suvarnabhumi or Don Mueang (Biman, US-Bangla, Thai, Bangladeshi carriers)",
+   "hours": 2.5,
+   "fare_min": 14000,
+   "fare_max": 26000,
+   "note": "About 2h30m; direct options from Dhaka."
+  }
+ ],
+ "local": [
+  {
+   "mode": "BTS Skytrain / MRT",
+   "group_fare": "30-120 BDT per ride",
+   "note": "Best way to avoid traffic."
+  },
+  {
+   "mode": "Tuk-tuk / taxi",
+   "group_fare": "300-1000 BDT",
+   "note": "Insist on meter; avoid scams."
+  },
+  {
+   "mode": "Chao Phraya Express Boat",
+   "group_fare": "40-60 BDT",
+   "note": "Great for temples."
+  }
+ ],
+ "attractions": [
+  {
+   "id": "grand-palace",
+   "name": "Grand Palace and Wat Phra Kaew",
+   "area": "Old City",
+   "tags": [
+    "history",
+    "culture",
+    "spiritual",
+    "photography"
+   ],
+   "mins": 180,
+   "fee": 1600,
+   "what": "Spectacular royal complex with the Emerald Buddha.",
+   "tip": "Strict dress code: covered shoulders and knees.",
+   "best": "morning",
+   "indoor": false
+  },
+  {
+   "id": "wat-pho",
+   "name": "Wat Pho (Reclining Buddha)",
+   "area": "Old City",
+   "tags": [
+    "history",
+    "spiritual"
+   ],
+   "mins": 90,
+   "fee": 500,
+   "what": "Giant gold reclining Buddha and massage school.",
+   "tip": "Combine with Wat Arun.",
+   "best": "morning",
+   "indoor": false
+  },
+  {
+   "id": "wat-arun",
+   "name": "Wat Arun",
+   "area": "Thonburi",
+   "tags": [
+    "history",
+    "spiritual",
+    "photography"
+   ],
+   "mins": 60,
+   "fee": 100,
+   "what": "Riverside temple glittering at sunset.",
+   "tip": "Best viewed across the river at sunset.",
+   "best": "sunset",
+   "indoor": false
+  },
+  {
+   "id": "chatuchak",
+   "name": "Chatuchak Weekend Market",
+   "area": "Chatuchak",
+   "tags": [
+    "shopping",
+    "food",
+    "culture"
+   ],
+   "mins": 240,
+   "fee": 0,
+   "what": "A huge market with 15,000 stalls on weekends.",
+   "tip": "Go early; Sat-Sun.",
+   "best": "morning",
+   "indoor": false
+  },
+  {
+   "id": "floating-market",
+   "name": "Damnoen Saduak Floating Market",
+   "area": "Ratchaburi, 100 km",
+   "tags": [
+    "culture",
+    "photography",
+    "family"
+   ],
+   "mins": 240,
+   "fee": 1100,
+   "what": "Traditional boat market (touristy).",
+   "tip": "Go early with tour.",
+   "best": "morning",
+   "indoor": false
+  },
+  {
+   "id": "siam",
+   "name": "Siam Paragon and MBK",
+   "area": "Siam",
+   "tags": [
+    "shopping",
+    "city"
+   ],
+   "mins": 240,
+   "fee": 0,
+   "what": "Malls for brands, bargains and food courts.",
+   "tip": "Bargain in MBK; check tax refund.",
+   "best": "afternoon",
+   "indoor": true
+  },
+  {
+   "id": "jim-thompson",
+   "name": "Jim Thompson House",
+   "area": "Siam",
+   "tags": [
+    "history",
+    "culture"
+   ],
+   "mins": 75,
+   "fee": 500,
+   "what": "Teak house museum of the Thai silk king.",
+   "tip": "Guided tour only.",
+   "best": "any",
+   "indoor": true
+  },
+  {
+   "id": "chinatown",
+   "name": "Yaowarat (Chinatown)",
+   "area": "Samphanthawong",
+   "tags": [
+    "food",
+    "culture",
+    "city"
+   ],
+   "mins": 150,
+   "fee": 0,
+   "what": "Famous street food lanes at night.",
+   "tip": "Go after 6pm; halal options are limited so ask.",
+   "best": "sunset",
+   "indoor": false
+  }
+ ],
+ "food": [
+  {
+   "dish": "Pad Thai",
+   "where": "Street vendors",
+   "cost": 150
+  },
+  {
+   "dish": "Tom yum goong",
+   "where": "Restaurants",
+   "cost": 350
+  },
+  {
+   "dish": "Mango sticky rice",
+   "where": "Street stalls",
+   "cost": 150
+  },
+  {
+   "dish": "Halal Thai food",
+   "where": "Halal restaurants around Sukhumvit Soi 3 (Nana)",
+   "cost": 350
+  }
+ ],
+ "stay": {
+  "budget": {
+   "area": "Khao San, Sukhumvit",
+   "price_min": 2500,
+   "price_max": 5500,
+   "note": "Hostels and budget hotels."
+  },
+  "mid": {
+   "area": "Sukhumvit, Silom, Siam",
+   "price_min": 6500,
+   "price_max": 14000,
+   "note": "3-4 star hotels."
+  },
+  "luxury": {
+   "area": "Riverside, Silom",
+   "price_min": 16000,
+   "price_max": 45000,
+   "note": "5-star hotels."
+  }
+ },
+ "rules": [
+  "Dress modestly in temples (shoulders and knees covered).",
+  "Insulting the monarchy is a serious crime.",
+  "Vaping is banned and carries heavy fines.",
+  "Do not touch monks (women)."
+ ],
+ "packing": [
+  "Light cotton clothes",
+  "Sunscreen",
+  "Umbrella",
+  "Modest cover-up for temples",
+  "Cash in THB"
+ ],
+ "nearby": [
+  "pattaya",
+  "phuket",
+  "chiang-mai"
+ ]
+}

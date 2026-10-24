@@ -147,7 +147,14 @@ $bad = new FakeCache(); $ct = 0;
 MapGeocoder::_setTestHooks(function () use (&$ct) { $ct++; return null; }, $bad, function () use (&$now) { return $now += 5; }, function () {}, 'c2', $lock);
 $r = MapGeocoder::search('Bandarban', null);
 MapGeocoder::search('Bandarban', null);
-t('search: failure reported and negative-cached', !$r['ok'] && $ct === 1);
+t('search: failure reported and negative-cached (Nominatim, then Photon, once; the repeat is cached)', !$r['ok'] && $ct === 2);
+// Photon fallback: Nominatim refuses (403), Photon answers
+$ph = new FakeCache(); $calls = [];
+MapGeocoder::_setTestHooks(function ($url) use (&$calls) { $calls[] = $url; if (str_contains($url, 'photon.komoot.io')) return ['status' => 200, 'body' => json_encode(['type' => 'FeatureCollection', 'features' => [['properties' => ['name' => "St. Martin's Island", 'city' => "Cox's Bazar", 'country' => 'Bangladesh', 'osm_key' => 'place', 'osm_value' => 'island', 'extent' => [92.31, 20.63, 92.33, 20.57]], 'geometry' => ['type' => 'Point', 'coordinates' => [92.327, 20.611]]], ['properties' => ['name' => 'Bad'], 'geometry' => ['type' => 'Point', 'coordinates' => [500, 20]]]]])]; return ['status' => 403, 'body' => 'blocked']; }, $ph, function () use (&$now) { return $now += 5; }, function () {}, 'c3', $lock);
+$r = MapGeocoder::search('Saint Martin island', null);
+t('photon fallback: used when Nominatim answers 403', !empty($r['ok']) && $r['source'] === 'photon' && count($r['items']) === 1 && abs($r['items'][0]['lat'] - 20.611) < 1e-9 && $r['items'][0]['display'] === "St. Martin's Island, Cox's Bazar, Bangladesh");
+t('photon fallback: out-of-range coordinates dropped and bbox read', empty($r['items'][0]['bbox']) === false && $r['items'][0]['bbox'][1] === 20.57);
+t('photon fallback: pure parser rejects a non-FeatureCollection', MapGeocoder::parsePhoton(200, '{"x":1}')['ok'] === false && MapGeocoder::parsePhoton(429, '')['error']['code'] === 'rate_limited');
 $cap = new FakeCache(); $cc = 0;
 MapGeocoder::_setTestHooks(function () use (&$cc) { $cc++; return ['status' => 200, 'body' => '[]']; }, $cap, function () use (&$now) { return $now += 5; }, function () {}, 'c3', $lock);
 $last = null;

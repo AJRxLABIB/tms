@@ -1,0 +1,187 @@
+{
+ "id": "munshiganj",
+ "name": "Munshiganj (Padma)",
+ "bn": "মুন্সীগঞ্জ",
+ "aliases": [
+  "munshiganj",
+  "munshigonj",
+  "munshiganj padma",
+  "padma bridge munshiganj",
+  "mawa",
+  "mawa ghat"
+ ],
+ "region": "Dhaka Division",
+ "lat": 23.55,
+ "lng": 90.53,
+ "summary": "A riverside district at the Padma with Mawa ghat, the Padma Bridge approach, Idrakpur Fort and Bikrampur history.",
+ "best_months": [
+  10,
+  11,
+  12,
+  1,
+  2,
+  3
+ ],
+ "season_note": "Winter is dry. Monsoon is rough on the river.",
+ "tags": [
+  "water",
+  "history",
+  "culture",
+  "family",
+  "food"
+ ],
+ "days": {
+  "min": 1,
+  "ideal": 1
+ },
+ "reach": [
+  {
+   "mode": "Bus",
+   "how": "Bus or CNG from Dhaka (Gulistan) to Munshiganj or Mawa",
+   "hours": 2,
+   "fare_min": 80,
+   "fare_max": 400,
+   "note": "Traffic is heavy; start early."
+  }
+ ],
+ "local": [
+  {
+   "mode": "CNG / rickshaw",
+   "group_fare": "50-300 BDT in town",
+   "note": "Agree fare first."
+  },
+  {
+   "mode": "Boat on the Padma",
+   "group_fare": "1000-3000 BDT per boat",
+   "note": "Bargain."
+  }
+ ],
+ "attractions": [
+  {
+   "id": "mawa",
+   "name": "Mawa ghat and Padma Bridge view",
+   "area": "Mawa",
+   "tags": [
+    "water",
+    "photography",
+    "family"
+   ],
+   "mins": 90,
+   "fee": 0,
+   "what": "View the Padma river and the great bridge from the bank.",
+   "tip": "Go in late afternoon.",
+   "best": "sunset",
+   "indoor": false
+  },
+  {
+   "id": "idrakpur",
+   "name": "Idrakpur Fort",
+   "area": "Munshiganj",
+   "tags": [
+    "history"
+   ],
+   "mins": 45,
+   "fee": 0,
+   "what": "A Mughal-era river fort.",
+   "tip": "Check access.",
+   "best": "afternoon",
+   "indoor": false
+  },
+  {
+   "id": "bikrampur",
+   "name": "Bikrampur historical area",
+   "area": "Bikrampur",
+   "tags": [
+    "history",
+    "culture"
+   ],
+   "mins": 90,
+   "fee": 0,
+   "what": "Region of old Buddhist and Hindu heritage; home of scholar Atish Dipankar.",
+   "tip": "Ask locals for sites.",
+   "best": "morning",
+   "indoor": false
+  },
+  {
+   "id": "padma-boat",
+   "name": "Padma boat ride",
+   "area": "Mawa",
+   "tags": [
+    "water",
+    "adventure"
+   ],
+   "mins": 90,
+   "fee": 0,
+   "what": "Hired boat trip with views of the river.",
+   "tip": "Wear a life jacket.",
+   "best": "sunset",
+   "indoor": false
+  },
+  {
+   "id": "hilsa",
+   "name": "Fresh fish at the ghat",
+   "area": "Mawa",
+   "tags": [
+    "food"
+   ],
+   "mins": 45,
+   "fee": 0,
+   "what": "Riverside restaurants serve fresh fish.",
+   "tip": "Check prices before ordering.",
+   "best": "any",
+   "indoor": false
+  }
+ ],
+ "food": [
+  {
+   "dish": "Fresh river fish",
+   "where": "Mawa restaurants",
+   "cost": 400
+  },
+  {
+   "dish": "Hilsa fry",
+   "where": "Restaurants",
+   "cost": 450
+  },
+  {
+   "dish": "Tea",
+   "where": "Stalls",
+   "cost": 20
+  }
+ ],
+ "stay": {
+  "budget": {
+   "area": "No stay at the site; use the nearby town",
+   "price_min": 0,
+   "price_max": 0,
+   "note": "Day-trip place."
+  },
+  "mid": {
+   "area": "No stay at the site; use the nearby town",
+   "price_min": 0,
+   "price_max": 0,
+   "note": "Day-trip place."
+  },
+  "luxury": {
+   "area": "No stay at the site; use the nearby town",
+   "price_min": 0,
+   "price_max": 0,
+   "note": "Day-trip place."
+  }
+ },
+ "rules": [
+  "Be careful near river edges.",
+  "No littering."
+ ],
+ "packing": [
+  "Sunscreen",
+  "Water",
+  "Light clothes"
+ ],
+ "nearby": [
+  "dhaka",
+  "sonargaon",
+  "manikganj"
+ ],
+ "country": "Bangladesh"
+}

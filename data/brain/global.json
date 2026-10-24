@@ -1,0 +1,266 @@
+{
+ "meals": {
+  "budget": {
+   "breakfast": 80,
+   "lunch": 160,
+   "dinner": 200
+  },
+  "mid": {
+   "breakfast": 160,
+   "lunch": 320,
+   "dinner": 420
+  },
+  "luxury": {
+   "breakfast": 350,
+   "lunch": 650,
+   "dinner": 850
+  }
+ },
+ "local_transport_per_day": {
+  "budget": 250,
+  "mid": 600,
+  "luxury": 1500
+ },
+ "tier_from_accommodation": {
+  "hotel": "mid",
+  "resort": "luxury",
+  "budget": "budget",
+  "luxury": "luxury",
+  "camping": "budget",
+  "mid": "mid"
+ },
+ "tier_from_style": {
+  "family": "mid",
+  "couple": "mid",
+  "solo": "budget",
+  "adventure": "budget",
+  "group": "budget",
+  "leisure": "mid"
+ },
+ "interest_words": {
+  "beach": [
+   "beach",
+   "sea",
+   "coast",
+   "sand",
+   "ocean",
+   "samudra",
+   "shagor",
+   "sagar",
+   "সমুদ্র",
+   "সৈকত"
+  ],
+  "hills": [
+   "hill",
+   "hills",
+   "mountain",
+   "pahar",
+   "peak",
+   "cloud",
+   "পাহাড়"
+  ],
+  "adventure": [
+   "adventure",
+   "trek",
+   "trekking",
+   "hiking",
+   "hike",
+   "camp",
+   "camping",
+   "cave",
+   "rafting",
+   "kayak",
+   "climb"
+  ],
+  "nature": [
+   "nature",
+   "forest",
+   "jungle",
+   "wildlife",
+   "bird",
+   "birds",
+   "green",
+   "waterfall",
+   "lake",
+   "river",
+   "swamp",
+   "mangrove",
+   "প্রকৃতি"
+  ],
+  "wildlife": [
+   "wildlife",
+   "tiger",
+   "deer",
+   "bird",
+   "birds",
+   "gibbon",
+   "animal"
+  ],
+  "history": [
+   "history",
+   "historic",
+   "heritage",
+   "fort",
+   "museum",
+   "ruins",
+   "ancient",
+   "archaeology",
+   "mosque",
+   "palace",
+   "temple",
+   "ইতিহাস"
+  ],
+  "culture": [
+   "culture",
+   "cultural",
+   "tribal",
+   "village",
+   "local life",
+   "handloom",
+   "craft",
+   "festival",
+   "art"
+  ],
+  "food": [
+   "food",
+   "eat",
+   "eating",
+   "restaurant",
+   "street food",
+   "seafood",
+   "biryani",
+   "cuisine",
+   "khabar",
+   "খাবার"
+  ],
+  "photography": [
+   "photo",
+   "photography",
+   "photos",
+   "instagram",
+   "scenery",
+   "view",
+   "views",
+   "sunset",
+   "sunrise"
+  ],
+  "relaxing": [
+   "relax",
+   "relaxing",
+   "peace",
+   "peaceful",
+   "quiet",
+   "calm",
+   "chill",
+   "rest"
+  ],
+  "family": [
+   "family",
+   "kids",
+   "children",
+   "child",
+   "parents",
+   "elderly"
+  ],
+  "romantic": [
+   "romantic",
+   "honeymoon",
+   "couple",
+   "anniversary",
+   "date"
+  ],
+  "spiritual": [
+   "spiritual",
+   "shrine",
+   "dargah",
+   "pilgrim",
+   "temple",
+   "mosque",
+   "buddhist"
+  ],
+  "tea": [
+   "tea",
+   "tea garden",
+   "tea estate"
+  ],
+  "water": [
+   "boat",
+   "river",
+   "lake",
+   "water",
+   "launch",
+   "cruise",
+   "haor",
+   "swim",
+   "snorkel"
+  ],
+  "shopping": [
+   "shopping",
+   "market",
+   "souvenir",
+   "buy",
+   "handicraft"
+  ],
+  "city": [
+   "city",
+   "urban",
+   "nightlife",
+   "mall"
+  ]
+ },
+ "month_names": {
+  "january": 1,
+  "jan": 1,
+  "february": 2,
+  "feb": 2,
+  "march": 3,
+  "mar": 3,
+  "april": 4,
+  "apr": 4,
+  "may": 5,
+  "june": 6,
+  "jun": 6,
+  "july": 7,
+  "jul": 7,
+  "august": 8,
+  "aug": 8,
+  "september": 9,
+  "sep": 9,
+  "sept": 9,
+  "october": 10,
+  "oct": 10,
+  "november": 11,
+  "nov": 11,
+  "december": 12,
+  "dec": 12,
+  "winter": 12,
+  "summer": 4,
+  "monsoon": 7,
+  "rainy": 7,
+  "শীত": 12,
+  "গ্রীষ্ম": 4,
+  "বর্ষা": 7
+ },
+ "road_factor": 1.35,
+ "bus_fare_per_km": {
+  "budget": 2.0,
+  "mid": 3.0,
+  "luxury": 4.5
+ },
+ "bus_kmh": 42,
+ "month_labels": [
+  "",
+  "January",
+  "February",
+  "March",
+  "April",
+  "May",
+  "June",
+  "July",
+  "August",
+  "September",
+  "October",
+  "November",
+  "December"
+ ]
+}

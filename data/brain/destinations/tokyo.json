@@ -1,0 +1,245 @@
+{
+ "id": "tokyo",
+ "name": "Tokyo",
+ "bn": "টোকিও",
+ "aliases": [
+  "tokio",
+  "tokyo japan",
+  "japan",
+  "toyko"
+ ],
+ "country": "Japan",
+ "region": "Kanto",
+ "lat": 35.6762,
+ "lng": 139.6503,
+ "summary": "Futuristic and traditional: Shibuya crossing, Asakusa, temples, shopping, anime culture and Mount Fuji day trips.",
+ "best_months": [
+  3,
+  4,
+  10,
+  11
+ ],
+ "season_note": "March-April (cherry blossom) and October-November (autumn colours) are the best. Summer is hot and humid; winter is dry and cold.",
+ "avoid_note": "Typhoons in late summer.",
+ "tags": [
+  "city",
+  "culture",
+  "food",
+  "shopping",
+  "photography",
+  "family",
+  "history"
+ ],
+ "days": {
+  "min": 5,
+  "ideal": 6
+ },
+ "emergency": {
+  "police": "110",
+  "ambulance": "119"
+ },
+ "entry_note": "Japan: visa required for Bangladeshi passport holders (apply at Japanese Embassy or authorised agencies); check the latest rules with the embassy before booking.",
+ "reach": [
+  {
+   "mode": "Flight",
+   "how": "Dhaka to Narita or Haneda (via Bangkok/Singapore/Kuala Lumpur) (Biman, Thai, Singapore Airlines, Malaysia Airlines)",
+   "hours": 10,
+   "fare_min": 55000,
+   "fare_max": 95000,
+   "note": "Usually one stop; Biman direct to Tokyo is limited."
+  }
+ ],
+ "local": [
+  {
+   "mode": "Metro / JR trains",
+   "group_fare": "100-500 BDT per ride",
+   "note": "Use Suica or Pasmo card."
+  },
+  {
+   "mode": "Taxi",
+   "group_fare": "1500-4500 BDT",
+   "note": "Expensive."
+  }
+ ],
+ "attractions": [
+  {
+   "id": "senso-ji",
+   "name": "Senso-ji Temple",
+   "area": "Asakusa",
+   "tags": [
+    "history",
+    "spiritual",
+    "culture",
+    "photography"
+   ],
+   "mins": 90,
+   "fee": 0,
+   "what": "Tokyo's oldest Buddhist temple.",
+   "tip": "Go early.",
+   "best": "morning",
+   "indoor": false
+  },
+  {
+   "id": "shibuya",
+   "name": "Shibuya Crossing",
+   "area": "Shibuya",
+   "tags": [
+    "city",
+    "photography"
+   ],
+   "mins": 45,
+   "fee": 0,
+   "what": "The world's busiest crossing.",
+   "tip": "See from Shibuya Sky.",
+   "best": "sunset",
+   "indoor": false
+  },
+  {
+   "id": "meiji",
+   "name": "Meiji Shrine",
+   "area": "Harajuku",
+   "tags": [
+    "spiritual",
+    "nature"
+   ],
+   "mins": 90,
+   "fee": 0,
+   "what": "Forest shrine.",
+   "tip": "Quiet morning.",
+   "best": "morning",
+   "indoor": false
+  },
+  {
+   "id": "tokyo-tower",
+   "name": "Tokyo Skytree or Tokyo Tower",
+   "area": "Sumida/Minato",
+   "tags": [
+    "city",
+    "photography"
+   ],
+   "mins": 90,
+   "fee": 2500,
+   "what": "Observation decks.",
+   "tip": "Book online.",
+   "best": "sunset",
+   "indoor": false
+  },
+  {
+   "id": "akihabara",
+   "name": "Akihabara",
+   "area": "Akihabara",
+   "tags": [
+    "shopping",
+    "culture"
+   ],
+   "mins": 150,
+   "fee": 0,
+   "what": "Anime and electronics.",
+   "tip": "Check tax-free shopping rules.",
+   "best": "afternoon",
+   "indoor": false
+  },
+  {
+   "id": "fuji",
+   "name": "Mount Fuji Day Trip (Hakone/Kawaguchiko)",
+   "area": "Yamanashi",
+   "tags": [
+    "nature",
+    "photography"
+   ],
+   "mins": 600,
+   "fee": 6000,
+   "what": "Day trip to see Mount Fuji.",
+   "tip": "Clear mornings best.",
+   "best": "morning",
+   "indoor": false
+  },
+  {
+   "id": "disney",
+   "name": "Tokyo Disneyland and DisneySea",
+   "area": "Chiba",
+   "tags": [
+    "family"
+   ],
+   "mins": 480,
+   "fee": 10000,
+   "what": "Theme parks.",
+   "tip": "Buy tickets in advance.",
+   "best": "morning",
+   "indoor": false
+  },
+  {
+   "id": "tsukiji",
+   "name": "Toyosu and Tsukiji Outer Market",
+   "area": "Chuo",
+   "tags": [
+    "food",
+    "culture"
+   ],
+   "mins": 120,
+   "fee": 0,
+   "what": "Fresh sushi and tamagoyaki.",
+   "tip": "Go early.",
+   "best": "morning",
+   "indoor": false
+  }
+ ],
+ "food": [
+  {
+   "dish": "Ramen",
+   "where": "Local shops",
+   "cost": 900
+  },
+  {
+   "dish": "Sushi",
+   "where": "Conveyor belt shops",
+   "cost": 1500
+  },
+  {
+   "dish": "Halal ramen",
+   "where": "Halal restaurants near Ueno/Shinjuku",
+   "cost": 1300
+  },
+  {
+   "dish": "Onigiri",
+   "where": "Konbini",
+   "cost": 250
+  }
+ ],
+ "stay": {
+  "budget": {
+   "area": "Asakusa, Ueno",
+   "price_min": 7000,
+   "price_max": 13000,
+   "note": "Hostels and capsule."
+  },
+  "mid": {
+   "area": "Shinjuku, Asakusa",
+   "price_min": 15000,
+   "price_max": 28000,
+   "note": "Business hotels."
+  },
+  "luxury": {
+   "area": "Ginza, Shinjuku",
+   "price_min": 40000,
+   "price_max": 100000,
+   "note": "5-star hotels."
+  }
+ },
+ "rules": [
+  "Do not tip.",
+  "Be quiet on trains; no phone calls.",
+  "Remove shoes indoors; tattoos restricted in onsen.",
+  "Carry cash."
+ ],
+ "packing": [
+  "Comfortable walking shoes",
+  "Light layers",
+  "Power adapter",
+  "Compact umbrella",
+  "Pocket wifi"
+ ],
+ "nearby": [
+  "seoul"
+ ]
+}

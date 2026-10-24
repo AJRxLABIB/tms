@@ -1,0 +1,169 @@
+{
+ "id": "khagrachhari",
+ "name": "Khagrachhari",
+ "bn": "খাগড়াছড়ি",
+ "aliases": [
+  "khagrachari",
+  "khagrachori",
+  "khagrachhari hill"
+ ],
+ "region": "Chattogram Hill Tracts",
+ "lat": 23.1193,
+ "lng": 91.9847,
+ "summary": "A hill town with waterfalls, the Alutila cave and Richhang waterfall, and the gateway to Sajek Valley.",
+ "best_months": [
+  10,
+  11,
+  12,
+  1,
+  2,
+  3
+ ],
+ "season_note": "Dry months are easier. Some waterfalls are best after rain.",
+ "avoid_note": "Check the current advisory before travelling. Sajek roads follow convoy times.",
+ "tags": [
+  "hills",
+  "nature",
+  "adventure",
+  "culture",
+  "water"
+ ],
+ "days": {
+  "min": 1,
+  "ideal": 2
+ },
+ "reach": [
+  {
+   "mode": "Bus",
+   "how": "AC coach from Dhaka (Sayedabad, Fakirapool) - Shanti, Hanif and others",
+   "hours": 6,
+   "fare_min": 700,
+   "fare_max": 1400,
+   "note": "About 6 to 8 hours."
+  }
+ ],
+ "local": [
+  {
+   "mode": "CNG / Chander Gari",
+   "group_fare": "300-1500 BDT per trip",
+   "note": "Hire for the day for the sights."
+  }
+ ],
+ "attractions": [
+  {
+   "id": "alutila",
+   "name": "Alutila Cave",
+   "area": "Alutila",
+   "tags": [
+    "adventure",
+    "nature"
+   ],
+   "mins": 90,
+   "fee": 40,
+   "what": "A dark natural cave you enter with a guide and a torch.",
+   "tip": "Wear shoes you can get wet.",
+   "best": "morning",
+   "indoor": false
+  },
+  {
+   "id": "richhang",
+   "name": "Richhang Waterfall",
+   "area": "Matiranga",
+   "tags": [
+    "nature",
+    "water"
+   ],
+   "mins": 150,
+   "fee": 50,
+   "what": "A waterfall with a pool, popular with local visitors.",
+   "tip": "Best after rain.",
+   "best": "morning",
+   "indoor": false
+  },
+  {
+   "id": "tabalchari",
+   "name": "Tabalchari and hill view",
+   "area": "Tabalchari",
+   "tags": [
+    "hills",
+    "photography"
+   ],
+   "mins": 90,
+   "fee": 20,
+   "what": "A quiet viewpoint over the hills.",
+   "tip": "Go in the morning.",
+   "best": "morning",
+   "indoor": false
+  },
+  {
+   "id": "tribal-museum2",
+   "name": "Tribal Museum and market",
+   "area": "Town",
+   "tags": [
+    "culture"
+   ],
+   "mins": 60,
+   "fee": 10,
+   "what": "Learn about local peoples and see crafts.",
+   "tip": "Check the opening time.",
+   "best": "afternoon",
+   "indoor": true
+  },
+  {
+   "id": "peaceful",
+   "name": "Shanti Kunja / Mahamuni Vihara visit",
+   "area": "Town",
+   "tags": [
+    "spiritual",
+    "culture"
+   ],
+   "mins": 60,
+   "fee": 0,
+   "what": "A peaceful temple visit.",
+   "tip": "Dress modestly.",
+   "best": "afternoon",
+   "indoor": true
+  }
+ ],
+ "food": [
+  {
+   "dish": "Hill-style chicken and local vegetables",
+   "where": "Town restaurants",
+   "cost": 250
+  }
+ ],
+ "stay": {
+  "budget": {
+   "area": "Town",
+   "price_min": 1200,
+   "price_max": 2500,
+   "note": ""
+  },
+  "mid": {
+   "area": "Town and hill",
+   "price_min": 3000,
+   "price_max": 6000,
+   "note": ""
+  },
+  "luxury": {
+   "area": "Resorts",
+   "price_min": 6500,
+   "price_max": 12000,
+   "note": ""
+  }
+ },
+ "rules": [
+  "Respect local customs and ask before taking photos.",
+  "Carry cash."
+ ],
+ "packing": [
+  "Torch",
+  "Rain jacket",
+  "Sturdy shoes"
+ ],
+ "nearby": [
+  "sajek",
+  "rangamati"
+ ],
+ "country": "Bangladesh"
+}

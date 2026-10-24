@@ -1,0 +1,240 @@
+{
+ "id": "goa",
+ "name": "Goa",
+ "bn": "গোয়া",
+ "aliases": [
+  "goa india",
+  "goa beach",
+  "goaa",
+  "panjim"
+ ],
+ "country": "India",
+ "region": "Goa",
+ "lat": 15.2993,
+ "lng": 74.124,
+ "summary": "India's beach state with Portuguese churches, nightlife, seafood and quiet southern coves.",
+ "best_months": [
+  11,
+  12,
+  1,
+  2,
+  3
+ ],
+ "season_note": "November to March is dry and sunny and peak season. Monsoon (June-Sept) closes beach shacks and water sports.",
+ "avoid_note": "Monsoon beaches are dangerous for swimming.",
+ "tags": [
+  "beach",
+  "food",
+  "relaxing",
+  "history",
+  "culture",
+  "family",
+  "romantic",
+  "adventure"
+ ],
+ "days": {
+  "min": 3,
+  "ideal": 5
+ },
+ "emergency": {
+  "police": "100 (or 112)",
+  "ambulance": "102 or 108"
+ },
+ "entry_note": "Indian visa is required for Bangladeshi passport holders (apply via the Indian Visa Application Centre; category as currently offered). Check the latest rules with the embassy before booking.",
+ "reach": [
+  {
+   "mode": "Flight",
+   "how": "Dhaka to Dabolim or Manohar (Mopa) airports (via Kolkata/Delhi/Bengaluru) (Biman, US-Bangla, IndiGo, Air India; often via Kolkata)",
+   "hours": 7,
+   "fare_min": 16000,
+   "fare_max": 32000,
+   "note": "Usually 1 stop, connecting in India."
+  },
+  {
+   "mode": "Train",
+   "how": "Kolkata to Madgaon, long haul",
+   "hours": 36,
+   "fare_min": 2500,
+   "fare_max": 6000,
+   "note": "Only if you have time."
+  }
+ ],
+ "local": [
+  {
+   "mode": "Scooter hire",
+   "group_fare": "400-700 BDT per day",
+   "note": "Need license; wear helmet."
+  },
+  {
+   "mode": "Taxi",
+   "group_fare": "500-2500 BDT per ride",
+   "note": "Pre-agree fare or use app."
+  }
+ ],
+ "attractions": [
+  {
+   "id": "baga",
+   "name": "Baga and Calangute Beach",
+   "area": "North Goa",
+   "tags": [
+    "beach",
+    "adventure",
+    "family"
+   ],
+   "mins": 180,
+   "fee": 0,
+   "what": "Busy beaches with water sports and shacks.",
+   "tip": "Check weather flags; avoid swimming in monsoon.",
+   "best": "afternoon",
+   "indoor": false
+  },
+  {
+   "id": "palolem",
+   "name": "Palolem Beach",
+   "area": "South Goa",
+   "tags": [
+    "beach",
+    "relaxing",
+    "romantic"
+   ],
+   "mins": 180,
+   "fee": 0,
+   "what": "A calm crescent beach with kayaks and quiet huts.",
+   "tip": "Dolphin trips available.",
+   "best": "morning",
+   "indoor": false
+  },
+  {
+   "id": "old-goa",
+   "name": "Old Goa Churches",
+   "area": "Old Goa",
+   "tags": [
+    "history",
+    "culture",
+    "spiritual"
+   ],
+   "mins": 120,
+   "fee": 0,
+   "what": "UNESCO Portuguese churches including Basilica of Bom Jesus.",
+   "tip": "Dress modestly; closed during mass.",
+   "best": "morning",
+   "indoor": true
+  },
+  {
+   "id": "fort-aguada",
+   "name": "Fort Aguada",
+   "area": "Candolim",
+   "tags": [
+    "history",
+    "photography"
+   ],
+   "mins": 60,
+   "fee": 50,
+   "what": "A 17th-century Portuguese fort with lighthouse.",
+   "tip": "Sunset views are good.",
+   "best": "sunset",
+   "indoor": false
+  },
+  {
+   "id": "dudhsagar",
+   "name": "Dudhsagar Waterfalls",
+   "area": "Mollem, 60 km",
+   "tags": [
+    "nature",
+    "adventure",
+    "photography"
+   ],
+   "mins": 300,
+   "fee": 500,
+   "what": "A massive four-tier waterfall via jeep safari.",
+   "tip": "Best Oct-Feb; jeeps run from Mollem.",
+   "best": "morning",
+   "indoor": false
+  },
+  {
+   "id": "anjuna",
+   "name": "Anjuna Flea Market",
+   "area": "Anjuna",
+   "tags": [
+    "shopping",
+    "culture"
+   ],
+   "mins": 120,
+   "fee": 0,
+   "what": "Wednesday market with crafts and clothes.",
+   "tip": "Cash and bargaining.",
+   "best": "afternoon",
+   "indoor": false
+  },
+  {
+   "id": "fontainhas",
+   "name": "Fontainhas Latin Quarter",
+   "area": "Panjim",
+   "tags": [
+    "history",
+    "culture",
+    "photography"
+   ],
+   "mins": 90,
+   "fee": 0,
+   "what": "Colourful Portuguese-era lanes.",
+   "tip": "Walk with a local guide.",
+   "best": "morning",
+   "indoor": false
+  }
+ ],
+ "food": [
+  {
+   "dish": "Goan fish curry rice",
+   "where": "Beach shacks",
+   "cost": 300
+  },
+  {
+   "dish": "Prawn balchao",
+   "where": "Local restaurants",
+   "cost": 450
+  },
+  {
+   "dish": "Bebinca (dessert)",
+   "where": "Bakeries",
+   "cost": 100
+  }
+ ],
+ "stay": {
+  "budget": {
+   "area": "Anjuna, Palolem",
+   "price_min": 2500,
+   "price_max": 5500,
+   "note": "Guesthouses and huts."
+  },
+  "mid": {
+   "area": "Calangute, Candolim",
+   "price_min": 7000,
+   "price_max": 15000,
+   "note": "Beach hotels."
+  },
+  "luxury": {
+   "area": "Cavelossim, Candolim",
+   "price_min": 18000,
+   "price_max": 40000,
+   "note": "Beach resorts."
+  }
+ },
+ "rules": [
+  "Alcohol is legal; drink responsibly and never drive after drinking.",
+  "Nude sunbathing is illegal; dress modestly off-beach.",
+  "Drugs are heavily punished.",
+  "Do not swim in monsoon flags."
+ ],
+ "packing": [
+  "Swimwear",
+  "Sunscreen",
+  "Hat",
+  "Light clothes",
+  "Cash in INR"
+ ],
+ "nearby": [
+  "kerala",
+  "kolkata"
+ ]
+}

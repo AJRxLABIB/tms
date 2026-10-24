@@ -1,0 +1,206 @@
+{
+ "id": "pattaya",
+ "name": "Pattaya",
+ "bn": "পাতায়া",
+ "aliases": [
+  "pataya",
+  "pattaya thailand",
+  "patya",
+  "koh larn"
+ ],
+ "country": "Thailand",
+ "region": "Chonburi",
+ "lat": 12.9236,
+ "lng": 100.8825,
+ "summary": "A beach resort city two hours from Bangkok: Koh Larn day trips, water parks, shows and nightlife.",
+ "best_months": [
+  11,
+  12,
+  1,
+  2,
+  3
+ ],
+ "season_note": "November to February is dry; May-October is rainy.",
+ "avoid_note": "Beaches near the city are not very clean.",
+ "tags": [
+  "beach",
+  "family",
+  "adventure",
+  "city"
+ ],
+ "days": {
+  "min": 2,
+  "ideal": 3
+ },
+ "emergency": {
+  "police": "191 (police), 1155 tourist police",
+  "ambulance": "1669"
+ },
+ "entry_note": "Thailand: visa required for Bangladeshi passport holders (e-visa via the Thai e-visa portal); check the latest rules with the embassy before booking.",
+ "reach": [
+  {
+   "mode": "Flight",
+   "how": "Dhaka to Bangkok (Suvarnabhumi) then 2h by road (Biman, US-Bangla, Thai, Bangladeshi carriers)",
+   "hours": 5,
+   "fare_min": 14000,
+   "fare_max": 26000,
+   "note": "Fly to Bangkok then cab/bus (about 2 hours)."
+  }
+ ],
+ "local": [
+  {
+   "mode": "Baht bus (songthaew)",
+   "group_fare": "30-60 BDT per ride"
+  },
+  {
+   "mode": "Grab",
+   "group_fare": "300-800 BDT"
+  }
+ ],
+ "attractions": [
+  {
+   "id": "koh-larn",
+   "name": "Koh Larn (Coral Island)",
+   "area": "Gulf of Thailand",
+   "tags": [
+    "beach",
+    "water",
+    "family"
+   ],
+   "mins": 360,
+   "fee": 800,
+   "what": "Island with clear beaches by ferry.",
+   "tip": "Take early boat.",
+   "best": "morning",
+   "indoor": false
+  },
+  {
+   "id": "sanctuary",
+   "name": "Sanctuary of Truth",
+   "area": "Naklua",
+   "tags": [
+    "culture",
+    "history",
+    "photography"
+   ],
+   "mins": 120,
+   "fee": 1500,
+   "what": "All-wooden temple art.",
+   "tip": "Dress modestly.",
+   "best": "morning",
+   "indoor": true
+  },
+  {
+   "id": "nong-nooch",
+   "name": "Nong Nooch Tropical Garden",
+   "area": "Sattahip",
+   "tags": [
+    "nature",
+    "family"
+   ],
+   "mins": 180,
+   "fee": 1200,
+   "what": "Garden, elephant and cultural show.",
+   "tip": "Choose ethical elephant activities.",
+   "best": "any",
+   "indoor": false
+  },
+  {
+   "id": "walking-street",
+   "name": "Walking Street",
+   "area": "South Pattaya",
+   "tags": [
+    "city"
+   ],
+   "mins": 120,
+   "fee": 0,
+   "what": "Lively nightlife strip; not family-friendly.",
+   "tip": "Keep valuables secure.",
+   "best": "sunset",
+   "indoor": false
+  },
+  {
+   "id": "floating-pattaya",
+   "name": "Pattaya Floating Market",
+   "area": "Jomtien",
+   "tags": [
+    "culture",
+    "shopping"
+   ],
+   "mins": 120,
+   "fee": 600,
+   "what": "Market with boat rides.",
+   "tip": "Visit mornings.",
+   "best": "morning",
+   "indoor": false
+  },
+  {
+   "id": "big-buddha-pat",
+   "name": "Big Buddha Hill",
+   "area": "Pratumnak",
+   "tags": [
+    "spiritual",
+    "photography"
+   ],
+   "mins": 45,
+   "fee": 0,
+   "what": "View over the bay.",
+   "tip": "Dress modestly.",
+   "best": "sunset",
+   "indoor": false
+  }
+ ],
+ "food": [
+  {
+   "dish": "Seafood",
+   "where": "Naklua",
+   "cost": 700
+  },
+  {
+   "dish": "Pad Thai",
+   "where": "Street stalls",
+   "cost": 150
+  },
+  {
+   "dish": "Grilled squid",
+   "where": "Beach vendors",
+   "cost": 200
+  }
+ ],
+ "stay": {
+  "budget": {
+   "area": "Central Pattaya",
+   "price_min": 2500,
+   "price_max": 5000,
+   "note": "Budget hotels."
+  },
+  "mid": {
+   "area": "Beach Road",
+   "price_min": 6000,
+   "price_max": 13000,
+   "note": "3-4 star hotels."
+  },
+  "luxury": {
+   "area": "Jomtien, Wong Amat",
+   "price_min": 16000,
+   "price_max": 45000,
+   "note": "Beach resorts."
+  }
+ },
+ "rules": [
+  "Dress modestly outside beach areas.",
+  "Beware scams and unlicensed jet ski operators.",
+  "Vaping banned.",
+  "Drugs punished heavily."
+ ],
+ "packing": [
+  "Swimwear",
+  "Sunscreen",
+  "Hat",
+  "Light clothes"
+ ],
+ "nearby": [
+  "bangkok",
+  "phuket"
+ ]
+}

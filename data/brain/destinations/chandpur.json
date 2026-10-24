@@ -1,0 +1,188 @@
+{
+ "id": "chandpur",
+ "name": "Chandpur",
+ "bn": "চাঁদপুর",
+ "aliases": [
+  "chandpur",
+  "chandpur ilish",
+  "chandpur meghna",
+  "chadpur"
+ ],
+ "region": "Chattogram Division",
+ "lat": 23.2333,
+ "lng": 90.6667,
+ "summary": "A river-confluence town at Padma and Meghna, famous for hilsa fish and its riverfront.",
+ "best_months": [
+  10,
+  11,
+  12,
+  1,
+  2,
+  3
+ ],
+ "season_note": "Hilsa season is Aug-Oct; the river is rough in monsoon.",
+ "tags": [
+  "water",
+  "food",
+  "culture",
+  "family"
+ ],
+ "days": {
+  "min": 1,
+  "ideal": 1
+ },
+ "reach": [
+  {
+   "mode": "Bus",
+   "how": "Bus Dhaka to Chandpur",
+   "hours": 3,
+   "fare_min": 300,
+   "fare_max": 600,
+   "note": "Frequent buses."
+  },
+  {
+   "mode": "Launch",
+   "how": "Launch from Sadarghat",
+   "hours": 4,
+   "fare_min": 200,
+   "fare_max": 800,
+   "note": "Scenic river trip."
+  }
+ ],
+ "local": [
+  {
+   "mode": "Rickshaw / CNG",
+   "group_fare": "50-200 BDT in town",
+   "note": "Agree fare first."
+  }
+ ],
+ "attractions": [
+  {
+   "id": "meghna-confluence",
+   "name": "Meghna-Padma confluence",
+   "area": "Chandpur",
+   "tags": [
+    "water",
+    "nature",
+    "photography"
+   ],
+   "mins": 90,
+   "fee": 0,
+   "what": "Join of two big rivers.",
+   "tip": "Hire a boat with life jackets.",
+   "best": "sunset",
+   "indoor": false
+  },
+  {
+   "id": "ilish",
+   "name": "Hilsa fish market",
+   "area": "Chandpur",
+   "tags": [
+    "food",
+    "culture"
+   ],
+   "mins": 45,
+   "fee": 0,
+   "what": "Famous hilsa trade.",
+   "tip": "Go early.",
+   "best": "morning",
+   "indoor": false
+  },
+  {
+   "id": "riverfront",
+   "name": "Chandpur riverfront",
+   "area": "Town",
+   "tags": [
+    "relaxing",
+    "family"
+   ],
+   "mins": 60,
+   "fee": 0,
+   "what": "Evening promenade.",
+   "tip": "Go in the evening.",
+   "best": "sunset",
+   "indoor": false
+  },
+  {
+   "id": "ghat",
+   "name": "Launch ghat",
+   "area": "Chandpur",
+   "tags": [
+    "water",
+    "culture"
+   ],
+   "mins": 30,
+   "fee": 0,
+   "what": "Busy ghat with river life.",
+   "tip": "Photograph politely.",
+   "best": "morning",
+   "indoor": false
+  },
+  {
+   "id": "temple",
+   "name": "Local temple",
+   "area": "Town",
+   "tags": [
+    "culture"
+   ],
+   "mins": 30,
+   "fee": 0,
+   "what": "Hindu temple in town.",
+   "tip": "Dress modestly.",
+   "best": "afternoon",
+   "indoor": false
+  }
+ ],
+ "food": [
+  {
+   "dish": "Hilsa fry",
+   "where": "Restaurants",
+   "cost": 500
+  },
+  {
+   "dish": "Hilsa curry",
+   "where": "Restaurants",
+   "cost": 450
+  },
+  {
+   "dish": "Tea",
+   "where": "Stalls",
+   "cost": 20
+  }
+ ],
+ "stay": {
+  "budget": {
+   "area": "Simple hotel",
+   "price_min": 700,
+   "price_max": 1500,
+   "note": "Basic."
+  },
+  "mid": {
+   "area": "Mid hotel",
+   "price_min": 2000,
+   "price_max": 4000,
+   "note": "Limited."
+  },
+  "luxury": {
+   "area": "Better hotel",
+   "price_min": 4500,
+   "price_max": 7000,
+   "note": "Few."
+  }
+ },
+ "rules": [
+  "Be careful on river ghats.",
+  "No littering."
+ ],
+ "packing": [
+  "Sunscreen",
+  "Water",
+  "Light clothes"
+ ],
+ "nearby": [
+  "dhaka",
+  "sonargaon",
+  "comilla"
+ ],
+ "country": "Bangladesh"
+}

@@ -1,0 +1,160 @@
+{
+ "id": "mahasthangarh",
+ "name": "Mahasthangarh and Bogura",
+ "bn": "মহাস্থানগড়",
+ "aliases": [
+  "mahasthan",
+  "mohasthangar",
+  "mahasthan garh"
+ ],
+ "region": "Rajshahi Division (Bogura)",
+ "lat": 24.965,
+ "lng": 89.348,
+ "summary": "The oldest archaeological site in Bangladesh: the ruins of the ancient city of Pundranagara, with a museum and local sweets (Bogura's famous yoghurt).",
+ "best_months": [
+  11,
+  12,
+  1,
+  2
+ ],
+ "season_note": "Winter is best.",
+ "avoid_note": "Midday sun can be strong.",
+ "tags": [
+  "history",
+  "culture",
+  "food",
+  "photography"
+ ],
+ "days": {
+  "min": 1,
+  "ideal": 1
+ },
+ "reach": [
+  {
+   "mode": "Bus",
+   "how": "AC coach from Dhaka (Gabtoli) to Bogura",
+   "hours": 6,
+   "fare_min": 800,
+   "fare_max": 1600,
+   "note": ""
+  },
+  {
+   "mode": "Train",
+   "how": "Intercity train to Bogura",
+   "hours": 6,
+   "fare_min": 450,
+   "fare_max": 1300,
+   "note": ""
+  }
+ ],
+ "local": [
+  {
+   "mode": "CNG / rickshaw",
+   "group_fare": "200-500 BDT",
+   "note": ""
+  }
+ ],
+ "attractions": [
+  {
+   "id": "mahasthan",
+   "name": "Mahasthangarh archaeological site",
+   "area": "Mahasthan",
+   "tags": [
+    "history",
+    "culture"
+   ],
+   "mins": 120,
+   "fee": 100,
+   "what": "Walk through the ruins of an ancient fortified city dating back 2,000+ years.",
+   "tip": "Wear a hat. Shade is limited.",
+   "best": "morning",
+   "indoor": false
+  },
+  {
+   "id": "museum-maha",
+   "name": "Mahasthangarh Museum",
+   "area": "Mahasthan",
+   "tags": [
+    "history"
+   ],
+   "mins": 45,
+   "fee": 20,
+   "what": "Finds from the site.",
+   "tip": "Check opening hours.",
+   "best": "afternoon",
+   "indoor": true
+  },
+  {
+   "id": "bogra-dahi",
+   "name": "Bogura's yoghurt (doi) shops",
+   "area": "Bogura town",
+   "tags": [
+    "food"
+   ],
+   "mins": 45,
+   "fee": 0,
+   "what": "Try the thick sweet yoghurt for which the city is famous.",
+   "tip": "Buy from busy shops.",
+   "best": "afternoon",
+   "indoor": true
+  },
+  {
+   "id": "govinda",
+   "name": "Govinda Bhita Temple",
+   "area": "Mahasthan",
+   "tags": [
+    "history",
+    "spiritual"
+   ],
+   "mins": 30,
+   "fee": 0,
+   "what": "A small ancient temple base close to the site.",
+   "tip": "Combine with the main site.",
+   "best": "afternoon",
+   "indoor": false
+  }
+ ],
+ "food": [
+  {
+   "dish": "Bogura doi (yoghurt)",
+   "where": "Town shops",
+   "cost": 80
+  },
+  {
+   "dish": "Local rice and fish",
+   "where": "Town restaurants",
+   "cost": 220
+  }
+ ],
+ "stay": {
+  "budget": {
+   "area": "Bogura city",
+   "price_min": 1200,
+   "price_max": 2500,
+   "note": ""
+  },
+  "mid": {
+   "area": "Bogura city",
+   "price_min": 3000,
+   "price_max": 6000,
+   "note": ""
+  },
+  "luxury": {
+   "area": "Bogura / Rajshahi",
+   "price_min": 6500,
+   "price_max": 12000,
+   "note": ""
+  }
+ },
+ "rules": [
+  "Do not climb on ruins."
+ ],
+ "packing": [
+  "Hat",
+  "Water"
+ ],
+ "nearby": [
+  "paharpur"
+ ],
+ "country": "Bangladesh"
+}

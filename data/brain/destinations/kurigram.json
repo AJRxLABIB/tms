@@ -1,0 +1,195 @@
+{
+ "id": "kurigram",
+ "name": "Kurigram (Chars)",
+ "bn": "কুড়িগ্রাম",
+ "aliases": [
+  "kurigram",
+  "kurigram char",
+  "kurigram brahmaputra",
+  "chilmari",
+  "rowmari",
+  "kurigram dharla"
+ ],
+ "region": "Rangpur Division",
+ "lat": 25.8,
+ "lng": 89.65,
+ "summary": "A northern district of rivers and sandy chars on the Brahmaputra and Dharla, known for river island life and Rajarhat.",
+ "best_months": [
+  10,
+  11,
+  12,
+  1,
+  2,
+  3
+ ],
+ "season_note": "Winter is dry and best for chars. Monsoon floods villages.",
+ "tags": [
+  "water",
+  "nature",
+  "culture",
+  "adventure"
+ ],
+ "days": {
+  "min": 2,
+  "ideal": 2
+ },
+ "reach": [
+  {
+   "mode": "Bus",
+   "how": "Bus Dhaka to Kurigram",
+   "hours": 10,
+   "fare_min": 900,
+   "fare_max": 1900,
+   "note": "Overnight coaches."
+  },
+  {
+   "mode": "Train",
+   "how": "Train Dhaka to Lalmonirhat then bus to Kurigram",
+   "hours": 10,
+   "fare_min": 500,
+   "fare_max": 1300,
+   "note": "Check timetable."
+  }
+ ],
+ "local": [
+  {
+   "mode": "CNG / rickshaw",
+   "group_fare": "50-300 BDT in town",
+   "note": "Agree fare first."
+  },
+  {
+   "mode": "Boat to chars",
+   "group_fare": "1500-4000 BDT per boat",
+   "note": "Bargain."
+  }
+ ],
+ "attractions": [
+  {
+   "id": "char-life",
+   "name": "Char village visit",
+   "area": "Brahmaputra chars",
+   "tags": [
+    "nature",
+    "culture",
+    "adventure"
+   ],
+   "mins": 180,
+   "fee": 0,
+   "what": "Boat to a river island with farm life and simple homes.",
+   "tip": "Hire a local guide.",
+   "best": "morning",
+   "indoor": false
+  },
+  {
+   "id": "brahmaputra",
+   "name": "Brahmaputra view",
+   "area": "Chilmari",
+   "tags": [
+    "water",
+    "photography"
+   ],
+   "mins": 60,
+   "fee": 0,
+   "what": "Wide river and boats.",
+   "tip": "Sunset.",
+   "best": "sunset",
+   "indoor": false
+  },
+  {
+   "id": "dharla",
+   "name": "Dharla river bank",
+   "area": "Kurigram",
+   "tags": [
+    "water",
+    "relaxing"
+   ],
+   "mins": 45,
+   "fee": 0,
+   "what": "Calm river scenery.",
+   "tip": "Evening.",
+   "best": "sunset",
+   "indoor": false
+  },
+  {
+   "id": "rajarhat",
+   "name": "Rajarhat",
+   "area": "Rajarhat",
+   "tags": [
+    "culture"
+   ],
+   "mins": 60,
+   "fee": 0,
+   "what": "Local market town.",
+   "tip": "Check local info.",
+   "best": "afternoon",
+   "indoor": false
+  },
+  {
+   "id": "boat-ride",
+   "name": "Boat ride on the river",
+   "area": "Chilmari",
+   "tags": [
+    "water",
+    "adventure"
+   ],
+   "mins": 90,
+   "fee": 0,
+   "what": "Short hired boat trip.",
+   "tip": "Wear a life jacket.",
+   "best": "morning",
+   "indoor": false
+  }
+ ],
+ "food": [
+  {
+   "dish": "Rice and river fish",
+   "where": "Local restaurants",
+   "cost": 250
+  },
+  {
+   "dish": "Pitha in winter",
+   "where": "Stalls",
+   "cost": 50
+  },
+  {
+   "dish": "Tea",
+   "where": "Stalls",
+   "cost": 20
+  }
+ ],
+ "stay": {
+  "budget": {
+   "area": "Simple hotel",
+   "price_min": 700,
+   "price_max": 1500,
+   "note": "Basic."
+  },
+  "mid": {
+   "area": "Mid hotel",
+   "price_min": 2000,
+   "price_max": 4000,
+   "note": "Limited."
+  },
+  "luxury": {
+   "area": "Better hotel",
+   "price_min": 4500,
+   "price_max": 7000,
+   "note": "Few."
+  }
+ },
+ "rules": [
+  "Respect local customs.",
+  "Use life jackets on boats."
+ ],
+ "packing": [
+  "Sunscreen",
+  "Water",
+  "Rain jacket"
+ ],
+ "nearby": [
+  "lalmonirhat",
+  "jamalpur",
+  "rajshahi"
+ ],
+ "country": "Bangladesh"
+}

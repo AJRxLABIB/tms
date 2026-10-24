@@ -1,0 +1,194 @@
+{
+ "id": "comilla",
+ "name": "Cumilla",
+ "bn": "কুমিল্লা",
+ "aliases": [
+  "comilla",
+  "cumilla",
+  "kumilla",
+  "comilla city"
+ ],
+ "region": "Cumilla District, Chattogram Division",
+ "lat": 23.4607,
+ "lng": 91.1809,
+ "summary": "A historic city known for the Buddhist ruins at Mainamati, rasamalai sweets, khadi cloth and the Dhormosagar pond.",
+ "best_months": [
+  10,
+  11,
+  12,
+  1,
+  2,
+  3
+ ],
+ "season_note": "Winter is dry and pleasant for ruins. Monsoon is wet but manageable.",
+ "tags": [
+  "history",
+  "culture",
+  "food",
+  "family",
+  "city"
+ ],
+ "days": {
+  "min": 1,
+  "ideal": 2
+ },
+ "reach": [
+  {
+   "mode": "Bus",
+   "how": "AC and non-AC buses from Dhaka (Sayedabad, Gulistan) to Cumilla",
+   "hours": 3,
+   "fare_min": 250,
+   "fare_max": 700,
+   "note": "Traffic around Dhaka can add time."
+  },
+  {
+   "mode": "Train",
+   "how": "Intercity trains from Kamalapur to Cumilla",
+   "hours": 3,
+   "fare_min": 160,
+   "fare_max": 650,
+   "note": "Check e-ticket for times."
+  }
+ ],
+ "local": [
+  {
+   "mode": "Rickshaw / CNG",
+   "group_fare": "50-300 BDT inside the city",
+   "note": "Agree fare first."
+  },
+  {
+   "mode": "Car day hire",
+   "group_fare": "4000-6500 BDT per day",
+   "note": "Useful for Mainamati and Salban Vihara."
+  }
+ ],
+ "attractions": [
+  {
+   "id": "dhormosagar",
+   "name": "Dhormosagar",
+   "area": "City centre",
+   "tags": [
+    "relaxing",
+    "family",
+    "history"
+   ],
+   "mins": 45,
+   "fee": 0,
+   "what": "A large old pond at the town centre with walking paths.",
+   "tip": "Visit at evening when it is lively.",
+   "best": "sunset",
+   "indoor": false
+  },
+  {
+   "id": "war-cemetery",
+   "name": "Commonwealth War Cemetery",
+   "area": "Cumilla",
+   "tags": [
+    "history"
+   ],
+   "mins": 45,
+   "fee": 0,
+   "what": "A carefully kept cemetery for soldiers of World War II.",
+   "tip": "Quiet place; dress modestly.",
+   "best": "morning",
+   "indoor": false
+  },
+  {
+   "id": "rasamalai",
+   "name": "Matri Bhandar (rasamalai)",
+   "area": "Cumilla town",
+   "tags": [
+    "food"
+   ],
+   "mins": 30,
+   "fee": 0,
+   "what": "Famous place to taste Cumilla rasamalai.",
+   "tip": "Buy fresh; carry a box home.",
+   "best": "any",
+   "indoor": true
+  },
+  {
+   "id": "khadi",
+   "name": "Khadi cloth shop",
+   "area": "Cumilla town",
+   "tags": [
+    "shopping",
+    "culture"
+   ],
+   "mins": 45,
+   "fee": 0,
+   "what": "Hand-woven khadi cloth, a local craft.",
+   "tip": "Check fabric quality before buying.",
+   "best": "any",
+   "indoor": true
+  },
+  {
+   "id": "mainamati-trip",
+   "name": "Mainamati museum and ruins",
+   "area": "Kotbari",
+   "tags": [
+    "history",
+    "culture"
+   ],
+   "mins": 180,
+   "fee": 100,
+   "what": "Day trip to the Buddhist ruins nearby (see Mainamati).",
+   "tip": "Combine with Salban Vihara.",
+   "best": "morning",
+   "indoor": false
+  }
+ ],
+ "food": [
+  {
+   "dish": "Rasamalai",
+   "where": "Sweet shops",
+   "cost": 250
+  },
+  {
+   "dish": "Cumilla biryani",
+   "where": "Local restaurants",
+   "cost": 300
+  },
+  {
+   "dish": "Khadi lungi/cloth (buy)",
+   "where": "Market",
+   "cost": 500
+  }
+ ],
+ "stay": {
+  "budget": {
+   "area": "Simple hotel near the town centre",
+   "price_min": 800,
+   "price_max": 1800,
+   "note": "Basic."
+  },
+  "mid": {
+   "area": "Mid-range hotel",
+   "price_min": 2500,
+   "price_max": 5000,
+   "note": "AC rooms available."
+  },
+  "luxury": {
+   "area": "Best hotel in town",
+   "price_min": 5500,
+   "price_max": 9000,
+   "note": "Few options."
+  }
+ },
+ "rules": [
+  "Dress modestly at religious sites.",
+  "Do not pick items from the archaeological site."
+ ],
+ "packing": [
+  "Sunscreen",
+  "Water bottle",
+  "Cash",
+  "Comfortable shoes"
+ ],
+ "nearby": [
+  "mainamati",
+  "sonargaon",
+  "dhaka"
+ ],
+ "country": "Bangladesh"
+}

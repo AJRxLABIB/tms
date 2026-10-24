@@ -1,0 +1,234 @@
+{
+ "id": "maldives",
+ "name": "Maldives (Male and resort islands)",
+ "bn": "মালদ্বীপ",
+ "aliases": [
+  "male",
+  "maldives resort",
+  "maldive",
+  "maldeevs",
+  "molodip"
+ ],
+ "country": "Maldives",
+ "region": "Kaafu Atoll",
+ "lat": 4.1755,
+ "lng": 73.5093,
+ "summary": "Coral islands with turquoise lagoons, resorts, snorkelling and diving; Male is the capital and transfer hub.",
+ "best_months": [
+  11,
+  12,
+  1,
+  2,
+  3,
+  4
+ ],
+ "season_note": "November to April is dry and sunny. May-October is wet and windy but cheaper.",
+ "avoid_note": "Monsoon brings choppy seas.",
+ "tags": [
+  "beach",
+  "water",
+  "relaxing",
+  "romantic",
+  "adventure",
+  "photography",
+  "family"
+ ],
+ "days": {
+  "min": 3,
+  "ideal": 5
+ },
+ "emergency": {
+  "police": "119",
+  "ambulance": "102"
+ },
+ "entry_note": "Maldives: 30-day visa-free arrival is generally available to all nationalities with a confirmed booking and funds; check the latest rules with the embassy before booking.",
+ "reach": [
+  {
+   "mode": "Flight",
+   "how": "Dhaka to Velana International Airport, Male (Biman, IndiGo, SriLankan)",
+   "hours": 4.5,
+   "fare_min": 25000,
+   "fare_max": 50000,
+   "note": "Often via Colombo or Kolkata; direct flights may vary."
+  }
+ ],
+ "local": [
+  {
+   "mode": "Speedboat transfer",
+   "group_fare": "5000-30000 BDT per person return",
+   "note": "Resort islands."
+  },
+  {
+   "mode": "Public ferry",
+   "group_fare": "50-300 BDT",
+   "note": "Local islands."
+  },
+  {
+   "mode": "Seaplane",
+   "group_fare": "25000-60000 BDT",
+   "note": "Luxury resorts."
+  }
+ ],
+ "attractions": [
+  {
+   "id": "male-fish",
+   "name": "Male Fish Market and Local Market",
+   "area": "Male",
+   "tags": [
+    "culture",
+    "food"
+   ],
+   "mins": 60,
+   "fee": 0,
+   "what": "Busy fish auction and food stalls.",
+   "tip": "Morning only.",
+   "best": "morning",
+   "indoor": false
+  },
+  {
+   "id": "sultan-park",
+   "name": "Sultan Park and Grand Friday Mosque",
+   "area": "Male",
+   "tags": [
+    "history",
+    "culture",
+    "spiritual"
+   ],
+   "mins": 60,
+   "fee": 0,
+   "what": "Gardens and a golden-domed mosque.",
+   "tip": "Dress modestly.",
+   "best": "afternoon",
+   "indoor": true
+  },
+  {
+   "id": "snorkelling",
+   "name": "House Reef Snorkelling",
+   "area": "Resort islands",
+   "tags": [
+    "water",
+    "adventure"
+   ],
+   "mins": 120,
+   "fee": 2500,
+   "what": "Snorkel with turtles and reef fish.",
+   "tip": "Use reef-safe sunscreen.",
+   "best": "morning",
+   "indoor": false
+  },
+  {
+   "id": "dive",
+   "name": "Scuba Diving",
+   "area": "Atolls",
+   "tags": [
+    "adventure",
+    "water"
+   ],
+   "mins": 180,
+   "fee": 9000,
+   "what": "Dive sites with mantas and sharks.",
+   "tip": "Need certification.",
+   "best": "morning",
+   "indoor": false
+  },
+  {
+   "id": "sandbank",
+   "name": "Sandbank Picnic",
+   "area": "Atoll",
+   "tags": [
+    "relaxing",
+    "romantic"
+   ],
+   "mins": 240,
+   "fee": 6000,
+   "what": "Day trip to a sandbank.",
+   "tip": "Carry water.",
+   "best": "morning",
+   "indoor": false
+  },
+  {
+   "id": "local-island",
+   "name": "Maafushi (Local Island)",
+   "area": "Kaafu",
+   "tags": [
+    "beach",
+    "culture",
+    "family"
+   ],
+   "mins": 240,
+   "fee": 0,
+   "what": "Cheaper stays and bikini beach.",
+   "tip": "Dress modestly in village.",
+   "best": "any",
+   "indoor": false
+  },
+  {
+   "id": "sunset-cruise",
+   "name": "Sunset Dolphin Cruise",
+   "area": "Resort islands",
+   "tags": [
+    "water",
+    "romantic"
+   ],
+   "mins": 120,
+   "fee": 3500,
+   "what": "Boat trip to spot dolphins.",
+   "tip": "Morning weather is better.",
+   "best": "sunset",
+   "indoor": false
+  }
+ ],
+ "food": [
+  {
+   "dish": "Garudhiya (fish soup)",
+   "where": "Local cafes",
+   "cost": 400
+  },
+  {
+   "dish": "Mas huni",
+   "where": "Local cafes",
+   "cost": 350
+  },
+  {
+   "dish": "Seafood grill",
+   "where": "Resort",
+   "cost": 2500
+  }
+ ],
+ "stay": {
+  "budget": {
+   "area": "Maafushi, Dhiffushi",
+   "price_min": 5000,
+   "price_max": 10000,
+   "note": "Guesthouse on local islands."
+  },
+  "mid": {
+   "area": "Resort or local island boutique",
+   "price_min": 15000,
+   "price_max": 35000,
+   "note": "3-4 star island resort."
+  },
+  "luxury": {
+   "area": "Private resort island",
+   "price_min": 45000,
+   "price_max": 150000,
+   "note": "Water villa or beach villa."
+  }
+ },
+ "rules": [
+  "Alcohol is available only in resorts.",
+  "Local islands: dress modestly; bikinis in designated areas.",
+  "Do not take coral or shells.",
+  "Drone permits needed."
+ ],
+ "packing": [
+  "Reef-safe sunscreen",
+  "Swimwear",
+  "Dry bag",
+  "Light shawl for local islands",
+  "Snorkel mask"
+ ],
+ "nearby": [
+  "sri-lanka"
+ ]
+}

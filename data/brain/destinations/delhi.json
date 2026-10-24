@@ -1,0 +1,265 @@
+{
+ "id": "delhi",
+ "name": "Delhi",
+ "bn": "দিল্লি",
+ "aliases": [
+  "new delhi",
+  "dilli",
+  "dehli",
+  "delhi india",
+  "nai dilli"
+ ],
+ "country": "India",
+ "region": "Delhi NCR",
+ "lat": 28.6139,
+ "lng": 77.209,
+ "summary": "India's capital: Mughal monuments, Old Delhi bazaars, grand colonial avenues and the gateway to Agra and Jaipur.",
+ "best_months": [
+  10,
+  11,
+  12,
+  1,
+  2,
+  3
+ ],
+ "season_note": "October to March is pleasant; winter mornings have fog and smog. April to June is extremely hot; July-September is monsoon.",
+ "avoid_note": "Winter (Nov-Jan) air pollution can be severe; check the AQI.",
+ "tags": [
+  "city",
+  "history",
+  "culture",
+  "food",
+  "shopping",
+  "spiritual",
+  "family"
+ ],
+ "days": {
+  "min": 3,
+  "ideal": 4
+ },
+ "emergency": {
+  "police": "100 (or 112)",
+  "ambulance": "102 or 108"
+ },
+ "entry_note": "Indian visa is required for Bangladeshi passport holders (apply via the Indian Visa Application Centre; category as currently offered). Check the latest rules with the embassy before booking.",
+ "reach": [
+  {
+   "mode": "Flight",
+   "how": "Dhaka to Indira Gandhi International Airport (Biman, US-Bangla, IndiGo, Air India; often via Kolkata)",
+   "hours": 3.5,
+   "fare_min": 14000,
+   "fare_max": 28000,
+   "note": "Direct flights exist; check schedules."
+  },
+  {
+   "mode": "Train + train",
+   "how": "Dhaka to Kolkata (Maitree) then Kolkata-Delhi Rajdhani",
+   "hours": 34,
+   "fare_min": 4500,
+   "fare_max": 8000,
+   "note": "Long; most fly instead."
+  }
+ ],
+ "local": [
+  {
+   "mode": "Delhi Metro",
+   "group_fare": "20-90 BDT per ride",
+   "note": "Clean and cheap; best for most trips."
+  },
+  {
+   "mode": "Auto-rickshaw / app cab",
+   "group_fare": "200-800 BDT",
+   "note": "Use the meter or Uber/Ola."
+  }
+ ],
+ "attractions": [
+  {
+   "id": "red-fort",
+   "name": "Red Fort (Lal Qila)",
+   "area": "Old Delhi",
+   "tags": [
+    "history",
+    "culture",
+    "photography"
+   ],
+   "mins": 120,
+   "fee": 350,
+   "what": "A UNESCO Mughal fort with museums and a light-and-sound show.",
+   "tip": "Closed on Mondays; bring ID for foreigner entry.",
+   "best": "morning",
+   "indoor": false
+  },
+  {
+   "id": "jama-masjid",
+   "name": "Jama Masjid",
+   "area": "Old Delhi",
+   "tags": [
+    "spiritual",
+    "history",
+    "photography"
+   ],
+   "mins": 75,
+   "fee": 50,
+   "what": "One of India's largest mosques; climb the minaret for views.",
+   "tip": "Dress modestly; entry timings around prayer.",
+   "best": "morning",
+   "indoor": false
+  },
+  {
+   "id": "humayun",
+   "name": "Humayun's Tomb",
+   "area": "Nizamuddin",
+   "tags": [
+    "history",
+    "culture",
+    "photography",
+    "relaxing"
+   ],
+   "mins": 90,
+   "fee": 350,
+   "what": "A UNESCO garden-tomb that inspired the Taj Mahal.",
+   "tip": "Late afternoon light is lovely.",
+   "best": "afternoon",
+   "indoor": false
+  },
+  {
+   "id": "qutub",
+   "name": "Qutub Minar",
+   "area": "Mehrauli",
+   "tags": [
+    "history",
+    "photography"
+   ],
+   "mins": 90,
+   "fee": 350,
+   "what": "A 73m red-sandstone victory tower from the 12th century.",
+   "tip": "Combine with Mehrauli Archaeological Park.",
+   "best": "morning",
+   "indoor": false
+  },
+  {
+   "id": "india-gate",
+   "name": "India Gate and Kartavya Path",
+   "area": "Central",
+   "tags": [
+    "history",
+    "relaxing",
+    "family"
+   ],
+   "mins": 60,
+   "fee": 0,
+   "what": "War memorial and lawns, lit at night.",
+   "tip": "Great at sunset.",
+   "best": "sunset",
+   "indoor": false
+  },
+  {
+   "id": "chandni-chowk",
+   "name": "Chandni Chowk Bazaar",
+   "area": "Old Delhi",
+   "tags": [
+    "food",
+    "shopping",
+    "culture"
+   ],
+   "mins": 150,
+   "fee": 0,
+   "what": "Narrow lanes with sweets, spices, paratha and fabrics.",
+   "tip": "Cycle rickshaw ride is fun; watch for pickpockets.",
+   "best": "afternoon",
+   "indoor": false
+  },
+  {
+   "id": "lotus",
+   "name": "Lotus Temple",
+   "area": "Bahapur",
+   "tags": [
+    "spiritual",
+    "photography",
+    "relaxing"
+   ],
+   "mins": 45,
+   "fee": 0,
+   "what": "A lotus-shaped Bahai house of worship.",
+   "tip": "Closed on Mondays; remove shoes.",
+   "best": "afternoon",
+   "indoor": true
+  },
+  {
+   "id": "akshardham",
+   "name": "Akshardham Temple",
+   "area": "East Delhi",
+   "tags": [
+    "spiritual",
+    "culture",
+    "family"
+   ],
+   "mins": 180,
+   "fee": 0,
+   "what": "A huge modern temple complex with exhibits and fountain show.",
+   "tip": "No phones or bags allowed inside; strict security.",
+   "best": "afternoon",
+   "indoor": true
+  }
+ ],
+ "food": [
+  {
+   "dish": "Butter chicken and naan",
+   "where": "Old Delhi restaurants",
+   "cost": 450
+  },
+  {
+   "dish": "Chaat",
+   "where": "Street stalls in Chandni Chowk",
+   "cost": 120
+  },
+  {
+   "dish": "Paratha",
+   "where": "Parathe Wali Gali",
+   "cost": 160
+  },
+  {
+   "dish": "Chhole bhature",
+   "where": "Local eateries",
+   "cost": 160
+  }
+ ],
+ "stay": {
+  "budget": {
+   "area": "Paharganj, Karol Bagh",
+   "price_min": 2500,
+   "price_max": 5000,
+   "note": "Backpacker-style rooms."
+  },
+  "mid": {
+   "area": "Connaught Place, Karol Bagh",
+   "price_min": 6000,
+   "price_max": 12000,
+   "note": "Mid-range hotels."
+  },
+  "luxury": {
+   "area": "Chanakyapuri, Aerocity",
+   "price_min": 16000,
+   "price_max": 35000,
+   "note": "5-star hotels."
+  }
+ },
+ "rules": [
+  "Dress modestly at religious sites.",
+  "Use official taxis or apps; avoid touts at airport/station.",
+  "Photography is restricted at some monuments (check signs).",
+  "Drones are banned without permission."
+ ],
+ "packing": [
+  "Light cotton",
+  "Sun hat",
+  "Mask for pollution in winter",
+  "Comfortable shoes",
+  "Cash in INR"
+ ],
+ "nearby": [
+  "agra",
+  "jaipur",
+  "kolkata"
+ ]
+}

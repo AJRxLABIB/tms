@@ -1,0 +1,233 @@
+{
+ "id": "dubai",
+ "name": "Dubai",
+ "bn": "দুবাই",
+ "aliases": [
+  "dubay",
+  "dubai uae",
+  "dubaii",
+  "uae",
+  "abu dhabi"
+ ],
+ "country": "United Arab Emirates",
+ "region": "Dubai Emirate",
+ "lat": 25.2048,
+ "lng": 55.2708,
+ "summary": "Skyscrapers, desert safaris, malls, beaches and Abu Dhabi day trips; a favourite for families and shoppers.",
+ "best_months": [
+  11,
+  12,
+  1,
+  2,
+  3
+ ],
+ "season_note": "November to March is pleasant; summer (June-Sept) is extremely hot (40C+).",
+ "avoid_note": "Summer heat makes outdoor sightseeing hard.",
+ "tags": [
+  "city",
+  "shopping",
+  "family",
+  "adventure",
+  "beach",
+  "photography",
+  "food"
+ ],
+ "days": {
+  "min": 3,
+  "ideal": 5
+ },
+ "emergency": {
+  "police": "999",
+  "ambulance": "998"
+ },
+ "entry_note": "UAE: visa required for Bangladeshi passport holders; usually via airline or approved sponsor/e-visa. Rules change often; check the latest rules with the embassy before booking.",
+ "reach": [
+  {
+   "mode": "Flight",
+   "how": "Dhaka to Dubai International (DXB) (Biman, US-Bangla, Emirates, flydubai, Turkish)",
+   "hours": 5,
+   "fare_min": 22000,
+   "fare_max": 40000,
+   "note": "Direct flights about 5h30m."
+  }
+ ],
+ "local": [
+  {
+   "mode": "Metro",
+   "group_fare": "60-200 BDT per ride",
+   "note": "Best for main sights."
+  },
+  {
+   "mode": "Taxi / Careem",
+   "group_fare": "500-2500 BDT"
+  }
+ ],
+ "attractions": [
+  {
+   "id": "burj",
+   "name": "Burj Khalifa At the Top",
+   "area": "Downtown",
+   "tags": [
+    "city",
+    "photography",
+    "family"
+   ],
+   "mins": 90,
+   "fee": 5500,
+   "what": "World's tallest building observation decks.",
+   "tip": "Book sunset slot online.",
+   "best": "sunset",
+   "indoor": false
+  },
+  {
+   "id": "dubai-mall",
+   "name": "Dubai Mall and Fountain Show",
+   "area": "Downtown",
+   "tags": [
+    "shopping",
+    "family"
+   ],
+   "mins": 240,
+   "fee": 0,
+   "what": "Giant mall with aquarium and fountain shows.",
+   "tip": "Fountain show every 30 min after 6pm.",
+   "best": "sunset",
+   "indoor": false
+  },
+  {
+   "id": "desert",
+   "name": "Desert Safari with BBQ Dinner",
+   "area": "Dubai desert",
+   "tags": [
+    "adventure",
+    "culture"
+   ],
+   "mins": 360,
+   "fee": 5000,
+   "what": "Dune bashing, camel ride and show.",
+   "tip": "Choose licensed operators; avoid motion sickness.",
+   "best": "afternoon",
+   "indoor": false
+  },
+  {
+   "id": "marina",
+   "name": "Dubai Marina and JBR Beach",
+   "area": "Marina",
+   "tags": [
+    "beach",
+    "city",
+    "relaxing"
+   ],
+   "mins": 180,
+   "fee": 0,
+   "what": "Waterfront promenade and beach.",
+   "tip": "Dress modestly.",
+   "best": "sunset",
+   "indoor": false
+  },
+  {
+   "id": "old-dubai",
+   "name": "Gold Souk, Spice Souk and Abra Ride",
+   "area": "Deira",
+   "tags": [
+    "shopping",
+    "culture",
+    "history"
+   ],
+   "mins": 150,
+   "fee": 50,
+   "what": "Old trading district with abras.",
+   "tip": "Bargain; abra costs 1 AED.",
+   "best": "afternoon",
+   "indoor": false
+  },
+  {
+   "id": "abu-dhabi-mosque",
+   "name": "Sheikh Zayed Grand Mosque (Abu Dhabi)",
+   "area": "Abu Dhabi, 140 km",
+   "tags": [
+    "spiritual",
+    "photography"
+   ],
+   "mins": 90,
+   "fee": 0,
+   "what": "One of the world's largest mosques.",
+   "tip": "Strict dress code; free entry.",
+   "best": "afternoon",
+   "indoor": true
+  },
+  {
+   "id": "palm",
+   "name": "Atlantis and Palm Jumeirah",
+   "area": "Palm",
+   "tags": [
+    "family",
+    "beach"
+   ],
+   "mins": 240,
+   "fee": 5000,
+   "what": "Aquaventure and aquarium.",
+   "tip": "Book online.",
+   "best": "any",
+   "indoor": false
+  }
+ ],
+ "food": [
+  {
+   "dish": "Shawarma",
+   "where": "Street shops",
+   "cost": 150
+  },
+  {
+   "dish": "Biryani",
+   "where": "Indian-Pakistani restaurants",
+   "cost": 300
+  },
+  {
+   "dish": "Karak chai",
+   "where": "Cafes",
+   "cost": 50
+  },
+  {
+   "dish": "Machboos",
+   "where": "Emirati restaurants",
+   "cost": 700
+  }
+ ],
+ "stay": {
+  "budget": {
+   "area": "Deira, Bur Dubai",
+   "price_min": 6000,
+   "price_max": 11000,
+   "note": "Budget hotels."
+  },
+  "mid": {
+   "area": "Marina, Downtown",
+   "price_min": 13000,
+   "price_max": 25000,
+   "note": "3-4 star hotels."
+  },
+  "luxury": {
+   "area": "Marina, Downtown, Palm",
+   "price_min": 35000,
+   "price_max": 90000,
+   "note": "5-star hotels."
+  }
+ },
+ "rules": [
+  "Public displays of affection are discouraged.",
+  "Alcohol only in licensed venues; drugs strictly banned.",
+  "Dress modestly in public, especially malls and mosques.",
+  "Photographing people without consent is illegal."
+ ],
+ "packing": [
+  "Light cotton",
+  "Sunscreen",
+  "Modest cover",
+  "Comfortable shoes",
+  "Power adapter (UK type)"
+ ],
+ "nearby": [
+  "makkah"
+ ]
+}

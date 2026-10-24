@@ -1,0 +1,156 @@
+{
+ "id": "nijhum-dwip",
+ "name": "Nijhum Dwip",
+ "bn": "নিঝুম দ্বীপ",
+ "aliases": [
+  "nijhum island",
+  "nijum dip",
+  "nijhumdwip",
+  "nijhum dip"
+ ],
+ "region": "Noakhali (Bay of Bengal)",
+ "lat": 22.05,
+ "lng": 91.0,
+ "summary": "A quiet island of deer, buffalo herds, wide beaches and mangrove forest at the mouth of the Meghna. Rustic, slow and photogenic.",
+ "best_months": [
+  11,
+  12,
+  1,
+  2,
+  3
+ ],
+ "season_note": "Winter is the main season with calm seas. Monsoon trips stop.",
+ "avoid_note": "Facilities are limited. Check the launch time and weather before you go.",
+ "tags": [
+  "nature",
+  "beach",
+  "wildlife",
+  "relaxing",
+  "photography",
+  "adventure"
+ ],
+ "days": {
+  "min": 2,
+  "ideal": 2
+ },
+ "reach": [
+  {
+   "mode": "Launch + trawler",
+   "how": "Launch Dhaka (Sadarghat) to Hatiya or bus to Noakhali (Sonapur), then trawler to the island",
+   "hours": 12,
+   "fare_min": 1200,
+   "fare_max": 3500,
+   "note": "Plan a long trip; weather matters."
+  }
+ ],
+ "local": [
+  {
+   "mode": "Buffalo cart / motorbike",
+   "group_fare": "200-700 BDT",
+   "note": "Local transport around the island."
+  }
+ ],
+ "attractions": [
+  {
+   "id": "deer",
+   "name": "Deer Park and mangrove forest",
+   "area": "Island forest",
+   "tags": [
+    "wildlife",
+    "nature"
+   ],
+   "mins": 120,
+   "fee": 50,
+   "what": "See spotted deer in the forest.",
+   "tip": "Go at dusk.",
+   "best": "afternoon",
+   "indoor": false
+  },
+  {
+   "id": "damar-char",
+   "name": "Damar Char Beach",
+   "area": "Damar Char",
+   "tags": [
+    "beach",
+    "relaxing",
+    "photography"
+   ],
+   "mins": 120,
+   "fee": 0,
+   "what": "A wide, quiet beach.",
+   "tip": "Wear a hat.",
+   "best": "morning",
+   "indoor": false
+  },
+  {
+   "id": "buffalo",
+   "name": "Buffalo herds in the evening",
+   "area": "Island",
+   "tags": [
+    "culture",
+    "photography"
+   ],
+   "mins": 60,
+   "fee": 0,
+   "what": "Herds walk along the coast at dusk.",
+   "tip": "Ask locals for the best spot.",
+   "best": "sunset",
+   "indoor": false
+  },
+  {
+   "id": "mud-flats",
+   "name": "Mud flats and bird watching",
+   "area": "East coast",
+   "tags": [
+    "nature",
+    "photography"
+   ],
+   "mins": 90,
+   "fee": 0,
+   "what": "Look for shore birds at low tide.",
+   "tip": "Bring binoculars.",
+   "best": "morning",
+   "indoor": false
+  }
+ ],
+ "food": [
+  {
+   "dish": "Fresh fish and crab",
+   "where": "Local homes and eateries",
+   "cost": 350
+  }
+ ],
+ "stay": {
+  "budget": {
+   "area": "Island guest houses",
+   "price_min": 1000,
+   "price_max": 2500,
+   "note": "Simple rooms."
+  },
+  "mid": {
+   "area": "Resort cottage",
+   "price_min": 3000,
+   "price_max": 6000,
+   "note": ""
+  },
+  "luxury": {
+   "area": "Few resorts",
+   "price_min": 6000,
+   "price_max": 10000,
+   "note": ""
+  }
+ },
+ "rules": [
+  "Do not disturb the deer.",
+  "Take your rubbish back."
+ ],
+ "packing": [
+  "Mosquito repellent",
+  "Power bank",
+  "Cash"
+ ],
+ "nearby": [
+  "barishal"
+ ],
+ "country": "Bangladesh"
+}

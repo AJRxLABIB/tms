@@ -1,0 +1,192 @@
+{
+ "id": "pabna",
+ "name": "Pabna",
+ "bn": "পাবনা",
+ "aliases": [
+  "pabna",
+  "pabna bangladesh",
+  "pabna sadar",
+  "pabnah"
+ ],
+ "region": "Rajshahi Division",
+ "lat": 24.0064,
+ "lng": 89.2372,
+ "summary": "A Padma-side district with the historic Hardinge Bridge, Chalan Beel wetland and handloom markets.",
+ "best_months": [
+  10,
+  11,
+  12,
+  1,
+  2,
+  3
+ ],
+ "season_note": "Winter is dry. Monsoon floods the beel.",
+ "tags": [
+  "nature",
+  "water",
+  "culture",
+  "shopping"
+ ],
+ "days": {
+  "min": 1,
+  "ideal": 2
+ },
+ "reach": [
+  {
+   "mode": "Bus",
+   "how": "Bus Dhaka to Pabna",
+   "hours": 4,
+   "fare_min": 450,
+   "fare_max": 900,
+   "note": "Via Padma bridge."
+  },
+  {
+   "mode": "Train",
+   "how": "Train via Ishwardi",
+   "hours": 5,
+   "fare_min": 250,
+   "fare_max": 700,
+   "note": "Check timetable."
+  }
+ ],
+ "local": [
+  {
+   "mode": "CNG / rickshaw",
+   "group_fare": "50-250 BDT",
+   "note": "Inside town."
+  },
+  {
+   "mode": "Boat on the Padma",
+   "group_fare": "1500-3500 BDT",
+   "note": "Negotiate."
+  }
+ ],
+ "attractions": [
+  {
+   "id": "hardinge",
+   "name": "Hardinge Bridge",
+   "area": "Paksey",
+   "tags": [
+    "history",
+    "photography"
+   ],
+   "mins": 60,
+   "fee": 0,
+   "what": "Historic railway bridge over the Padma.",
+   "tip": "Photograph from a safe place.",
+   "best": "sunset",
+   "indoor": false
+  },
+  {
+   "id": "padma-view",
+   "name": "Padma river bank",
+   "area": "Pabna",
+   "tags": [
+    "water",
+    "relaxing"
+   ],
+   "mins": 60,
+   "fee": 0,
+   "what": "Wide river views and fishing boats.",
+   "tip": "Visit late afternoon.",
+   "best": "sunset",
+   "indoor": false
+  },
+  {
+   "id": "chalan-beel",
+   "name": "Chalan Beel",
+   "area": "Pabna",
+   "tags": [
+    "nature",
+    "wildlife"
+   ],
+   "mins": 150,
+   "fee": 0,
+   "what": "A large wetland with birds and boats.",
+   "tip": "Best in monsoon and post-monsoon.",
+   "best": "morning",
+   "indoor": false
+  },
+  {
+   "id": "textile",
+   "name": "Handloom market",
+   "area": "Town",
+   "tags": [
+    "shopping",
+    "culture"
+   ],
+   "mins": 60,
+   "fee": 0,
+   "what": "Handloom sarees, lungi and fabrics.",
+   "tip": "Compare prices.",
+   "best": "afternoon",
+   "indoor": true
+  },
+  {
+   "id": "ishwardi",
+   "name": "Ishwardi town",
+   "area": "Ishwardi",
+   "tags": [
+    "city"
+   ],
+   "mins": 45,
+   "fee": 0,
+   "what": "Railway town and gateway to Hardinge Bridge.",
+   "tip": "Check local info.",
+   "best": "any",
+   "indoor": false
+  }
+ ],
+ "food": [
+  {
+   "dish": "Sweet curd (doi)",
+   "where": "Sweet shops",
+   "cost": 100
+  },
+  {
+   "dish": "Fish curry with rice",
+   "where": "Restaurants",
+   "cost": 250
+  },
+  {
+   "dish": "Tea",
+   "where": "Stalls",
+   "cost": 20
+  }
+ ],
+ "stay": {
+  "budget": {
+   "area": "Simple hotel",
+   "price_min": 700,
+   "price_max": 1500,
+   "note": "Basic."
+  },
+  "mid": {
+   "area": "Mid hotel",
+   "price_min": 2000,
+   "price_max": 4000,
+   "note": "Limited."
+  },
+  "luxury": {
+   "area": "Better hotel",
+   "price_min": 4500,
+   "price_max": 7000,
+   "note": "Few options."
+  }
+ },
+ "rules": [
+  "Respect local customs.",
+  "No littering."
+ ],
+ "packing": [
+  "Sunscreen",
+  "Water",
+  "Light clothes"
+ ],
+ "nearby": [
+  "rajshahi",
+  "natore",
+  "kushtia"
+ ],
+ "country": "Bangladesh"
+}

@@ -1,0 +1,248 @@
+{
+ "id": "makkah",
+ "name": "Makkah and Madinah (Umrah)",
+ "bn": "মক্কা ও মদিনা",
+ "aliases": [
+  "mecca",
+  "makka",
+  "madinah",
+  "medina",
+  "umrah",
+  "umra",
+  "omra",
+  "hajj"
+ ],
+ "country": "Saudi Arabia",
+ "region": "Makkah and Madinah Regions",
+ "lat": 21.4225,
+ "lng": 39.8262,
+ "summary": "Islam's two holiest cities. Umrah can be performed all year; plan with a registered agency for visa, hotels and transfers, and respect crowd rules.",
+ "best_months": [
+  11,
+  12,
+  1,
+  2,
+  3
+ ],
+ "season_note": "November to February is mild. Summer is very hot; Ramadan and Hajj season are extremely crowded and prices rise sharply.",
+ "avoid_note": "Summer midday heat is dangerous; stay hydrated and avoid peak crowds if elderly.",
+ "tags": [
+  "spiritual",
+  "culture",
+  "family",
+  "history"
+ ],
+ "days": {
+  "min": 8,
+  "ideal": 12
+ },
+ "emergency": {
+  "police": "999 (or 911)",
+  "ambulance": "997"
+ },
+ "entry_note": "Saudi Arabia: Bangladeshis normally travel for Umrah through a registered agency with visa arranged via the Nusuk/Umrah system; follow current Ministry of Hajj guidelines and check the latest rules with the embassy before booking.",
+ "reach": [
+  {
+   "mode": "Flight",
+   "how": "Dhaka to Jeddah (King Abdulaziz) or Madinah (Prince Mohammad bin Abdulaziz) (Biman, Saudia, flynas, US-Bangla)",
+   "hours": 5.5,
+   "fare_min": 50000,
+   "fare_max": 95000,
+   "note": "Direct flights about 5h30m; Biman and Saudia operate. Prices rise at Ramadan and Hajj."
+  }
+ ],
+ "local": [
+  {
+   "mode": "Haramain High-Speed Train",
+   "group_fare": "2500-6500 BDT",
+   "note": "Makkah-Madinah in about 2 hours."
+  },
+  {
+   "mode": "Bus or taxi transfer",
+   "group_fare": "1200-4000 BDT",
+   "note": "Jeddah airport to Makkah by agency."
+  },
+  {
+   "mode": "Short taxi rides",
+   "group_fare": "300-900 BDT",
+   "note": "Agree price."
+  }
+ ],
+ "attractions": [
+  {
+   "id": "masjid-haram",
+   "name": "Masjid al-Haram and Kaaba (Umrah)",
+   "area": "Makkah",
+   "tags": [
+    "spiritual",
+    "culture"
+   ],
+   "mins": 300,
+   "fee": 0,
+   "what": "The Grand Mosque; perform Tawaf and Sai.",
+   "tip": "Wear ihram properly; avoid peak prayer times with elders.",
+   "best": "morning",
+   "indoor": true
+  },
+  {
+   "id": "jabal-nour",
+   "name": "Jabal al-Nour and Cave Hira",
+   "area": "Makkah",
+   "tags": [
+    "spiritual",
+    "history",
+    "hills"
+   ],
+   "mins": 240,
+   "fee": 0,
+   "what": "The mountain of the first revelation; steep climb.",
+   "tip": "Not suitable for the elderly; climb early.",
+   "best": "morning",
+   "indoor": false
+  },
+  {
+   "id": "masjid-nabawi",
+   "name": "Masjid an-Nabawi and Rawdah",
+   "area": "Madinah",
+   "tags": [
+    "spiritual",
+    "culture"
+   ],
+   "mins": 240,
+   "fee": 0,
+   "what": "The Prophet's Mosque; Rawdah visits need Nusuk booking.",
+   "tip": "Book Rawdah slot on Nusuk app.",
+   "best": "any",
+   "indoor": true
+  },
+  {
+   "id": "quba",
+   "name": "Masjid Quba",
+   "area": "Madinah",
+   "tags": [
+    "spiritual",
+    "history"
+   ],
+   "mins": 45,
+   "fee": 0,
+   "what": "The first mosque in Islam.",
+   "tip": "Make wudu at home and pray 2 rakat.",
+   "best": "morning",
+   "indoor": true
+  },
+  {
+   "id": "uhud",
+   "name": "Mount Uhud and Martyrs Cemetery",
+   "area": "Madinah",
+   "tags": [
+    "history",
+    "spiritual"
+   ],
+   "mins": 75,
+   "fee": 0,
+   "what": "Site of the Battle of Uhud.",
+   "tip": "Visit with a guide.",
+   "best": "morning",
+   "indoor": false
+  },
+  {
+   "id": "masjid-qiblatayn",
+   "name": "Masjid al-Qiblatayn",
+   "area": "Madinah",
+   "tags": [
+    "spiritual",
+    "history"
+   ],
+   "mins": 30,
+   "fee": 0,
+   "what": "The mosque of two Qiblas.",
+   "tip": "Respect prayer times.",
+   "best": "any",
+   "indoor": true
+  },
+  {
+   "id": "arafat",
+   "name": "Mount Arafat and Mina (viewing)",
+   "area": "Makkah",
+   "tags": [
+    "spiritual",
+    "history"
+   ],
+   "mins": 90,
+   "fee": 0,
+   "what": "Hajj sites; Umrah visitors may take ziyarat tours.",
+   "tip": "Take agency transport.",
+   "best": "morning",
+   "indoor": false
+  },
+  {
+   "id": "zamzam",
+   "name": "Zamzam and Dates Market",
+   "area": "Madinah",
+   "tags": [
+    "shopping",
+    "food",
+    "culture"
+   ],
+   "mins": 90,
+   "fee": 0,
+   "what": "Buy dates and prayer items.",
+   "tip": "Compare prices; check airline limits.",
+   "best": "afternoon",
+   "indoor": false
+  }
+ ],
+ "food": [
+  {
+   "dish": "Bukhari rice with lamb",
+   "where": "Local restaurants",
+   "cost": 600
+  },
+  {
+   "dish": "Dates and Arabic coffee",
+   "where": "Hotels",
+   "cost": 150
+  },
+  {
+   "dish": "Bangladeshi/Indian meals near haram",
+   "where": "Many restaurants in Aziziyah/Misfalah",
+   "cost": 400
+  }
+ ],
+ "stay": {
+  "budget": {
+   "area": "Aziziyah, Shisha",
+   "price_min": 6000,
+   "price_max": 12000,
+   "note": "Farther from Haram; shuttle needed."
+  },
+  "mid": {
+   "area": "Near Haram (500m-1km)",
+   "price_min": 14000,
+   "price_max": 28000,
+   "note": "3-4 star hotels."
+  },
+  "luxury": {
+   "area": "Clock Tower area",
+   "price_min": 40000,
+   "price_max": 100000,
+   "note": "5-star hotels."
+  }
+ },
+ "rules": [
+  "Non-Muslims cannot enter Makkah or Madinah's Haram area.",
+  "Follow ihram rules; no perfume, no cutting hair, etc.",
+  "Photography inside the Haram has restrictions; be respectful.",
+  "Carry your Umrah permit and agency ID."
+ ],
+ "packing": [
+  "Ihram cloth (men)",
+  "Comfortable slippers",
+  "Light cotton",
+  "Sunscreen and umbrella",
+  "Power bank"
+ ],
+ "nearby": [
+  "dubai"
+ ]
+}

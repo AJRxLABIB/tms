@@ -40,7 +40,7 @@ final class PromptRedactor
         // 1. emails
         $t = preg_replace_callback('/[A-Za-z0-9._%+\-]+@[A-Za-z0-9\-]+(?:\.[A-Za-z0-9\-]+)+/u', fn($m) => $bump('email'), $t) ?? $t;
         // 2. key-like secrets: well-known prefixes, bearer tokens, long hex/base64 runs
-        $t = preg_replace_callback('/\b(?:AIza[0-9A-Za-z_\-]{20,}|sk-[A-Za-z0-9_\-]{16,}|gh[pousr]_[A-Za-z0-9]{20,}|xox[abprs]-[A-Za-z0-9\-]{10,}|AKIA[0-9A-Z]{12,})\b/', fn($m) => $bump('key'), $t) ?? $t;
+        $t = preg_replace_callback('/\b(?:AIza[0-9A-Za-z_\-]{20,}|AQ\.[0-9A-Za-z_\-]{20,}|sk-[A-Za-z0-9_\-]{16,}|gh[pousr]_[A-Za-z0-9]{20,}|xox[abprs]-[A-Za-z0-9\-]{10,}|AKIA[0-9A-Z]{12,})\b/', fn($m) => $bump('key'), $t) ?? $t;
         $t = preg_replace_callback('/\bBearer\s+[A-Za-z0-9._\-]{16,}/i', fn($m) => $bump('key'), $t) ?? $t;
         $t = preg_replace_callback('/\b(?=[A-Za-z0-9+\/_\-]*[0-9])(?=[A-Za-z0-9+\/_\-]*[A-Za-z])[A-Za-z0-9+\/_\-]{32,}={0,2}(?![A-Za-z0-9])/', fn($m) => $bump('key'), $t) ?? $t;
         $t = preg_replace_callback('/\b[0-9a-f]{32,}\b/i', fn($m) => $bump('key'), $t) ?? $t;

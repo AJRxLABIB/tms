@@ -18,11 +18,10 @@ Permanent: Windows Start -> "Edit the system environment variables" -> Environme
 Without changing PATH you can always run `D:\XAMPP\php\php.exe tools\create-admin.php admin`.
 
 ## 3. Create the database and load the schema
-1. Open http://localhost/phpmyadmin, click **New**, name it `tms`, collation `utf8mb4_general_ci`, **Create**.
-2. Select `tms` -> **Import** -> choose `database\legacy-sql\tms.sql` -> Go.
-3. Import `database\legacy-sql\v6_migration.sql` the same way.
+1. Open http://localhost/phpmyadmin, click **New**, name it `tourbuddy`, collation `utf8mb4_general_ci`, **Create**.
+2. Select `tourbuddy` -> **Import** -> choose `database\tourbuddy.sql` -> Go.
    (Or in PowerShell from the project folder:
-   `cmd /c "mysql -u root tms < database\legacy-sql\tms.sql"` then the same for `v6_migration.sql`.)
+   `cmd /c "D:\XAMPP\mysql\bin\mysql.exe -u root tourbuddy < database\tourbuddy.sql"`)
 The app creates many remaining tables itself the first time it runs (AI, Explore, payments, suppliers, notices, ...),
 but a few (for example the API token tables) come from tracked migrations. Run them once, and again after every update:
 
@@ -32,7 +31,7 @@ If it prints a WARNING about constraints, your old data has orphaned rows (e.g. 
 deleted for you; fix those rows and re-run.
 
 ## 4. Configure `.env` (project root; already open in your editor)
-The defaults match a fresh XAMPP, so you can leave the `DB_*` lines **empty**: user `root`, no password, database `tms`.
+The defaults match a fresh XAMPP, so you can leave the `DB_*` lines **empty**: user `root`, no password, database `tourbuddy`.
 Only fill these when you need them:
 
     APP_DEBUG=true                    # fine on your own PC, never on a public server
@@ -51,7 +50,7 @@ Keep the `WALLET_ENCRYPTION_KEY` safe: if you lose it, uploaded wallet documents
 
 ## 5. Check the site opens
 Visit http://localhost/tourbuddy/ (customer site) and http://localhost/tourbuddy/admin/ (admin).
-If you see "Database connection failed", MySQL is not started or the `tms` database does not exist (steps 1 and 3).
+If you see "Database connection failed", MySQL is not started or the `tourbuddy` database does not exist (steps 1 and 3).
 
 ## 6. Create your admin login
 In the project folder (`D:\XAMPP\htdocs\tourbuddy`):
@@ -91,7 +90,7 @@ Admin -> AI Safety & Evaluation runs the built-in checks. Never expose port 1143
 |---|---|
 | `php` not recognized | Step 2 (PATH) or use `D:\XAMPP\php\php.exe` |
 | Blank page / 500 | Set `APP_DEBUG=true` in `.env`, save, reload; or read `D:\XAMPP\apache\logs\error.log` |
-| "Database connection failed" | Start MySQL in XAMPP; make sure database `tms` exists; check `DB_*` in `.env` |
+| "Database connection failed" | Start MySQL in XAMPP; make sure database `tourbuddy` exists; check `DB_*` in `.env` |
 | MySQL will not start | Another MySQL on port 3306; stop it, or change the port in XAMPP |
 | Apache will not start | Port 80/443 in use; stop IIS/Skype or change the port in XAMPP |
 | CSS/URLs broken | Open the site as `http://localhost/tourbuddy/` (the project must sit in `htdocs\tourbuddy`) |

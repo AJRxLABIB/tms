@@ -8,7 +8,7 @@ running against local XAMPP defaults exactly as it always has.
 
 | Variable | Required? | Purpose |
 |---|---|---|
-| `DB_HOST`, `DB_NAME`, `DB_USER`, `DB_PASS` | Only on a real host | Blank = local XAMPP defaults (`localhost` / `root` / no password / `tms`). Any real host gives you its own values. |
+| `DB_HOST`, `DB_NAME`, `DB_USER`, `DB_PASS` | Only on a real host | Blank = local XAMPP defaults (`localhost` / `root` / no password / `tourbuddy`). Any real host gives you its own values. |
 | `GEMINI_API_KEY` | For AI features | Google Gemini key. Without it, AI features (chatbot, itinerary planner, trip copilot, recommendations) run on their honest offline fallback instead of failing. |
 | `GEMINI_MODEL` | No | Defaults sensibly if blank. |
 | `AI_MAX_TOKENS`, `AI_CACHE_TTL`, `AI_RATE_LIMIT` | No | Tuning knobs for AI cost/latency. |

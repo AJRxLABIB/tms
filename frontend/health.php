@@ -42,7 +42,7 @@ $httpCode = 200;
 $dbStart = microtime(true);
 try {
     $dbh = new PDO(
-        'mysql:host=' . tms_env('DB_HOST', 'localhost') . ';dbname=' . tms_env('DB_NAME', 'tms') . ';charset=utf8mb4',
+        'mysql:host=' . tms_env('DB_HOST', 'localhost') . ';dbname=' . tms_env('DB_NAME', 'tourbuddy') . ';charset=utf8mb4',
         tms_env('DB_USER', 'root'),
         tms_env('DB_PASS', ''),
         [PDO::ATTR_TIMEOUT => 3, PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]

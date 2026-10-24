@@ -196,6 +196,60 @@ tms_require_user();   // protected travel service: sign in first, then return he
 .planner-card .col-md-3 { grid-column: span 3; } .planner-card .col-md-2 { grid-column: span 2; }
 .planner-card .col-12 { grid-column: 1 / -1; }
 @media (max-width: 768px) { .planner-card { padding: 22px 18px; } .planner-card .row > [class*="col-"] { grid-column: 1 / -1; } }
+
+/* ---- detailed trip guide ---- */
+.tp-h { font-weight:800; color:var(--text); margin:26px 0 12px; }
+.tp-h i { color:#2E9E78; margin-right:6px; }
+.tp-overview { color:rgba(255,255,255,.92); margin:8px 0 10px; font-size:15px; line-height:1.55; }
+.tp-best { background:rgba(255,255,255,.12); border-radius:10px; padding:8px 12px; font-size:13.5px; margin-top:8px; }
+.tp-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(250px,1fr)); gap:12px; }
+.tp-card { background:var(--white); border:1px solid rgba(127,127,127,.25); border-radius:14px; padding:14px; }
+.tp-card-top { display:flex; gap:6px; flex-wrap:wrap; margin-bottom:6px; }
+.tp-card-title { font-weight:800; color:var(--text); margin-bottom:4px; }
+.tp-line { font-size:13.5px; color:var(--text-muted); margin-top:3px; }
+.tp-pill { background:#176B50; color:#fff; border-radius:999px; padding:2px 10px; font-size:12px; font-weight:700; }
+.tp-pill-soft { background:rgba(46,158,120,.18); color:#2E9E78; }
+.tp-badge { background:#2E9E78; color:#04261b; border-radius:6px; padding:1px 8px; font-size:11.5px; font-weight:800; }
+.tp-money { color:#2E9E78; font-weight:700; }
+.tp-cost { display:grid; grid-template-columns:1.6fr 1fr; gap:16px; background:var(--white); border:1px solid rgba(127,127,127,.25); border-radius:14px; padding:16px; }
+.tp-cost-row { display:grid; grid-template-columns:150px 1fr 90px; gap:10px; align-items:center; margin:7px 0; font-size:13.5px; }
+.tp-cost-label { color:var(--text-muted); }
+.tp-cost-bar { background:rgba(127,127,127,.2); border-radius:6px; height:8px; overflow:hidden; display:block; }
+.tp-cost-bar span { display:block; height:100%; background:#2E9E78; border-radius:6px; }
+.tp-cost-val { text-align:right; font-weight:700; color:var(--text); }
+.tp-cost-total { display:flex; flex-direction:column; gap:10px; justify-content:center; border-left:1px dashed rgba(127,127,127,.4); padding-left:16px; }
+.tp-cost-total small { display:block; color:var(--text-muted); }
+.tp-cost-total strong { font-size:24px; color:var(--text); }
+.tp-ok { color:#2E9E78; font-weight:700; } .tp-over { color:#e5534b; font-weight:700; }
+.tp-fine { font-size:12px; color:var(--text-muted); margin-top:6px; }
+.tp-days-head { display:flex; justify-content:space-between; align-items:center; margin:26px 0 12px; flex-wrap:wrap; gap:8px; }
+.tp-link { background:none; border:0; color:#2E9E78; font-weight:700; cursor:pointer; padding:0; }
+.tp-date { color:var(--text-muted); font-weight:500; margin-left:6px; }
+.tp-day-overview { color:var(--text); margin:6px 0 10px; line-height:1.55; }
+.tp-day-facts { display:flex; flex-wrap:wrap; gap:8px 16px; font-size:13px; color:var(--text-muted); margin-bottom:12px; }
+.tp-what { color:var(--text); font-size:14px; line-height:1.55; margin:6px 0; }
+.tp-hop { font-size:12.5px; color:var(--text-muted); margin-top:5px; }
+.tp-maplink { font-size:12px; margin-left:6px; color:#2E9E78; font-weight:700; }
+.tp-book { display:inline-block; margin-top:8px; background:#176B50; color:#fff !important; border-radius:8px; padding:6px 12px; font-size:13px; font-weight:700; text-decoration:none; }
+.tp-meals { display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); gap:10px; margin:14px 0 8px; }
+.tp-meal { background:rgba(46,158,120,.08); border-radius:10px; padding:10px; display:flex; flex-direction:column; gap:2px; font-size:13.5px; color:var(--text); }
+.tp-meal b { color:#2E9E78; text-transform:uppercase; font-size:11.5px; letter-spacing:.04em; }
+.tp-meal em { color:var(--text-muted); } .tp-meal small { color:#2E9E78; font-weight:700; }
+.tp-stay { background:rgba(23,107,80,.14); border-radius:10px; padding:10px 12px; margin:8px 0; font-size:14px; color:var(--text); }
+.schedule-meta { display:flex; flex-wrap:wrap; gap:6px 14px; align-items:flex-start; }
+.schedule-meta .tp-badge { align-self:flex-start; white-space:nowrap; }
+.tp-tip { font-size:13px; color:var(--text-muted); margin-top:6px; line-height:1.45; }
+.tp-banner { border-radius:12px; padding:14px 16px; margin-bottom:16px; }
+.tp-banner-warn { background:#fff4d6; color:#5c3b00; border:1px solid #f0c36d; }
+.tp-btn { margin-top:8px; background:#176B50; color:#fff; border:0; border-radius:8px; padding:6px 14px; font-weight:700; cursor:pointer; }
+@media (max-width:700px) { .tp-cost { grid-template-columns:1fr; } .tp-cost-total { border-left:0; padding-left:0; } .tp-cost-row { grid-template-columns:110px 1fr 76px; } }
+@media print {
+  body * { visibility:hidden !important; }
+  #itinWrap, #itinWrap * { visibility:visible !important; }
+  #itinWrap { position:absolute; left:0; top:0; width:100%; }
+  .day-body { display:block !important; }
+  .btn-download, .btn-regen, #regenBox, .tp-days-head span, .tp-btn, .tp-book { display:none !important; }
+}
 </style>
 </head>
 <body>
@@ -233,8 +287,12 @@ tms_require_user();   // protected travel service: sign in first, then return he
         ?>
         <div class="row g-3">
             <div class="col-md-6">
+                <label class="field-label" for="p_origin">Starting from</label>
+                <input type="text" id="p_origin" class="field-input" data-place-suggest="place" placeholder="e.g. Dhaka, Bangladesh" value="Dhaka, Bangladesh">
+            </div>
+            <div class="col-md-6">
                 <label class="field-label" for="p_dest">Destination *</label>
-                <input type="text" id="p_dest" class="field-input" placeholder="e.g. Cox's Bazar, Bandarban, Thailand…">
+                <input type="text" id="p_dest" class="field-input" data-place-suggest="place" placeholder="e.g. Cox's Bazar, Bandarban, Thailand…">
             </div>
             <div class="col-md-3">
                 <label class="field-label" for="p_start">Start Date *</label>
@@ -251,6 +309,13 @@ tms_require_user();   // protected travel service: sign in first, then return he
             <div class="col-md-3">
                 <label class="field-label" for="p_budget">Total Budget (BDT)</label>
                 <input type="number" id="p_budget" class="field-input" placeholder="e.g. 40000">
+            </div>
+            <div class="col-md-3">
+                <label class="field-label" for="p_engine">Planner engine</label>
+                <select id="p_engine" class="field-input">
+                    <option value="">Automatic (AI, with built-in backup)</option>
+                    <option value="brain">TourBuddy Brain (instant, offline)</option>
+                </select>
             </div>
             <div class="col-md-3">
                 <label class="field-label" for="p_style">Travel Style</label>
@@ -312,14 +377,15 @@ tms_require_user();   // protected travel service: sign in first, then return he
     <!-- Thinking -->
     <div class="ai-thinking" id="thinkingDiv">
         <div class="ai-spinner"></div>
-        <h4 style="font-weight:800;color:var(--text);">AI is crafting your itinerary…</h4>
-        <p id="thinkingMsg" style="color:var(--text-muted);">Analyzing destination and optimizing your schedule</p>
+        <h4 style="font-weight:800;color:var(--text);">AI is writing your full trip guide…</h4>
+        <p id="thinkingMsg" style="color:var(--text-muted);">This takes up to a minute: it plans every stop, fare and meal</p>
     </div>
 
     <!-- Itinerary Output -->
     <div class="itinerary-wrap" id="itinWrap">
         <div id="itinContent"></div>
         <div style="text-align:center;margin-top:20px;">
+            <button class="btn-download" onclick="printItinerary()"><i class="fa fa-print"></i> Print / Save as PDF</button>
             <button class="btn-download" onclick="downloadItinerary()"><i class="fa fa-download"></i> Download Plan</button>
             <button class="btn-regen" id="regenToggleBtn" onclick="toggleRegenBox()"><i class="fa fa-refresh"></i> Regenerate</button>
         </div>
@@ -365,6 +431,8 @@ function buildPlanFormData(extra) {
     const fd = new FormData();
     fd.append('action', 'itinerary');
     fd.append('destination',     document.getElementById('p_dest').value.trim());
+    fd.append('origin',          (document.getElementById('p_origin') || {value: ''}).value.trim());
+    fd.append('engine',          (document.getElementById('p_engine') || {value: ''}).value);
     fd.append('duration',        document.getElementById('p_days').value);
     fd.append('travelers',       document.getElementById('p_travelers').value);
     fd.append('budget',          document.getElementById('p_budget').value || 0);
@@ -407,7 +475,7 @@ async function runPlanRequest(fd, busyBtn, busyBtnText, busyLabel, idleLabel) {
 
         if (json.success && json.data.itinerary) {
             currentItinerary = json.data.itinerary;
-            renderItinerary(currentItinerary);
+            showItinerary(currentItinerary);
             return true;
         }
         tmsToast(json.error || 'Failed to generate itinerary. Please try again.');
@@ -458,116 +526,8 @@ async function regeneratePlan() {
     }
 }
 
-function renderItinerary(itin) {
-    const cost = itin.estimated_cost || {};
-    const days  = itin.days || [];
-
-    const typeIcons = {
-        sightseeing: '<i class="fa fa-camera"></i>',
-        meal:        '<i class="fa fa-cutlery"></i>',
-        transport:   '<i class="fa fa-bus"></i>',
-        accommodation:'<i class="fa fa-bed"></i>',
-        activity:    '<i class="fa fa-star"></i>',
-    };
-
-    let html = `
-    <div class="itin-header">
-        <div class="itin-title">${esc(itin.trip_title || 'Your Trip Plan')}</div>
-        <div class="itin-meta">
-            <span class="itin-meta-item"><i class="fa fa-map-marker"></i> ${esc(itin.destination)}</span>
-            <span class="itin-meta-item"><i class="fa fa-calendar"></i> ${itin.total_duration} days</span>
-            <span class="itin-meta-item"><i class="fa fa-money"></i> Est. ৳${Number(cost.total||0).toLocaleString()}</span>
-        </div>
-    </div>
-
-    <!-- Cost grid -->
-    <div class="cost-grid">
-        ${costBox('Accommodation', cost.accommodation)}
-        ${costBox('Transport', cost.transport)}
-        ${costBox('Food', cost.food)}
-        ${costBox('Activities', cost.activities)}
-        ${costBox('Miscellaneous', cost.miscellaneous)}
-        ${costBox('TOTAL', cost.total, true)}
-    </div>
-
-    <!-- Days -->
-    <h5 style="font-weight:800;color:var(--text);margin-bottom:16px;"><i class="fa fa-list-alt" style="color:#176B50;"></i> Day-by-Day Itinerary</h5>`;
-
-    days.forEach((day, i) => {
-        const schedule = (day.schedule || []);
-        const meals    = day.meal_suggestions || {};
-
-        html += `
-        <div class="day-card">
-            <div class="day-header" onclick="toggleDay(${i})">
-                <span class="day-number">Day ${day.day}</span>
-                <span class="day-title">${esc(day.title || '')}</span>
-                <span class="day-weather-note"><i class="fa fa-cloud"></i> ${esc(day.weather_note || '')}</span>
-                <span class="day-budget-chip">৳${Number(day.daily_budget||0).toLocaleString()}</span>
-            </div>
-            <div class="day-body" id="dayBody${i}" style="${i===0?'':'display:none'}">`;
-
-        schedule.forEach(s => {
-            const iconClass = s.type || 'sightseeing';
-            html += `
-            <div class="schedule-item">
-                <div class="schedule-time">${esc(s.time||'')}</div>
-                <div class="schedule-icon ${iconClass}">${typeIcons[iconClass]||'🔹'}</div>
-                <div class="schedule-content">
-                    <div class="schedule-activity">${esc(s.activity||'')}</div>
-                    <div class="schedule-location"><i class="fa fa-map-marker"></i> ${esc(s.location||'')}</div>
-                    <div class="schedule-meta">
-                        <span><i class="fa fa-clock-o"></i> ${esc(s.duration||'')}</span>
-                        ${s.cost ? `<span><i class="fa fa-money"></i> ৳${Number(s.cost).toLocaleString()}/person</span>` : ''}
-                    </div>
-                    ${s.notes ? `<div class="schedule-notes">💡 ${esc(s.notes)}</div>` : ''}
-                </div>
-            </div>`;
-        });
-
-        if (meals.breakfast || meals.lunch || meals.dinner) {
-            html += `<div class="day-meals">
-                🍽️ <strong>Meals:</strong>
-                ${meals.breakfast ? `<b>Breakfast:</b> ${esc(meals.breakfast)} ` : ''}
-                ${meals.lunch ? `&nbsp;|&nbsp; <b>Lunch:</b> ${esc(meals.lunch)} ` : ''}
-                ${meals.dinner ? `&nbsp;|&nbsp; <b>Dinner:</b> ${esc(meals.dinner)}` : ''}
-            </div>`;
-        }
-
-        if (day.pro_tip) {
-            html += `<div class="day-pro-tip"><span>⭐</span><span><strong>Pro Tip:</strong> ${esc(day.pro_tip)}</span></div>`;
-        }
-
-        html += `</div></div>`;
-    });
-
-    // Extras
-    const gems      = itin.hidden_gems || [];
-    const tips      = itin.money_saving_tips || [];
-    const packing   = itin.packing_essentials || [];
-    const emergency = itin.emergency_info || {};
-
-    html += `<div class="extras-grid">
-        <div class="extras-card">
-            <div class="extras-title"><i class="fa fa-diamond"></i> Hidden Gems</div>
-            ${gems.map(g=>`<div class="extras-item">✨ ${esc(g)}</div>`).join('')}
-        </div>
-        <div class="extras-card">
-            <div class="extras-title"><i class="fa fa-piggy-bank"></i> Money Saving Tips</div>
-            ${tips.map(t=>`<div class="extras-item">💰 ${esc(t)}</div>`).join('')}
-        </div>
-        <div class="extras-card">
-            <div class="extras-title"><i class="fa fa-suitcase"></i> Packing Essentials</div>
-            ${packing.map(p=>`<div class="extras-item">📦 ${esc(p)}</div>`).join('')}
-        </div>
-        <div class="extras-card">
-            <div class="extras-title"><i class="fa fa-phone"></i> Emergency Contacts</div>
-            ${emergency.local_police ? `<div class="extras-item">🚔 Police: ${esc(emergency.local_police)}</div>` : ''}
-            ${emergency.ambulance ? `<div class="extras-item">🚑 Ambulance: ${esc(emergency.ambulance)}</div>` : ''}
-            ${emergency.nearest_hospital ? `<div class="extras-item">🏥 ${esc(emergency.nearest_hospital)}</div>` : ''}
-        </div>
-    </div>`;
-
+function renderChecks(itin) {
+    let html = '';
     if (itin.validation && itin.validation.status) {
         // Computed in code (PlanValidator), not by the model: status, what was changed, trade-offs, and which places are bookable.
         const v = itin.validation, cc = itin.computed_cost || {}, bc = itin.budget_check || null;
@@ -598,7 +558,182 @@ function renderItinerary(itin) {
             <strong>🤖 AI Notes:</strong> ${esc(itin.ai_notes)}</div>`;
     }
 
-    document.getElementById('itinContent').innerHTML = html;
+    return html;
+}
+
+function fmtMoney(n) { n = Number(n); return (isFinite(n) && n > 0) ? '৳' + Math.round(n).toLocaleString() : ''; }
+function mapsLink(q) { return 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(q); }
+function listItems(arr, icon) {
+    return (arr || []).filter(Boolean).map(x => `<div class="extras-item">${icon} ${esc(typeof x === 'string' ? x : JSON.stringify(x))}</div>`).join('');
+}
+
+function renderItinerary(itin) {
+    const cost = itin.estimated_cost || {};
+    const days = itin.days || [];
+    const trav = Number((document.getElementById('p_travelers') || {}).value) || 2;
+    const destName = itin.destination || (document.getElementById('p_dest') || {}).value || '';
+    const grand = Number(cost.grand_total || cost.total || 0);
+    const typeIcons = {
+        sightseeing: '<i class="fa fa-camera"></i>', meal: '<i class="fa fa-cutlery"></i>', transport: '<i class="fa fa-bus"></i>',
+        accommodation: '<i class="fa fa-bed"></i>', activity: '<i class="fa fa-star"></i>'
+    };
+    let html = '';
+
+    if (itin.is_fallback) {
+        html += `<div class="tp-banner tp-banner-warn" role="alert"><strong><i class="fa fa-exclamation-triangle"></i> This is a basic draft, not the full AI guide.</strong>
+            <div>${esc(itin.ai_notes || 'The AI planner could not finish this time.')}${itin.ai_error ? ' <em>(' + esc(itin.ai_error) + ')</em>' : ''}</div>
+            <button type="button" class="tp-btn" onclick="generatePlan()"><i class="fa fa-refresh"></i> Try again</button></div>`;
+    }
+
+    if (itin.engine === 'brain') {
+        html += `<div class="tp-banner" role="note"><strong><i class="fa fa-bolt"></i> Planned by the TourBuddy Brain</strong> <span>Built-in travel engine: instant, works offline, no outside AI. Prices are estimates.</span></div>`;
+    }
+
+    html += `<div class="itin-header">
+        <div class="itin-title">${esc(itin.trip_title || 'Your Trip Plan')}</div>
+        ${itin.overview ? `<p class="tp-overview">${esc(itin.overview)}</p>` : ''}
+        <div class="itin-meta">
+            <span class="itin-meta-item"><i class="fa fa-map-marker"></i> ${esc(destName)}</span>
+            <span class="itin-meta-item"><i class="fa fa-calendar"></i> ${esc(String(itin.total_duration || days.length))} days</span>
+            <span class="itin-meta-item"><i class="fa fa-users"></i> ${trav} traveller${trav === 1 ? '' : 's'}</span>
+            ${grand ? `<span class="itin-meta-item"><i class="fa fa-money"></i> Est. ${fmtMoney(grand)} total · ${fmtMoney(cost.per_person || grand / trav)} each</span>` : ''}
+        </div>
+        ${itin.best_visiting_time ? `<div class="tp-best"><i class="fa fa-sun-o"></i> <strong>Best time to visit:</strong> ${esc(itin.best_visiting_time)}</div>` : ''}
+    </div>`;
+
+    // ---- getting there
+    const gt = (itin.getting_there || []).filter(o => o && typeof o === 'object');
+    if (gt.length) {
+        html += `<h5 class="tp-h"><i class="fa fa-road"></i> Getting there</h5><div class="tp-grid">` + gt.map(o => `
+            <div class="tp-card">
+                <div class="tp-card-top"><span class="tp-pill">${esc(o.mode || 'Travel')}</span>${o.comfort ? `<span class="tp-pill tp-pill-soft">${esc(o.comfort)}</span>` : ''}</div>
+                <div class="tp-card-title">${esc(o.route || '')}</div>
+                <div class="tp-line"><i class="fa fa-clock-o"></i> ${esc(o.duration || '')}${o.departure_tip ? ' · ' + esc(o.departure_tip) : ''}</div>
+                ${Number(o.fare_per_person_one_way) > 0 ? `<div class="tp-line tp-money"><i class="fa fa-money"></i> ${fmtMoney(o.fare_per_person_one_way)} per person one way</div>` : ''}
+                ${o.operators ? `<div class="tp-line"><i class="fa fa-bus"></i> ${esc(o.operators)}</div>` : ''}
+                ${o.tip ? `<div class="tp-tip">💡 ${esc(o.tip)}</div>` : ''}
+            </div>`).join('') + `</div>`;
+    }
+
+    // ---- cost summary
+    const parts = [['Accommodation', cost.accommodation], ['Getting there (return)', cost.getting_there], ['Local transport', cost.transport], ['Food', cost.food], ['Activities & entry', cost.activities], ['Buffer & misc.', cost.miscellaneous]];
+    const maxPart = Math.max(1, ...parts.map(p => Number(p[1]) || 0));
+    html += `<h5 class="tp-h"><i class="fa fa-money"></i> What it will cost</h5>
+    <div class="tp-cost">
+        <div class="tp-cost-rows">${parts.map(p => `<div class="tp-cost-row"><span class="tp-cost-label">${esc(p[0])}</span>
+            <span class="tp-cost-bar"><span style="width:${Math.round(100 * (Number(p[1]) || 0) / maxPart)}%"></span></span>
+            <span class="tp-cost-val">${fmtMoney(p[1]) || '—'}</span></div>`).join('')}</div>
+        <div class="tp-cost-total"><div><small>Total for ${trav}</small><strong>${fmtMoney(grand) || '—'}</strong></div>
+            <div><small>Per person</small><strong>${fmtMoney(cost.per_person || (grand && grand / trav)) || '—'}</strong></div>
+            ${itin.budget_check_total ? (itin.budget_check_total.status === 'within_budget'
+                ? `<div class="tp-ok"><i class="fa fa-check-circle"></i> ${fmtMoney(itin.budget_check_total.difference)} under your budget</div>`
+                : `<div class="tp-over"><i class="fa fa-exclamation-circle"></i> ${fmtMoney(itin.budget_check_total.difference)} over your budget</div>`) : ''}</div>
+    </div>
+    <div class="tp-fine">Amounts are estimates in BDT. Items matched to the TourBuddy catalogue use its real prices; the journey is the cheapest option listed above, both ways; ${esc(cost.buffer_basis || 'a small buffer is added')}.</div>`;
+
+    // ---- days
+    html += `<div class="tp-days-head"><h5 class="tp-h" style="margin:0;"><i class="fa fa-list-alt"></i> Day-by-day guide</h5>
+        <span><button type="button" class="tp-link" onclick="toggleAllDays(true)">Expand all</button> · <button type="button" class="tp-link" onclick="toggleAllDays(false)">Collapse all</button></span></div>`;
+
+    days.forEach((day, i) => {
+        const schedule = (day.schedule || []);
+        const md = day.meal_details || {};
+        const stay = (day.stay && typeof day.stay === 'object') ? day.stay : null;
+        html += `
+        <div class="day-card">
+            <div class="day-header" onclick="toggleDay(${i})">
+                <span class="day-number">Day ${esc(String(day.day))}</span>
+                <span class="day-title">${esc(day.title || '')}${day.date ? ` <small class="tp-date">${esc(day.date)}</small>` : ''}</span>
+                <span class="day-budget-chip">${fmtMoney(day.daily_budget) || '—'}</span>
+            </div>
+            <div class="day-body" id="dayBody${i}">
+                ${day.overview ? `<p class="tp-day-overview">${esc(day.overview)}</p>` : ''}
+                <div class="tp-day-facts">
+                    ${day.area ? `<span><i class="fa fa-map-signs"></i> ${esc(day.area)}</span>` : ''}
+                    ${day.weather_note ? `<span><i class="fa fa-cloud"></i> ${esc(day.weather_note)}</span>` : ''}
+                    ${Number(day.daily_budget) > 0 ? `<span><i class="fa fa-money"></i> ${fmtMoney(day.daily_budget)} for the group · about ${fmtMoney(day.daily_budget / trav)} each</span>` : ''}
+                </div>`;
+
+        schedule.forEach(s => {
+            const t = s.type || 'sightseeing';
+            const hop = (s.how_to_get_there && typeof s.how_to_get_there === 'object') ? s.how_to_get_there : null;
+            const place = s.location || s.activity || '';
+            const book = (s.catalogue_id && (t === 'accommodation' || s.source === 'catalogue'))
+                ? (t === 'accommodation' ? `hotel-details.php?id=${encodeURIComponent(s.catalogue_id)}` : `activity-details.php?id=${encodeURIComponent(s.catalogue_id)}`) : '';
+            html += `
+            <div class="schedule-item">
+                <div class="schedule-time">${esc(s.time || '')}</div>
+                <div class="schedule-icon ${esc(t)}">${typeIcons[t] || '🔹'}</div>
+                <div class="schedule-content">
+                    <div class="schedule-activity">${esc(s.activity || '')}</div>
+                    <div class="schedule-location"><i class="fa fa-map-marker"></i> ${esc(s.location || '')}${s.area ? ' · ' + esc(s.area) : ''}
+                        ${place ? ` <a class="tp-maplink" href="${mapsLink(place + ' ' + destName)}" target="_blank" rel="noopener noreferrer"><i class="fa fa-external-link"></i> Map</a>` : ''}</div>
+                    ${s.what_to_do ? `<div class="tp-what">${esc(s.what_to_do)}</div>` : ''}
+                    <div class="schedule-meta">
+                        ${s.duration ? `<span><i class="fa fa-clock-o"></i> ${esc(s.duration)}</span>` : ''}
+                        ${Number(s.cost) > 0 ? `<span class="tp-money"><i class="fa fa-money"></i> ${fmtMoney(s.cost)} per person${s.cost_note ? ' · ' + esc(s.cost_note) : ''}</span>` : (s.cost_note ? `<span class="tp-money"><i class="fa fa-money"></i> ${esc(s.cost_note)}</span>` : '')}
+                        ${s.booking ? `<span><i class="fa fa-ticket"></i> ${esc(s.booking)}</span>` : ''}
+                        ${s.source === 'catalogue' ? '<span class="tp-badge">On TourBuddy</span>' : ''}
+                    </div>
+                    ${hop ? `<div class="tp-hop"><i class="fa fa-arrow-right"></i> ${hop.from ? 'From ' + esc(hop.from) + ': ' : ''}${esc(hop.mode || '')}${hop.duration ? ', ' + esc(hop.duration) : ''}${Number(hop.cost_group) > 0 ? ', about ' + fmtMoney(hop.cost_group) + ' for the group' : ''}</div>` : ''}
+                    ${s.tip ? `<div class="tp-tip">💡 ${esc(s.tip)}</div>` : ''}
+                    ${s.alternative ? `<div class="tp-tip">↺ Alternative: ${esc(s.alternative)}</div>` : ''}
+                    ${(s.notes && s.notes !== s.tip) ? `<div class="tp-tip">${esc(s.notes)}</div>` : ''}
+                    ${book ? `<a class="tp-book" href="${book}"><i class="fa fa-calendar-check-o"></i> View &amp; book on TourBuddy</a>` : ''}
+                </div>
+            </div>`;
+        });
+
+        const meals = ['breakfast', 'lunch', 'dinner'].map(k => {
+            const m = md[k]; const flat = (day.meal_suggestions || {})[k];
+            if (m && typeof m === 'object') return `<div class="tp-meal"><b>${k.charAt(0).toUpperCase() + k.slice(1)}</b><span>${esc(m.place || '')}</span><em>${esc(m.dish || '')}</em>${Number(m.cost_per_person) > 0 ? `<small>${fmtMoney(m.cost_per_person)} each</small>` : ''}</div>`;
+            if (typeof flat === 'string' && flat) return `<div class="tp-meal"><b>${k.charAt(0).toUpperCase() + k.slice(1)}</b><span>${esc(flat)}</span></div>`;
+            return '';
+        }).join('');
+        if (meals) html += `<div class="tp-meals">${meals}</div>`;
+
+        if (stay && stay.name) {
+            html += `<div class="tp-stay"><i class="fa fa-bed"></i> <strong>Tonight:</strong> ${esc(stay.name)}${stay.area ? ' · ' + esc(stay.area) : ''}
+                ${Number(stay.price_group_per_night) > 0 ? ` · about ${fmtMoney(stay.price_group_per_night)} per night for the group` : ''}${stay.booking_tip ? ` <span class="tp-fine">${esc(stay.booking_tip)}</span>` : ''}</div>`;
+        }
+        if (day.pro_tip) html += `<div class="day-pro-tip"><span>⭐</span><span><strong>Pro tip:</strong> ${esc(day.pro_tip)}</span></div>`;
+        html += `</div></div>`;
+    });
+
+    // ---- where to stay / eat
+    const hotels = (itin.hotel_recommendations || []).filter(h => h && typeof h === 'object');
+    const rests = (itin.restaurant_recommendations || []).filter(h => h && typeof h === 'object');
+    if (hotels.length || rests.length) {
+        const card = (h, kind) => `<div class="tp-card"><div class="tp-card-top"><span class="tp-pill tp-pill-soft">${esc(h.tier || h.cuisine || kind)}</span>${h.verified ? '<span class="tp-badge">Verified on map</span>' : ''}</div>
+            <div class="tp-card-title">${esc(h.name || '')}</div>
+            ${h.area ? `<div class="tp-line"><i class="fa fa-map-marker"></i> ${esc(h.area)}</div>` : ''}
+            ${h.price_range ? `<div class="tp-line tp-money"><i class="fa fa-money"></i> ${esc(h.price_range)}</div>` : ''}
+            ${(h.why || h.must_try) ? `<div class="tp-line">${esc(h.why || ('Must try: ' + h.must_try))}</div>` : ''}</div>`;
+        html += `<h5 class="tp-h"><i class="fa fa-bed"></i> Where to stay and eat</h5><div class="tp-grid">${hotels.map(h => card(h, 'Hotel')).join('')}${rests.map(h => card(h, 'Restaurant')).join('')}</div>`;
+    }
+
+    // ---- extras
+    const emergency = itin.emergency_info || {};
+    const before = itin.before_you_go || [];
+    html += `<div class="extras-grid">
+        ${before.length ? `<div class="extras-card"><div class="extras-title"><i class="fa fa-check-square-o"></i> Before you go</div>${listItems(before, '✅')}</div>` : ''}
+        ${(itin.transportation_suggestions || []).length ? `<div class="extras-card"><div class="extras-title"><i class="fa fa-bus"></i> Getting around</div>${listItems(itin.transportation_suggestions, '🚌')}</div>` : ''}
+        ${(itin.hidden_gems || []).length ? `<div class="extras-card"><div class="extras-title"><i class="fa fa-diamond"></i> Hidden gems</div>${listItems(itin.hidden_gems, '✨')}</div>` : ''}
+        ${(itin.money_saving_tips || []).length ? `<div class="extras-card"><div class="extras-title"><i class="fa fa-money"></i> Money-saving tips</div>${listItems(itin.money_saving_tips, '💰')}</div>` : ''}
+        ${(itin.safety_tips || []).length ? `<div class="extras-card"><div class="extras-title"><i class="fa fa-shield"></i> Safety</div>${listItems(itin.safety_tips, '🛡️')}</div>` : ''}
+        ${(itin.packing_essentials || []).length ? `<div class="extras-card"><div class="extras-title"><i class="fa fa-suitcase"></i> What to pack</div>${listItems(itin.packing_essentials, '📦')}</div>` : ''}
+        <div class="extras-card"><div class="extras-title"><i class="fa fa-phone"></i> Emergency</div>
+            ${emergency.local_police ? `<div class="extras-item">🚔 Police: ${esc(emergency.local_police)}</div>` : ''}
+            ${emergency.ambulance ? `<div class="extras-item">🚑 Ambulance: ${esc(emergency.ambulance)}</div>` : ''}
+            ${emergency.nearest_hospital ? `<div class="extras-item">🏥 ${esc(emergency.nearest_hospital)}</div>` : ''}
+            ${emergency.embassy_if_abroad && !/not applicable/i.test(emergency.embassy_if_abroad) ? `<div class="extras-item">🏛️ ${esc(emergency.embassy_if_abroad)}</div>` : ''}</div>
+    </div>`;
+
+    return html + renderChecks(itin);
+}
+
+function showItinerary(itin) {
+    document.getElementById('itinContent').innerHTML = renderItinerary(itin);
     document.getElementById('itinWrap').style.display = 'block';
     document.getElementById('itinWrap').scrollIntoView({ behavior: 'smooth' });
 }
@@ -609,6 +744,12 @@ function costBox(label, amount, isTotal = false) {
         <div class="label" style="${isTotal?'color:rgba(255,255,255,.8);':''}">${label}</div>
     </div>`;
 }
+
+function toggleAllDays(open) {
+    document.querySelectorAll('.day-body').forEach(b => { b.style.display = open ? 'block' : 'none'; });
+}
+
+function printItinerary() { window.print(); }
 
 function toggleDay(i) {
     const body = document.getElementById('dayBody'+i);

@@ -1,0 +1,208 @@
+{
+ "id": "kuakata",
+ "name": "Kuakata",
+ "bn": "কুয়াকাটা",
+ "aliases": [
+  "kuwakata",
+  "kuakata beach",
+  "sea daughter"
+ ],
+ "region": "Barishal Division (Patuakhali)",
+ "lat": 21.816,
+ "lng": 90.121,
+ "summary": "One of the few beaches where you can watch both sunrise and sunset over the sea. Wide, flat sand, Buddhist temples and mangrove villages.",
+ "best_months": [
+  11,
+  12,
+  1,
+  2,
+  3
+ ],
+ "season_note": "November to March is dry and comfortable. Cyclone season (April to May, October to November) can bring storms.",
+ "avoid_note": "Check cyclone warnings before you go. The sea can be rough in the monsoon.",
+ "tags": [
+  "beach",
+  "family",
+  "photography",
+  "relaxing",
+  "culture"
+ ],
+ "days": {
+  "min": 2,
+  "ideal": 3
+ },
+ "reach": [
+  {
+   "mode": "Bus",
+   "how": "AC coach from Dhaka (Gabtoli, Sayedabad) via Barishal or ferry - Saudia, Green Line, Hanif",
+   "hours": 9,
+   "fare_min": 900,
+   "fare_max": 1900,
+   "note": "Long overnight travel; ferry crossing times vary."
+  },
+  {
+   "mode": "Launch + bus",
+   "how": "Overnight launch Dhaka-Barishal (Sadarghat) then bus to Kuakata",
+   "hours": 10,
+   "fare_min": 1200,
+   "fare_max": 3500,
+   "note": "A classic river-launch trip."
+  }
+ ],
+ "local": [
+  {
+   "mode": "Motorbike / rickshaw van",
+   "group_fare": "100-400 BDT",
+   "note": "Short rides along the beach."
+  },
+  {
+   "mode": "Auto / CNG hire",
+   "group_fare": "500-1500 BDT per trip",
+   "note": "For Fatrar Char and temples."
+  }
+ ],
+ "attractions": [
+  {
+   "id": "sunrise",
+   "name": "Sunrise and sunset on the beach",
+   "area": "Kuakata sea beach",
+   "tags": [
+    "beach",
+    "photography",
+    "relaxing"
+   ],
+   "mins": 120,
+   "fee": 0,
+   "what": "See the sun rise and set over the sea from the same beach.",
+   "tip": "Wake up before dawn. Walk on the beach.",
+   "best": "morning",
+   "indoor": false
+  },
+  {
+   "id": "lebur-char",
+   "name": "Lebur Char and Fatrar Char",
+   "area": "Beach side",
+   "tags": [
+    "nature",
+    "beach"
+   ],
+   "mins": 150,
+   "fee": 0,
+   "what": "A mangrove-fringed beach strip.",
+   "tip": "Go with a local guide.",
+   "best": "morning",
+   "indoor": false
+  },
+  {
+   "id": "buddhist",
+   "name": "Rakhine Buddhist Temple and Buddha statue",
+   "area": "Kuakata",
+   "tags": [
+    "culture",
+    "spiritual"
+   ],
+   "mins": 90,
+   "fee": 0,
+   "what": "A temple and a large Buddha statue with a local Rakhine community.",
+   "tip": "Dress modestly.",
+   "best": "afternoon",
+   "indoor": true
+  },
+  {
+   "id": "gongamoti",
+   "name": "Gangamati Mangrove Forest",
+   "area": "Gangamati",
+   "tags": [
+    "nature",
+    "adventure"
+   ],
+   "mins": 120,
+   "fee": 50,
+   "what": "A calm mangrove area for boat rides.",
+   "tip": "Check the tide.",
+   "best": "morning",
+   "indoor": false
+  },
+  {
+   "id": "rakhine-market",
+   "name": "Rakhine handloom market",
+   "area": "Kuakata",
+   "tags": [
+    "culture",
+    "shopping"
+   ],
+   "mins": 60,
+   "fee": 0,
+   "what": "Cloth and handicrafts from the Rakhine community.",
+   "tip": "Bargain gently.",
+   "best": "afternoon",
+   "indoor": true
+  },
+  {
+   "id": "fish-market",
+   "name": "Fisherman's market (Alipur dry fish)",
+   "area": "Alipur",
+   "tags": [
+    "culture",
+    "food"
+   ],
+   "mins": 90,
+   "fee": 0,
+   "what": "Walk through the dry-fish yards and the fish market.",
+   "tip": "Strong smell; go for the colours and the boats.",
+   "best": "afternoon",
+   "indoor": false
+  }
+ ],
+ "food": [
+  {
+   "dish": "Hilsa and sea fish fry",
+   "where": "Beach restaurants",
+   "cost": 500
+  },
+  {
+   "dish": "Crab and prawn",
+   "where": "Beach stalls",
+   "cost": 600
+  },
+  {
+   "dish": "Local sweets",
+   "where": "Town stalls",
+   "cost": 80
+  }
+ ],
+ "stay": {
+  "budget": {
+   "area": "Beach road",
+   "price_min": 1500,
+   "price_max": 3000,
+   "note": ""
+  },
+  "mid": {
+   "area": "Beach hotels",
+   "price_min": 3500,
+   "price_max": 7500,
+   "note": ""
+  },
+  "luxury": {
+   "area": "Premium beach resorts",
+   "price_min": 8000,
+   "price_max": 16000,
+   "note": ""
+  }
+ },
+ "rules": [
+  "Swim only where locals say it is safe.",
+  "Check the weather bulletin before the trip."
+ ],
+ "packing": [
+  "Sunscreen",
+  "Light clothes",
+  "Rain jacket",
+  "Mosquito repellent"
+ ],
+ "nearby": [
+  "barishal"
+ ],
+ "country": "Bangladesh"
+}

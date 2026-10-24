@@ -1,0 +1,186 @@
+{
+ "id": "manikganj",
+ "name": "Manikganj",
+ "bn": "মানিকগঞ্জ",
+ "aliases": [
+  "manikganj",
+  "manikgonj",
+  "manikganj dhaka",
+  "manikganj bangladesh"
+ ],
+ "region": "Dhaka Division",
+ "lat": 23.86,
+ "lng": 90.0,
+ "summary": "A river district close to Dhaka with Baliati Zamindar Palace, Tewta Jamindar Bari and Padma-Jamuna views.",
+ "best_months": [
+  10,
+  11,
+  12,
+  1,
+  2,
+  3
+ ],
+ "season_note": "Winter is best. Monsoon floods lower areas.",
+ "tags": [
+  "history",
+  "culture",
+  "family",
+  "nature"
+ ],
+ "days": {
+  "min": 1,
+  "ideal": 1
+ },
+ "reach": [
+  {
+   "mode": "Bus",
+   "how": "Bus from Dhaka (Gabtoli) to Manikganj",
+   "hours": 2.5,
+   "fare_min": 100,
+   "fare_max": 350,
+   "note": "Frequent buses."
+  }
+ ],
+ "local": [
+  {
+   "mode": "CNG / rickshaw",
+   "group_fare": "50-250 BDT in town",
+   "note": "Agree fare first."
+  },
+  {
+   "mode": "Car hire",
+   "group_fare": "3500-6000 BDT per day",
+   "note": "Good for several sites."
+  }
+ ],
+ "attractions": [
+  {
+   "id": "baliati",
+   "name": "Baliati Zamindar Palace",
+   "area": "Saturia",
+   "tags": [
+    "history",
+    "culture",
+    "photography"
+   ],
+   "mins": 60,
+   "fee": 0,
+   "what": "A 19th-century zamindar palace.",
+   "tip": "Check access and hours.",
+   "best": "morning",
+   "indoor": false
+  },
+  {
+   "id": "tewta",
+   "name": "Tewta Jamindar Bari",
+   "area": "Tewta",
+   "tags": [
+    "history",
+    "culture"
+   ],
+   "mins": 45,
+   "fee": 0,
+   "what": "An old zamindar house.",
+   "tip": "Check access.",
+   "best": "afternoon",
+   "indoor": false
+  },
+  {
+   "id": "river",
+   "name": "Padma-Jamuna riverbank",
+   "area": "Manikganj",
+   "tags": [
+    "water",
+    "relaxing"
+   ],
+   "mins": 60,
+   "fee": 0,
+   "what": "Quiet river views.",
+   "tip": "Evening is best.",
+   "best": "sunset",
+   "indoor": false
+  },
+  {
+   "id": "dighi",
+   "name": "Local ponds and village walks",
+   "area": "Manikganj",
+   "tags": [
+    "culture",
+    "nature"
+   ],
+   "mins": 60,
+   "fee": 0,
+   "what": "Rural scenes near the town.",
+   "tip": "Ask before photographing.",
+   "best": "afternoon",
+   "indoor": false
+  },
+  {
+   "id": "town",
+   "name": "Manikganj market",
+   "area": "Town",
+   "tags": [
+    "food",
+    "shopping"
+   ],
+   "mins": 45,
+   "fee": 0,
+   "what": "Local snacks.",
+   "tip": "Go in the evening.",
+   "best": "sunset",
+   "indoor": false
+  }
+ ],
+ "food": [
+  {
+   "dish": "Rice and curry",
+   "where": "Restaurants",
+   "cost": 250
+  },
+  {
+   "dish": "Fish fry",
+   "where": "Restaurants",
+   "cost": 300
+  },
+  {
+   "dish": "Tea",
+   "where": "Stalls",
+   "cost": 20
+  }
+ ],
+ "stay": {
+  "budget": {
+   "area": "No stay at the site; use the nearby town",
+   "price_min": 0,
+   "price_max": 0,
+   "note": "Day-trip place."
+  },
+  "mid": {
+   "area": "No stay at the site; use the nearby town",
+   "price_min": 0,
+   "price_max": 0,
+   "note": "Day-trip place."
+  },
+  "luxury": {
+   "area": "No stay at the site; use the nearby town",
+   "price_min": 0,
+   "price_max": 0,
+   "note": "Day-trip place."
+  }
+ },
+ "rules": [
+  "Respect private property.",
+  "No littering."
+ ],
+ "packing": [
+  "Sunscreen",
+  "Water",
+  "Comfortable shoes"
+ ],
+ "nearby": [
+  "dhaka",
+  "munshiganj",
+  "tangail"
+ ],
+ "country": "Bangladesh"
+}

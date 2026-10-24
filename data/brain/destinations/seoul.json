@@ -1,0 +1,230 @@
+{
+ "id": "seoul",
+ "name": "Seoul",
+ "bn": "সিউল",
+ "aliases": [
+  "soul",
+  "seoul korea",
+  "south korea",
+  "korea",
+  "seoull"
+ ],
+ "country": "South Korea",
+ "region": "Seoul Capital Area",
+ "lat": 37.5665,
+ "lng": 126.978,
+ "summary": "K-culture capital: palaces, hanok villages, street food, shopping and nearby mountains.",
+ "best_months": [
+  4,
+  5,
+  9,
+  10
+ ],
+ "season_note": "April-May (cherry blossoms) and September-October (autumn leaves) are the best. Summer is humid; winters are very cold.",
+ "avoid_note": "Monsoon in July; freezing in January.",
+ "tags": [
+  "city",
+  "culture",
+  "shopping",
+  "food",
+  "history",
+  "family",
+  "photography"
+ ],
+ "days": {
+  "min": 4,
+  "ideal": 5
+ },
+ "emergency": {
+  "police": "112",
+  "ambulance": "119"
+ },
+ "entry_note": "South Korea: visa required for Bangladeshi passport holders (K-ETA is not available for Bangladesh; apply for a visa at the Korean embassy); check the latest rules with the embassy before booking.",
+ "reach": [
+  {
+   "mode": "Flight",
+   "how": "Dhaka to Incheon International Airport (via Bangkok/Singapore/KL) (Thai, Singapore Airlines, Korean Air)",
+   "hours": 9,
+   "fare_min": 50000,
+   "fare_max": 90000,
+   "note": "Usually one stop; Korean Air/Asiana/Thai."
+  }
+ ],
+ "local": [
+  {
+   "mode": "Subway",
+   "group_fare": "80-300 BDT per ride",
+   "note": "Use T-money."
+  },
+  {
+   "mode": "Taxi",
+   "group_fare": "500-3000 BDT",
+   "note": "Kakao T app."
+  }
+ ],
+ "attractions": [
+  {
+   "id": "gyeongbokgung",
+   "name": "Gyeongbokgung Palace",
+   "area": "Jongno",
+   "tags": [
+    "history",
+    "culture",
+    "photography"
+   ],
+   "mins": 120,
+   "fee": 350,
+   "what": "The grand royal palace.",
+   "tip": "Free if wearing hanbok.",
+   "best": "morning",
+   "indoor": false
+  },
+  {
+   "id": "bukchon",
+   "name": "Bukchon Hanok Village",
+   "area": "Jongno",
+   "tags": [
+    "culture",
+    "photography"
+   ],
+   "mins": 90,
+   "fee": 0,
+   "what": "Traditional houses.",
+   "tip": "Be quiet.",
+   "best": "morning",
+   "indoor": false
+  },
+  {
+   "id": "myeongdong",
+   "name": "Myeongdong Shopping Street",
+   "area": "Jung",
+   "tags": [
+    "shopping",
+    "food"
+   ],
+   "mins": 150,
+   "fee": 0,
+   "what": "Cosmetics and street food.",
+   "tip": "Tax refund available.",
+   "best": "sunset",
+   "indoor": false
+  },
+  {
+   "id": "n-seoul",
+   "name": "N Seoul Tower",
+   "area": "Namsan",
+   "tags": [
+    "city",
+    "photography",
+    "romantic"
+   ],
+   "mins": 90,
+   "fee": 1800,
+   "what": "City views.",
+   "tip": "Go at dusk.",
+   "best": "sunset",
+   "indoor": false
+  },
+  {
+   "id": "hongdae",
+   "name": "Hongdae",
+   "area": "Mapo",
+   "tags": [
+    "city",
+    "culture",
+    "food"
+   ],
+   "mins": 150,
+   "fee": 0,
+   "what": "Youth culture and cafes.",
+   "tip": "Go in the evening.",
+   "best": "sunset",
+   "indoor": false
+  },
+  {
+   "id": "dmz",
+   "name": "DMZ Tour",
+   "area": "Paju",
+   "tags": [
+    "history"
+   ],
+   "mins": 420,
+   "fee": 6500,
+   "what": "North-South border area.",
+   "tip": "Book through approved tour; bring passport.",
+   "best": "morning",
+   "indoor": false
+  },
+  {
+   "id": "lotte",
+   "name": "Lotte World",
+   "area": "Songpa",
+   "tags": [
+    "family"
+   ],
+   "mins": 420,
+   "fee": 5500,
+   "what": "Indoor/outdoor park.",
+   "tip": "Go on weekdays.",
+   "best": "morning",
+   "indoor": false
+  }
+ ],
+ "food": [
+  {
+   "dish": "Bibimbap",
+   "where": "Local restaurants",
+   "cost": 900
+  },
+  {
+   "dish": "Tteokbokki",
+   "where": "Street",
+   "cost": 300
+  },
+  {
+   "dish": "Korean fried chicken",
+   "where": "Chain restaurants",
+   "cost": 1500
+  },
+  {
+   "dish": "Halal Korean BBQ",
+   "where": "Itaewon halal restaurants",
+   "cost": 1800
+  }
+ ],
+ "stay": {
+  "budget": {
+   "area": "Hongdae, Myeongdong",
+   "price_min": 7000,
+   "price_max": 13000,
+   "note": "Guesthouses."
+  },
+  "mid": {
+   "area": "Myeongdong, Jongno",
+   "price_min": 15000,
+   "price_max": 28000,
+   "note": "3-4 star hotels."
+  },
+  "luxury": {
+   "area": "Gangnam, Jung",
+   "price_min": 35000,
+   "price_max": 90000,
+   "note": "5-star hotels."
+  }
+ },
+ "rules": [
+  "Eat politely and do not stick chopsticks in rice.",
+  "Remove shoes in hanok homes.",
+  "Jaywalking rules apply.",
+  "Smoking restrictions."
+ ],
+ "packing": [
+  "Winter coat (Nov-Mar)",
+  "Comfortable shoes",
+  "Power adapter",
+  "Umbrella"
+ ],
+ "nearby": [
+  "tokyo"
+ ]
+}

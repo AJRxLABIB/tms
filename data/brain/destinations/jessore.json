@@ -1,0 +1,201 @@
+{
+ "id": "jessore",
+ "name": "Jashore (Jessore)",
+ "bn": "যশোর",
+ "aliases": [
+  "jessore",
+  "jashore",
+  "joshor",
+  "jessor",
+  "jashor"
+ ],
+ "region": "Khulna Division",
+ "lat": 23.1667,
+ "lng": 89.2081,
+ "summary": "A southwestern city known for date palm juice in winter, the Michael Madhusudan Dutt house at Sagardari and the Benapole border.",
+ "best_months": [
+  11,
+  12,
+  1,
+  2
+ ],
+ "season_note": "November to February is date-juice season and pleasant. Summer is hot.",
+ "tags": [
+  "history",
+  "culture",
+  "food",
+  "family",
+  "city"
+ ],
+ "days": {
+  "min": 1,
+  "ideal": 2
+ },
+ "reach": [
+  {
+   "mode": "Bus",
+   "how": "Bus Dhaka to Jashore via Padma bridge",
+   "hours": 5,
+   "fare_min": 600,
+   "fare_max": 1300,
+   "note": "Direct AC coaches."
+  },
+  {
+   "mode": "Flight",
+   "how": "Dhaka to Jashore airport",
+   "hours": 1,
+   "fare_min": 3500,
+   "fare_max": 6500,
+   "note": "Quick."
+  },
+  {
+   "mode": "Train",
+   "how": "Train via Jashore Junction",
+   "hours": 7,
+   "fare_min": 300,
+   "fare_max": 900,
+   "note": "Check timetable."
+  }
+ ],
+ "local": [
+  {
+   "mode": "CNG / rickshaw",
+   "group_fare": "50-300 BDT in the city",
+   "note": "Agree fare first."
+  },
+  {
+   "mode": "Car hire",
+   "group_fare": "4000-6500 BDT per day",
+   "note": "For Sagardari."
+  }
+ ],
+ "attractions": [
+  {
+   "id": "sagardari",
+   "name": "Madhusudan Dutt house",
+   "area": "Sagardari (Keshabpur)",
+   "tags": [
+    "history",
+    "culture"
+   ],
+   "mins": 90,
+   "fee": 20,
+   "what": "Home of the poet Michael Madhusudan Dutt, with a small museum.",
+   "tip": "Check hours.",
+   "best": "morning",
+   "indoor": true
+  },
+  {
+   "id": "city-market",
+   "name": "City market",
+   "area": "City",
+   "tags": [
+    "shopping",
+    "food",
+    "culture"
+   ],
+   "mins": 60,
+   "fee": 0,
+   "what": "Local sweets and clothing.",
+   "tip": "Evenings.",
+   "best": "sunset",
+   "indoor": false
+  },
+  {
+   "id": "khejur-rasa",
+   "name": "Khejur rasa (date juice)",
+   "area": "Villages",
+   "tags": [
+    "food",
+    "culture"
+   ],
+   "mins": 45,
+   "fee": 0,
+   "what": "Fresh date juice in winter mornings.",
+   "tip": "Go very early, in season only.",
+   "best": "morning",
+   "indoor": false
+  },
+  {
+   "id": "benapole",
+   "name": "Benapole land port",
+   "area": "Benapole",
+   "tags": [
+    "city"
+   ],
+   "mins": 60,
+   "fee": 0,
+   "what": "Largest land port; crossing point to India.",
+   "tip": "Carry valid documents if crossing.",
+   "best": "any",
+   "indoor": false
+  },
+  {
+   "id": "kopotakkho",
+   "name": "Kopotakkho river",
+   "area": "Jashore",
+   "tags": [
+    "water",
+    "relaxing"
+   ],
+   "mins": 45,
+   "fee": 0,
+   "what": "River scenery.",
+   "tip": "Evening visit.",
+   "best": "sunset",
+   "indoor": false
+  }
+ ],
+ "food": [
+  {
+   "dish": "Date jaggery pitha",
+   "where": "Winter stalls",
+   "cost": 60
+  },
+  {
+   "dish": "Rice and fish",
+   "where": "Restaurants",
+   "cost": 250
+  },
+  {
+   "dish": "Tea",
+   "where": "Stalls",
+   "cost": 20
+  }
+ ],
+ "stay": {
+  "budget": {
+   "area": "Simple hotel",
+   "price_min": 800,
+   "price_max": 1800,
+   "note": "Basic."
+  },
+  "mid": {
+   "area": "Mid hotel",
+   "price_min": 2500,
+   "price_max": 5000,
+   "note": "AC rooms."
+  },
+  "luxury": {
+   "area": "Better hotel",
+   "price_min": 5500,
+   "price_max": 9000,
+   "note": "Few options."
+  }
+ },
+ "rules": [
+  "Dress modestly at religious sites.",
+  "Carry ID."
+ ],
+ "packing": [
+  "Sunscreen",
+  "Water",
+  "Light jacket in winter"
+ ],
+ "nearby": [
+  "satkhira",
+  "bagerhat",
+  "kushtia"
+ ],
+ "country": "Bangladesh"
+}

@@ -59,6 +59,15 @@ class GeminiProvider implements AIProviderInterface {
             ],
         ];
 
+        // Long structured answers (the trip planner): ask for JSON directly and, on the 2.5 "flash" models, turn off hidden
+        // "thinking" tokens. Those count against maxOutputTokens, so with thinking on a long plan was cut off mid-JSON and
+        // the site showed its generic fallback instead of the real plan.
+        if (!empty($options['json'])) $payload['generationConfig']['responseMimeType'] = 'application/json';
+        if (!empty($options['noThinking']) && stripos($this->model, 'flash') !== false) {
+            $payload['generationConfig']['thinkingConfig'] = ['thinkingBudget' => 0];
+        }
+        if (isset($options['temperature'])) $payload['generationConfig']['temperature'] = (float)$options['temperature'];
+
         return $this->buildRequest($payload);
     }
 

@@ -1,0 +1,267 @@
+{
+ "id": "shillong",
+ "name": "Shillong and Cherrapunji",
+ "bn": "শিলং",
+ "aliases": [
+  "shilong",
+  "cherrapunji",
+  "cherapunji",
+  "sohra",
+  "meghalaya",
+  "shillong cherrapunji"
+ ],
+ "country": "India",
+ "region": "Meghalaya",
+ "lat": 25.5788,
+ "lng": 91.8933,
+ "summary": "The Scotland of the East: pine hills, waterfalls, living root bridges and the wettest places on earth, close to Bangladesh's Sylhet border.",
+ "best_months": [
+  10,
+  11,
+  12,
+  1,
+  2,
+  3,
+  4
+ ],
+ "season_note": "October to April is dry and clear; waterfalls are strongest in June-September but roads can be bad.",
+ "avoid_note": "Heavy monsoon causes landslides near Cherrapunji.",
+ "tags": [
+  "hills",
+  "nature",
+  "adventure",
+  "photography",
+  "family",
+  "culture"
+ ],
+ "days": {
+  "min": 3,
+  "ideal": 4
+ },
+ "emergency": {
+  "police": "100 (or 112)",
+  "ambulance": "102 or 108"
+ },
+ "entry_note": "Indian visa is required for Bangladeshi passport holders (apply via the Indian Visa Application Centre, usually medical/tourist/e-visa categories as currently offered). Check the latest rules with the embassy before booking.",
+ "reach": [
+  {
+   "mode": "Flight",
+   "how": "Dhaka to Guwahati (Biman, US-Bangla, IndiGo, Air India)",
+   "hours": 1.5,
+   "fare_min": 10000,
+   "fare_max": 20000,
+   "note": "Then 3.5 hours by road/cab to Shillong. Check direct options."
+  },
+  {
+   "mode": "Bus + taxi",
+   "how": "Dhaka to Sylhet then Tamabil-Dawki border to Dawki and on to Shillong (via Dawki/Shillong road)",
+   "hours": 10,
+   "fare_min": 2200,
+   "fare_max": 4500,
+   "note": "Dawki-Tamabil border crossing; check if open for tourists."
+  },
+  {
+   "mode": "Train + taxi",
+   "how": "Dhaka to Sylhet then taxi via Tamabil",
+   "hours": 9,
+   "fare_min": 1500,
+   "fare_max": 3500,
+   "note": "Plan for border time."
+  }
+ ],
+ "local": [
+  {
+   "mode": "Shared taxi",
+   "group_fare": "150-400 BDT per seat"
+  },
+  {
+   "mode": "Day-hire car",
+   "group_fare": "4500-8500 BDT",
+   "note": "Needed for Cherrapunji and Dawki."
+  }
+ ],
+ "attractions": [
+  {
+   "id": "elephant-falls",
+   "name": "Elephant Falls",
+   "area": "Shillong",
+   "tags": [
+    "nature",
+    "photography",
+    "family"
+   ],
+   "mins": 60,
+   "fee": 40,
+   "what": "A three-tier waterfall near the city.",
+   "tip": "Stairs can be slippery.",
+   "best": "morning",
+   "indoor": false
+  },
+  {
+   "id": "sohra-falls",
+   "name": "Nohkalikai Falls and Mawsmai Caves",
+   "area": "Cherrapunji",
+   "tags": [
+    "nature",
+    "photography",
+    "adventure"
+   ],
+   "mins": 150,
+   "fee": 80,
+   "what": "One of India's tallest waterfalls and a limestone cave.",
+   "tip": "Clear mornings give the best view.",
+   "best": "morning",
+   "indoor": false
+  },
+  {
+   "id": "root-bridge",
+   "name": "Double Decker Living Root Bridge",
+   "area": "Nongriat village",
+   "tags": [
+    "nature",
+    "adventure",
+    "photography"
+   ],
+   "mins": 300,
+   "fee": 100,
+   "what": "A hiking day to an ancient living root bridge in the jungle.",
+   "tip": "Over 3,000 steps; start early, wear grip shoes.",
+   "best": "morning",
+   "indoor": false
+  },
+  {
+   "id": "dawki",
+   "name": "Dawki and Umngot River",
+   "area": "Dawki",
+   "tags": [
+    "water",
+    "nature",
+    "photography"
+   ],
+   "mins": 120,
+   "fee": 300,
+   "what": "Crystal-clear river with boat rides on the Bangladesh border.",
+   "tip": "Best in the dry months; boat per boat price.",
+   "best": "morning",
+   "indoor": false
+  },
+  {
+   "id": "umiam",
+   "name": "Umiam (Bara Pani) Lake",
+   "area": "Shillong",
+   "tags": [
+    "water",
+    "relaxing",
+    "photography"
+   ],
+   "mins": 90,
+   "fee": 100,
+   "what": "A reservoir with boating and water sports.",
+   "tip": "Good sunset spot.",
+   "best": "sunset",
+   "indoor": false
+  },
+  {
+   "id": "shillong-peak",
+   "name": "Shillong Peak",
+   "area": "Shillong",
+   "tags": [
+    "hills",
+    "photography"
+   ],
+   "mins": 45,
+   "fee": 50,
+   "what": "The highest viewpoint with view of the city.",
+   "tip": "Clear mornings only.",
+   "best": "morning",
+   "indoor": false
+  },
+  {
+   "id": "police-bazar",
+   "name": "Police Bazar",
+   "area": "Shillong",
+   "tags": [
+    "shopping",
+    "food",
+    "city"
+   ],
+   "mins": 120,
+   "fee": 0,
+   "what": "The central market for shopping and street food.",
+   "tip": "Bargain gently.",
+   "best": "afternoon",
+   "indoor": false
+  },
+  {
+   "id": "don-bosco",
+   "name": "Don Bosco Museum",
+   "area": "Shillong",
+   "tags": [
+    "culture",
+    "history",
+    "family"
+   ],
+   "mins": 120,
+   "fee": 150,
+   "what": "Museum of Northeast India's tribes and cultures.",
+   "tip": "Allow two hours.",
+   "best": "any",
+   "indoor": true
+  }
+ ],
+ "food": [
+  {
+   "dish": "Jadoh (rice and pork)",
+   "where": "Khasi restaurants",
+   "cost": 250
+  },
+  {
+   "dish": "Momos",
+   "where": "Street stalls",
+   "cost": 100
+  },
+  {
+   "dish": "Tungrymbai (fermented soy)",
+   "where": "Khasi local eateries",
+   "cost": 150
+  }
+ ],
+ "stay": {
+  "budget": {
+   "area": "Police Bazar",
+   "price_min": 2000,
+   "price_max": 4000,
+   "note": "Basic lodges."
+  },
+  "mid": {
+   "area": "Laitumkhrah, Polo",
+   "price_min": 4500,
+   "price_max": 9000,
+   "note": "Mid-range hotels."
+  },
+  "luxury": {
+   "area": "Umiam, Shillong outskirts",
+   "price_min": 10000,
+   "price_max": 20000,
+   "note": "Resort stays."
+  }
+ },
+ "rules": [
+  "Respect Khasi tribal culture; ask before photographing people.",
+  "Alcohol is legal but drinking in public is frowned upon.",
+  "Plastic bag use is restricted in parts of the state.",
+  "Root bridge hike: stay on marked trails."
+ ],
+ "packing": [
+  "Rain jacket or umbrella",
+  "Grip shoes for treks",
+  "Warm layer",
+  "Power bank",
+  "Cash in INR"
+ ],
+ "nearby": [
+  "sylhet",
+  "tanguar-haor",
+  "gangtok"
+ ]
+}

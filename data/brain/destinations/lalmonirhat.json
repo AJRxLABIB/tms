@@ -1,0 +1,194 @@
+{
+ "id": "lalmonirhat",
+ "name": "Lalmonirhat",
+ "bn": "লালমনিরহাট",
+ "aliases": [
+  "lalmonirhat",
+  "lalmonirhat teesta",
+  "teesta barrage",
+  "lalmonirhat railway",
+  "tinbigha"
+ ],
+ "region": "Rangpur Division",
+ "lat": 25.99,
+ "lng": 89.45,
+ "summary": "A northern district with the Teesta Barrage (Dalia), Teesta riverside chars and an old railway junction.",
+ "best_months": [
+  10,
+  11,
+  12,
+  1,
+  2,
+  3
+ ],
+ "season_note": "Winter is dry. Monsoon floods the Teesta area.",
+ "tags": [
+  "water",
+  "nature",
+  "culture",
+  "family"
+ ],
+ "days": {
+  "min": 1,
+  "ideal": 2
+ },
+ "reach": [
+  {
+   "mode": "Bus",
+   "how": "Bus Dhaka to Lalmonirhat",
+   "hours": 9,
+   "fare_min": 800,
+   "fare_max": 1800,
+   "note": "Overnight coaches."
+  },
+  {
+   "mode": "Train",
+   "how": "Train Dhaka to Lalmonirhat",
+   "hours": 9,
+   "fare_min": 450,
+   "fare_max": 1200,
+   "note": "Check timetable."
+  }
+ ],
+ "local": [
+  {
+   "mode": "CNG / rickshaw",
+   "group_fare": "50-300 BDT in town",
+   "note": "Agree fare first."
+  },
+  {
+   "mode": "Car to Teesta",
+   "group_fare": "2500-4500 BDT",
+   "note": "Day trip."
+  }
+ ],
+ "attractions": [
+  {
+   "id": "teesta-barrage",
+   "name": "Teesta Barrage",
+   "area": "Dalia",
+   "tags": [
+    "water",
+    "nature",
+    "photography"
+   ],
+   "mins": 120,
+   "fee": 50,
+   "what": "A large irrigation barrage on the Teesta river.",
+   "tip": "Go early; check entry.",
+   "best": "morning",
+   "indoor": false
+  },
+  {
+   "id": "chars",
+   "name": "River char visit",
+   "area": "Teesta",
+   "tags": [
+    "nature",
+    "culture"
+   ],
+   "mins": 120,
+   "fee": 0,
+   "what": "Sandy chars and villages by boat.",
+   "tip": "Take a local guide.",
+   "best": "afternoon",
+   "indoor": false
+  },
+  {
+   "id": "junction",
+   "name": "Lalmonirhat railway junction",
+   "area": "Town",
+   "tags": [
+    "history",
+    "culture"
+   ],
+   "mins": 30,
+   "fee": 0,
+   "what": "Historic railway junction town.",
+   "tip": "Quick stop.",
+   "best": "any",
+   "indoor": false
+  },
+  {
+   "id": "village",
+   "name": "Village walk",
+   "area": "Countryside",
+   "tags": [
+    "culture",
+    "relaxing"
+   ],
+   "mins": 60,
+   "fee": 0,
+   "what": "Paddy and ponds.",
+   "tip": "Ask before photographing.",
+   "best": "afternoon",
+   "indoor": false
+  },
+  {
+   "id": "tinbigha",
+   "name": "Tin Bigha corridor view",
+   "area": "Patgram",
+   "tags": [
+    "history"
+   ],
+   "mins": 45,
+   "fee": 0,
+   "what": "Link to the Dahagram-Angarpota enclave (check current access).",
+   "tip": "Carry ID.",
+   "best": "afternoon",
+   "indoor": false
+  }
+ ],
+ "food": [
+  {
+   "dish": "Rice and curry",
+   "where": "Restaurants",
+   "cost": 250
+  },
+  {
+   "dish": "River fish",
+   "where": "Restaurants",
+   "cost": 300
+  },
+  {
+   "dish": "Tea",
+   "where": "Stalls",
+   "cost": 20
+  }
+ ],
+ "stay": {
+  "budget": {
+   "area": "Simple hotel",
+   "price_min": 700,
+   "price_max": 1500,
+   "note": "Basic."
+  },
+  "mid": {
+   "area": "Mid hotel",
+   "price_min": 2000,
+   "price_max": 4000,
+   "note": "Limited."
+  },
+  "luxury": {
+   "area": "Better hotel",
+   "price_min": 4500,
+   "price_max": 7000,
+   "note": "Few."
+  }
+ },
+ "rules": [
+  "Follow border area rules.",
+  "No littering."
+ ],
+ "packing": [
+  "Sunscreen",
+  "Water",
+  "Light clothes"
+ ],
+ "nearby": [
+  "rajshahi",
+  "dinajpur",
+  "kurigram"
+ ],
+ "country": "Bangladesh"
+}

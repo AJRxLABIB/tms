@@ -4,7 +4,7 @@ PHP 8+ · MySQL/MariaDB · plain PHP + Bootstrap 3 + vanilla JS (no framework).
 
 ## Quick start (XAMPP)
 1. Copy this folder to `htdocs/tourbuddy`, start Apache and MySQL.
-2. In phpMyAdmin create a database named `tms`, open **Import** and import the one file: `database/tourbuddy.sql`.
+2. In phpMyAdmin create a database named `tourbuddy`, open **Import** and import the one file: `database/tourbuddy.sql`.
 3. Copy `.env.example` to `.env` and set `DB_NAME`, `DB_USER`, `DB_PASS`.
 4. Open `http://localhost/tourbuddy/`.
 5. Create an admin: `php tools/create-admin.php` (prints a random password once), then sign in at `/tourbuddy/admin/`.

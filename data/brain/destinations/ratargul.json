@@ -1,0 +1,192 @@
+{
+ "id": "ratargul",
+ "name": "Ratargul Swamp Forest",
+ "bn": "রাতারগুল",
+ "aliases": [
+  "ratargul",
+  "ratargul sylhet",
+  "swamp forest",
+  "ratargool"
+ ],
+ "region": "Sylhet Division (Gowainghat)",
+ "lat": 25.0,
+ "lng": 91.9,
+ "summary": "A freshwater swamp forest where boats glide between submerged trees, best in the rainy season.",
+ "best_months": [
+  6,
+  7,
+  8,
+  9,
+  10,
+  11
+ ],
+ "season_note": "Water level is high June to October for the best boat ride. In winter the forest is mostly dry and less impressive.",
+ "avoid_note": "In dry months the water is low and boats may not run.",
+ "tags": [
+  "nature",
+  "water",
+  "photography",
+  "adventure",
+  "wildlife"
+ ],
+ "days": {
+  "min": 1,
+  "ideal": 1
+ },
+ "reach": [
+  {
+   "mode": "Bus + boat",
+   "how": "Bus or train Dhaka to Sylhet, then CNG or car to Ratargul (about 1 hr)",
+   "hours": 8,
+   "fare_min": 1000,
+   "fare_max": 2300,
+   "note": "Plan a full day trip."
+  }
+ ],
+ "local": [
+  {
+   "mode": "Private car from Sylhet",
+   "group_fare": "3000-5000 BDT round trip",
+   "note": "Combined with Jaflong in many tours."
+  },
+  {
+   "mode": "Boat in the forest",
+   "group_fare": "600-1500 BDT per boat",
+   "note": "Fixed by local committee; verify at the ticket counter."
+  }
+ ],
+ "attractions": [
+  {
+   "id": "boat-swamp",
+   "name": "Boat ride through the swamp forest",
+   "area": "Ratargul",
+   "tags": [
+    "water",
+    "nature",
+    "photography",
+    "adventure"
+   ],
+   "mins": 120,
+   "fee": 300,
+   "what": "Paddle boat through hijol and koroch trees standing in water.",
+   "tip": "Pay at the official counter; take a life jacket.",
+   "best": "morning",
+   "indoor": false
+  },
+  {
+   "id": "watch-tower",
+   "name": "Forest watch tower",
+   "area": "Ratargul",
+   "tags": [
+    "nature",
+    "photography"
+   ],
+   "mins": 30,
+   "fee": 0,
+   "what": "Bamboo tower with a view over the green canopy.",
+   "tip": "Do not overload the tower.",
+   "best": "morning",
+   "indoor": false
+  },
+  {
+   "id": "bird-watching",
+   "name": "Bird and monkey watching",
+   "area": "Ratargul",
+   "tags": [
+    "wildlife",
+    "nature"
+   ],
+   "mins": 60,
+   "fee": 0,
+   "what": "Spot kingfishers, herons, and sometimes monkeys from the boat.",
+   "tip": "Stay quiet for best sightings.",
+   "best": "morning",
+   "indoor": false
+  },
+  {
+   "id": "gowain-river",
+   "name": "Gowain river view",
+   "area": "Gowainghat",
+   "tags": [
+    "water",
+    "relaxing"
+   ],
+   "mins": 30,
+   "fee": 0,
+   "what": "Quiet river on the way back with village scenes.",
+   "tip": "Time to stop for tea.",
+   "best": "afternoon",
+   "indoor": false
+  },
+  {
+   "id": "village-walk",
+   "name": "Village walk",
+   "area": "Near Ratargul",
+   "tags": [
+    "culture",
+    "relaxing"
+   ],
+   "mins": 45,
+   "fee": 0,
+   "what": "Walk through a small village and fishing community.",
+   "tip": "Be respectful.",
+   "best": "afternoon",
+   "indoor": false
+  }
+ ],
+ "food": [
+  {
+   "dish": "Fresh river fish fry",
+   "where": "Local stalls",
+   "cost": 300
+  },
+  {
+   "dish": "Sylhet-style tea",
+   "where": "Tea stalls",
+   "cost": 30
+  },
+  {
+   "dish": "Beef curry with rice",
+   "where": "Sylhet town restaurants",
+   "cost": 350
+  }
+ ],
+ "stay": {
+  "budget": {
+   "area": "No stay at the site; use the nearby town",
+   "price_min": 0,
+   "price_max": 0,
+   "note": "Day-trip place."
+  },
+  "mid": {
+   "area": "No stay at the site; use the nearby town",
+   "price_min": 0,
+   "price_max": 0,
+   "note": "Day-trip place."
+  },
+  "luxury": {
+   "area": "No stay at the site; use the nearby town",
+   "price_min": 0,
+   "price_max": 0,
+   "note": "Day-trip place."
+  }
+ },
+ "rules": [
+  "Wear life jacket.",
+  "Do not cut or damage trees.",
+  "No plastic in the forest."
+ ],
+ "packing": [
+  "Life jacket",
+  "Rain jacket",
+  "Insect repellent",
+  "Water",
+  "Waterproof bag for phone"
+ ],
+ "nearby": [
+  "sylhet",
+  "jaflong",
+  "lalakhali"
+ ],
+ "country": "Bangladesh"
+}

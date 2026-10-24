@@ -1,0 +1,195 @@
+{
+ "id": "natore",
+ "name": "Natore (Puthia and Rajbari)",
+ "bn": "নাটোর",
+ "aliases": [
+  "natore",
+  "puthia",
+  "natore rajbari",
+  "nator",
+  "natore palace",
+  "puthia temple"
+ ],
+ "region": "Rajshahi Division",
+ "lat": 24.4206,
+ "lng": 89.0003,
+ "summary": "A district of zamindar-era palaces and terracotta temples, with the Puthia temple complex and Natore Rajbari.",
+ "best_months": [
+  10,
+  11,
+  12,
+  1,
+  2,
+  3
+ ],
+ "season_note": "Winter is best for walking. Summer is hot.",
+ "tags": [
+  "history",
+  "culture",
+  "photography",
+  "family"
+ ],
+ "days": {
+  "min": 1,
+  "ideal": 2
+ },
+ "reach": [
+  {
+   "mode": "Bus",
+   "how": "Bus Dhaka to Natore",
+   "hours": 5,
+   "fare_min": 450,
+   "fare_max": 900,
+   "note": "Many AC coaches."
+  },
+  {
+   "mode": "Train",
+   "how": "Intercity trains to Natore or Ishwardi",
+   "hours": 5,
+   "fare_min": 250,
+   "fare_max": 800,
+   "note": "Check timetable."
+  }
+ ],
+ "local": [
+  {
+   "mode": "CNG",
+   "group_fare": "50-250 BDT in Natore",
+   "note": "Agree fare first."
+  },
+  {
+   "mode": "Private car to Puthia",
+   "group_fare": "1500-3000 BDT",
+   "note": "About 1 hr from Natore."
+  }
+ ],
+ "attractions": [
+  {
+   "id": "puthia",
+   "name": "Puthia Temple Complex",
+   "area": "Puthia",
+   "tags": [
+    "history",
+    "culture",
+    "photography"
+   ],
+   "mins": 150,
+   "fee": 20,
+   "what": "Group of 18th-19th century terracotta Hindu temples and a palace.",
+   "tip": "Go early for cooler light.",
+   "best": "morning",
+   "indoor": false
+  },
+  {
+   "id": "govinda",
+   "name": "Govinda Temple",
+   "area": "Puthia",
+   "tags": [
+    "history",
+    "photography"
+   ],
+   "mins": 45,
+   "fee": 0,
+   "what": "Elaborate terracotta carvings on a Hindu temple.",
+   "tip": "Bring a camera.",
+   "best": "morning",
+   "indoor": false
+  },
+  {
+   "id": "natore-rajbari",
+   "name": "Natore Rajbari",
+   "area": "Natore",
+   "tags": [
+    "history",
+    "culture"
+   ],
+   "mins": 60,
+   "fee": 0,
+   "what": "Former zamindar palace area, partly used today by administration.",
+   "tip": "Check access.",
+   "best": "afternoon",
+   "indoor": false
+  },
+  {
+   "id": "dighapatia",
+   "name": "Dighapatia Rajbari",
+   "area": "Natore",
+   "tags": [
+    "history",
+    "culture"
+   ],
+   "mins": 45,
+   "fee": 0,
+   "what": "Another zamindar palace, used today as an official residence.",
+   "tip": "Check access first.",
+   "best": "afternoon",
+   "indoor": false
+  },
+  {
+   "id": "kacha-gola",
+   "name": "Natore kacha golla",
+   "area": "Natore market",
+   "tags": [
+    "food"
+   ],
+   "mins": 30,
+   "fee": 0,
+   "what": "Try the local milk-sweet speciality.",
+   "tip": "Buy fresh.",
+   "best": "any",
+   "indoor": true
+  }
+ ],
+ "food": [
+  {
+   "dish": "Kacha gola",
+   "where": "Sweet shops",
+   "cost": 150
+  },
+  {
+   "dish": "Rice and curry",
+   "where": "Restaurants",
+   "cost": 250
+  },
+  {
+   "dish": "Tea",
+   "where": "Stalls",
+   "cost": 20
+  }
+ ],
+ "stay": {
+  "budget": {
+   "area": "Simple hotel in Natore",
+   "price_min": 700,
+   "price_max": 1500,
+   "note": "Basic."
+  },
+  "mid": {
+   "area": "Mid-range hotel",
+   "price_min": 2000,
+   "price_max": 4000,
+   "note": "Limited."
+  },
+  "luxury": {
+   "area": "Best available hotel",
+   "price_min": 4500,
+   "price_max": 7000,
+   "note": "Few options."
+  }
+ },
+ "rules": [
+  "Dress modestly at temples.",
+  "Do not touch carvings."
+ ],
+ "packing": [
+  "Hat",
+  "Water",
+  "Comfortable shoes"
+ ],
+ "nearby": [
+  "rajshahi",
+  "paharpur",
+  "mahasthangarh"
+ ],
+ "country": "Bangladesh"
+}

@@ -1,0 +1,224 @@
+{
+ "id": "rangamati",
+ "name": "Rangamati",
+ "bn": "রাঙ্গামাটি",
+ "aliases": [
+  "rangamatti",
+  "rangamati lake"
+ ],
+ "region": "Chattogram Hill Tracts",
+ "lat": 22.6373,
+ "lng": 92.201,
+ "summary": "A lake city in the hills: boat rides on Kaptai Lake, hanging bridge, tribal markets, handloom shops and quiet viewpoints.",
+ "best_months": [
+  10,
+  11,
+  12,
+  1,
+  2,
+  3
+ ],
+ "season_note": "Winter is clear. Monsoon brings lake views and some road landslides.",
+ "avoid_note": "Check the latest local travel advisory before long trips into the hills.",
+ "tags": [
+  "water",
+  "hills",
+  "nature",
+  "family",
+  "culture",
+  "relaxing",
+  "photography"
+ ],
+ "days": {
+  "min": 1,
+  "ideal": 2
+ },
+ "reach": [
+  {
+   "mode": "Bus",
+   "how": "AC coach from Dhaka (Sayedabad, Gabtoli) via Chattogram - Hanif, Saintmartin, Eagle",
+   "hours": 8,
+   "fare_min": 800,
+   "fare_max": 1600,
+   "note": "Longer in traffic; often 8 to 10 hours."
+  },
+  {
+   "mode": "Bus + local",
+   "how": "Reach Chattogram by train/flight, then a bus to Rangamati",
+   "hours": 5,
+   "fare_min": 1200,
+   "fare_max": 4500,
+   "note": ""
+  }
+ ],
+ "local": [
+  {
+   "mode": "CNG auto",
+   "group_fare": "150-400 BDT in town",
+   "note": "Short rides around the lake."
+  },
+  {
+   "mode": "Speed boat or engine boat",
+   "group_fare": "1000-3500 BDT per boat per trip",
+   "note": "The main way to see lake spots. Agree price and number of stops."
+  }
+ ],
+ "attractions": [
+  {
+   "id": "hanging-bridge",
+   "name": "Hanging Bridge",
+   "area": "Lake edge",
+   "tags": [
+    "photography",
+    "family"
+   ],
+   "mins": 45,
+   "fee": 20,
+   "what": "A long suspension bridge across the lake, the best-known photo spot.",
+   "tip": "Visit around sunset.",
+   "best": "sunset",
+   "indoor": false
+  },
+  {
+   "id": "shubolong",
+   "name": "Shuvolong Waterfall",
+   "area": "Shuvolong",
+   "tags": [
+    "nature",
+    "water"
+   ],
+   "mins": 180,
+   "fee": 100,
+   "what": "A waterfall and small beach area reached by boat, plus lake views.",
+   "tip": "Boat trip is the main cost. Wear a life jacket.",
+   "best": "morning",
+   "indoor": false
+  },
+  {
+   "id": "peda-ting-ting",
+   "name": "Peda Ting Ting restaurant and lake viewpoint",
+   "area": "Lake edge",
+   "tags": [
+    "food",
+    "photography"
+   ],
+   "mins": 90,
+   "fee": 0,
+   "what": "A floating restaurant and viewpoint with a tribal-style menu.",
+   "tip": "Try bamboo chicken and local snacks.",
+   "best": "afternoon",
+   "indoor": false
+  },
+  {
+   "id": "tribal-museum",
+   "name": "Tribal Cultural Institute Museum",
+   "area": "Town",
+   "tags": [
+    "culture",
+    "history"
+   ],
+   "mins": 60,
+   "fee": 20,
+   "what": "A small museum showing the life, clothes and crafts of the hill tribes.",
+   "tip": "Check opening times.",
+   "best": "afternoon",
+   "indoor": true
+  },
+  {
+   "id": "rajban",
+   "name": "Rajban Vihara",
+   "area": "Rajban",
+   "tags": [
+    "spiritual",
+    "culture"
+   ],
+   "mins": 90,
+   "fee": 0,
+   "what": "A peaceful Buddhist temple complex on the lake.",
+   "tip": "Dress modestly.",
+   "best": "afternoon",
+   "indoor": true
+  },
+  {
+   "id": "handloom",
+   "name": "Tribal handloom and market",
+   "area": "Town market",
+   "tags": [
+    "culture",
+    "shopping"
+   ],
+   "mins": 90,
+   "fee": 0,
+   "what": "Buy tribal scarves, bags and cloths made on traditional looms.",
+   "tip": "Prices are fair; bargain gently.",
+   "best": "afternoon",
+   "indoor": true
+  },
+  {
+   "id": "lake-ride",
+   "name": "Kaptai Lake boat tour",
+   "area": "Kaptai Lake",
+   "tags": [
+    "water",
+    "nature",
+    "photography"
+   ],
+   "mins": 180,
+   "fee": 1500,
+   "what": "A full boat ride across the lake with island stops.",
+   "tip": "Hire for a half or full day. Check what is included.",
+   "best": "morning",
+   "indoor": false
+  }
+ ],
+ "food": [
+  {
+   "dish": "Bamboo chicken and hill-style curries",
+   "where": "Peda Ting Ting and local eateries",
+   "cost": 350
+  },
+  {
+   "dish": "Local fish from the lake",
+   "where": "Lakeside",
+   "cost": 300
+  }
+ ],
+ "stay": {
+  "budget": {
+   "area": "Town centre",
+   "price_min": 1200,
+   "price_max": 2500,
+   "note": "Simple hotels."
+  },
+  "mid": {
+   "area": "Lakeside",
+   "price_min": 3000,
+   "price_max": 6500,
+   "note": "Lake-view hotels."
+  },
+  "luxury": {
+   "area": "Lake resorts",
+   "price_min": 7000,
+   "price_max": 15000,
+   "note": "Resort rooms with views."
+  }
+ },
+ "rules": [
+  "Take life jackets on the boat.",
+  "Ask before taking photos of villagers.",
+  "Respect temples and local customs."
+ ],
+ "packing": [
+  "Sunscreen",
+  "Light jacket",
+  "Rain jacket",
+  "Comfortable shoes",
+  "Camera"
+ ],
+ "nearby": [
+  "bandarban",
+  "sajek",
+  "khagrachhari"
+ ],
+ "country": "Bangladesh"
+}

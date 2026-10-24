@@ -1,0 +1,180 @@
+{
+ "id": "tangail",
+ "name": "Tangail",
+ "bn": "টাঙ্গাইল",
+ "aliases": [
+  "tangail",
+  "tangail sari",
+  "tangail saree",
+  "tangal",
+  "mirzapur"
+ ],
+ "region": "Dhaka Division",
+ "lat": 24.25,
+ "lng": 89.92,
+ "summary": "A district known for Tangail sarees, Atia Mosque, Jamuna river chars and the Mirzapur area.",
+ "best_months": [
+  10,
+  11,
+  12,
+  1,
+  2,
+  3
+ ],
+ "season_note": "Winter is best. Monsoon floods the river area.",
+ "tags": [
+  "history",
+  "culture",
+  "shopping",
+  "family"
+ ],
+ "days": {
+  "min": 1,
+  "ideal": 1
+ },
+ "reach": [
+  {
+   "mode": "Bus",
+   "how": "Bus from Dhaka (Gabtoli) to Tangail",
+   "hours": 3,
+   "fare_min": 200,
+   "fare_max": 500,
+   "note": "Frequent buses."
+  }
+ ],
+ "local": [
+  {
+   "mode": "CNG / rickshaw",
+   "group_fare": "50-250 BDT in town",
+   "note": "Agree fare first."
+  }
+ ],
+ "attractions": [
+  {
+   "id": "atia",
+   "name": "Atia Mosque",
+   "area": "Delduar",
+   "tags": [
+    "history",
+    "spiritual"
+   ],
+   "mins": 45,
+   "fee": 0,
+   "what": "A 17th-century brick mosque with terracotta detail.",
+   "tip": "Dress modestly.",
+   "best": "morning",
+   "indoor": false
+  },
+  {
+   "id": "saree",
+   "name": "Tangail saree weaving villages",
+   "area": "Tangail",
+   "tags": [
+    "shopping",
+    "culture"
+   ],
+   "mins": 90,
+   "fee": 0,
+   "what": "Visit handloom villages and buy sarees.",
+   "tip": "Compare prices.",
+   "best": "afternoon",
+   "indoor": false
+  },
+  {
+   "id": "jamuna",
+   "name": "Jamuna river bank",
+   "area": "Tangail",
+   "tags": [
+    "water",
+    "nature"
+   ],
+   "mins": 60,
+   "fee": 0,
+   "what": "Wide river views and chars.",
+   "tip": "Boat trips at the ghat.",
+   "best": "sunset",
+   "indoor": false
+  },
+  {
+   "id": "dhonbari",
+   "name": "Dhanbari Nawab Palace",
+   "area": "Dhanbari",
+   "tags": [
+    "history",
+    "culture"
+   ],
+   "mins": 60,
+   "fee": 0,
+   "what": "Zamindar palace area (check access).",
+   "tip": "Ask locals.",
+   "best": "afternoon",
+   "indoor": false
+  },
+  {
+   "id": "sweets",
+   "name": "Porabari chomchom",
+   "area": "Porabari",
+   "tags": [
+    "food"
+   ],
+   "mins": 30,
+   "fee": 0,
+   "what": "Famous sweet.",
+   "tip": "Buy fresh.",
+   "best": "any",
+   "indoor": true
+  }
+ ],
+ "food": [
+  {
+   "dish": "Porabari chomchom",
+   "where": "Sweet shops",
+   "cost": 200
+  },
+  {
+   "dish": "Rice and curry",
+   "where": "Restaurants",
+   "cost": 250
+  },
+  {
+   "dish": "Tea",
+   "where": "Stalls",
+   "cost": 20
+  }
+ ],
+ "stay": {
+  "budget": {
+   "area": "Simple hotel",
+   "price_min": 700,
+   "price_max": 1500,
+   "note": "Basic."
+  },
+  "mid": {
+   "area": "Mid hotel",
+   "price_min": 2000,
+   "price_max": 4000,
+   "note": "Limited."
+  },
+  "luxury": {
+   "area": "Better hotel",
+   "price_min": 4500,
+   "price_max": 7000,
+   "note": "Few."
+  }
+ },
+ "rules": [
+  "Dress modestly at religious sites.",
+  "Respect weaving workshops and ask before photos."
+ ],
+ "packing": [
+  "Sunscreen",
+  "Water",
+  "Comfortable shoes"
+ ],
+ "nearby": [
+  "dhaka",
+  "mymensingh",
+  "jamalpur"
+ ],
+ "country": "Bangladesh"
+}

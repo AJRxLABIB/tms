@@ -1,0 +1,247 @@
+{
+ "id": "singapore",
+ "name": "Singapore",
+ "bn": "সিঙ্গাপুর",
+ "aliases": [
+  "singapur",
+  "singapore city",
+  "singapor",
+  "sg"
+ ],
+ "country": "Singapore",
+ "region": "Singapore",
+ "lat": 1.3521,
+ "lng": 103.8198,
+ "summary": "A spotless city-state: Gardens by the Bay, Sentosa, Universal Studios, Little India and some of the world's best street food.",
+ "best_months": [
+  2,
+  3,
+  4,
+  5,
+  6,
+  7
+ ],
+ "season_note": "Warm and humid all year; February-April is drier. Heaviest rain is November to January.",
+ "avoid_note": "Sudden showers anytime; haze from regional fires may occur June-Sept.",
+ "tags": [
+  "city",
+  "family",
+  "shopping",
+  "food",
+  "culture",
+  "photography"
+ ],
+ "days": {
+  "min": 3,
+  "ideal": 4
+ },
+ "emergency": {
+  "police": "999",
+  "ambulance": "995"
+ },
+ "entry_note": "Singapore: visa is required for Bangladeshi passport holders; apply via a local sponsor or ICA online. Check the latest rules with the embassy before booking.",
+ "reach": [
+  {
+   "mode": "Flight",
+   "how": "Dhaka to Changi Airport (Biman, US-Bangla, Singapore Airlines, Malaysia Airlines, Batik)",
+   "hours": 4.5,
+   "fare_min": 22000,
+   "fare_max": 42000,
+   "note": "Direct flights about 4h30m."
+  }
+ ],
+ "local": [
+  {
+   "mode": "MRT / bus",
+   "group_fare": "50-160 BDT per ride",
+   "note": "Best way to move around."
+  },
+  {
+   "mode": "Grab / taxi",
+   "group_fare": "600-1800 BDT"
+  }
+ ],
+ "attractions": [
+  {
+   "id": "gardens",
+   "name": "Gardens by the Bay",
+   "area": "Marina Bay",
+   "tags": [
+    "nature",
+    "photography",
+    "family",
+    "romantic"
+   ],
+   "mins": 180,
+   "fee": 2200,
+   "what": "Supertrees, Cloud Forest and Flower Dome.",
+   "tip": "Light show at 7:45pm and 8:45pm is free.",
+   "best": "sunset",
+   "indoor": false
+  },
+  {
+   "id": "sentosa",
+   "name": "Sentosa Island",
+   "area": "Sentosa",
+   "tags": [
+    "family",
+    "adventure",
+    "beach"
+   ],
+   "mins": 360,
+   "fee": 1500,
+   "what": "Beaches, cable car and attractions.",
+   "tip": "Combine Universal Studios.",
+   "best": "any",
+   "indoor": false
+  },
+  {
+   "id": "uss",
+   "name": "Universal Studios Singapore",
+   "area": "Sentosa",
+   "tags": [
+    "family",
+    "adventure"
+   ],
+   "mins": 420,
+   "fee": 9000,
+   "what": "A theme park with rides.",
+   "tip": "Buy tickets online; go on weekdays.",
+   "best": "morning",
+   "indoor": false
+  },
+  {
+   "id": "marina-bay",
+   "name": "Marina Bay Sands SkyPark",
+   "area": "Marina Bay",
+   "tags": [
+    "photography",
+    "city"
+   ],
+   "mins": 90,
+   "fee": 3500,
+   "what": "Observation deck with skyline view.",
+   "tip": "Go at sunset.",
+   "best": "sunset",
+   "indoor": false
+  },
+  {
+   "id": "little-india",
+   "name": "Little India and Mustafa Centre",
+   "area": "Little India",
+   "tags": [
+    "culture",
+    "shopping",
+    "food"
+   ],
+   "mins": 180,
+   "fee": 0,
+   "what": "Bangladeshi-friendly shops, 24-hour Mustafa Centre and halal food.",
+   "tip": "Prices are fixed; check duty-free allowance.",
+   "best": "afternoon",
+   "indoor": false
+  },
+  {
+   "id": "zoo",
+   "name": "Singapore Zoo and Night Safari",
+   "area": "Mandai",
+   "tags": [
+    "wildlife",
+    "family"
+   ],
+   "mins": 300,
+   "fee": 6500,
+   "what": "Open-concept zoo and night safari.",
+   "tip": "Book combo tickets.",
+   "best": "afternoon",
+   "indoor": false
+  },
+  {
+   "id": "chinatown",
+   "name": "Chinatown and Buddha Tooth Relic Temple",
+   "area": "Chinatown",
+   "tags": [
+    "culture",
+    "food"
+   ],
+   "mins": 120,
+   "fee": 0,
+   "what": "Shophouses and a large temple.",
+   "tip": "Modest dress at temples.",
+   "best": "afternoon",
+   "indoor": true
+  },
+  {
+   "id": "merlion",
+   "name": "Merlion Park",
+   "area": "Marina Bay",
+   "tags": [
+    "photography"
+   ],
+   "mins": 30,
+   "fee": 0,
+   "what": "Iconic fountain statue.",
+   "tip": "Great for quick photo.",
+   "best": "sunset",
+   "indoor": false
+  }
+ ],
+ "food": [
+  {
+   "dish": "Chicken rice",
+   "where": "Hawker centres",
+   "cost": 300
+  },
+  {
+   "dish": "Laksa",
+   "where": "Hawker centres",
+   "cost": 250
+  },
+  {
+   "dish": "Halal Indian-Muslim food (nasi biryani)",
+   "where": "Little India and Arab Street",
+   "cost": 350
+  },
+  {
+   "dish": "Chilli crab",
+   "where": "Seafood restaurants",
+   "cost": 2500
+  }
+ ],
+ "stay": {
+  "budget": {
+   "area": "Geylang, Little India",
+   "price_min": 6500,
+   "price_max": 12000,
+   "note": "Hostels and budget hotels."
+  },
+  "mid": {
+   "area": "Bugis, Chinatown",
+   "price_min": 14000,
+   "price_max": 25000,
+   "note": "Mid-range hotels."
+  },
+  "luxury": {
+   "area": "Marina Bay, Orchard",
+   "price_min": 35000,
+   "price_max": 90000,
+   "note": "5-star hotels."
+  }
+ },
+ "rules": [
+  "Chewing gum import/sale and littering carry heavy fines.",
+  "Vaping banned.",
+  "Drugs carry mandatory death penalty in some cases.",
+  "Do not eat on MRT."
+ ],
+ "packing": [
+  "Light cotton",
+  "Umbrella",
+  "Power adapter (UK type)",
+  "Comfortable shoes",
+  "Small cash"
+ ],
+ "nearby": [
+  "kuala-lumpur"
+ ]
+}

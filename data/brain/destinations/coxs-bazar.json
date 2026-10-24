@@ -1,0 +1,302 @@
+{
+ "id": "coxs-bazar",
+ "name": "Cox's Bazar",
+ "bn": "কক্সবাজার",
+ "aliases": [
+  "coxs bazar",
+  "cox bazar",
+  "coxsbazar",
+  "cox's bazaar",
+  "coxs bazaar",
+  "kokshobajar",
+  "coxbazar"
+ ],
+ "region": "Chattogram Division",
+ "lat": 21.4272,
+ "lng": 92.0058,
+ "summary": "Home of the world's longest natural sea beach (about 120 km). A relaxed beach town with sunsets, seafood, hill and island day trips, and the best-connected beach holiday in Bangladesh.",
+ "best_months": [
+  11,
+  12,
+  1,
+  2,
+  3
+ ],
+ "season_note": "November to March is dry and pleasant. April to May is hot. June to September is monsoon: heavy rain, rough sea and red flags on the beach.",
+ "avoid_note": "Peak crowds hit on public holidays, Eid and winter weekends: book hotels early. Do not swim when the red flag is up.",
+ "tags": [
+  "beach",
+  "family",
+  "romantic",
+  "food",
+  "photography",
+  "relaxing",
+  "water",
+  "nature"
+ ],
+ "days": {
+  "min": 2,
+  "ideal": 4
+ },
+ "reach": [
+  {
+   "mode": "Bus",
+   "how": "AC or sleeper coach from Dhaka (Sayedabad, Fakirapool, Kamalapur) - operators such as Hanif, S Alam, Soudia, Green Line, Saintmartin Paribahan",
+   "hours": 10,
+   "fare_min": 1300,
+   "fare_max": 3000,
+   "note": "Overnight coaches are the most common choice. Book ahead on weekends."
+  },
+  {
+   "mode": "Train",
+   "how": "Cox's Bazar Express via Chattogram (check Bangladesh Railway e-ticket for times and class fares)",
+   "hours": 11,
+   "fare_min": 500,
+   "fare_max": 1800,
+   "note": "Fares vary by class. Seats sell out quickly."
+  },
+  {
+   "mode": "Flight",
+   "how": "Dhaka (Hazrat Shahjalal) to Cox's Bazar airport - Biman, US-Bangla, Novoair",
+   "hours": 1,
+   "fare_min": 4500,
+   "fare_max": 9500,
+   "note": "Fastest option. Fares jump on holidays."
+  }
+ ],
+ "local": [
+  {
+   "mode": "Tuk-tuk / CNG auto",
+   "group_fare": "150-400 BDT for most town trips",
+   "note": "Agree the fare before you get in."
+  },
+  {
+   "mode": "Marine Drive jeep or microbus (day hire)",
+   "group_fare": "3500-6000 BDT per day",
+   "note": "Good for Himchari and Inani in one day."
+  },
+  {
+   "mode": "Rickshaw",
+   "group_fare": "50-150 BDT",
+   "note": "Short hops around the beach hotels."
+  }
+ ],
+ "attractions": [
+  {
+   "id": "laboni",
+   "name": "Laboni Beach",
+   "area": "Kolatoli / Laboni",
+   "tags": [
+    "beach",
+    "family",
+    "photography"
+   ],
+   "mins": 120,
+   "fee": 0,
+   "what": "The main town beach: walk the sand, paddle at the shoreline, watch the crowd and the fishing boats, and try beach snacks and horse rides.",
+   "tip": "Go early morning for space and clean sand. Keep valuables at the hotel.",
+   "best": "morning",
+   "indoor": false
+  },
+  {
+   "id": "sugandha",
+   "name": "Sugandha and Kolatoli Beach",
+   "area": "Sugandha Point",
+   "tags": [
+    "beach",
+    "photography",
+    "relaxing"
+   ],
+   "mins": 90,
+   "fee": 0,
+   "what": "A quieter stretch near the hotels, good for a long walk and for taking photos with fewer people.",
+   "tip": "Sunset here is excellent; plan your dinner after.",
+   "best": "sunset",
+   "indoor": false
+  },
+  {
+   "id": "himchari",
+   "name": "Himchari National Park and Waterfall",
+   "area": "Marine Drive, 12 km south",
+   "tags": [
+    "nature",
+    "photography",
+    "family"
+   ],
+   "mins": 150,
+   "fee": 40,
+   "what": "A hill-and-sea stop on Marine Drive with a small waterfall, a viewpoint over the water and short walks.",
+   "tip": "The waterfall is weak in the dry season. Go with a jeep on a Marine Drive day.",
+   "best": "morning",
+   "indoor": false
+  },
+  {
+   "id": "inani",
+   "name": "Inani Beach",
+   "area": "Marine Drive, 30 km south",
+   "tags": [
+    "beach",
+    "relaxing",
+    "photography"
+   ],
+   "mins": 150,
+   "fee": 0,
+   "what": "A wide, calmer beach with rock formations and coral stones, less crowded than Laboni.",
+   "tip": "Tides matter: ask locals when the rocks are best seen.",
+   "best": "afternoon",
+   "indoor": false
+  },
+  {
+   "id": "marine-drive",
+   "name": "Marine Drive (Cox's Bazar to Teknaf road)",
+   "area": "Himchari to Inani to Teknaf",
+   "tags": [
+    "nature",
+    "photography",
+    "adventure"
+   ],
+   "mins": 240,
+   "fee": 0,
+   "what": "Drive the road that runs between the hills and the sea, with stops for viewpoints and roadside coconut water.",
+   "tip": "Start in the morning so you are not driving back in the dark.",
+   "best": "morning",
+   "indoor": false
+  },
+  {
+   "id": "ramu",
+   "name": "Ramu Buddhist Temples",
+   "area": "Ramu, 15 km east",
+   "tags": [
+    "culture",
+    "history"
+   ],
+   "mins": 120,
+   "fee": 0,
+   "what": "A group of old Buddhist monasteries and a giant Buddha statue, quiet and very different from the beach.",
+   "tip": "Dress modestly and remove shoes at temples.",
+   "best": "afternoon",
+   "indoor": true
+  },
+  {
+   "id": "sonadia",
+   "name": "Sonadia Island",
+   "area": "Moheshkhali channel",
+   "tags": [
+    "nature",
+    "beach",
+    "adventure"
+   ],
+   "mins": 360,
+   "fee": 150,
+   "what": "A boat day trip to a remote sandy island with crabs, birds and empty shores.",
+   "tip": "Needs calm weather and a hired boat. Not suitable in monsoon.",
+   "best": "morning",
+   "indoor": false
+  },
+  {
+   "id": "moheshkhali",
+   "name": "Moheshkhali and Adinath Temple",
+   "area": "Moheshkhali island",
+   "tags": [
+    "culture",
+    "nature",
+    "adventure"
+   ],
+   "mins": 300,
+   "fee": 50,
+   "what": "Cross by boat to an island with a hilltop Hindu temple, betel-leaf farms and village roads.",
+   "tip": "Combine with a trawler ride and eat at the jetty.",
+   "best": "morning",
+   "indoor": false
+  },
+  {
+   "id": "burmese-market",
+   "name": "Burmese Market",
+   "area": "Town centre",
+   "tags": [
+    "culture",
+    "food",
+    "shopping"
+   ],
+   "mins": 90,
+   "fee": 0,
+   "what": "Browse Burmese-style textiles, pearls, dried-fish and handicrafts; a lively evening market.",
+   "tip": "Bargain politely. Pearls and stones: buy from reputable shops only.",
+   "best": "sunset",
+   "indoor": true
+  },
+  {
+   "id": "seafood-street",
+   "name": "Seafood dinner on the beach road",
+   "area": "Kolatoli / Laboni",
+   "tags": [
+    "food"
+   ],
+   "mins": 90,
+   "fee": 0,
+   "what": "Choose fresh fish, prawn or lobster by weight and have it grilled or fried.",
+   "tip": "Agree the price per kg before cooking and check the weight.",
+   "best": "sunset",
+   "indoor": false
+  }
+ ],
+ "food": [
+  {
+   "dish": "Grilled or fried sea fish and prawn",
+   "where": "Kolatoli and Laboni restaurants",
+   "cost": 600
+  },
+  {
+   "dish": "Chhuri (ribbonfish) fry and shutki bhuna",
+   "where": "Local restaurants",
+   "cost": 350
+  },
+  {
+   "dish": "Beef or mutton rezala with rice",
+   "where": "Town hotels",
+   "cost": 300
+  },
+  {
+   "dish": "Coconut water and beach snacks",
+   "where": "Beach stalls",
+   "cost": 80
+  }
+ ],
+ "stay": {
+  "budget": {
+   "area": "Kolatoli lanes, Hotel-Motel Zone",
+   "price_min": 1500,
+   "price_max": 3000,
+   "note": "Basic rooms, AC rooms cost more on weekends."
+  },
+  "mid": {
+   "area": "Kolatoli, Laboni road",
+   "price_min": 4500,
+   "price_max": 9000,
+   "note": "Sea-view rooms and breakfast."
+  },
+  "luxury": {
+   "area": "Hotel-Motel Zone, Inani/Marine Drive resorts",
+   "price_min": 12000,
+   "price_max": 30000,
+   "note": "Resorts with private beach and pools."
+  }
+ },
+ "rules": [
+  "Swim only in flagged safe zones and never when the red flag is flying.",
+  "Bargain for tuk-tuks and jeeps before you start.",
+  "Keep phones and wallets off the sand when you swim."
+ ],
+ "packing": [
+  "Sunscreen and sunglasses",
+  "Light cotton clothes and a cap",
+  "Swimwear and a quick-dry towel",
+  "Flip-flops",
+  "Rain jacket (April to October)"
+ ],
+ "nearby": [
+  "saint-martin",
+  "bandarban"
+ ],
+ "country": "Bangladesh"
+}

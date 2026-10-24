@@ -37,6 +37,8 @@ require_once __DIR__ . '/StructuredOutput.php';
 class AIClient {
 
     private int    $maxTokens;
+    /** Per-call overrides for the next call(s) (maxTokens, json, noThinking, temperature). See setCallOptions(). */
+    private array  $callOptions = [];
     private int    $cacheTtl;
     private PDO    $db;
     private CacheService $cache;
@@ -109,6 +111,13 @@ class AIClient {
             if ($p === null) { error_log("[TourBuddy AI] unknown fallback provider '{$name}' ignored."); continue; }
             if (!$p->isConfigured()) { error_log("[TourBuddy AI] fallback provider '{$name}' is not configured; skipped."); continue; }
             $out[$name] = $p;
+        }
+        // AI_PROVIDER=auto only: if the local model fails (e.g. Ollama runs but the model was never pulled), use a valid
+        // Gemini key rather than showing the offline catalogue. Explicit AI_PROVIDER values never get this implicit hop.
+        $mode = defined('AI_PROVIDER') ? strtolower(trim((string)AI_PROVIDER)) : 'auto';
+        if (($mode === '' || $mode === 'auto') && $primary->name() === 'ollama' && !isset($out['gemini']) && defined('GEMINI_API_KEY')
+            && AIProviderResolver::geminiKeyLooksValid((string)GEMINI_API_KEY)) {
+            $out['gemini'] = new GeminiProvider((string)GEMINI_API_KEY, defined('GEMINI_MODEL') ? GEMINI_MODEL : 'gemini-2.5-flash');
         }
         return array_values($out);
     }
@@ -301,7 +310,7 @@ class AIClient {
             $moreAfter = count(array_filter(array_slice($chain, $i + 1), fn($p) => $p->isConfigured() && !ProviderHealth::isOpen($this->db, $p->name())));
             $slice = $moreAfter > 0 ? max(3, (int)ceil($remaining / 2)) : $remaining; // leave time for the next provider
             $provMessages = $messages;
-            $reqOptions   = ['maxTokens' => $this->maxTokens];
+            $reqOptions   = array_merge(['maxTokens' => $this->maxTokens], $this->callOptions);
             $routeInfo    = ['reason' => '', 'dropped' => 0];
             if ($capability !== null && $prov instanceof OllamaProvider) {
                 $routed = $this->routeOllama($prov, $capability, $system, $messages);
@@ -470,6 +479,55 @@ class AIClient {
      * Identical to original AIClient::parseJson() -- vendor-agnostic, so it
      * never needed to move into the provider classes.
      */
+    /** Options for the calls that follow on THIS client: maxTokens (int), json (bool), noThinking (bool), temperature (float). [] resets. */
+    public function setCallOptions(array $o): void {
+        $keep = [];
+        if (isset($o['maxTokens'])) $keep['maxTokens'] = max(256, min(32000, (int)$o['maxTokens']));
+        foreach (['json', 'noThinking'] as $k) if (!empty($o[$k])) $keep[$k] = true;
+        if (isset($o['temperature'])) $keep['temperature'] = max(0.0, min(1.5, (float)$o['temperature']));
+        $this->callOptions = $keep;
+    }
+
+    /**
+     * Like parseJson(), but when the model's answer was cut off (token limit) it closes the open strings / arrays / objects
+     * and returns what was complete instead of nothing. $truncated says whether that repair was needed.
+     */
+    public function parseJsonLenient(string $content, ?bool &$truncated = null): ?array {
+        $truncated = false;
+        $ok = $this->parseJson($content);
+        if ($ok !== null) return $ok;
+        $s = preg_replace('/^```(?:json)?\s*/m', '', $content);
+        $s = trim((string)preg_replace('/^```\s*$/m', '', (string)$s));
+        $start = strpos($s, '{');
+        if ($start === false) return null;
+        $s = substr($s, $start);
+        $stack = []; $inStr = false; $esc = false; $lastSafe = 0; $n = strlen($s);
+        for ($i = 0; $i < $n; $i++) {
+            $ch = $s[$i];
+            if ($inStr) { if ($esc) $esc = false; elseif ($ch === '\\') $esc = true; elseif ($ch === '"') $inStr = false; continue; }
+            if ($ch === '"') { $inStr = true; continue; }
+            if ($ch === '{' || $ch === '[') { $stack[] = $ch === '{' ? '}' : ']'; }
+            elseif ($ch === '}' || $ch === ']') { array_pop($stack); $lastSafe = $i + 1; }
+            elseif ($ch === ',') { $lastSafe = $i; }
+        }
+        if (!$stack) return null;   // balanced yet invalid: nothing safe to repair
+        // cut back to the last complete value, then close everything that is still open
+        $cut = substr($s, 0, $lastSafe);
+        $stack = []; $inStr = false; $esc = false;
+        for ($i = 0, $m = strlen($cut); $i < $m; $i++) {
+            $ch = $cut[$i];
+            if ($inStr) { if ($esc) $esc = false; elseif ($ch === '\\') $esc = true; elseif ($ch === '"') $inStr = false; continue; }
+            if ($ch === '"') $inStr = true;
+            elseif ($ch === '{') $stack[] = '}'; elseif ($ch === '[') $stack[] = ']';
+            elseif ($ch === '}' || $ch === ']') array_pop($stack);
+        }
+        $fixed = rtrim($cut, ", \n\r\t") . implode('', array_reverse($stack));
+        $d = json_decode($fixed, true);
+        if (!is_array($d)) return null;
+        $truncated = true;
+        return $d;
+    }
+
     public function parseJson(string $content): ?array {
         $clean = preg_replace('/^```(?:json)?\s*/m', '', $content);
         $clean = preg_replace('/^```\s*$/m', '', $clean);
@@ -624,7 +682,7 @@ class AIClient {
         return [
             'provider' => $prov->withModel($route['model']),
             'messages' => $fit['messages'],
-            'options'  => ['maxTokens' => $this->maxTokens, 'numCtx' => $limit],
+            'options'  => ['maxTokens' => (int)($this->callOptions['maxTokens'] ?? $this->maxTokens), 'numCtx' => $limit],
             'info'     => ['reason' => $route['reason'], 'dropped' => $fit['dropped'] + $fit['shortened']],
         ];
     }

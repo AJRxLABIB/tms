@@ -1,0 +1,190 @@
+{
+ "id": "kushtia",
+ "name": "Kushtia (Lalon Akhra)",
+ "bn": "কুষ্টিয়া",
+ "aliases": [
+  "kushtia",
+  "kustia",
+  "lalon akhra",
+  "lalon shah mazar",
+  "cheuriya",
+  "kushtia lalon"
+ ],
+ "region": "Khulna Division",
+ "lat": 23.9,
+ "lng": 89.12,
+ "summary": "The land of the Baul saint Lalon Shah, with his Akhra at Cheuriya, Tagore Kuthibari at Shilaidaha and the Gorai river.",
+ "best_months": [
+  10,
+  11,
+  12,
+  1,
+  2,
+  3
+ ],
+ "season_note": "Winter has cultural events at Lalon Akhra. Summer is hot.",
+ "tags": [
+  "culture",
+  "spiritual",
+  "history",
+  "family"
+ ],
+ "days": {
+  "min": 1,
+  "ideal": 2
+ },
+ "reach": [
+  {
+   "mode": "Bus",
+   "how": "Bus Dhaka to Kushtia via Padma bridge",
+   "hours": 5,
+   "fare_min": 500,
+   "fare_max": 1000,
+   "note": "Direct buses available."
+  },
+  {
+   "mode": "Train",
+   "how": "Train via Kushtia Court",
+   "hours": 6,
+   "fare_min": 250,
+   "fare_max": 800,
+   "note": "Check timetable."
+  }
+ ],
+ "local": [
+  {
+   "mode": "CNG / rickshaw",
+   "group_fare": "50-300 BDT in Kushtia",
+   "note": "Agree fare first."
+  }
+ ],
+ "attractions": [
+  {
+   "id": "lalon-akhra",
+   "name": "Lalon Akhra (Cheuriya)",
+   "area": "Cheuriya",
+   "tags": [
+    "culture",
+    "spiritual"
+   ],
+   "mins": 120,
+   "fee": 0,
+   "what": "Mazar and akhra of the Baul poet Lalon Shah, with gatherings of song.",
+   "tip": "Evenings have Baul songs.",
+   "best": "afternoon",
+   "indoor": false
+  },
+  {
+   "id": "tagore",
+   "name": "Tagore Kuthibari",
+   "area": "Shilaidaha",
+   "tags": [
+    "history",
+    "culture"
+   ],
+   "mins": 90,
+   "fee": 20,
+   "what": "Riverside house of Rabindranath Tagore.",
+   "tip": "Check closing day.",
+   "best": "morning",
+   "indoor": true
+  },
+  {
+   "id": "gorai",
+   "name": "Gorai river",
+   "area": "Kushtia",
+   "tags": [
+    "water",
+    "relaxing"
+   ],
+   "mins": 45,
+   "fee": 0,
+   "what": "Calm river views.",
+   "tip": "Sunset spot.",
+   "best": "sunset",
+   "indoor": false
+  },
+  {
+   "id": "baul-song",
+   "name": "Baul song session",
+   "area": "Cheuriya",
+   "tags": [
+    "culture",
+    "spiritual"
+   ],
+   "mins": 90,
+   "fee": 0,
+   "what": "Informal Baul performances near the mazar.",
+   "tip": "Tip performers politely.",
+   "best": "sunset",
+   "indoor": false
+  },
+  {
+   "id": "town",
+   "name": "Kushtia town walk",
+   "area": "Town",
+   "tags": [
+    "culture",
+    "food"
+   ],
+   "mins": 45,
+   "fee": 0,
+   "what": "Local market and sweets.",
+   "tip": "Evening.",
+   "best": "sunset",
+   "indoor": false
+  }
+ ],
+ "food": [
+  {
+   "dish": "Til-er khaja (sweet)",
+   "where": "Sweet shops",
+   "cost": 100
+  },
+  {
+   "dish": "Rice and fish curry",
+   "where": "Restaurants",
+   "cost": 250
+  },
+  {
+   "dish": "Tea",
+   "where": "Stalls",
+   "cost": 20
+  }
+ ],
+ "stay": {
+  "budget": {
+   "area": "Simple hotel",
+   "price_min": 700,
+   "price_max": 1600,
+   "note": "Basic."
+  },
+  "mid": {
+   "area": "Mid hotel",
+   "price_min": 2000,
+   "price_max": 4000,
+   "note": "Few."
+  },
+  "luxury": {
+   "area": "Better hotel",
+   "price_min": 4500,
+   "price_max": 7000,
+   "note": "Few."
+  }
+ },
+ "rules": [
+  "Show respect at the mazar.",
+  "Ask before recording music."
+ ],
+ "packing": [
+  "Modest clothes",
+  "Water",
+  "Small cash for tips"
+ ],
+ "nearby": [
+  "pabna",
+  "jessore",
+  "rajshahi"
+ ],
+ "country": "Bangladesh"
+}

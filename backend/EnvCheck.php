@@ -118,7 +118,7 @@ final class EnvCheck
         if ($ai === 'auto') {
             // Local Ollama first; a Gemini key is used only as a cloud fallback and only if it looks valid.
             $gk = $get('GEMINI_API_KEY');
-            if ($gk !== '' && preg_match('/^AIza[0-9A-Za-z_\-]{35}$/', $gk)) $add('WARN', 'AI_PROVIDER', 'auto: Ollama is used when it is running; otherwise customer messages go to Gemini (Google). Set AI_PROVIDER=ollama to keep all AI local.');
+            if ($gk !== '' && preg_match('/^(?:AIza[0-9A-Za-z_\-]{35}|AQ\.[0-9A-Za-z_\-]{20,120})$/', $gk)) $add('WARN', 'AI_PROVIDER', 'auto: Ollama is used when it is running; otherwise customer messages go to Gemini (Google). Set AI_PROVIDER=ollama to keep all AI local.');
             else $add('PASS', 'AI_PROVIDER', 'auto: local Ollama when running, otherwise no AI (catalogue answers only). Nothing is sent to an external service.');
         } elseif ($ai === 'none') {
             $add('PASS', 'AI_PROVIDER', 'AI is turned off; features answer from the catalogue.');
@@ -130,7 +130,7 @@ final class EnvCheck
         } else {
             $add('WARN', 'AI_PROVIDER', "External AI provider ($ai): customer messages are sent to that service. Make sure this is intended and disclosed.");
         }
-        if ($get('GEMINI_API_KEY') !== '' && strpos($get('GEMINI_API_KEY'), 'AIza') !== 0) $add('WARN', 'GEMINI_API_KEY', 'Does not look like a Google AI Studio key (expected to start with "AIza").');
+        if ($get('GEMINI_API_KEY') !== '' && strpos($get('GEMINI_API_KEY'), 'AIza') !== 0 && strpos($get('GEMINI_API_KEY'), 'AQ.') !== 0) $add('WARN', 'GEMINI_API_KEY', 'Does not look like a Google AI Studio key (expected to start with "AIza" or "AQ.").');
         foreach (['GEMINI_API_KEY', 'OPENAI_API_KEY'] as $k) {
             if ($get($k) !== '' && self::looksLikePlaceholder($get($k))) $add($bad, $k, 'Looks like a placeholder.');
         }

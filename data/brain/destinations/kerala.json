@@ -1,0 +1,247 @@
+{
+ "id": "kerala",
+ "name": "Kerala (Munnar and Alleppey)",
+ "bn": "কেরালা",
+ "aliases": [
+  "munnar",
+  "alleppey",
+  "alappuzha",
+  "kerela",
+  "kerala backwater"
+ ],
+ "country": "India",
+ "region": "Kerala",
+ "lat": 9.9312,
+ "lng": 76.2673,
+ "summary": "God's Own Country: misty tea hills in Munnar, houseboats on the Alleppey backwaters, beaches and Ayurveda.",
+ "best_months": [
+  10,
+  11,
+  12,
+  1,
+  2,
+  3
+ ],
+ "season_note": "October to March is dry and cool; houseboats are best then. June to September is monsoon with heavy rain.",
+ "avoid_note": "Heavy rain can close hill roads in monsoon.",
+ "tags": [
+  "hills",
+  "nature",
+  "water",
+  "relaxing",
+  "romantic",
+  "family",
+  "photography",
+  "tea"
+ ],
+ "days": {
+  "min": 5,
+  "ideal": 7
+ },
+ "emergency": {
+  "police": "100 (or 112)",
+  "ambulance": "102 or 108"
+ },
+ "entry_note": "Indian visa is required for Bangladeshi passport holders (apply via the Indian Visa Application Centre; category as currently offered). Check the latest rules with the embassy before booking.",
+ "reach": [
+  {
+   "mode": "Flight",
+   "how": "Dhaka to Cochin International Airport (via Kolkata/Delhi/Bengaluru) (Biman, US-Bangla, IndiGo, Air India; often via Kolkata)",
+   "hours": 7,
+   "fare_min": 17000,
+   "fare_max": 34000,
+   "note": "Usually 1 stop."
+  },
+  {
+   "mode": "Train",
+   "how": "Kolkata to Ernakulam, long-haul",
+   "hours": 45,
+   "fare_min": 3000,
+   "fare_max": 7000,
+   "note": "Not practical for short trips."
+  }
+ ],
+ "local": [
+  {
+   "mode": "Tuk-tuk",
+   "group_fare": "150-500 BDT"
+  },
+  {
+   "mode": "Houseboat (per night)",
+   "group_fare": "10000-30000 BDT",
+   "note": "Shared with 2-6 guests."
+  },
+  {
+   "mode": "Car hire",
+   "group_fare": "4500-8500 BDT per day",
+   "note": "For Munnar loop."
+  }
+ ],
+ "attractions": [
+  {
+   "id": "munnar-tea",
+   "name": "Munnar Tea Gardens",
+   "area": "Munnar",
+   "tags": [
+    "tea",
+    "nature",
+    "hills",
+    "photography"
+   ],
+   "mins": 180,
+   "fee": 0,
+   "what": "Rolling tea hills and cool air.",
+   "tip": "Visit Tata Tea Museum for tea history.",
+   "best": "morning",
+   "indoor": false
+  },
+  {
+   "id": "eravikulam",
+   "name": "Eravikulam National Park",
+   "area": "Munnar",
+   "tags": [
+    "wildlife",
+    "nature",
+    "hills"
+   ],
+   "mins": 180,
+   "fee": 300,
+   "what": "Home of Nilgiri tahr and flowers.",
+   "tip": "Closed during calving season (Feb-Mar).",
+   "best": "morning",
+   "indoor": false
+  },
+  {
+   "id": "mattupetty",
+   "name": "Mattupetty Dam and Echo Point",
+   "area": "Munnar",
+   "tags": [
+    "nature",
+    "relaxing"
+   ],
+   "mins": 60,
+   "fee": 100,
+   "what": "Lake and boating spots.",
+   "tip": "Go early.",
+   "best": "morning",
+   "indoor": false
+  },
+  {
+   "id": "alleppey-houseboat",
+   "name": "Alleppey Backwater Houseboat",
+   "area": "Alappuzha",
+   "tags": [
+    "water",
+    "relaxing",
+    "romantic",
+    "family"
+   ],
+   "mins": 600,
+   "fee": 0,
+   "what": "Overnight cruises through canals and paddy fields.",
+   "tip": "Book via a licensed operator; negotiate included meals.",
+   "best": "morning",
+   "indoor": false
+  },
+  {
+   "id": "kumarakom",
+   "name": "Kumarakom Bird Sanctuary",
+   "area": "Kumarakom",
+   "tags": [
+    "wildlife",
+    "nature"
+   ],
+   "mins": 120,
+   "fee": 150,
+   "what": "Migratory birds on Vembanad Lake.",
+   "tip": "Best Nov-Mar.",
+   "best": "morning",
+   "indoor": false
+  },
+  {
+   "id": "fort-kochi",
+   "name": "Fort Kochi",
+   "area": "Kochi",
+   "tags": [
+    "history",
+    "culture",
+    "photography"
+   ],
+   "mins": 180,
+   "fee": 0,
+   "what": "Chinese fishing nets, colonial streets, art cafes.",
+   "tip": "Visit at sunset; try Kathakali show.",
+   "best": "sunset",
+   "indoor": false
+  },
+  {
+   "id": "kovalam",
+   "name": "Kovalam or Varkala Beach",
+   "area": "South Kerala",
+   "tags": [
+    "beach",
+    "relaxing"
+   ],
+   "mins": 180,
+   "fee": 0,
+   "what": "Cliffside beach with cafes.",
+   "tip": "Calm in Nov-Mar.",
+   "best": "sunset",
+   "indoor": false
+  }
+ ],
+ "food": [
+  {
+   "dish": "Kerala fish curry meals",
+   "where": "Local restaurants",
+   "cost": 300
+  },
+  {
+   "dish": "Appam with stew",
+   "where": "Local restaurants",
+   "cost": 200
+  },
+  {
+   "dish": "Karimeen pollichathu",
+   "where": "Backwater restaurants",
+   "cost": 500
+  }
+ ],
+ "stay": {
+  "budget": {
+   "area": "Munnar town, Alleppey",
+   "price_min": 2500,
+   "price_max": 5500,
+   "note": "Homestays."
+  },
+  "mid": {
+   "area": "Munnar, Kumarakom",
+   "price_min": 6500,
+   "price_max": 14000,
+   "note": "Resorts."
+  },
+  "luxury": {
+   "area": "Munnar, Kumarakom",
+   "price_min": 16000,
+   "price_max": 40000,
+   "note": "Luxury resorts."
+  }
+ },
+ "rules": [
+  "Houseboats: choose licensed operators; no plastics.",
+  "Dress modestly at temples.",
+  "Alcohol available at licensed outlets.",
+  "Wildlife park rules apply."
+ ],
+ "packing": [
+  "Light clothes",
+  "Rain jacket",
+  "Sunscreen",
+  "Insect repellent",
+  "Cash in INR"
+ ],
+ "nearby": [
+  "goa",
+  "kolkata"
+ ]
+}

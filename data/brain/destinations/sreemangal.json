@@ -1,0 +1,229 @@
+{
+ "id": "sreemangal",
+ "name": "Sreemangal",
+ "bn": "শ্রীমঙ্গল",
+ "aliases": [
+  "srimangal",
+  "sreemongol",
+  "srimongol",
+  "sri mangal",
+  "tea capital"
+ ],
+ "region": "Sylhet Division (Moulvibazar)",
+ "lat": 24.3065,
+ "lng": 91.7296,
+ "summary": "The tea capital of Bangladesh: endless green tea gardens, rubber plantations, lakes, a rainforest reserve and the famous seven-colour tea.",
+ "best_months": [
+  10,
+  11,
+  12,
+  1,
+  2,
+  3
+ ],
+ "season_note": "October to March is cool and dry. Rainy months are lush but roads can be muddy.",
+ "avoid_note": "Hiking in Lawachara can be slippery after rain. Look out for leeches.",
+ "tags": [
+  "tea",
+  "nature",
+  "family",
+  "relaxing",
+  "photography",
+  "wildlife"
+ ],
+ "days": {
+  "min": 1,
+  "ideal": 2
+ },
+ "reach": [
+  {
+   "mode": "Train",
+   "how": "Parabat, Jayantika, Upaban or Udayan Express from Kamalapur (check e-ticket)",
+   "hours": 5,
+   "fare_min": 350,
+   "fare_max": 1100,
+   "note": "Comfortable and the most popular choice."
+  },
+  {
+   "mode": "Bus",
+   "how": "AC coach from Dhaka (Sayedabad, Gabtoli) via Sylhet road",
+   "hours": 6,
+   "fare_min": 700,
+   "fare_max": 1500,
+   "note": ""
+  }
+ ],
+ "local": [
+  {
+   "mode": "CNG auto or easy-bike",
+   "group_fare": "200-600 BDT per trip",
+   "note": "Hire for half a day to see tea gardens and Lawachara."
+  },
+  {
+   "mode": "Private car (day hire)",
+   "group_fare": "4000-7000 BDT",
+   "note": "Best for Madhabkunda."
+  }
+ ],
+ "attractions": [
+  {
+   "id": "lawachara",
+   "name": "Lawachara National Park",
+   "area": "Kamalganj",
+   "tags": [
+    "nature",
+    "wildlife",
+    "adventure"
+   ],
+   "mins": 180,
+   "fee": 100,
+   "what": "A short trek through tropical forest to spot gibbons, langurs and many birds.",
+   "tip": "Go early. Wear closed shoes. Hire a local guide.",
+   "best": "morning",
+   "indoor": false
+  },
+  {
+   "id": "nilkantha",
+   "name": "Nilkantha Tea Cabin (seven-colour tea)",
+   "area": "Town centre",
+   "tags": [
+    "food",
+    "culture"
+   ],
+   "mins": 45,
+   "fee": 100,
+   "what": "Taste the famous seven-layer tea.",
+   "tip": "Go in the afternoon; it can get crowded.",
+   "best": "afternoon",
+   "indoor": true
+  },
+  {
+   "id": "tea-estate",
+   "name": "Tea gardens and Baikka Beel",
+   "area": "Sreemangal",
+   "tags": [
+    "tea",
+    "nature",
+    "photography"
+   ],
+   "mins": 150,
+   "fee": 30,
+   "what": "Walk through tea estates and see the wetland bird sanctuary.",
+   "tip": "Early morning mist is the best time for photos.",
+   "best": "morning",
+   "indoor": false
+  },
+  {
+   "id": "madhabkunda",
+   "name": "Madhabkunda Waterfall",
+   "area": "Barlekha, 50 km",
+   "tags": [
+    "nature",
+    "adventure",
+    "family"
+   ],
+   "mins": 240,
+   "fee": 50,
+   "what": "The largest waterfall in Bangladesh, with a pool and a forest walk.",
+   "tip": "Best from July to October. Take a hired car.",
+   "best": "morning",
+   "indoor": false
+  },
+  {
+   "id": "lemon-garden",
+   "name": "Lemon and pineapple gardens",
+   "area": "Surrounding villages",
+   "tags": [
+    "nature"
+   ],
+   "mins": 90,
+   "fee": 0,
+   "what": "Walk through the gardens and buy fruit directly from growers.",
+   "tip": "Seasonal; ask your driver where to stop.",
+   "best": "afternoon",
+   "indoor": false
+  },
+  {
+   "id": "tribal",
+   "name": "Khasi and Manipuri villages",
+   "area": "Surrounding area",
+   "tags": [
+    "culture"
+   ],
+   "mins": 90,
+   "fee": 0,
+   "what": "Meet local communities and see handloom work.",
+   "tip": "Be polite and ask before taking photos.",
+   "best": "afternoon",
+   "indoor": false
+  },
+  {
+   "id": "rubber",
+   "name": "Rubber and tea plantation drive",
+   "area": "Sreemangal",
+   "tags": [
+    "nature",
+    "photography"
+   ],
+   "mins": 90,
+   "fee": 0,
+   "what": "A scenic loop through plantations.",
+   "tip": "Great at sunset.",
+   "best": "sunset",
+   "indoor": false
+  }
+ ],
+ "food": [
+  {
+   "dish": "Seven-colour tea",
+   "where": "Nilkantha Tea Cabin",
+   "cost": 100
+  },
+  {
+   "dish": "Local pineapple and lemon juice",
+   "where": "Roadside stalls",
+   "cost": 60
+  },
+  {
+   "dish": "Fish curry with rice",
+   "where": "Town restaurants",
+   "cost": 250
+  }
+ ],
+ "stay": {
+  "budget": {
+   "area": "Town centre",
+   "price_min": 1200,
+   "price_max": 2500,
+   "note": "Simple hotels."
+  },
+  "mid": {
+   "area": "Near tea gardens",
+   "price_min": 3000,
+   "price_max": 6500,
+   "note": "Cottage-style hotels."
+  },
+  "luxury": {
+   "area": "Tea estate resorts",
+   "price_min": 8000,
+   "price_max": 16000,
+   "note": "Garden resorts with pools."
+  }
+ },
+ "rules": [
+  "Follow forest rules in Lawachara and keep your voice low.",
+  "Do not litter in tea gardens.",
+  "Carry insect repellent and wear shoes."
+ ],
+ "packing": [
+  "Insect repellent",
+  "Closed shoes",
+  "Light rain jacket",
+  "Binoculars if you have them",
+  "Camera"
+ ],
+ "nearby": [
+  "sylhet"
+ ],
+ "country": "Bangladesh"
+}

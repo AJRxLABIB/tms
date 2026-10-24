@@ -1,0 +1,235 @@
+{
+ "id": "bali",
+ "name": "Bali",
+ "bn": "বালি",
+ "aliases": [
+  "bali indonesia",
+  "baali",
+  "bali island",
+  "denpasar",
+  "ubud"
+ ],
+ "country": "Indonesia",
+ "region": "Bali",
+ "lat": -8.4095,
+ "lng": 115.1889,
+ "summary": "Island of temples, rice terraces, surf beaches and yoga retreats; Ubud for culture, Seminyak/Kuta for beach life.",
+ "best_months": [
+  4,
+  5,
+  6,
+  7,
+  8,
+  9
+ ],
+ "season_note": "April to October is dry season; November to March is wet but cheaper.",
+ "avoid_note": "Wet season brings flooding and rough seas.",
+ "tags": [
+  "beach",
+  "culture",
+  "nature",
+  "romantic",
+  "relaxing",
+  "adventure",
+  "photography"
+ ],
+ "days": {
+  "min": 4,
+  "ideal": 6
+ },
+ "emergency": {
+  "police": "110",
+  "ambulance": "118 (or 119)"
+ },
+ "entry_note": "Indonesia: visa required for Bangladeshi passport holders (e-VOA availability varies); check the latest rules with the embassy before booking.",
+ "reach": [
+  {
+   "mode": "Flight",
+   "how": "Dhaka to Ngurah Rai Airport (via Singapore/Kuala Lumpur) (Biman, US-Bangla, Singapore Airlines, Malaysia Airlines, Batik)",
+   "hours": 8,
+   "fare_min": 30000,
+   "fare_max": 55000,
+   "note": "Usually one stop via Singapore or KL."
+  }
+ ],
+ "local": [
+  {
+   "mode": "Scooter hire",
+   "group_fare": "350-700 BDT per day",
+   "note": "Need license; helmet required."
+  },
+  {
+   "mode": "Grab/Gojek",
+   "group_fare": "300-1500 BDT"
+  },
+  {
+   "mode": "Private driver per day",
+   "group_fare": "4500-7500 BDT",
+   "note": "Common for tours."
+  }
+ ],
+ "attractions": [
+  {
+   "id": "tanah-lot",
+   "name": "Tanah Lot Temple",
+   "area": "Tabanan",
+   "tags": [
+    "spiritual",
+    "photography"
+   ],
+   "mins": 90,
+   "fee": 300,
+   "what": "A sea temple on a rock.",
+   "tip": "Sunset is crowded.",
+   "best": "sunset",
+   "indoor": false
+  },
+  {
+   "id": "ubud",
+   "name": "Ubud Monkey Forest and Art Market",
+   "area": "Ubud",
+   "tags": [
+    "culture",
+    "nature",
+    "shopping"
+   ],
+   "mins": 150,
+   "fee": 400,
+   "what": "Temple forest and craft market.",
+   "tip": "Hold belongings; monkeys steal.",
+   "best": "morning",
+   "indoor": false
+  },
+  {
+   "id": "tegalalang",
+   "name": "Tegalalang Rice Terraces",
+   "area": "Ubud",
+   "tags": [
+    "nature",
+    "photography"
+   ],
+   "mins": 90,
+   "fee": 150,
+   "what": "Green terraced fields.",
+   "tip": "Go early.",
+   "best": "morning",
+   "indoor": false
+  },
+  {
+   "id": "uluwatu",
+   "name": "Uluwatu Temple and Kecak dance",
+   "area": "Uluwatu",
+   "tags": [
+    "spiritual",
+    "culture",
+    "photography"
+   ],
+   "mins": 120,
+   "fee": 500,
+   "what": "Cliff temple with fire dance at sunset.",
+   "tip": "Watch for monkeys.",
+   "best": "sunset",
+   "indoor": false
+  },
+  {
+   "id": "nusa-penida",
+   "name": "Nusa Penida Day Trip",
+   "area": "Nusa Penida",
+   "tags": [
+    "adventure",
+    "nature",
+    "photography"
+   ],
+   "mins": 480,
+   "fee": 6000,
+   "what": "Kelingking beach and cliffs.",
+   "tip": "Rough roads; check sea.",
+   "best": "morning",
+   "indoor": false
+  },
+  {
+   "id": "kuta",
+   "name": "Kuta and Seminyak Beach",
+   "area": "South",
+   "tags": [
+    "beach",
+    "adventure",
+    "city"
+   ],
+   "mins": 180,
+   "fee": 0,
+   "what": "Surfing and cafes.",
+   "tip": "Swim between flags.",
+   "best": "afternoon",
+   "indoor": false
+  },
+  {
+   "id": "besakih",
+   "name": "Besakih Temple",
+   "area": "Karangasem",
+   "tags": [
+    "spiritual",
+    "culture"
+   ],
+   "mins": 120,
+   "fee": 300,
+   "what": "Bali's mother temple.",
+   "tip": "Sarongs required.",
+   "best": "morning",
+   "indoor": false
+  }
+ ],
+ "food": [
+  {
+   "dish": "Nasi goreng",
+   "where": "Warungs",
+   "cost": 200
+  },
+  {
+   "dish": "Satay lilit",
+   "where": "Local eateries",
+   "cost": 200
+  },
+  {
+   "dish": "Halal seafood",
+   "where": "Jimbaran restaurants",
+   "cost": 900
+  }
+ ],
+ "stay": {
+  "budget": {
+   "area": "Ubud, Kuta",
+   "price_min": 2500,
+   "price_max": 6000,
+   "note": "Guesthouses."
+  },
+  "mid": {
+   "area": "Seminyak, Ubud",
+   "price_min": 7000,
+   "price_max": 16000,
+   "note": "Boutique hotels."
+  },
+  "luxury": {
+   "area": "Nusa Dua, Uluwatu",
+   "price_min": 22000,
+   "price_max": 80000,
+   "note": "Villas and resorts."
+  }
+ },
+ "rules": [
+  "Wear sarong and sash in temples.",
+  "Do not climb sacred trees or step on offerings.",
+  "Drug laws are strict.",
+  "Seek halal options as many foods contain pork."
+ ],
+ "packing": [
+  "Sarong",
+  "Sunscreen",
+  "Insect repellent",
+  "Rain jacket",
+  "Swimwear"
+ ],
+ "nearby": [
+  "singapore"
+ ]
+}

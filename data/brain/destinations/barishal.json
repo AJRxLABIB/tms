@@ -1,0 +1,194 @@
+{
+ "id": "barishal",
+ "name": "Barishal",
+ "bn": "বরিশাল",
+ "aliases": [
+  "barisal",
+  "barishal city",
+  "venice of the east",
+  "floating guava market",
+  "bhimruli"
+ ],
+ "region": "Barishal Division",
+ "lat": 22.701,
+ "lng": 90.3535,
+ "summary": "The river-delta region: boat travel, floating guava markets in Bhimruli, old mosques and Durga Sagar, and the gateway to Kuakata.",
+ "best_months": [
+  11,
+  12,
+  1,
+  2,
+  3
+ ],
+ "season_note": "Winter is dry. Monsoon is lush but wet.",
+ "avoid_note": "Cyclone and river warnings: check the weather. Launch trips depend on the tides.",
+ "tags": [
+  "water",
+  "culture",
+  "nature",
+  "relaxing",
+  "food"
+ ],
+ "days": {
+  "min": 1,
+  "ideal": 2
+ },
+ "reach": [
+  {
+   "mode": "Launch",
+   "how": "Overnight launch Dhaka (Sadarghat) to Barishal",
+   "hours": 8,
+   "fare_min": 600,
+   "fare_max": 3500,
+   "note": "Cabin classes vary. Book ahead on weekends."
+  },
+  {
+   "mode": "Bus",
+   "how": "AC coach from Dhaka (Gabtoli) via Padma Bridge",
+   "hours": 4,
+   "fare_min": 700,
+   "fare_max": 1400,
+   "note": "The Padma Bridge cut travel time sharply."
+  },
+  {
+   "mode": "Flight",
+   "how": "Dhaka to Barishal airport",
+   "hours": 1,
+   "fare_min": 3200,
+   "fare_max": 6500,
+   "note": ""
+  }
+ ],
+ "local": [
+  {
+   "mode": "Rickshaw / auto",
+   "group_fare": "80-300 BDT",
+   "note": ""
+  },
+  {
+   "mode": "Country boat hire",
+   "group_fare": "1000-2500 BDT",
+   "note": "For the floating market."
+  }
+ ],
+ "attractions": [
+  {
+   "id": "guava",
+   "name": "Bhimruli floating guava market",
+   "area": "Swarupkathi",
+   "tags": [
+    "culture",
+    "water",
+    "photography"
+   ],
+   "mins": 180,
+   "fee": 500,
+   "what": "Sellers in small boats sell guavas on the canals in the monsoon (July to September).",
+   "tip": "Seasonal only.",
+   "best": "morning",
+   "indoor": false
+  },
+  {
+   "id": "durga-sagar",
+   "name": "Durga Sagar",
+   "area": "Durga Sagar",
+   "tags": [
+    "relaxing",
+    "family"
+   ],
+   "mins": 90,
+   "fee": 20,
+   "what": "A big old pond with a park.",
+   "tip": "Go in the evening.",
+   "best": "sunset",
+   "indoor": false
+  },
+  {
+   "id": "bibi-chini",
+   "name": "Bibichini Mosque",
+   "area": "Town",
+   "tags": [
+    "history",
+    "spiritual"
+   ],
+   "mins": 45,
+   "fee": 0,
+   "what": "A quiet old mosque.",
+   "tip": "Dress modestly.",
+   "best": "afternoon",
+   "indoor": true
+  },
+  {
+   "id": "aqua-bazaar",
+   "name": "River ghat and launch terminal",
+   "area": "River",
+   "tags": [
+    "culture",
+    "water"
+   ],
+   "mins": 60,
+   "fee": 0,
+   "what": "Watch the busy river port.",
+   "tip": "Be careful with bags.",
+   "best": "afternoon",
+   "indoor": false
+  },
+  {
+   "id": "jamidar",
+   "name": "Jamidar Bari",
+   "area": "Outskirts",
+   "tags": [
+    "history"
+   ],
+   "mins": 60,
+   "fee": 20,
+   "what": "The old zamindar house.",
+   "tip": "Check opening hours.",
+   "best": "afternoon",
+   "indoor": true
+  }
+ ],
+ "food": [
+  {
+   "dish": "Local fish and rice",
+   "where": "Town restaurants",
+   "cost": 260
+  },
+  {
+   "dish": "Guava products (seasonal)",
+   "where": "Local stalls",
+   "cost": 80
+  }
+ ],
+ "stay": {
+  "budget": {
+   "area": "Town",
+   "price_min": 1200,
+   "price_max": 2500,
+   "note": ""
+  },
+  "mid": {
+   "area": "Town",
+   "price_min": 3000,
+   "price_max": 5500,
+   "note": ""
+  },
+  "luxury": {
+   "area": "Town",
+   "price_min": 5500,
+   "price_max": 10000,
+   "note": ""
+  }
+ },
+ "rules": [
+  "Wear a life jacket on boats."
+ ],
+ "packing": [
+  "Rain jacket",
+  "Sun hat"
+ ],
+ "nearby": [
+  "kuakata"
+ ],
+ "country": "Bangladesh"
+}

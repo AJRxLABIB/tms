@@ -26,3 +26,4 @@
 })();
 </script>
 <script src="../js/tms-a11y.js" defer></script>
+<script src="../js/tms-suggest.js" defer></script>

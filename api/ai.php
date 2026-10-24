@@ -184,6 +184,8 @@ function buildTripDataFromPost(): array {
         'transport'       => tms_clean($_POST['transport'] ?? 'mixed'),
         'activities'      => array_map('trim', explode(',', tms_clean($_POST['activities'] ?? 'sightseeing'))),
         'special_requests'=> tms_clean($_POST['special_requests'] ?? ''),
+        'origin'          => tms_clean($_POST['origin'] ?? ''),
+        'engine'          => in_array(($_POST['engine'] ?? ''), ['auto', 'brain', 'llm'], true) ? $_POST['engine'] : '',
     ];
 }
 
@@ -208,7 +210,7 @@ function handleItinerary(PDO $dbh, string $email): void {
     // ~30-50s (see AIClient's longer budget for this call); PHP's own default
     // max_execution_time (30-60s on stock XAMPP) could otherwise kill the script
     // mid-request and hand the browser an HTML fatal instead of JSON.
-    if (function_exists('set_time_limit')) { @set_time_limit(120); }
+    if (function_exists('set_time_limit')) { @set_time_limit(200); }
 
     // SECURITY (round 20): this endpoint spends the site's AI quota (same
     // concern handleChatbot() already documents above) and was posted as a
@@ -245,7 +247,7 @@ function handleItinerary(PDO $dbh, string $email): void {
  * whatever the traveler said they want changed.
  */
 function handleItineraryRegenerate(PDO $dbh, string $email): void {
-    if (function_exists('set_time_limit')) { @set_time_limit(120); }
+    if (function_exists('set_time_limit')) { @set_time_limit(200); }
     tms_csrf_validate(); // same reasoning as handleItinerary() above
 
     $tripData = buildTripDataFromPost();
@@ -308,8 +310,13 @@ function handleChatbot(PDO $dbh, string $email): void {
     // text respected the language switch, never the AI-generated answers.
     $chatLanguage = function_exists('tms_active_language') ? tms_active_language() : 'en';
 
-    $assistant = new SiteAssistant($dbh);
-    $result    = $assistant->reply($message, $history, $email, $pageContext, $chatLanguage);
+    // AI_PROVIDER=builtin: no language model at all. The built-in Brain / catalogue assistant answers.
+    if ((defined('AI_BUILTIN') && AI_BUILTIN) || (defined('AI_PLANNER_ENGINE') && AI_PLANNER_ENGINE === 'brain')) {
+        $result = ['success' => false, 'reply' => '', 'error' => 'builtin'];
+    } else {
+        $assistant = new SiteAssistant($dbh);
+        $result    = $assistant->reply($message, $history, $email, $pageContext, $chatLanguage);
+    }
 
     if (!$result['success']) {
         // No language model answered (not configured, runtime down, quota, rate limit, admin switch). The same read-only
@@ -317,7 +324,7 @@ function handleChatbot(PDO $dbh, string $email): void {
         // is offline is added once per session. Nothing is generated or guessed (backend/ai/OfflineAssistant.php).
         require_once dirname(__DIR__) . '/backend/ai/OfflineAssistant.php';
         $sessionOk = session_status() === PHP_SESSION_ACTIVE;
-        $result = OfflineAssistant::reply($dbh, $message, $history, $email, $pageContext, $chatLanguage, $sessionOk && empty($_SESSION['tms_ai_offline_noted']));
+        $result = OfflineAssistant::reply($dbh, $message, $history, $email, $pageContext, $chatLanguage, $sessionOk && empty($_SESSION['tms_ai_offline_noted']) && !(defined('AI_BUILTIN') && AI_BUILTIN) && !(defined('AI_PLANNER_ENGINE') && AI_PLANNER_ENGINE === 'brain'));
         if ($sessionOk) $_SESSION['tms_ai_offline_noted'] = true;
     }
 

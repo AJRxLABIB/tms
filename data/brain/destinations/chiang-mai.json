@@ -1,0 +1,207 @@
+{
+ "id": "chiang-mai",
+ "name": "Chiang Mai",
+ "bn": "চিয়াং মাই",
+ "aliases": [
+  "chiangmai",
+  "chiang mai thailand",
+  "chaingmai",
+  "cheng mai"
+ ],
+ "country": "Thailand",
+ "region": "Northern Thailand",
+ "lat": 18.7883,
+ "lng": 98.9853,
+ "summary": "Northern Thailand's cultural capital with temples, night markets, elephant sanctuaries and cool mountain air.",
+ "best_months": [
+  11,
+  12,
+  1,
+  2
+ ],
+ "season_note": "November to February is cool and dry; March-April has haze and smoke from burning.",
+ "avoid_note": "Smoky season (Feb-April) air pollution can be severe.",
+ "tags": [
+  "culture",
+  "nature",
+  "adventure",
+  "food",
+  "relaxing",
+  "family"
+ ],
+ "days": {
+  "min": 3,
+  "ideal": 4
+ },
+ "emergency": {
+  "police": "191 (police), 1155 tourist police",
+  "ambulance": "1669"
+ },
+ "entry_note": "Thailand: visa required for Bangladeshi passport holders (e-visa via the Thai e-visa portal); check the latest rules with the embassy before booking.",
+ "reach": [
+  {
+   "mode": "Flight",
+   "how": "Dhaka to Chiang Mai (via Bangkok) (Biman, US-Bangla, Thai, Bangladeshi carriers)",
+   "hours": 4.5,
+   "fare_min": 18000,
+   "fare_max": 32000,
+   "note": "Usually one stop via Bangkok."
+  }
+ ],
+ "local": [
+  {
+   "mode": "Songthaew (red truck)",
+   "group_fare": "50-150 BDT"
+  },
+  {
+   "mode": "Grab/Bolt",
+   "group_fare": "200-600 BDT"
+  }
+ ],
+ "attractions": [
+  {
+   "id": "doi-suthep",
+   "name": "Doi Suthep Temple",
+   "area": "Doi Suthep",
+   "tags": [
+    "spiritual",
+    "photography",
+    "hills"
+   ],
+   "mins": 120,
+   "fee": 100,
+   "what": "Gilded hilltop temple with city views.",
+   "tip": "Dress modestly.",
+   "best": "morning",
+   "indoor": false
+  },
+  {
+   "id": "old-city",
+   "name": "Old City Temples",
+   "area": "Old City",
+   "tags": [
+    "history",
+    "culture"
+   ],
+   "mins": 150,
+   "fee": 0,
+   "what": "Wat Chedi Luang and Wat Phra Singh.",
+   "tip": "Cover shoulders and knees.",
+   "best": "morning",
+   "indoor": false
+  },
+  {
+   "id": "night-bazaar",
+   "name": "Night Bazaar and Sunday Walking Street",
+   "area": "City",
+   "tags": [
+    "shopping",
+    "food"
+   ],
+   "mins": 150,
+   "fee": 0,
+   "what": "Crafts and street food.",
+   "tip": "Sunday walking street is best.",
+   "best": "sunset",
+   "indoor": false
+  },
+  {
+   "id": "elephant",
+   "name": "Ethical Elephant Sanctuary",
+   "area": "Mae Taeng",
+   "tags": [
+    "wildlife",
+    "nature",
+    "family"
+   ],
+   "mins": 360,
+   "fee": 5000,
+   "what": "Observe elephants without riding.",
+   "tip": "Avoid riding camps.",
+   "best": "morning",
+   "indoor": false
+  },
+  {
+   "id": "doi-inthanon",
+   "name": "Doi Inthanon National Park",
+   "area": "Chom Thong",
+   "tags": [
+    "nature",
+    "hills"
+   ],
+   "mins": 360,
+   "fee": 350,
+   "what": "Thailand's highest peak with waterfalls.",
+   "tip": "Cool; bring jacket.",
+   "best": "morning",
+   "indoor": false
+  },
+  {
+   "id": "sticky-waterfall",
+   "name": "Bua Thong Sticky Waterfall",
+   "area": "Mae Taeng",
+   "tags": [
+    "nature",
+    "family"
+   ],
+   "mins": 90,
+   "fee": 0,
+   "what": "Climbable limestone waterfall.",
+   "tip": "Wear grip shoes.",
+   "best": "morning",
+   "indoor": false
+  }
+ ],
+ "food": [
+  {
+   "dish": "Khao soi",
+   "where": "Local noodle shops",
+   "cost": 200
+  },
+  {
+   "dish": "Sai oua sausage",
+   "where": "Markets",
+   "cost": 150
+  },
+  {
+   "dish": "Halal Chiang Mai food",
+   "where": "Muslim quarter restaurants",
+   "cost": 300
+  }
+ ],
+ "stay": {
+  "budget": {
+   "area": "Old City, Nimman",
+   "price_min": 2000,
+   "price_max": 4000,
+   "note": "Guesthouses."
+  },
+  "mid": {
+   "area": "Nimman, Riverside",
+   "price_min": 5500,
+   "price_max": 12000,
+   "note": "Boutique hotels."
+  },
+  "luxury": {
+   "area": "Mae Rim, Riverside",
+   "price_min": 16000,
+   "price_max": 45000,
+   "note": "Luxury resorts."
+  }
+ },
+ "rules": [
+  "Dress modestly in temples.",
+  "Do not ride elephants; use ethical sanctuaries.",
+  "Vaping banned.",
+  "Burning season air quality advisories."
+ ],
+ "packing": [
+  "Light jacket",
+  "Sunscreen",
+  "Mask in smoky season",
+  "Walking shoes"
+ ],
+ "nearby": [
+  "bangkok"
+ ]
+}

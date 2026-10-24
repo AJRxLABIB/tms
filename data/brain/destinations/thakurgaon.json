@@ -1,0 +1,189 @@
+{
+ "id": "thakurgaon",
+ "name": "Thakurgaon",
+ "bn": "ঠাকুরগাঁও",
+ "aliases": [
+  "thakurgaon",
+  "thakurgaon sugar",
+  "thakurgaon bangladesh",
+  "thakurgoan"
+ ],
+ "region": "Rangpur Division",
+ "lat": 26.03,
+ "lng": 88.46,
+ "summary": "A far-north district of paddy fields, Ranisankail palace areas, and the Haripur zamindar area, with easy links to Dinajpur and Panchagarh.",
+ "best_months": [
+  10,
+  11,
+  12,
+  1,
+  2,
+  3
+ ],
+ "season_note": "Winter is dry and pleasant.",
+ "tags": [
+  "culture",
+  "history",
+  "relaxing",
+  "family"
+ ],
+ "days": {
+  "min": 1,
+  "ideal": 2
+ },
+ "reach": [
+  {
+   "mode": "Bus",
+   "how": "Bus Dhaka to Thakurgaon",
+   "hours": 10,
+   "fare_min": 800,
+   "fare_max": 1800,
+   "note": "Overnight coaches."
+  },
+  {
+   "mode": "Train",
+   "how": "Train to Thakurgaon via Dinajpur",
+   "hours": 12,
+   "fare_min": 400,
+   "fare_max": 1100,
+   "note": "Check timetable."
+  }
+ ],
+ "local": [
+  {
+   "mode": "CNG / rickshaw",
+   "group_fare": "50-300 BDT in town",
+   "note": "Agree fare first."
+  }
+ ],
+ "attractions": [
+  {
+   "id": "ranisankail",
+   "name": "Ranisankail area",
+   "area": "Ranisankail",
+   "tags": [
+    "culture",
+    "nature"
+   ],
+   "mins": 90,
+   "fee": 0,
+   "what": "Rural landscape and villages.",
+   "tip": "Ask locals.",
+   "best": "afternoon",
+   "indoor": false
+  },
+  {
+   "id": "haripur",
+   "name": "Haripur Rajbari area",
+   "area": "Haripur",
+   "tags": [
+    "history",
+    "culture"
+   ],
+   "mins": 60,
+   "fee": 0,
+   "what": "Old zamindar area.",
+   "tip": "Check access.",
+   "best": "afternoon",
+   "indoor": false
+  },
+  {
+   "id": "paddy",
+   "name": "Paddy field and village walk",
+   "area": "Countryside",
+   "tags": [
+    "nature",
+    "culture",
+    "photography"
+   ],
+   "mins": 90,
+   "fee": 0,
+   "what": "Open flat fields in winter.",
+   "tip": "Ask before photographing.",
+   "best": "morning",
+   "indoor": false
+  },
+  {
+   "id": "town",
+   "name": "Thakurgaon town",
+   "area": "Town",
+   "tags": [
+    "culture",
+    "food"
+   ],
+   "mins": 45,
+   "fee": 0,
+   "what": "Local market and snacks.",
+   "tip": "Evenings.",
+   "best": "sunset",
+   "indoor": false
+  },
+  {
+   "id": "dinajpur-day",
+   "name": "Day trip to Dinajpur",
+   "area": "Dinajpur",
+   "tags": [
+    "history",
+    "culture"
+   ],
+   "mins": 240,
+   "fee": 0,
+   "what": "Visit Kantajew Temple and Ramsagar (see Dinajpur).",
+   "tip": "Combine with Dinajpur stay.",
+   "best": "morning",
+   "indoor": false
+  }
+ ],
+ "food": [
+  {
+   "dish": "Rice and curry",
+   "where": "Restaurants",
+   "cost": 250
+  },
+  {
+   "dish": "Local sweets",
+   "where": "Shops",
+   "cost": 100
+  },
+  {
+   "dish": "Tea",
+   "where": "Stalls",
+   "cost": 20
+  }
+ ],
+ "stay": {
+  "budget": {
+   "area": "Simple hotel",
+   "price_min": 700,
+   "price_max": 1500,
+   "note": "Basic."
+  },
+  "mid": {
+   "area": "Mid hotel",
+   "price_min": 2000,
+   "price_max": 4000,
+   "note": "Limited."
+  },
+  "luxury": {
+   "area": "Better hotel",
+   "price_min": 4500,
+   "price_max": 7000,
+   "note": "Few."
+  }
+ },
+ "rules": [
+  "Respect local customs.",
+  "Follow border area rules."
+ ],
+ "packing": [
+  "Sunscreen",
+  "Water",
+  "Light jacket in winter"
+ ],
+ "nearby": [
+  "dinajpur",
+  "panchagarh",
+  "tetulia"
+ ],
+ "country": "Bangladesh"
+}

@@ -27,6 +27,7 @@ if (isset($_POST['submit6'])) {
         $query->bindParam(':mobileno', $mobileno, PDO::PARAM_STR);
         $query->bindParam(':email',    $email,    PDO::PARAM_STR);
         $query->execute();
+        unset($_SESSION['nav_name'], $_SESSION['nav_name_for']);   // header shows the new name straight away
         $msg = 'Profile updated successfully.';
     }
 }

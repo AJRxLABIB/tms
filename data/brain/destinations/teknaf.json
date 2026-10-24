@@ -1,0 +1,183 @@
+{
+ "id": "teknaf",
+ "name": "Teknaf",
+ "bn": "টেকনাফ",
+ "aliases": [
+  "teknaf",
+  "teknaf sea beach",
+  "technaf",
+  "teknaf peninsula"
+ ],
+ "region": "Chattogram Division (Cox's Bazar)",
+ "lat": 20.86,
+ "lng": 92.3,
+ "summary": "The southernmost tip of Bangladesh, with the Naf river, Shah Porir Dwip and a long quiet sea coast.",
+ "best_months": [
+  10,
+  11,
+  12,
+  1,
+  2,
+  3
+ ],
+ "season_note": "Winter has clear seas. Monsoon is rough.",
+ "avoid_note": "The area near the Myanmar border can have security restrictions; check current advice.",
+ "tags": [
+  "beach",
+  "nature",
+  "adventure",
+  "photography"
+ ],
+ "days": {
+  "min": 1,
+  "ideal": 2
+ },
+ "reach": [
+  {
+   "mode": "Bus",
+   "how": "Bus Dhaka to Cox Bazar then to Teknaf (about 3 hrs more)",
+   "hours": 13,
+   "fare_min": 1200,
+   "fare_max": 2700,
+   "note": "Long trip; stay in Cox Bazar first."
+  }
+ ],
+ "local": [
+  {
+   "mode": "CNG / jeep",
+   "group_fare": "100-500 BDT per person; 1500-3500 BDT hire",
+   "note": "Check security notes."
+  }
+ ],
+ "attractions": [
+  {
+   "id": "naf",
+   "name": "Naf river view",
+   "area": "Teknaf",
+   "tags": [
+    "water",
+    "nature",
+    "photography"
+   ],
+   "mins": 60,
+   "fee": 0,
+   "what": "Look across to Myanmar over the river.",
+   "tip": "Do not approach border zones.",
+   "best": "sunset",
+   "indoor": false
+  },
+  {
+   "id": "shah-porir-dwip",
+   "name": "Shah Porir Dwip",
+   "area": "Teknaf",
+   "tags": [
+    "beach",
+    "nature",
+    "culture"
+   ],
+   "mins": 120,
+   "fee": 0,
+   "what": "A small island with a fishing community and dry fish.",
+   "tip": "Check boat times.",
+   "best": "afternoon",
+   "indoor": false
+  },
+  {
+   "id": "sea-beach",
+   "name": "Teknaf sea beach",
+   "area": "Teknaf",
+   "tags": [
+    "beach",
+    "relaxing"
+   ],
+   "mins": 90,
+   "fee": 0,
+   "what": "Quieter beach than Cox Bazar.",
+   "tip": "Do not swim in rough water.",
+   "best": "any",
+   "indoor": false
+  },
+  {
+   "id": "marine-drive",
+   "name": "Marine Drive stretch",
+   "area": "Teknaf",
+   "tags": [
+    "adventure",
+    "photography"
+   ],
+   "mins": 90,
+   "fee": 0,
+   "what": "Scenic road along the sea.",
+   "tip": "Drive carefully.",
+   "best": "sunset",
+   "indoor": false
+  },
+  {
+   "id": "fish-market",
+   "name": "Fish market",
+   "area": "Teknaf",
+   "tags": [
+    "food",
+    "culture"
+   ],
+   "mins": 45,
+   "fee": 0,
+   "what": "Fresh seafood.",
+   "tip": "Go early.",
+   "best": "morning",
+   "indoor": false
+  }
+ ],
+ "food": [
+  {
+   "dish": "Fresh seafood",
+   "where": "Local restaurants",
+   "cost": 400
+  },
+  {
+   "dish": "Dry fish",
+   "where": "Market",
+   "cost": 250
+  },
+  {
+   "dish": "Tea",
+   "where": "Stalls",
+   "cost": 20
+  }
+ ],
+ "stay": {
+  "budget": {
+   "area": "Basic guest house",
+   "price_min": 700,
+   "price_max": 1500,
+   "note": "Limited."
+  },
+  "mid": {
+   "area": "Hotel in Teknaf or Cox Bazar",
+   "price_min": 2500,
+   "price_max": 5000,
+   "note": "Few."
+  },
+  "luxury": {
+   "area": "Resort at Cox Bazar",
+   "price_min": 7000,
+   "price_max": 14000,
+   "note": "See Cox Bazar."
+  }
+ },
+ "rules": [
+  "Follow police and border guard guidance.",
+  "Carry ID."
+ ],
+ "packing": [
+  "Sunscreen",
+  "Hat",
+  "Water",
+  "Copy of ID"
+ ],
+ "nearby": [
+  "coxs-bazar",
+  "saint-martin"
+ ],
+ "country": "Bangladesh"
+}

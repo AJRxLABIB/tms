@@ -34,8 +34,8 @@ class ItineraryPlanner {
         $rows = [];
         try {
             $q = $this->db->prepare("SELECT ActivityId, ActivityName, PricePerPerson, DurationHours, AvgRating, IsSampleData FROM tblactivities
-                                     WHERE Status = 1 AND (City LIKE :d OR Country LIKE :d) ORDER BY AvgRating DESC, ActivityId LIMIT 40");
-            $q->execute([':d' => $like]);
+                                     WHERE Status = 1 AND (City LIKE :d1 OR Country LIKE :d2) ORDER BY AvgRating DESC, ActivityId LIMIT 40");
+            $q->execute([':d1' => $like, ':d2' => $like]);
             foreach ($q->fetchAll(PDO::FETCH_ASSOC) as $r) {
                 $rows[] = ['kind' => 'activity', 'id' => (int)$r['ActivityId'], 'name' => (string)$r['ActivityName'],
                     'price' => $r['PricePerPerson'] !== null ? (int)$r['PricePerPerson'] : null, 'price_unit' => 'per_person',
@@ -43,8 +43,8 @@ class ItineraryPlanner {
                     'rating' => (float)$r['AvgRating'], 'sample' => (int)$r['IsSampleData'] === 1];
             }
             $q = $this->db->prepare("SELECT HotelId, HotelName, PricePerNight, AvgRating, IsSampleData FROM tblhotels
-                                     WHERE Status = 1 AND (City LIKE :d OR Country LIKE :d) ORDER BY AvgRating DESC, HotelId LIMIT 20");
-            $q->execute([':d' => $like]);
+                                     WHERE Status = 1 AND (City LIKE :d1 OR Country LIKE :d2) ORDER BY AvgRating DESC, HotelId LIMIT 20");
+            $q->execute([':d1' => $like, ':d2' => $like]);
             foreach ($q->fetchAll(PDO::FETCH_ASSOC) as $r) {
                 $rows[] = ['kind' => 'hotel', 'id' => (int)$r['HotelId'], 'name' => (string)$r['HotelName'],
                     'price' => $r['PricePerNight'] !== null ? (int)$r['PricePerNight'] : null, 'price_unit' => 'per_night',
@@ -56,6 +56,83 @@ class ItineraryPlanner {
         return $rows;
     }
 
+    /** Prompt block listing real TourBuddy catalogue items (names and prices) so the model prefers them. */
+    private function catalogueBlock(array $rows): string {
+        if (!$rows) return '';
+        $lines = [];
+        foreach (array_slice($rows, 0, 24) as $r) {
+            if (!isset($r['price'])) continue;
+            $unit = ($r['price_unit'] ?? '') === 'per_night' ? 'per room per night' : 'per person';
+            $lines[] = '- ' . ($r['kind'] === 'hotel' ? 'HOTEL' : 'ACTIVITY') . ': ' . self::cleanField($r['name'], 90) . ' - BDT ' . (int)$r['price'] . ' ' . $unit;
+        }
+        if (!$lines) return '';
+        return "REAL TOURBUDDY CATALOGUE for this destination (bookable on the platform; use these exact names and prices when they fit, they are checked by code):\n" . implode("\n", $lines);
+    }
+
+    /**
+     * After validation: add what the day-by-day rows do not contain. The validator counts items scheduled on the days;
+     * the trip also needs the journey there and back and a small buffer. Both stay clearly labelled estimates.
+     */
+    private function addTripLevelCosts(array $plan, array $trip): array {
+        try {
+            // Other pages (custom-trip, my-trip) still print meal_suggestions as plain text: keep a text version there and the
+            // detailed objects (place, dish, price) under meal_details for the planner page.
+            foreach ($plan['days'] as $di => $d) {
+                if (!is_array($d) || !is_array($d['meal_suggestions'] ?? null)) continue;
+                foreach (['breakfast', 'lunch', 'dinner'] as $m) {
+                    $v = $d['meal_suggestions'][$m] ?? null;
+                    if (!is_array($v)) continue;
+                    $plan['days'][$di]['meal_details'][$m] = $v;
+                    $txt = trim((string)($v['place'] ?? ''));
+                    if (!empty($v['dish'])) $txt .= ($txt !== '' ? ': ' : '') . $v['dish'];
+                    if (isset($v['cost_per_person']) && is_numeric($v['cost_per_person'])) $txt .= ' (about BDT ' . (int)$v['cost_per_person'] . ' per person)';
+                    $plan['days'][$di]['meal_suggestions'][$m] = $txt;
+                }
+            }
+            $travellers = max(1, (int)($trip['travelers'] ?? 2));
+            $cost = is_array($plan['estimated_cost'] ?? null) ? $plan['estimated_cost'] : [];
+            $options = array_values(array_filter((array)($plan['getting_there'] ?? []), fn($o) => is_array($o)));
+            $fares = array_values(array_filter(array_map(fn($o) => is_numeric($o['fare_per_person_one_way'] ?? null) ? (float)$o['fare_per_person_one_way'] : null, $options), fn($f) => $f !== null && $f > 0));
+            $rec = array_values(array_filter($options, fn($o) => !empty($o['recommended']) && is_numeric($o['fare_per_person_one_way'] ?? null)));
+            if ($rec) $fares = [(float)$rec[0]['fare_per_person_one_way']];             // built-in Brain marks the option it planned around
+            $journey = $fares ? (int)round(min($fares) * 2 * $travellers) : 0;       // cheapest listed option, both ways
+            // Costs the day rows do not carry: hops written as "how_to_get_there" (group fare), and a night's stay given only as the
+            // day's "stay" block. Counted here so the total is not low; both are the model's estimates.
+            $localHops = 0; $stayExtra = 0;
+            foreach ((array)($plan['days'] ?? []) as $di => $d) {
+                if (!is_array($d)) continue;
+                $hasStayRow = false;
+                foreach ((array)($d['schedule'] ?? []) as $ri => $r) {
+                    if (!is_array($r)) continue;
+                    if ($di === 0 && $ri === 0) continue;   // the first stop's "how to get there" is the journey itself, priced from getting_there
+                    if (($r['type'] ?? '') === 'accommodation') $hasStayRow = true;
+                    if (($r['type'] ?? '') !== 'transport' && is_array($r['how_to_get_there'] ?? null) && is_numeric($r['how_to_get_there']['cost_group'] ?? null))
+                        $localHops += max(0, min(50000, (float)$r['how_to_get_there']['cost_group']));
+                }
+                if (!$hasStayRow && is_array($d['stay'] ?? null) && is_numeric($d['stay']['price_group_per_night'] ?? null))
+                    $stayExtra += max(0, min(500000, (float)$d['stay']['price_group_per_night']));
+            }
+            $cost['transport'] = (int)($cost['transport'] ?? 0) + (int)round($localHops);
+            $cost['accommodation'] = (int)($cost['accommodation'] ?? 0) + (int)round($stayExtra);
+            $core = (int)($cost['total'] ?? 0) + (int)round($localHops) + (int)round($stayExtra);
+            $cost['total'] = $core;
+            $buffer = (int)round(($core + $journey) * 0.07);                           // tips, small shopping, unexpected fares
+            $cost['getting_there'] = $journey;
+            $cost['miscellaneous'] = $buffer;
+            $cost['grand_total'] = $core + $journey + $buffer;
+            $cost['per_person'] = (int)round($cost['grand_total'] / $travellers);
+            $cost['note'] = 'Day items use catalogue prices where matched and the planner\'s estimates otherwise. Local hops, nights given only as a stay block, the return journey and a 7% buffer are added on top. Everything is an estimate in BDT.';
+            $cost['journey_basis'] = $journey > 0 ? 'Cheapest listed way to get there, both directions, all travellers (estimate)' : 'No journey fare was given, so travel to the destination is not included';
+            $cost['buffer_basis'] = '7% allowance for tips, small purchases and unplanned fares (estimate)';
+            $plan['estimated_cost'] = $cost;
+            $budget = (int)($trip['budget'] ?? 0);
+            if ($budget > 0) {
+                $plan['budget_check_total'] = ['budget' => $budget, 'grand_total' => $cost['grand_total'], 'status' => $cost['grand_total'] <= $budget ? 'within_budget' : 'over_budget', 'difference' => abs($budget - $cost['grand_total'])];
+            }
+        } catch (Throwable $e) { error_log('[TourBuddy planner trip costs] ' . $e->getMessage()); }
+        return $plan;
+    }
+
     /** date => ['rain_pct'=>int] from the forecast days buildWeatherContext() already fetched (empty when none). */
     private static function weatherMap(array $weatherContext): array {
         $m = [];
@@ -63,6 +140,22 @@ class ItineraryPlanner {
             if (!empty($d['date']) && isset($d['pop'])) $m[substr((string)$d['date'], 0, 10)] = ['rain_pct' => (int)$d['pop']];
         }
         return $m;
+    }
+
+    /** Which engine plans this trip: 'brain' (built-in), or 'auto' / 'llm'. A per-request 'engine' wins over AI_PLANNER_ENGINE. */
+    private function engineFor(array $tripData): string {
+        $e = strtolower((string)(!empty($tripData['engine']) ? $tripData['engine'] : (defined('AI_PLANNER_ENGINE') ? AI_PLANNER_ENGINE : 'auto')));
+        if (!in_array($e, ['auto', 'brain', 'llm'], true)) $e = 'auto';
+        if ($e === 'auto' && ((defined('AI_BUILTIN') && AI_BUILTIN) || (defined('AI_PROVIDER') && AI_PROVIDER === 'none'))) return 'brain';
+        return $e;
+    }
+
+    /** Plan from the built-in TourBuddy Brain (no model). Null when the destination is not in its knowledge base. Never throws. */
+    private function brainPlan(array $tripData, array $weatherContext): ?array {
+        try {
+            require_once __DIR__ . '/../brain/BrainPlanner.php';
+            return BrainPlanner::plan($tripData, ['weather' => self::weatherMap($weatherContext), 'catalogue' => $this->loadCatalogue((string)($tripData['destination'] ?? ''))]);
+        } catch (Throwable $e) { error_log('[TourBuddy brain planner] ' . $e->getMessage()); return null; }
     }
 
     /**
@@ -135,63 +228,47 @@ class ItineraryPlanner {
         $nearbyContext  = $this->buildNearbyPlacesContext($weatherContext['lat'] ?? null, $weatherContext['lng'] ?? null, $dest);
 
         $system = <<<SYSTEM
-You are an expert travel planner at TourBuddy with deep knowledge of Bangladesh, South Asia, and international destinations.
+You are a senior TourBuddy travel planner who knows Bangladesh, South Asia and the world like a local guide. You write complete, practical trip guides: for every stop the traveller must know WHERE it is, HOW to get there, WHAT to do there, HOW MUCH it costs and WHEN to go.
 
-You create hyper-detailed, realistic, time-optimized travel itineraries that feel hand-crafted by a local expert.
-
-Guidelines:
-- Be specific: real place names, actual opening hours, realistic travel times
-- Balance must-see attractions with hidden gems
-- Include meal suggestions (local restaurants where relevant)
-- Account for realistic travel times between locations
-- Suggest budget alternatives and premium options
-- Include emergency contacts for the destination
-- Think about group type: family with kids need different pacing than solo adventurers
-- You will be given real, live weather data for this destination and trip dates where available.
-  Use it concretely: if rain or extreme heat is forecast on a specific day, move outdoor
-  activities to a better day or add an indoor alternative, and say so explicitly in that
-  day's weather_note and pro_tip — don't just restate the forecast, actually replan around it.
-- You may also be given a list of REAL, verified nearby hotels/restaurants (from live map
-  data). When it's provided, strongly prefer those exact names for hotel_recommendations
-  and restaurant_recommendations over ones from your own general knowledge — they are
-  confirmed to actually exist at this location. Only suggest a place NOT on that list if
-  none of the listed ones genuinely fit the requested tier, cuisine, or budget.
-- You may also be given REAL PLATFORM PRICING DATA (actual prices of packages this
-  platform already sells for this destination). When given, ground estimated_cost and
-  daily_budget in that real range instead of inventing numbers with no anchor to it —
-  don't wildly contradict it without a stated reason (e.g. a much longer/shorter trip).
-- Return ONLY valid JSON
+Rules:
+- Be specific. Use real place names, real areas or landmarks, realistic opening times and realistic travel times. Never write vague stops like "explore the area" or "local restaurant": name the place, or name the exact kind of place and the area.
+- Money: every amount is in BDT (Bangladeshi taka) and is a realistic current estimate. For each stop give the cost per person (entry fee, ticket, activity) in "cost" and say in "cost_note" what that covers. Put group costs (a rickshaw, a CNG, a private car, a hotel room for the night) in "transport_cost_group" or in the hotel item's "cost" as the total for the whole group for that night. Use 0 for free places and write "Free" in "cost_note".
+- Getting around: for every stop after the first of the day, fill "how_to_get_there" with the real option (walk, rickshaw, CNG auto, bus, boat, train, car, flight), how long it takes and the group fare.
+- Intercity travel: fill "getting_there" with the real ways to reach the destination from the traveller's starting city (named operators or train names where you know them, usual departure times, duration, fare per person one way). Include the cheapest and the most comfortable option.
+- Every day needs: an overview, 4 to 6 timed stops including breakfast, lunch and dinner as separate "meal" items with a named place, one dish to order and the cost per person, and an evening "accommodation" item naming where to sleep with the total price for the group for the night (except the last night).
+- Each stop's "what_to_do" is 2 to 3 sentences: what you will see or do, what is special, what to avoid, how long to stay. Add one "tip" and, where useful, a cheaper or rainy-day "alternative".
+- Respect the traveller's budget, group type, pace and special requests. Say clearly when the budget is too low for the plan and what to cut.
+- Use the live weather data when it is given: move outdoor stops away from rainy or very hot hours and say so in that day's weather_note.
+- You may be given REAL hotels/restaurants from live map data and REAL TourBuddy catalogue items with prices. Prefer those exact names and prices; they exist and can be booked on TourBuddy. Only suggest others when none fit.
+- Never invent phone numbers, licence numbers or exact opening hours you are not sure of: say "check locally" instead.
+- Return ONLY valid JSON, no markdown.
 SYSTEM;
 
         $budget    = max(0, (int)($tripData['budget'] ?? 0));
         $travelers = max(1, min(50, (int)($tripData['travelers'] ?? 2)));
         $style     = self::cleanField($tripData['travel_type'] ?? 'leisure', 40) ?: 'leisure';
         $activities = self::cleanField((array)($tripData['activities'] ?? ['sightseeing']), 200) ?: 'sightseeing';
-        // FIX (Round 113, AI-upgrade priority): these three were interpolated
-        // directly from $tripData below with no ?? fallback, unlike every
-        // other field on this same trip-details block. With APP_DEBUG=true
-        // (this project's local-dev default -- see .env's own comment) a
-        // missing key here is a PHP warning that gets embedded straight into
-        // this JSON-building request, corrupting the itinerary API response
-        // for any caller that omits one of these three optional fields (e.g.
-        // custom-trip.php's ad-hoc planner, which doesn't collect all three).
-        // AIEvaluator's own fixtures already exercise exactly this gap.
+        // These optional fields were once interpolated without a fallback; a missing key became a PHP warning inside the prompt.
         $accommodation   = self::cleanField($tripData['accommodation'] ?? 'No preference', 100) ?: 'No preference';
         $transport       = self::cleanField($tripData['transport'] ?? 'No preference', 100) ?: 'No preference';
         $specialRequests = self::cleanField($tripData['special_requests'] ?? 'None', 600) ?: 'None';
+        $origin          = self::cleanField($tripData['origin'] ?? '', 100) ?: 'Dhaka, Bangladesh';
         $c = PlanValidator::constraints($mode);
         $modeLine = "Planning mode: {$mode} (at most {$c['max_items']} paid activities per day, nothing before "
                   . sprintf('%02d:%02d', intdiv($c['earliest'], 60), $c['earliest'] % 60) . ', finish by '
-                  . sprintf('%02d:%02d', intdiv($c['latest_end'], 60), $c['latest_end'] % 60) . '). Prices you write are estimates; the platform recomputes costs from its own catalogue.';
+                  . sprintf('%02d:%02d', intdiv($c['latest_end'], 60), $c['latest_end'] % 60) . '). Prices you write are estimates; the platform recomputes costs from its own catalogue where it can.';
+        $perPerson = $budget > 0 ? (int)round($budget / $travelers) : 0;
+        $catalogueBlock = $this->catalogueBlock($this->loadCatalogue($dest));
 
         $userMessage = <<<MSG
-Create a complete {$duration}-day travel itinerary for the following trip:
+Create a complete {$duration}-day travel guide for this trip:
 
 TRIP DETAILS:
+- Starting from: {$origin}
 - Destination: {$dest}
 - Travel dates: {$startDate} ({$duration} days)
 - Travelers: {$travelers} people ({$style} trip)
-- Total budget: {$budget} BDT
+- Total budget: {$budget} BDT (about {$perPerson} BDT per person, 0 means no budget given)
 - Preferred activities: {$activities}
 - Accommodation: {$accommodation}
 - Transport preference: {$transport}
@@ -202,81 +279,98 @@ TRIP DETAILS:
 {$crowdContext}
 {$marketContext}
 {$nearbyContext['prompt_block']}
+{$catalogueBlock}
 
-Return this exact JSON structure:
+Return exactly this JSON (all amounts are plain numbers in BDT, no currency symbols):
 {
-  "trip_title": "<creative trip title>",
+  "trip_title": "<short, specific title>",
   "destination": "<destination>",
   "total_duration": <days>,
-  "best_visiting_time": "<best months/season to visit this destination and why>",
-  "weather_risk_analysis": {
-    "summary": "<1-2 sentence overall weather outlook for this specific trip window, grounded in the live data above if provided>",
-    "risk_level": "<low|moderate|high>",
-    "contingency_plan": "<concrete fallback plan if the forecast risk materializes, e.g. indoor alternatives, rescheduled days>"
-  },
-  "estimated_cost": {
-    "accommodation": <BDT>,
-    "transport": <BDT>,
-    "food": <BDT>,
-    "activities": <BDT>,
-    "miscellaneous": <BDT>,
-    "total": <BDT>
-  },
+  "overview": "<3-4 sentences: what makes this trip good, who it suits, the pace>",
+  "best_visiting_time": "<best months and why>",
+  "weather_risk_analysis": {"summary": "<outlook for these dates>", "risk_level": "<low|moderate|high>", "contingency_plan": "<concrete fallback>"},
+  "getting_there": [
+    {"mode": "<Bus|Train|Flight|Car|Boat>", "route": "<from -> to>", "operators": "<named operators / train or flight names, or 'check locally'>", "departure_tip": "<best departure times>", "duration": "<e.g. 9-10 hours>", "fare_per_person_one_way": <BDT>, "comfort": "<Economy|Comfort|Premium>", "tip": "<booking or comfort tip>"}
+  ],
+  "estimated_cost": {"accommodation": <BDT>, "transport": <BDT>, "food": <BDT>, "activities": <BDT>, "miscellaneous": <BDT>, "total": <BDT>},
   "days": [
     {
       "day": 1,
       "date": "<YYYY-MM-DD>",
-      "title": "<Day theme e.g. 'Arrival & City Orientation'>",
-      "weather_note": "<expected weather & what to wear — use the live forecast above for days it covers, otherwise general seasonal expectation>",
+      "title": "<day theme>",
+      "overview": "<2 sentences: the shape of the day and why this order>",
+      "area": "<main area or neighbourhood of the day>",
+      "weather_note": "<weather and what to wear, from the live forecast when given>",
       "schedule": [
         {
           "time": "09:00",
-          "activity": "<specific activity>",
+          "type": "<sightseeing|activity|meal|transport|accommodation>",
+          "activity": "<what you do, specific>",
           "location": "<exact place name>",
+          "area": "<neighbourhood / address / landmark to find it>",
+          "what_to_do": "<2-3 sentences: what to see or do, what is special, how long to stay>",
           "duration": "<e.g. 2 hours>",
-          "cost": <BDT per person>,
-          "notes": "<tips, alternatives>",
-          "type": "<sightseeing|meal|transport|accommodation|activity>"
+          "cost": <BDT per person (entry, ticket, meal)>,
+          "cost_note": "<what the cost covers, or Free>",
+          "how_to_get_there": {"from": "<previous stop>", "mode": "<walk|rickshaw|CNG|bus|boat|train|car|flight>", "duration": "<e.g. 15 min>", "cost_group": <BDT for the whole group>},
+          "booking": "<walk-in | book ahead via ... | included>",
+          "tip": "<one insider tip>",
+          "alternative": "<cheaper or rainy-day alternative, optional>",
+          "notes": "<anything else short>"
         }
       ],
       "meal_suggestions": {
-        "breakfast": "<restaurant or food suggestion>",
-        "lunch": "<restaurant or food suggestion>",
-        "dinner": "<restaurant or food suggestion>"
+        "breakfast": {"place": "<name>", "dish": "<what to order>", "cost_per_person": <BDT>},
+        "lunch": {"place": "<name>", "dish": "<what to order>", "cost_per_person": <BDT>},
+        "dinner": {"place": "<name>", "dish": "<what to order>", "cost_per_person": <BDT>}
       },
-      "daily_budget": <BDT>,
+      "stay": {"name": "<where to sleep tonight>", "area": "<area>", "price_group_per_night": <BDT>, "booking_tip": "<tip>"},
+      "daily_budget": <BDT for the whole group>,
       "pro_tip": "<insider tip for the day>"
     }
   ],
-  "hotel_recommendations": [
-    {"name": "<hotel name>", "tier": "<Budget|Mid-range|Luxury>", "price_range": "<e.g. BDT 2000-4000/night>", "why": "<one-line reason>"}
-  ],
-  "restaurant_recommendations": [
-    {"name": "<restaurant name>", "cuisine": "<cuisine type>", "price_range": "<e.g. BDT 300-600/person>", "must_try": "<signature dish>"}
-  ],
-  "transportation_suggestions": ["<how to get there and get around, with rough costs>"],
-  "packing_essentials": ["<item1>", "<item2>"],
-  "emergency_info": {
-    "local_police": "<number>",
-    "ambulance": "<number>",
-    "nearest_hospital": "<name>",
-    "embassy_if_abroad": "<contact>"
-  },
-  "safety_tips": ["<general safety guideline 1>", "<guideline 2>", "<guideline 3>"],
-  "money_saving_tips": ["<tip1>", "<tip2>", "<tip3>"],
-  "hidden_gems": ["<gem1>", "<gem2>"],
-  "ai_notes": "<any important caveats or recommendations from the AI>"
+  "hotel_recommendations": [{"name": "<hotel>", "tier": "<Budget|Mid-range|Luxury>", "area": "<area>", "price_range": "<e.g. BDT 2000-4000/night>", "why": "<one line>"}],
+  "restaurant_recommendations": [{"name": "<restaurant>", "area": "<area>", "cuisine": "<type>", "price_range": "<e.g. BDT 300-600/person>", "must_try": "<dish>"}],
+  "transportation_suggestions": ["<how to get around locally, with rough fares>"],
+  "before_you_go": ["<permits, tickets to pre-book, cash and ATM advice, SIM, vaccinations, anything to do in advance>"],
+  "packing_essentials": ["<item>"],
+  "emergency_info": {"local_police": "<number or 'check locally'>", "ambulance": "<number>", "nearest_hospital": "<name>", "embassy_if_abroad": "<contact or 'not applicable'>"},
+  "safety_tips": ["<tip>"],
+  "money_saving_tips": ["<tip>"],
+  "hidden_gems": ["<gem with where it is>"],
+  "ai_notes": "<caveats: what to double-check before booking>"
 }
 
-Generate ALL {$duration} days in full detail. No other text.
+Write ALL {$duration} days in full detail, with 4 to 6 stops per day. No other text.
 MSG;
 
         // Cache key includes the weather context's own freshness marker so a
         // materially different forecast (e.g. a storm appearing) produces a
         // fresh itinerary instead of silently reusing a stale cached one —
         // see buildWeatherContext()'s $cacheBucket for what this covers.
-        $cacheKey = md5('itinerary_' . json_encode($tripData) . '_' . $weatherContext['cache_bucket']);
-        $result   = $this->ai->ask($system, $userMessage, $cacheKey, $email, 90, 85, feature: 'itinerary'); // FIX (live testing, round 19): longer budget than the interactive-chat default -- a full itinerary genuinely needs it, see AIClient::send().
+        $cacheKey = md5('itinerary_v3_' . json_encode($tripData) . '_' . $weatherContext['cache_bucket']);
+        // A detailed guide is long: about 1,500 output tokens per day plus the trip-level sections. The default 2,000-token cap
+        // cut every plan off mid-JSON (hence the generic template), so size the answer and the time budget to the trip length.
+        $outTokens = max(6000, min(24000, 3500 + 1700 * $duration));
+        $budgetSec = (int)min(170, 70 + 14 * $duration);
+        $engine = $this->engineFor($tripData);
+        $brainPlan = ($engine === 'brain') ? $this->brainPlan($tripData, $weatherContext) : null;
+        $result = ['success' => true, 'content' => ''];
+        if ($brainPlan === null) {
+        $this->ai->setCallOptions(['maxTokens' => $outTokens, 'json' => true, 'noThinking' => true, 'temperature' => 0.6]);
+        try {
+            $result = $this->ai->ask($system, $userMessage, $cacheKey, $email, $budgetSec, $budgetSec - 5, feature: 'itinerary');
+        } finally {
+            $this->ai->setCallOptions([]);
+        }
+        }   // end: model call (skipped when the built-in Brain already planned this trip)
+
+        $brainNote = '';
+        if (!$result['success'] && $engine !== 'llm' && $brainPlan === null) {
+            // The AI model is unavailable: the built-in Brain writes a full plan instead of the thin catalogue draft.
+            $brainPlan = $this->brainPlan($tripData, $weatherContext);
+            if ($brainPlan !== null) { $result = ['success' => true, 'content' => '']; $brainNote = 'The AI model was unavailable, so the built-in TourBuddy Brain planned this trip offline. '; }
+        }
 
         if (!$result['success']) {
             // FIX (live testing, round 19): this used to `return` here directly,
@@ -290,12 +384,17 @@ MSG;
             // traveler with the honest, clearly-labeled template (see ai_notes
             // below) instead of the button silently doing nothing.
             $itinerary = $this->fallbackFor($tripData, $weatherContext);
+            $itinerary['ai_error'] = mb_substr((string)($result['error'] ?? ''), 0, 200);
             if ($save) { $this->saveItinerary($itinerary, $tripData, $email, $bookingId); }
             return $itinerary;
         }
 
-        $itinerary = $this->ai->parseJson($result['content']);
-
+        $truncated = false;
+        $itinerary = $brainPlan ?? $this->ai->parseJsonLenient((string)$result['content'], $truncated);
+        if ((!$itinerary || empty($itinerary['days'])) && $engine !== 'llm' && $brainPlan === null) {
+            $brainPlan = $this->brainPlan($tripData, $weatherContext);
+            if ($brainPlan !== null) { $itinerary = $brainPlan; $brainNote = 'The AI answer could not be read, so the built-in TourBuddy Brain planned this trip offline. '; }
+        }
 
         if (!$itinerary || empty($itinerary['days'])) {
             // Same fix as above: a response that came back but didn't parse
@@ -304,8 +403,12 @@ MSG;
             // succeeded -- but it must still be saved as a fallback so the
             // trip page has something to show instead of nothing.
             $itinerary = $this->fallbackFor($tripData, $weatherContext);
+            $itinerary['ai_error'] = 'The AI answer could not be read as a plan.';
             if ($save) { $this->saveItinerary($itinerary, $tripData, $email, $bookingId); }
             return $itinerary;
+        }
+        if ($truncated) {
+            $itinerary['ai_notes'] = trim(((string)($itinerary['ai_notes'] ?? '')) . ' The AI answer was cut off, so the last day or section may be shorter than the others. Press Regenerate for a full version.');
         }
 
         // Deterministic, threshold-based alerts (heat/rain/wind) straight from
@@ -337,6 +440,12 @@ MSG;
             $itinerary = PlanValidator::finalize($itinerary, $tripData, $this->loadCatalogue($dest),
                 ['weather' => self::weatherMap($weatherContext), 'geocoder' => ItineraryChecker::cachedGeocoder($this->db)]);
         } catch (Throwable $e) { error_log('[TourBuddy planner validate] ' . $e->getMessage()); }
+
+        $itinerary = $this->addTripLevelCosts($itinerary, $tripData);
+        if ($brainPlan !== null) {
+            $itinerary['engine'] = 'brain';
+            if ($brainNote !== '') $itinerary['ai_notes'] = trim($brainNote . (string)($itinerary['ai_notes'] ?? ''));
+        }
 
         // Deterministic self-consistency check (times, overlaps, dates, cost totals, budget, known distances). Never changes the plan;
         // reported next to it. See ItineraryChecker for exactly what is and is not checked.

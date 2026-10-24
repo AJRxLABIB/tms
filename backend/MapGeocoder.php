@@ -63,14 +63,56 @@ final class MapGeocoder
 
         self::throttle();
         $res = self::http($url);
-        if ($res === null) {
-            $out = self::err('upstream_error', 'The search service could not be reached.');
-            if ($cache) self::cacheSet($cache, $key . ':fail', $out, self::TTL_FAIL);
-            return $out;
+        $out = $res === null
+            ? self::err('upstream_error', 'The search service could not be reached.')
+            : self::parse($res['status'], $res['body'], $limit);
+        if (empty($out['ok'])) {
+            // Nominatim refused or failed (a public server may block a host): try Photon, a second free OpenStreetMap geocoder.
+            $pho = self::photon($q, $limit, $lang, $countries, $bias);
+            if (!empty($pho['ok'])) $out = $pho;
         }
-        $out = self::parse($res['status'], $res['body'], $limit);
         if ($cache) self::cacheSet($cache, $out['ok'] ? $key : $key . ':fail', $out, $out['ok'] ? self::TTL_OK : self::TTL_FAIL);
         return $out;
+    }
+
+    /** Second provider (Photon, OpenStreetMap data, free fair use). Returns the same shape as parse(). */
+    private static function photon(string $q, int $limit, string $lang, string $countries, ?array $bias): array
+    {
+        $params = ['q' => $q, 'limit' => $limit, 'lang' => in_array(substr($lang, 0, 2), ['en', 'de', 'fr', 'it'], true) ? substr($lang, 0, 2) : 'en'];
+        if ($countries === 'bd') $params['bbox'] = '88.0,20.5,92.7,26.7';
+        if ($bias && isset($bias['lng'], $bias['lat']) && is_numeric($bias['lng']) && is_numeric($bias['lat'])) { $params['lon'] = (float)$bias['lng']; $params['lat'] = (float)$bias['lat']; }
+        $res = self::http('https://photon.komoot.io/api/?' . http_build_query($params, '', '&', PHP_QUERY_RFC3986));
+        if ($res === null) return self::err('upstream_error', 'The search service could not be reached.');
+        return self::parsePhoton($res['status'], $res['body'], $limit);
+    }
+
+    /** Pure: parses a Photon GeoJSON FeatureCollection into the same items parse() returns. */
+    public static function parsePhoton(int $status, string $body, int $limit = 5): array
+    {
+        if ($status === 429) return self::err('rate_limited', 'The search service is busy. Please try again shortly.');
+        $j = json_decode($body, true);
+        if ($status < 200 || $status >= 300 || !is_array($j) || !isset($j['features']) || !is_array($j['features'])) return self::err('upstream_error', 'The search service returned an unusable answer.');
+        $items = [];
+        foreach ($j['features'] as $f) {
+            $c = $f['geometry']['coordinates'] ?? null;
+            if (!is_array($c) || count($c) < 2 || !is_numeric($c[0]) || !is_numeric($c[1])) continue;
+            $lng = (float)$c[0]; $lat = (float)$c[1];
+            if ($lat < -90 || $lat > 90 || $lng < -180 || $lng > 180) continue;
+            $pr = is_array($f['properties'] ?? null) ? $f['properties'] : [];
+            $name = trim((string)($pr['name'] ?? ''));
+            $parts = array_values(array_filter(array_unique(array_map(static fn($k) => trim((string)($pr[$k] ?? '')), ['name', 'district', 'city', 'state', 'country'])), static fn($v) => $v !== ''));
+            if ($name === '' && !$parts) continue;
+            $item = ['name' => $name !== '' ? $name : $parts[0], 'display' => implode(', ', $parts), 'lat' => $lat, 'lng' => $lng,
+                     'type' => (string)($pr['osm_key'] ?? '') . (isset($pr['osm_value']) ? ':' . $pr['osm_value'] : ''), 'source' => 'photon'];
+            $ex = $pr['extent'] ?? null;   // [west, north, east, south]
+            if (is_array($ex) && count($ex) === 4 && count(array_filter($ex, 'is_numeric')) === 4) {
+                [$w, $n, $e, $sv] = array_map('floatval', $ex);
+                if ($sv >= -90 && $n <= 90 && $w >= -180 && $e <= 180 && $sv <= $n && $w <= $e) $item['bbox'] = [$w, $sv, $e, $n];
+            }
+            $items[] = $item;
+            if (count($items) >= $limit) break;
+        }
+        return ['ok' => true, 'items' => $items, 'source' => 'photon'];
     }
 
     /** Pure: trims, collapses whitespace, strips control characters. */
@@ -87,7 +129,10 @@ final class MapGeocoder
         if ($status === 429) return self::err('rate_limited', 'The search service is busy. Please try again shortly.');
         $j = json_decode($body, true);
         if ($status < 200 || $status >= 300 || !is_array($j) || (array_keys($j) !== range(0, count($j) - 1) && $j !== [])) {
-            return self::err('upstream_error', 'The search service returned an unusable answer.');
+            // Say WHY (status code) so a blocked or misconfigured install can be fixed; the body is only logged, never shown.
+            error_log('[TourBuddy geocoder] upstream HTTP ' . $status . ': ' . substr(preg_replace('/\s+/', ' ', strip_tags($body)) ?? '', 0, 160));
+            $why = $status === 403 ? ' (HTTP 403: the provider refused this server, check MAP_CONTACT_EMAIL and the network)' : ($status >= 400 ? ' (HTTP ' . $status . ')' : '');
+            return self::err('upstream_error', 'The search service returned an unusable answer' . $why . '.');
         }
         $items = [];
         foreach ($j as $r) {

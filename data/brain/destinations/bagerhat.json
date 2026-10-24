@@ -1,0 +1,183 @@
+{
+ "id": "bagerhat",
+ "name": "Bagerhat",
+ "bn": "বাগেরহাট",
+ "aliases": [
+  "bagerhat mosque city",
+  "sixty dome mosque",
+  "shat gombuj",
+  "60 dome mosque"
+ ],
+ "region": "Khulna Division",
+ "lat": 22.66,
+ "lng": 89.785,
+ "summary": "A UNESCO World Heritage site: the historic Mosque City with the famous Sixty Dome Mosque (Shait Gumbad) from the 15th century.",
+ "best_months": [
+  10,
+  11,
+  12,
+  1,
+  2,
+  3
+ ],
+ "season_note": "Winter is cooler for walking between the monuments.",
+ "avoid_note": "Mosques are active places of worship; dress modestly and respect prayer times.",
+ "tags": [
+  "history",
+  "culture",
+  "spiritual",
+  "photography"
+ ],
+ "days": {
+  "min": 1,
+  "ideal": 1
+ },
+ "reach": [
+  {
+   "mode": "Bus",
+   "how": "AC coach from Dhaka to Khulna/Bagerhat (Gabtoli) - 8 to 10 hours",
+   "hours": 9,
+   "fare_min": 900,
+   "fare_max": 1800,
+   "note": ""
+  },
+  {
+   "mode": "Train",
+   "how": "Sundarban Express to Khulna, then a short road trip",
+   "hours": 9,
+   "fare_min": 500,
+   "fare_max": 1500,
+   "note": ""
+  }
+ ],
+ "local": [
+  {
+   "mode": "Rickshaw / auto",
+   "group_fare": "200-600 BDT",
+   "note": "Between monuments."
+  }
+ ],
+ "attractions": [
+  {
+   "id": "sixty-dome",
+   "name": "Sixty Dome Mosque (Shait Gumbad Masjid)",
+   "area": "Mosque City",
+   "tags": [
+    "history",
+    "spiritual",
+    "photography"
+   ],
+   "mins": 90,
+   "fee": 100,
+   "what": "The largest and best-known medieval mosque in the country, built by Khan Jahan Ali.",
+   "tip": "Remove shoes. Avoid prayer times.",
+   "best": "morning",
+   "indoor": true
+  },
+  {
+   "id": "khan-jahan",
+   "name": "Tomb of Khan Jahan Ali",
+   "area": "Mosque City",
+   "tags": [
+    "history",
+    "spiritual"
+   ],
+   "mins": 60,
+   "fee": 0,
+   "what": "The shrine and large pond with crocodiles.",
+   "tip": "Dress modestly.",
+   "best": "afternoon",
+   "indoor": true
+  },
+  {
+   "id": "singar",
+   "name": "Singar Mosque and Bibi Begni Mosque",
+   "area": "Mosque City",
+   "tags": [
+    "history",
+    "photography"
+   ],
+   "mins": 60,
+   "fee": 0,
+   "what": "Smaller but beautiful mosques from the same era.",
+   "tip": "Combine with a short walk.",
+   "best": "afternoon",
+   "indoor": true
+  },
+  {
+   "id": "museum-bagerhat",
+   "name": "Bagerhat Museum",
+   "area": "Mosque City",
+   "tags": [
+    "history",
+    "culture"
+   ],
+   "mins": 45,
+   "fee": 20,
+   "what": "Displays old coins and artefacts.",
+   "tip": "Check opening hours.",
+   "best": "afternoon",
+   "indoor": true
+  },
+  {
+   "id": "village-lake",
+   "name": "Village roads and ponds",
+   "area": "Around Bagerhat",
+   "tags": [
+    "culture",
+    "nature"
+   ],
+   "mins": 60,
+   "fee": 0,
+   "what": "Slow rickshaw rides past ponds and village markets.",
+   "tip": "Ask the driver for quiet routes.",
+   "best": "afternoon",
+   "indoor": false
+  }
+ ],
+ "food": [
+  {
+   "dish": "Khulna-style fish and prawn curry",
+   "where": "Town restaurants",
+   "cost": 300
+  },
+  {
+   "dish": "Local sweets",
+   "where": "Town market",
+   "cost": 60
+  }
+ ],
+ "stay": {
+  "budget": {
+   "area": "Bagerhat / Khulna",
+   "price_min": 1200,
+   "price_max": 2500,
+   "note": ""
+  },
+  "mid": {
+   "area": "Khulna",
+   "price_min": 3000,
+   "price_max": 6000,
+   "note": ""
+  },
+  "luxury": {
+   "area": "Khulna city",
+   "price_min": 6500,
+   "price_max": 12000,
+   "note": ""
+  }
+ },
+ "rules": [
+  "Dress modestly and remove shoes in mosques.",
+  "Do not climb on monuments."
+ ],
+ "packing": [
+  "Comfortable shoes",
+  "Hat and water",
+  "Light cotton clothes"
+ ],
+ "nearby": [
+  "sundarbans"
+ ],
+ "country": "Bangladesh"
+}

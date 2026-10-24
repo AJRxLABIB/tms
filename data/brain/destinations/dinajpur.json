@@ -1,0 +1,171 @@
+{
+ "id": "dinajpur",
+ "name": "Dinajpur",
+ "bn": "দিনাজপুর",
+ "aliases": [
+  "dinajpur kantajew",
+  "kantajew temple",
+  "ramsagar"
+ ],
+ "region": "Rangpur Division",
+ "lat": 25.6217,
+ "lng": 88.6354,
+ "summary": "A quiet northern town with the beautiful terracotta Kantajew Temple, the large Ramsagar pond and a rich agricultural land.",
+ "best_months": [
+  11,
+  12,
+  1,
+  2
+ ],
+ "season_note": "Winter is best. Fog can reduce visibility in January.",
+ "avoid_note": "Winter nights are cold in the north.",
+ "tags": [
+  "history",
+  "culture",
+  "relaxing",
+  "food"
+ ],
+ "days": {
+  "min": 1,
+  "ideal": 2
+ },
+ "reach": [
+  {
+   "mode": "Train",
+   "how": "Ekota or Drutajan Express to Dinajpur",
+   "hours": 9,
+   "fare_min": 500,
+   "fare_max": 1500,
+   "note": ""
+  },
+  {
+   "mode": "Bus",
+   "how": "AC coach from Dhaka (Mohakhali, Gabtoli)",
+   "hours": 9,
+   "fare_min": 1000,
+   "fare_max": 2000,
+   "note": ""
+  },
+  {
+   "mode": "Flight",
+   "how": "Dhaka to Saidpur Airport and road to Dinajpur",
+   "hours": 5,
+   "fare_min": 4000,
+   "fare_max": 7500,
+   "note": ""
+  }
+ ],
+ "local": [
+  {
+   "mode": "Rickshaw / auto",
+   "group_fare": "100-400 BDT",
+   "note": ""
+  }
+ ],
+ "attractions": [
+  {
+   "id": "kantajew-d",
+   "name": "Kantajew Temple",
+   "area": "Kantanagar",
+   "tags": [
+    "history",
+    "culture",
+    "photography"
+   ],
+   "mins": 90,
+   "fee": 50,
+   "what": "A richly decorated terracotta temple of the 18th century.",
+   "tip": "Go in the morning light.",
+   "best": "morning",
+   "indoor": false
+  },
+  {
+   "id": "ramsagar",
+   "name": "Ramsagar National Park",
+   "area": "Ramsagar",
+   "tags": [
+    "nature",
+    "relaxing"
+   ],
+   "mins": 120,
+   "fee": 30,
+   "what": "The country's biggest man-made pond, with trees and picnic spots.",
+   "tip": "Quiet on weekdays.",
+   "best": "afternoon",
+   "indoor": false
+  },
+  {
+   "id": "rajbari",
+   "name": "Dinajpur Rajbari",
+   "area": "Town",
+   "tags": [
+    "history"
+   ],
+   "mins": 60,
+   "fee": 20,
+   "what": "The old Raj family palace and garden.",
+   "tip": "Check opening hours.",
+   "best": "afternoon",
+   "indoor": true
+  },
+  {
+   "id": "lychee",
+   "name": "Lychee and mango gardens (seasonal)",
+   "area": "Outskirts",
+   "tags": [
+    "food",
+    "nature"
+   ],
+   "mins": 90,
+   "fee": 0,
+   "what": "Taste local seasonal fruit.",
+   "tip": "Seasonal only.",
+   "best": "afternoon",
+   "indoor": false
+  }
+ ],
+ "food": [
+  {
+   "dish": "Kataribhog rice with local curries",
+   "where": "Town restaurants",
+   "cost": 250
+  },
+  {
+   "dish": "Local sweets",
+   "where": "Town stalls",
+   "cost": 70
+  }
+ ],
+ "stay": {
+  "budget": {
+   "area": "Town",
+   "price_min": 1200,
+   "price_max": 2500,
+   "note": ""
+  },
+  "mid": {
+   "area": "Town",
+   "price_min": 3000,
+   "price_max": 5500,
+   "note": ""
+  },
+  "luxury": {
+   "area": "Town",
+   "price_min": 5500,
+   "price_max": 10000,
+   "note": ""
+  }
+ },
+ "rules": [
+  "Dress modestly at temples."
+ ],
+ "packing": [
+  "Warm jacket in winter",
+  "Comfortable shoes"
+ ],
+ "nearby": [
+  "paharpur",
+  "tetulia"
+ ],
+ "country": "Bangladesh"
+}

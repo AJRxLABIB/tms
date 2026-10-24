@@ -1,0 +1,251 @@
+{
+ "id": "kuala-lumpur",
+ "name": "Kuala Lumpur",
+ "bn": "কুয়ালালামপুর",
+ "aliases": [
+  "kl",
+  "kualalumpur",
+  "kuala lumpur malaysia",
+  "kuala lampur",
+  "malaysia"
+ ],
+ "country": "Malaysia",
+ "region": "Federal Territory of Kuala Lumpur",
+ "lat": 3.139,
+ "lng": 101.6869,
+ "summary": "Malaysia's capital with Petronas Towers, Batu Caves, malls and great halal street food; easy for Bangladeshi families.",
+ "best_months": [
+  5,
+  6,
+  7,
+  8,
+  12,
+  1,
+  2
+ ],
+ "season_note": "Hot and humid all year; heaviest rain is October-December and April.",
+ "avoid_note": "Afternoon thunderstorms are common.",
+ "tags": [
+  "city",
+  "family",
+  "shopping",
+  "food",
+  "culture",
+  "photography"
+ ],
+ "days": {
+  "min": 3,
+  "ideal": 4
+ },
+ "emergency": {
+  "police": "999 (or 112 on mobile)",
+  "ambulance": "999 (or 112)"
+ },
+ "entry_note": "Malaysia: visa generally required for Bangladeshi passport holders; check the latest rules with the embassy before booking.",
+ "reach": [
+  {
+   "mode": "Flight",
+   "how": "Dhaka to Kuala Lumpur International Airport (KLIA) (Biman, US-Bangla, Malaysia Airlines, Batik Air Malaysia)",
+   "hours": 4,
+   "fare_min": 16000,
+   "fare_max": 32000,
+   "note": "Direct flights about 4h; carriers include Biman, Malaysia Airlines, Batik."
+  }
+ ],
+ "local": [
+  {
+   "mode": "LRT / MRT / monorail",
+   "group_fare": "30-120 BDT per ride"
+  },
+  {
+   "mode": "Grab",
+   "group_fare": "200-800 BDT"
+  }
+ ],
+ "attractions": [
+  {
+   "id": "petronas",
+   "name": "Petronas Twin Towers and KLCC Park",
+   "area": "KLCC",
+   "tags": [
+    "city",
+    "photography",
+    "family"
+   ],
+   "mins": 120,
+   "fee": 2500,
+   "what": "Iconic 452m towers with skybridge.",
+   "tip": "Book skybridge ahead.",
+   "best": "sunset",
+   "indoor": false
+  },
+  {
+   "id": "batu-caves",
+   "name": "Batu Caves",
+   "area": "Gombak",
+   "tags": [
+    "spiritual",
+    "culture",
+    "adventure"
+   ],
+   "mins": 120,
+   "fee": 0,
+   "what": "A Hindu shrine in a limestone cave with 272 steps.",
+   "tip": "Modest dress; monkeys snatch food.",
+   "best": "morning",
+   "indoor": false
+  },
+  {
+   "id": "merdeka",
+   "name": "Merdeka Square and Sultan Abdul Samad",
+   "area": "City",
+   "tags": [
+    "history",
+    "culture"
+   ],
+   "mins": 60,
+   "fee": 0,
+   "what": "Colonial landmarks.",
+   "tip": "Walk in the morning.",
+   "best": "morning",
+   "indoor": false
+  },
+  {
+   "id": "bukit-bintang",
+   "name": "Bukit Bintang and Pavilion",
+   "area": "Bukit Bintang",
+   "tags": [
+    "shopping",
+    "food",
+    "city"
+   ],
+   "mins": 240,
+   "fee": 0,
+   "what": "Shopping and Jalan Alor street food.",
+   "tip": "Check halal certification.",
+   "best": "sunset",
+   "indoor": false
+  },
+  {
+   "id": "national-mosque",
+   "name": "National Mosque (Masjid Negara)",
+   "area": "City",
+   "tags": [
+    "spiritual",
+    "history"
+   ],
+   "mins": 45,
+   "fee": 0,
+   "what": "A modernist mosque; visitors welcome.",
+   "tip": "Modest dress provided.",
+   "best": "any",
+   "indoor": true
+  },
+  {
+   "id": "genting",
+   "name": "Genting Highlands",
+   "area": "Pahang border",
+   "tags": [
+    "family",
+    "adventure",
+    "hills"
+   ],
+   "mins": 360,
+   "fee": 1500,
+   "what": "Theme park and cable car on a cool hilltop.",
+   "tip": "Consider weather.",
+   "best": "afternoon",
+   "indoor": false
+  },
+  {
+   "id": "putrajaya",
+   "name": "Putrajaya Mosque and Lake",
+   "area": "Putrajaya",
+   "tags": [
+    "spiritual",
+    "relaxing",
+    "photography"
+   ],
+   "mins": 120,
+   "fee": 0,
+   "what": "Pink mosque and gardens.",
+   "tip": "Day trip.",
+   "best": "afternoon",
+   "indoor": false
+  },
+  {
+   "id": "central-market",
+   "name": "Central Market",
+   "area": "City",
+   "tags": [
+    "shopping",
+    "culture"
+   ],
+   "mins": 90,
+   "fee": 0,
+   "what": "Handicrafts and batik.",
+   "tip": "Bargain.",
+   "best": "afternoon",
+   "indoor": true
+  }
+ ],
+ "food": [
+  {
+   "dish": "Nasi lemak",
+   "where": "Hawkers",
+   "cost": 150
+  },
+  {
+   "dish": "Roti canai",
+   "where": "Mamak stalls",
+   "cost": 60
+  },
+  {
+   "dish": "Satay",
+   "where": "Jalan Alor",
+   "cost": 250
+  },
+  {
+   "dish": "Halal Malay food",
+   "where": "Restaurants",
+   "cost": 300
+  }
+ ],
+ "stay": {
+  "budget": {
+   "area": "Chinatown, Bukit Bintang",
+   "price_min": 4000,
+   "price_max": 8000,
+   "note": "Hostels and budget hotels."
+  },
+  "mid": {
+   "area": "KLCC, Bukit Bintang",
+   "price_min": 9000,
+   "price_max": 18000,
+   "note": "3-4 star hotels."
+  },
+  "luxury": {
+   "area": "KLCC, Mont Kiara",
+   "price_min": 22000,
+   "price_max": 60000,
+   "note": "5-star hotels."
+  }
+ },
+ "rules": [
+  "Dress modestly at mosques and temples.",
+  "Drugs carry heavy penalties.",
+  "Vaping rules apply.",
+  "Respect local Muslim customs in Ramadan."
+ ],
+ "packing": [
+  "Light cotton",
+  "Umbrella",
+  "Power adapter (UK type)",
+  "Modest wear",
+  "Sunscreen"
+ ],
+ "nearby": [
+  "langkawi",
+  "singapore"
+ ]
+}

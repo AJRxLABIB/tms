@@ -1,0 +1,236 @@
+{
+ "id": "agra",
+ "name": "Agra",
+ "bn": "আগ্রা",
+ "aliases": [
+  "taj mahal",
+  "agra taj mahal",
+  "agra india",
+  "tajmahal"
+ ],
+ "country": "India",
+ "region": "Uttar Pradesh",
+ "lat": 27.1767,
+ "lng": 78.0081,
+ "summary": "Home of the Taj Mahal, Agra Fort and Fatehpur Sikri; usually visited as a day trip from Delhi.",
+ "best_months": [
+  10,
+  11,
+  12,
+  1,
+  2,
+  3
+ ],
+ "season_note": "October to March for cool weather; fog can block sunrise views in winter. April to June is extremely hot.",
+ "avoid_note": "Summer heat (above 40C) is intense.",
+ "tags": [
+  "history",
+  "culture",
+  "photography",
+  "romantic",
+  "family"
+ ],
+ "days": {
+  "min": 1,
+  "ideal": 2
+ },
+ "emergency": {
+  "police": "100 (or 112)",
+  "ambulance": "102 or 108"
+ },
+ "entry_note": "Indian visa is required for Bangladeshi passport holders (apply via the Indian Visa Application Centre; category as currently offered). Check the latest rules with the embassy before booking.",
+ "reach": [
+  {
+   "mode": "Flight",
+   "how": "Dhaka to Delhi (then train/cab to Agra) (Biman, US-Bangla, IndiGo, Air India; often via Kolkata)",
+   "hours": 5.5,
+   "fare_min": 14000,
+   "fare_max": 28000,
+   "note": "Fly to Delhi then 3.5 hours by car or Gatimaan Express."
+  },
+  {
+   "mode": "Train",
+   "how": "Delhi to Agra by Gatimaan Express or Shatabdi",
+   "hours": 2,
+   "fare_min": 400,
+   "fare_max": 1200,
+   "note": "Book via IRCTC; 2 hours."
+  }
+ ],
+ "local": [
+  {
+   "mode": "E-rickshaw / auto",
+   "group_fare": "100-300 BDT inside the Taj area"
+  },
+  {
+   "mode": "Private cab",
+   "group_fare": "5000-9000 BDT per day",
+   "note": "For Agra Fort and Fatehpur Sikri."
+  }
+ ],
+ "attractions": [
+  {
+   "id": "taj",
+   "name": "Taj Mahal",
+   "area": "Taj Ganj",
+   "tags": [
+    "history",
+    "romantic",
+    "photography"
+   ],
+   "mins": 180,
+   "fee": 1900,
+   "what": "The white-marble mausoleum built by Shah Jahan, one of the world's wonders.",
+   "tip": "Closed on Fridays; sunrise is best. Foreigner ticket is much higher than locals.",
+   "best": "morning",
+   "indoor": false
+  },
+  {
+   "id": "agra-fort",
+   "name": "Agra Fort",
+   "area": "Agra",
+   "tags": [
+    "history",
+    "culture",
+    "photography"
+   ],
+   "mins": 120,
+   "fee": 1100,
+   "what": "A UNESCO red-sandstone fort with palaces and views of the Taj.",
+   "tip": "Allow two hours; combine with Taj on the same day.",
+   "best": "afternoon",
+   "indoor": false
+  },
+  {
+   "id": "fatehpur",
+   "name": "Fatehpur Sikri",
+   "area": "Fatehpur Sikri, 40 km",
+   "tags": [
+    "history",
+    "photography"
+   ],
+   "mins": 150,
+   "fee": 1100,
+   "what": "Akbar's abandoned red-sandstone capital.",
+   "tip": "Hire a licensed guide; touts are aggressive.",
+   "best": "morning",
+   "indoor": false
+  },
+  {
+   "id": "mehtab",
+   "name": "Mehtab Bagh",
+   "area": "Yamuna bank",
+   "tags": [
+    "photography",
+    "romantic",
+    "relaxing"
+   ],
+   "mins": 60,
+   "fee": 200,
+   "what": "Garden across the river with Taj view at sunset.",
+   "tip": "Best for photographers.",
+   "best": "sunset",
+   "indoor": false
+  },
+  {
+   "id": "itimad",
+   "name": "Itimad-ud-Daulah (Baby Taj)",
+   "area": "Agra",
+   "tags": [
+    "history",
+    "photography"
+   ],
+   "mins": 60,
+   "fee": 300,
+   "what": "A delicate marble tomb with inlay work.",
+   "tip": "Less crowded; good photos.",
+   "best": "afternoon",
+   "indoor": false
+  },
+  {
+   "id": "sikandra",
+   "name": "Akbar's Tomb, Sikandra",
+   "area": "Sikandra",
+   "tags": [
+    "history",
+    "relaxing"
+   ],
+   "mins": 75,
+   "fee": 300,
+   "what": "A large garden tomb of Emperor Akbar.",
+   "tip": "Deer and monkeys roam; hold your belongings.",
+   "best": "any",
+   "indoor": false
+  },
+  {
+   "id": "kinari",
+   "name": "Kinari Bazaar",
+   "area": "Old Agra",
+   "tags": [
+    "shopping",
+    "food",
+    "culture"
+   ],
+   "mins": 90,
+   "fee": 0,
+   "what": "Market for marble inlay, leather and sweets.",
+   "tip": "Agree prices first.",
+   "best": "afternoon",
+   "indoor": false
+  }
+ ],
+ "food": [
+  {
+   "dish": "Petha (sweet)",
+   "where": "Panchhi Petha-style shops",
+   "cost": 120
+  },
+  {
+   "dish": "Mughlai thali",
+   "where": "Local restaurants",
+   "cost": 400
+  },
+  {
+   "dish": "Bedai and jalebi",
+   "where": "Street breakfast",
+   "cost": 80
+  }
+ ],
+ "stay": {
+  "budget": {
+   "area": "Taj Ganj",
+   "price_min": 2000,
+   "price_max": 4500,
+   "note": "Guesthouses near Taj."
+  },
+  "mid": {
+   "area": "Fatehabad Road",
+   "price_min": 6000,
+   "price_max": 12000,
+   "note": "Mid-range hotels."
+  },
+  "luxury": {
+   "area": "Taj area",
+   "price_min": 16000,
+   "price_max": 35000,
+   "note": "Luxury hotels with Taj views."
+  }
+ },
+ "rules": [
+  "Taj Mahal is closed on Fridays.",
+  "Security bans food, tripods and large bags at the Taj.",
+  "Dress modestly.",
+  "Do not feed monkeys."
+ ],
+ "packing": [
+  "Sun hat",
+  "Water bottle",
+  "Comfortable shoes",
+  "Light cotton",
+  "Cash in INR"
+ ],
+ "nearby": [
+  "delhi",
+  "jaipur"
+ ]
+}

@@ -1,0 +1,179 @@
+{
+ "id": "mainamati",
+ "name": "Mainamati and Salban Vihara",
+ "bn": "ময়নামতি",
+ "aliases": [
+  "mainamati",
+  "moynamoti",
+  "mainamoti",
+  "salban vihara",
+  "shalban bihar"
+ ],
+ "region": "Cumilla District (Kotbari)",
+ "lat": 23.4333,
+ "lng": 91.1333,
+ "summary": "A cluster of Buddhist monasteries and stupas from the 8th century, with a museum, one of the best ruins of Bangladesh.",
+ "best_months": [
+  10,
+  11,
+  12,
+  1,
+  2,
+  3
+ ],
+ "season_note": "Open air, so winter is best. Hot afternoons in summer.",
+ "tags": [
+  "history",
+  "culture",
+  "photography",
+  "family"
+ ],
+ "days": {
+  "min": 1,
+  "ideal": 1
+ },
+ "reach": [
+  {
+   "mode": "Bus",
+   "how": "Bus Dhaka to Cumilla, then CNG to Kotbari (about 20 mins)",
+   "hours": 3,
+   "fare_min": 250,
+   "fare_max": 750,
+   "note": "Day trip from Dhaka is possible."
+  }
+ ],
+ "local": [
+  {
+   "mode": "CNG from Cumilla city",
+   "group_fare": "500-900 BDT round trip",
+   "note": "Negotiate for waiting time."
+  }
+ ],
+ "attractions": [
+  {
+   "id": "salban",
+   "name": "Salban Vihara",
+   "area": "Kotbari",
+   "tags": [
+    "history",
+    "culture",
+    "photography"
+   ],
+   "mins": 90,
+   "fee": 40,
+   "what": "A monastery with a central temple and 115 cells around a courtyard.",
+   "tip": "Go early to avoid heat.",
+   "best": "morning",
+   "indoor": false
+  },
+  {
+   "id": "museum",
+   "name": "Mainamati Museum",
+   "area": "Kotbari",
+   "tags": [
+    "history",
+    "culture"
+   ],
+   "mins": 60,
+   "fee": 40,
+   "what": "Collection of terracotta plaques, coins and bronze items from the sites.",
+   "tip": "Check closing day (Sunday-Monday).",
+   "best": "afternoon",
+   "indoor": true
+  },
+  {
+   "id": "kotila",
+   "name": "Kotila Mura",
+   "area": "Kotbari",
+   "tags": [
+    "history",
+    "photography"
+   ],
+   "mins": 60,
+   "fee": 30,
+   "what": "Three stupas of Buddha, Dharma and Sangha.",
+   "tip": "Wear shoes for uneven ground.",
+   "best": "morning",
+   "indoor": false
+  },
+  {
+   "id": "charpatra",
+   "name": "Charpatra Mura",
+   "area": "Kotbari",
+   "tags": [
+    "history"
+   ],
+   "mins": 30,
+   "fee": 30,
+   "what": "Smaller ruin with a temple.",
+   "tip": "Often quiet.",
+   "best": "afternoon",
+   "indoor": false
+  },
+  {
+   "id": "rupban",
+   "name": "Rupban Mura / Ananda Vihara",
+   "area": "Kotbari",
+   "tags": [
+    "history"
+   ],
+   "mins": 30,
+   "fee": 30,
+   "what": "More brick ruins in the area.",
+   "tip": "Hire a local guide if you want context.",
+   "best": "afternoon",
+   "indoor": false
+  }
+ ],
+ "food": [
+  {
+   "dish": "Cumilla rasamalai",
+   "where": "Sweet shops in Cumilla",
+   "cost": 250
+  },
+  {
+   "dish": "Rice and curry",
+   "where": "Local eateries",
+   "cost": 200
+  },
+  {
+   "dish": "Tea",
+   "where": "Stalls",
+   "cost": 20
+  }
+ ],
+ "stay": {
+  "budget": {
+   "area": "No stay at the site; use the nearby town",
+   "price_min": 0,
+   "price_max": 0,
+   "note": "Day-trip place."
+  },
+  "mid": {
+   "area": "No stay at the site; use the nearby town",
+   "price_min": 0,
+   "price_max": 0,
+   "note": "Day-trip place."
+  },
+  "luxury": {
+   "area": "No stay at the site; use the nearby town",
+   "price_min": 0,
+   "price_max": 0,
+   "note": "Day-trip place."
+  }
+ },
+ "rules": [
+  "Do not climb unmarked ruins.",
+  "No littering."
+ ],
+ "packing": [
+  "Hat",
+  "Water",
+  "Comfortable shoes"
+ ],
+ "nearby": [
+  "comilla",
+  "sonargaon"
+ ],
+ "country": "Bangladesh"
+}

@@ -1,0 +1,181 @@
+{
+ "id": "mymensingh",
+ "name": "Mymensingh",
+ "bn": "ময়মনসিংহ",
+ "aliases": [
+  "mymensingh city",
+  "mymensing",
+  "mymensingh bhaluka",
+  "shashi lodge",
+  "muktagacha"
+ ],
+ "region": "Mymensingh Division",
+ "lat": 24.7471,
+ "lng": 90.4203,
+ "summary": "A river city close to Dhaka: the Brahmaputra riverbank, the Shashi Lodge and Zainul Abedin Museum, Muktagacha sweets and old zamindar houses.",
+ "best_months": [
+  11,
+  12,
+  1,
+  2,
+  3
+ ],
+ "season_note": "Winter is best.",
+ "avoid_note": "A good day or overnight trip from Dhaka.",
+ "tags": [
+  "culture",
+  "history",
+  "food",
+  "family",
+  "relaxing"
+ ],
+ "days": {
+  "min": 1,
+  "ideal": 1
+ },
+ "reach": [
+  {
+   "mode": "Train",
+   "how": "Jamuna Express, Agnibina and others from Airport/Kamalapur (check e-ticket)",
+   "hours": 5,
+   "fare_min": 200,
+   "fare_max": 700,
+   "note": ""
+  },
+  {
+   "mode": "Bus",
+   "how": "AC or non-AC bus from Mohakhali or Gabtoli",
+   "hours": 4,
+   "fare_min": 350,
+   "fare_max": 900,
+   "note": ""
+  }
+ ],
+ "local": [
+  {
+   "mode": "Rickshaw / auto",
+   "group_fare": "80-300 BDT",
+   "note": ""
+  }
+ ],
+ "attractions": [
+  {
+   "id": "zainul",
+   "name": "Zainul Abedin Museum",
+   "area": "Town",
+   "tags": [
+    "culture",
+    "history"
+   ],
+   "mins": 60,
+   "fee": 20,
+   "what": "A museum honouring the painter Zainul Abedin.",
+   "tip": "Check opening days.",
+   "best": "afternoon",
+   "indoor": true
+  },
+  {
+   "id": "shashi",
+   "name": "Shashi Lodge",
+   "area": "Town",
+   "tags": [
+    "history",
+    "photography"
+   ],
+   "mins": 45,
+   "fee": 20,
+   "what": "An old zamindar palace with a garden.",
+   "tip": "Closed on some days.",
+   "best": "afternoon",
+   "indoor": true
+  },
+  {
+   "id": "brahmaputra",
+   "name": "Brahmaputra River bank",
+   "area": "River bank",
+   "tags": [
+    "relaxing",
+    "photography"
+   ],
+   "mins": 60,
+   "fee": 0,
+   "what": "A relaxed walk by the old river bank.",
+   "tip": "Best at sunset.",
+   "best": "sunset",
+   "indoor": false
+  },
+  {
+   "id": "muktagacha",
+   "name": "Muktagacha sweets (monda)",
+   "area": "Muktagacha",
+   "tags": [
+    "food"
+   ],
+   "mins": 45,
+   "fee": 0,
+   "what": "Try the famous sweet from the local shops.",
+   "tip": "Buy from the old shops in the market.",
+   "best": "afternoon",
+   "indoor": true
+  },
+  {
+   "id": "agri-university",
+   "name": "Bangladesh Agricultural University campus",
+   "area": "Campus",
+   "tags": [
+    "nature",
+    "relaxing",
+    "family"
+   ],
+   "mins": 90,
+   "fee": 0,
+   "what": "A big green campus with ponds, a museum and a quiet walk.",
+   "tip": "Go on a weekday afternoon.",
+   "best": "afternoon",
+   "indoor": false
+  }
+ ],
+ "food": [
+  {
+   "dish": "Muktagacha monda sweet",
+   "where": "Muktagacha",
+   "cost": 80
+  },
+  {
+   "dish": "Local fish curry",
+   "where": "Town restaurants",
+   "cost": 250
+  }
+ ],
+ "stay": {
+  "budget": {
+   "area": "Town",
+   "price_min": 1200,
+   "price_max": 2500,
+   "note": ""
+  },
+  "mid": {
+   "area": "Town",
+   "price_min": 3000,
+   "price_max": 5500,
+   "note": ""
+  },
+  "luxury": {
+   "area": "Town resorts",
+   "price_min": 6000,
+   "price_max": 12000,
+   "note": ""
+  }
+ },
+ "rules": [
+  "Be careful on the riverside after dark."
+ ],
+ "packing": [
+  "Light clothes",
+  "Comfortable shoes"
+ ],
+ "nearby": [
+  "dhaka"
+ ],
+ "country": "Bangladesh"
+}

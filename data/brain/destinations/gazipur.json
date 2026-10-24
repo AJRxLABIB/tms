@@ -1,0 +1,191 @@
+{
+ "id": "gazipur",
+ "name": "Gazipur (Bhawal, safari parks)",
+ "bn": "গাজীপুর",
+ "aliases": [
+  "gazipur",
+  "gazipur bhawal",
+  "bhawal national park",
+  "bangabandhu safari park",
+  "gazipur safari",
+  "joydebpur",
+  "gazipur resort"
+ ],
+ "region": "Dhaka Division",
+ "lat": 24.0,
+ "lng": 90.42,
+ "summary": "A day-trip district north of Dhaka with sal forest at Bhawal National Park, Bangabandhu Safari Park and many resorts.",
+ "best_months": [
+  10,
+  11,
+  12,
+  1,
+  2,
+  3
+ ],
+ "season_note": "Winter is best. Monsoon is green but muddy.",
+ "tags": [
+  "nature",
+  "wildlife",
+  "family",
+  "adventure",
+  "relaxing"
+ ],
+ "days": {
+  "min": 1,
+  "ideal": 1
+ },
+ "reach": [
+  {
+   "mode": "Bus",
+   "how": "Bus from Dhaka (Mohakhali/Gazipur Chowrasta) to Gazipur or Joydebpur",
+   "hours": 2,
+   "fare_min": 60,
+   "fare_max": 250,
+   "note": "Traffic is heavy; start early."
+  }
+ ],
+ "local": [
+  {
+   "mode": "CNG / rickshaw",
+   "group_fare": "50-300 BDT",
+   "note": "Short trips."
+  },
+  {
+   "mode": "Car hire",
+   "group_fare": "3500-6000 BDT per day",
+   "note": "For several sites."
+  }
+ ],
+ "attractions": [
+  {
+   "id": "bhawal",
+   "name": "Bhawal National Park",
+   "area": "Joydebpur",
+   "tags": [
+    "nature",
+    "wildlife",
+    "family"
+   ],
+   "mins": 150,
+   "fee": 50,
+   "what": "A sal forest with walking trails and birds.",
+   "tip": "Wear light shoes.",
+   "best": "morning",
+   "indoor": false
+  },
+  {
+   "id": "safari-park",
+   "name": "Bangabandhu Safari Park",
+   "area": "Kaliakair",
+   "tags": [
+    "wildlife",
+    "family"
+   ],
+   "mins": 180,
+   "fee": 150,
+   "what": "A drive-through park with deer, lions, tigers and elephants.",
+   "tip": "Keep windows closed in animal zones.",
+   "best": "morning",
+   "indoor": false
+  },
+  {
+   "id": "resort-day",
+   "name": "Resort day-out",
+   "area": "Gazipur",
+   "tags": [
+    "relaxing",
+    "family"
+   ],
+   "mins": 240,
+   "fee": 500,
+   "what": "Pay-per-day facilities with pools and gardens.",
+   "tip": "Check day-pass prices.",
+   "best": "afternoon",
+   "indoor": false
+  },
+  {
+   "id": "picnic",
+   "name": "Picnic spots",
+   "area": "Gazipur",
+   "tags": [
+    "family",
+    "relaxing"
+   ],
+   "mins": 120,
+   "fee": 0,
+   "what": "Forest picnic areas.",
+   "tip": "Carry your rubbish out.",
+   "best": "afternoon",
+   "indoor": false
+  },
+  {
+   "id": "nature-walk",
+   "name": "Forest trail",
+   "area": "Bhawal",
+   "tags": [
+    "nature",
+    "photography"
+   ],
+   "mins": 90,
+   "fee": 0,
+   "what": "Peaceful sal forest walk.",
+   "tip": "Avoid dusk.",
+   "best": "morning",
+   "indoor": false
+  }
+ ],
+ "food": [
+  {
+   "dish": "Picnic lunch",
+   "where": "Resorts",
+   "cost": 350
+  },
+  {
+   "dish": "Rice and curry",
+   "where": "Local",
+   "cost": 200
+  },
+  {
+   "dish": "Tea",
+   "where": "Stalls",
+   "cost": 20
+  }
+ ],
+ "stay": {
+  "budget": {
+   "area": "Simple hotel or guest house",
+   "price_min": 800,
+   "price_max": 1800,
+   "note": "Basic."
+  },
+  "mid": {
+   "area": "Resort room",
+   "price_min": 3500,
+   "price_max": 7000,
+   "note": "Day-trip resorts."
+  },
+  "luxury": {
+   "area": "Better resort",
+   "price_min": 7500,
+   "price_max": 14000,
+   "note": "Check offers."
+  }
+ },
+ "rules": [
+  "Do not feed or tease animals.",
+  "No littering in forests."
+ ],
+ "packing": [
+  "Hat",
+  "Water",
+  "Insect repellent",
+  "Comfortable shoes"
+ ],
+ "nearby": [
+  "dhaka",
+  "mymensingh",
+  "tangail"
+ ],
+ "country": "Bangladesh"
+}

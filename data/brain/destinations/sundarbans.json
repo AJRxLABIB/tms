@@ -1,0 +1,199 @@
+{
+ "id": "sundarbans",
+ "name": "The Sundarbans",
+ "bn": "সুন্দরবন",
+ "aliases": [
+  "sundarban",
+  "sundarbon",
+  "sundorbon",
+  "mangrove forest",
+  "khulna sundarbans",
+  "mongla"
+ ],
+ "region": "Khulna Division",
+ "lat": 22.3,
+ "lng": 89.75,
+ "summary": "The world's largest mangrove forest and home of the Bengal tiger. Visits are by boat with a licensed operator and forest-guard escort.",
+ "best_months": [
+  11,
+  12,
+  1,
+  2,
+  3
+ ],
+ "season_note": "November to February is the main tourist season with cool weather. The forest is closed to visitors for some months of the year.",
+ "avoid_note": "Entry needs a permit through a licensed tour operator. Tiger sightings are rare. Check the forest department rules and current closures.",
+ "tags": [
+  "wildlife",
+  "nature",
+  "adventure",
+  "water",
+  "photography"
+ ],
+ "days": {
+  "min": 3,
+  "ideal": 3
+ },
+ "reach": [
+  {
+   "mode": "Bus",
+   "how": "AC coach from Dhaka (Gabtoli, Sayedabad) to Khulna, then road to Mongla",
+   "hours": 9,
+   "fare_min": 1000,
+   "fare_max": 2000,
+   "note": "Most packages start from Khulna."
+  },
+  {
+   "mode": "Flight + road",
+   "how": "Fly to Jashore, then drive to Khulna/Mongla",
+   "hours": 4,
+   "fare_min": 3800,
+   "fare_max": 7500,
+   "note": "Fast option."
+  },
+  {
+   "mode": "Train",
+   "how": "Sundarban Express (Dhaka-Khulna), check e-ticket",
+   "hours": 9,
+   "fare_min": 500,
+   "fare_max": 1500,
+   "note": "Overnight service."
+  }
+ ],
+ "local": [
+  {
+   "mode": "Boat with escort",
+   "group_fare": "Operator package (3 days around 8000-18000 BDT per person)",
+   "note": "Sleep on the boat; meals included in most packages."
+  }
+ ],
+ "attractions": [
+  {
+   "id": "karamjal",
+   "name": "Karamjal Wildlife Centre",
+   "area": "Mongla / Karamjal",
+   "tags": [
+    "wildlife",
+    "nature",
+    "family"
+   ],
+   "mins": 180,
+   "fee": 100,
+   "what": "A visitor centre with a deer park, crocodile breeding and forest walks.",
+   "tip": "Go with the tour operator.",
+   "best": "morning",
+   "indoor": false
+  },
+  {
+   "id": "hiron-point",
+   "name": "Hiron Point (Nilkamal)",
+   "area": "Sundarbans south",
+   "tags": [
+    "wildlife",
+    "nature",
+    "photography"
+   ],
+   "mins": 240,
+   "fee": 500,
+   "what": "A remote forest spot known for tigers, deer and birds.",
+   "tip": "Early morning forest walks are the highlight.",
+   "best": "morning",
+   "indoor": false
+  },
+  {
+   "id": "katka",
+   "name": "Katka Beach and Watchtower",
+   "area": "Katka",
+   "tags": [
+    "wildlife",
+    "nature",
+    "beach"
+   ],
+   "mins": 180,
+   "fee": 300,
+   "what": "A tower and a beach in the deep forest.",
+   "tip": "Binoculars help.",
+   "best": "morning",
+   "indoor": false
+  },
+  {
+   "id": "kotka-deer",
+   "name": "Dimer Char (Egg Island)",
+   "area": "Sundarbans",
+   "tags": [
+    "nature",
+    "beach"
+   ],
+   "mins": 120,
+   "fee": 200,
+   "what": "A sandy island with crabs and shore birds.",
+   "tip": "Ask your guide about the tide.",
+   "best": "afternoon",
+   "indoor": false
+  },
+  {
+   "id": "cruise",
+   "name": "Boat cruise between creeks",
+   "area": "Sundarbans",
+   "tags": [
+    "water",
+    "adventure",
+    "photography"
+   ],
+   "mins": 240,
+   "fee": 0,
+   "what": "Slow cruising through creeks and mangroves is the main activity.",
+   "tip": "Bring binoculars and be quiet for wildlife.",
+   "best": "morning",
+   "indoor": false
+  }
+ ],
+ "food": [
+  {
+   "dish": "Boat meals (rice, fish, vegetables)",
+   "where": "Included in packages",
+   "cost": 300
+  },
+  {
+   "dish": "Local honey",
+   "where": "Market",
+   "cost": 500
+  }
+ ],
+ "stay": {
+  "budget": {
+   "area": "Boat cabin (shared)",
+   "price_min": 3000,
+   "price_max": 6000,
+   "note": "Basic boat package."
+  },
+  "mid": {
+   "area": "Cabin tour boat",
+   "price_min": 6000,
+   "price_max": 12000,
+   "note": "Good cabin boats."
+  },
+  "luxury": {
+   "area": "Premium cruiser",
+   "price_min": 12000,
+   "price_max": 25000,
+   "note": "Fewer, better boats."
+  }
+ },
+ "rules": [
+  "Entry only with a permit and a licensed operator.",
+  "No littering or disturbing wildlife; keep quiet.",
+  "Do not wander outside the allowed paths."
+ ],
+ "packing": [
+  "Insect repellent",
+  "Binoculars",
+  "Long sleeves and a hat",
+  "Power bank",
+  "Motion-sickness tablets"
+ ],
+ "nearby": [
+  "bagerhat"
+ ],
+ "country": "Bangladesh"
+}

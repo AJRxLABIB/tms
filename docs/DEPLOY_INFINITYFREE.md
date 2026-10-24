@@ -28,7 +28,7 @@ Optional sanity check of your settings: `D:\XAMPP\php\php.exe scripts/check_env.
 ## B. On InfinityFree (client area)
 
 1. **PHP version.** Open your hosting account, then the PHP version setting (Hosting Account, then "PHP Version" or "Select PHP version"). Choose **8.1 or newer**. TourBuddy will not run on PHP 7.
-2. **Create the database.** Client area → your hosting account → **MySQL Databases** → create one named `tms`. Write down four things the panel shows:
+2. **Create the database.** Client area → your hosting account → **MySQL Databases** → create one named `tourbuddy`. Write down four things the panel shows:
    - **MySQL hostname** (like `sql123.infinityfree.com`, never `localhost`)
    - **Database name** (like `if0_12345678_tms`)
    - **Username** (like `if0_12345678`)

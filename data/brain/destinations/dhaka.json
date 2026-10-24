@@ -1,0 +1,292 @@
+{
+ "id": "dhaka",
+ "name": "Dhaka",
+ "bn": "ঢাকা",
+ "aliases": [
+  "dacca",
+  "dhaka city",
+  "old dhaka",
+  "puran dhaka",
+  "dhaka bangladesh"
+ ],
+ "region": "Dhaka Division",
+ "lat": 23.8103,
+ "lng": 90.4125,
+ "summary": "The capital: a huge, busy city of Mughal and colonial history, river life on the Buriganga, famous street food, museums and shopping.",
+ "best_months": [
+  11,
+  12,
+  1,
+  2
+ ],
+ "season_note": "Winter (November to February) is the most comfortable. Summer is hot; monsoon brings waterlogging and heavy traffic.",
+ "avoid_note": "Traffic is heavy: plan short days and use rides or the Metro Rail. Avoid Friday-prayer hours and rush hours for sightseeing.",
+ "tags": [
+  "city",
+  "history",
+  "culture",
+  "food",
+  "shopping",
+  "family"
+ ],
+ "days": {
+  "min": 1,
+  "ideal": 2
+ },
+ "reach": [
+  {
+   "mode": "Flight",
+   "how": "Domestic or international flights to Hazrat Shahjalal International Airport",
+   "hours": 1,
+   "fare_min": 3000,
+   "fare_max": 9000,
+   "note": "Many routes."
+  },
+  {
+   "mode": "Train",
+   "how": "Intercity trains to Kamalapur and Airport stations",
+   "hours": 6,
+   "fare_min": 400,
+   "fare_max": 2000,
+   "note": "Check e-ticket."
+  },
+  {
+   "mode": "Bus",
+   "how": "AC coaches to Sayedabad, Gabtoli, Mohakhali",
+   "hours": 6,
+   "fare_min": 700,
+   "fare_max": 2000,
+   "note": ""
+  }
+ ],
+ "local": [
+  {
+   "mode": "Metro Rail (MRT Line 6)",
+   "group_fare": "20-100 BDT per person",
+   "note": "Uttara to Motijheel is the fastest north-south route."
+  },
+  {
+   "mode": "Ride-share (Uber, Pathao)",
+   "group_fare": "200-900 BDT per trip",
+   "note": "Best way to avoid bargaining."
+  },
+  {
+   "mode": "Rickshaw",
+   "group_fare": "50-250 BDT",
+   "note": "Short hops only; agree the fare first."
+  }
+ ],
+ "attractions": [
+  {
+   "id": "lalbagh",
+   "name": "Lalbagh Fort",
+   "area": "Old Dhaka",
+   "tags": [
+    "history",
+    "photography",
+    "family"
+   ],
+   "mins": 90,
+   "fee": 30,
+   "what": "A 17th-century Mughal fort with a mosque, a tomb and gardens. Calm in the morning.",
+   "tip": "Go early; closed on some days.",
+   "best": "morning",
+   "indoor": false
+  },
+  {
+   "id": "ahsan-manzil",
+   "name": "Ahsan Manzil (Pink Palace)",
+   "area": "Kumartuli",
+   "tags": [
+    "history",
+    "culture",
+    "photography"
+   ],
+   "mins": 90,
+   "fee": 30,
+   "what": "The riverside palace of the Nawabs, now a museum.",
+   "tip": "Closed on some weekdays; check before you go.",
+   "best": "morning",
+   "indoor": true
+  },
+  {
+   "id": "sadarghat",
+   "name": "Sadarghat river port and Buriganga boat ride",
+   "area": "Old Dhaka",
+   "tags": [
+    "culture",
+    "water",
+    "photography"
+   ],
+   "mins": 90,
+   "fee": 50,
+   "what": "Watch the busiest river port, then ride a small boat across the Buriganga.",
+   "tip": "Keep valuables close. Agree the boat fare first.",
+   "best": "afternoon",
+   "indoor": false
+  },
+  {
+   "id": "star-mosque",
+   "name": "Star Mosque (Tara Masjid)",
+   "area": "Armanitola",
+   "tags": [
+    "history",
+    "spiritual",
+    "photography"
+   ],
+   "mins": 45,
+   "fee": 0,
+   "what": "A beautiful mosque decorated with star-pattern tiles.",
+   "tip": "Dress modestly.",
+   "best": "afternoon",
+   "indoor": true
+  },
+  {
+   "id": "national-museum",
+   "name": "Bangladesh National Museum",
+   "area": "Shahbag",
+   "tags": [
+    "history",
+    "culture"
+   ],
+   "mins": 120,
+   "fee": 50,
+   "what": "The country's biggest museum with art, nature and history galleries.",
+   "tip": "Check opening hours; closed one weekday.",
+   "best": "afternoon",
+   "indoor": true
+  },
+  {
+   "id": "liberation-war",
+   "name": "Liberation War Museum",
+   "area": "Agargaon",
+   "tags": [
+    "history",
+    "culture"
+   ],
+   "mins": 90,
+   "fee": 150,
+   "what": "Moving exhibits on 1971.",
+   "tip": "Allow time; some displays are intense.",
+   "best": "afternoon",
+   "indoor": true
+  },
+  {
+   "id": "national-parliament",
+   "name": "National Parliament House",
+   "area": "Sher-e-Bangla Nagar",
+   "tags": [
+    "photography",
+    "culture"
+   ],
+   "mins": 60,
+   "fee": 0,
+   "what": "A famous modern building by Louis Kahn; the grounds are open at set times.",
+   "tip": "Check visiting rules.",
+   "best": "afternoon",
+   "indoor": false
+  },
+  {
+   "id": "old-dhaka-food",
+   "name": "Old Dhaka food walk (Haji Biryani, Bakarkhani, Nanna)",
+   "area": "Old Dhaka",
+   "tags": [
+    "food",
+    "culture"
+   ],
+   "mins": 120,
+   "fee": 0,
+   "what": "Eat kacchi biryani, bakarkhani, borhani and fresh sweets.",
+   "tip": "Go with a local if you can; eat at busy places.",
+   "best": "afternoon",
+   "indoor": false
+  },
+  {
+   "id": "dhanmondi-lake",
+   "name": "Dhanmondi Lake and Rabindra Sarobar",
+   "area": "Dhanmondi",
+   "tags": [
+    "relaxing",
+    "family"
+   ],
+   "mins": 60,
+   "fee": 0,
+   "what": "A lakeside walk with tea stalls.",
+   "tip": "Best in the evening.",
+   "best": "sunset",
+   "indoor": false
+  },
+  {
+   "id": "jatiya-smriti",
+   "name": "National Martyrs' Memorial (Savar)",
+   "area": "Savar",
+   "tags": [
+    "history",
+    "culture"
+   ],
+   "mins": 90,
+   "fee": 0,
+   "what": "A national memorial to 1971 with quiet grounds.",
+   "tip": "Allow a half-day with traffic.",
+   "best": "morning",
+   "indoor": false
+  }
+ ],
+ "food": [
+  {
+   "dish": "Kacchi biryani",
+   "where": "Haji, Sultan's Dine, Nanna",
+   "cost": 400
+  },
+  {
+   "dish": "Bakarkhani and Shahi tukra",
+   "where": "Old Dhaka",
+   "cost": 120
+  },
+  {
+   "dish": "Fuchka and chotpoti",
+   "where": "Street stalls",
+   "cost": 80
+  },
+  {
+   "dish": "Hilsa and bhorta",
+   "where": "Local restaurants",
+   "cost": 450
+  }
+ ],
+ "stay": {
+  "budget": {
+   "area": "Motijheel, Paltan, Fakirapool",
+   "price_min": 1500,
+   "price_max": 3200,
+   "note": ""
+  },
+  "mid": {
+   "area": "Gulshan, Banani, Dhanmondi",
+   "price_min": 5000,
+   "price_max": 10000,
+   "note": ""
+  },
+  "luxury": {
+   "area": "Gulshan, Banani, Uttara",
+   "price_min": 12000,
+   "price_max": 30000,
+   "note": "5-star hotels."
+  }
+ },
+ "rules": [
+  "Keep valuables close in crowded markets.",
+  "Use ride-share or the Metro to avoid long traffic jams."
+ ],
+ "packing": [
+  "Comfortable shoes",
+  "Hat and sunscreen",
+  "Small bag",
+  "Power bank"
+ ],
+ "nearby": [
+  "sonargaon",
+  "mymensingh"
+ ],
+ "country": "Bangladesh"
+}

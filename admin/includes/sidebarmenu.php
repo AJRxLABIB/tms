@@ -92,6 +92,7 @@ if ($isSuper) $add('people', 'manage-admins.php', 'user-shield', 'Manage Admins'
 if ($canSee(['ai_manager', 'manager'])) {
     $add('ai', 'ai-dashboard.php', 'magic', 'AI Usage Dashboard');
     $add('ai', 'ai-setup.php', 'plug', 'AI Setup &amp; Test');
+    $add('ai', 'brain.php', 'bolt', 'TourBuddy Brain');
     $add('ai', 'ai-safety.php', 'shield', 'AI Safety &amp; Evaluation');
     $add('ai', 'ai-evaluation.php', 'line-chart', 'AI Evaluation &amp; Metrics');
 }

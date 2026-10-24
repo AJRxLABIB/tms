@@ -1,0 +1,194 @@
+{
+ "id": "jamalpur",
+ "name": "Jamalpur",
+ "bn": "জামালপুর",
+ "aliases": [
+  "jamalpur",
+  "jamalpur bangladesh",
+  "jamalpur sadar",
+  "jamalpoor"
+ ],
+ "region": "Mymensingh Division",
+ "lat": 24.9375,
+ "lng": 89.9372,
+ "summary": "A quiet river district on the Brahmaputra-Jamuna with sandy chars, boat trips and village life, a lesser-known short escape from Dhaka.",
+ "best_months": [
+  10,
+  11,
+  12,
+  1,
+  2,
+  3
+ ],
+ "season_note": "Winter is dry and best for chars. Rivers rise and flood low areas in monsoon.",
+ "tags": [
+  "water",
+  "nature",
+  "culture",
+  "relaxing"
+ ],
+ "days": {
+  "min": 1,
+  "ideal": 2
+ },
+ "reach": [
+  {
+   "mode": "Bus",
+   "how": "Bus Dhaka to Jamalpur via Tangail",
+   "hours": 4,
+   "fare_min": 350,
+   "fare_max": 800,
+   "note": "Road conditions vary."
+  },
+  {
+   "mode": "Train",
+   "how": "Train Kamalapur to Jamalpur",
+   "hours": 5,
+   "fare_min": 200,
+   "fare_max": 700,
+   "note": "Check e-ticket for times."
+  }
+ ],
+ "local": [
+  {
+   "mode": "CNG / rickshaw",
+   "group_fare": "50-300 BDT inside town",
+   "note": "Agree fare first."
+  },
+  {
+   "mode": "Hired boat",
+   "group_fare": "1000-3000 BDT per boat",
+   "note": "Bargain."
+  }
+ ],
+ "attractions": [
+  {
+   "id": "river",
+   "name": "Brahmaputra-Jamuna river",
+   "area": "Jamalpur",
+   "tags": [
+    "water",
+    "nature",
+    "photography"
+   ],
+   "mins": 90,
+   "fee": 0,
+   "what": "Wide river with boats and sandbanks.",
+   "tip": "Ask for life jackets.",
+   "best": "sunset",
+   "indoor": false
+  },
+  {
+   "id": "char",
+   "name": "River char visit",
+   "area": "Char area",
+   "tags": [
+    "nature",
+    "culture"
+   ],
+   "mins": 150,
+   "fee": 0,
+   "what": "Cross by boat to a sandy island where farmers grow crops.",
+   "tip": "Go with a local guide.",
+   "best": "morning",
+   "indoor": false
+  },
+  {
+   "id": "town-walk",
+   "name": "Town and market walk",
+   "area": "Town",
+   "tags": [
+    "culture",
+    "food"
+   ],
+   "mins": 60,
+   "fee": 0,
+   "what": "Local markets and street food.",
+   "tip": "Evening is livelier.",
+   "best": "sunset",
+   "indoor": false
+  },
+  {
+   "id": "village",
+   "name": "Village life walk",
+   "area": "Countryside",
+   "tags": [
+    "culture",
+    "relaxing"
+   ],
+   "mins": 90,
+   "fee": 0,
+   "what": "Ponds, paddy fields and rural homes.",
+   "tip": "Ask before photographing.",
+   "best": "afternoon",
+   "indoor": false
+  },
+  {
+   "id": "pitha",
+   "name": "Pitha stalls",
+   "area": "Market",
+   "tags": [
+    "food",
+    "culture"
+   ],
+   "mins": 30,
+   "fee": 0,
+   "what": "Try traditional rice cakes in winter.",
+   "tip": "Best in Dec-Feb.",
+   "best": "any",
+   "indoor": false
+  }
+ ],
+ "food": [
+  {
+   "dish": "Pitha",
+   "where": "Local markets",
+   "cost": 50
+  },
+  {
+   "dish": "River fish curry",
+   "where": "Restaurants",
+   "cost": 250
+  },
+  {
+   "dish": "Tea",
+   "where": "Stalls",
+   "cost": 20
+  }
+ ],
+ "stay": {
+  "budget": {
+   "area": "Simple hotel",
+   "price_min": 600,
+   "price_max": 1500,
+   "note": "Basic."
+  },
+  "mid": {
+   "area": "Mid hotel",
+   "price_min": 2000,
+   "price_max": 4000,
+   "note": "Limited."
+  },
+  "luxury": {
+   "area": "Better hotel",
+   "price_min": 4500,
+   "price_max": 7000,
+   "note": "Few options."
+  }
+ },
+ "rules": [
+  "Respect rural customs.",
+  "No littering on the river."
+ ],
+ "packing": [
+  "Sunscreen",
+  "Water",
+  "Light jacket in winter"
+ ],
+ "nearby": [
+  "mymensingh",
+  "tangail",
+  "kurigram"
+ ],
+ "country": "Bangladesh"
+}

@@ -1,0 +1,189 @@
+{
+ "id": "kaptai",
+ "name": "Kaptai",
+ "bn": "কাপ্তাই",
+ "aliases": [
+  "kaptai",
+  "kaptai lake",
+  "kaptai hydro",
+  "kaptaye"
+ ],
+ "region": "Chattogram Hill Tracts (Rangamati district)",
+ "lat": 22.5033,
+ "lng": 92.2094,
+ "summary": "A lake town on Bangladesh largest man-made lake, with hydroelectric dam, national park and tribal villages.",
+ "best_months": [
+  10,
+  11,
+  12,
+  1,
+  2,
+  3
+ ],
+ "season_note": "Cool season is best for boat trips. Monsoon is green but wet.",
+ "tags": [
+  "water",
+  "nature",
+  "hills",
+  "family",
+  "relaxing",
+  "photography"
+ ],
+ "days": {
+  "min": 1,
+  "ideal": 2
+ },
+ "reach": [
+  {
+   "mode": "Bus",
+   "how": "Bus Dhaka to Kaptai or via Chattogram to Kaptai (7 to 9 hrs)",
+   "hours": 8,
+   "fare_min": 800,
+   "fare_max": 1600,
+   "note": "Often combined with Rangamati."
+  }
+ ],
+ "local": [
+  {
+   "mode": "Boat on the lake",
+   "group_fare": "1500-4000 BDT per hired boat",
+   "note": "Fixed schedules and prices vary."
+  },
+  {
+   "mode": "CNG",
+   "group_fare": "100-400 BDT",
+   "note": "Short distances."
+  }
+ ],
+ "attractions": [
+  {
+   "id": "lake",
+   "name": "Kaptai Lake boat ride",
+   "area": "Kaptai",
+   "tags": [
+    "water",
+    "photography",
+    "relaxing",
+    "family"
+   ],
+   "mins": 150,
+   "fee": 0,
+   "what": "Hired boat on the huge blue lake with hills around.",
+   "tip": "Bargain for hours.",
+   "best": "morning",
+   "indoor": false
+  },
+  {
+   "id": "dam",
+   "name": "Kaptai Dam",
+   "area": "Kaptai",
+   "tags": [
+    "adventure"
+   ],
+   "mins": 45,
+   "fee": 0,
+   "what": "View the dam and hydroelectric plant from outside.",
+   "tip": "Check security rules at the gate.",
+   "best": "afternoon",
+   "indoor": false
+  },
+  {
+   "id": "national-park",
+   "name": "Kaptai National Park",
+   "area": "Karnaphuli",
+   "tags": [
+    "nature",
+    "wildlife"
+   ],
+   "mins": 120,
+   "fee": 50,
+   "what": "Hilly forest with wildlife and walking trails.",
+   "tip": "Hire a local guide.",
+   "best": "morning",
+   "indoor": false
+  },
+  {
+   "id": "rajban-vihara",
+   "name": "Rajban Vihara",
+   "area": "Near Kaptai",
+   "tags": [
+    "culture",
+    "spiritual"
+   ],
+   "mins": 60,
+   "fee": 0,
+   "what": "Buddhist temple associated with the Chakma community.",
+   "tip": "Remove shoes.",
+   "best": "afternoon",
+   "indoor": false
+  },
+  {
+   "id": "sunset-kaptai",
+   "name": "Sunset on the lake",
+   "area": "Kaptai",
+   "tags": [
+    "romantic",
+    "photography"
+   ],
+   "mins": 45,
+   "fee": 0,
+   "what": "Golden colours over the lake.",
+   "tip": "Stay for the evening.",
+   "best": "sunset",
+   "indoor": false
+  }
+ ],
+ "food": [
+  {
+   "dish": "Fresh lake fish",
+   "where": "Restaurants",
+   "cost": 350
+  },
+  {
+   "dish": "Bamboo chicken",
+   "where": "Local stalls",
+   "cost": 400
+  },
+  {
+   "dish": "Rice and curry",
+   "where": "Simple eateries",
+   "cost": 200
+  }
+ ],
+ "stay": {
+  "budget": {
+   "area": "Basic guest house",
+   "price_min": 800,
+   "price_max": 2000,
+   "note": "Basic."
+  },
+  "mid": {
+   "area": "Resort / hotel near lake",
+   "price_min": 3000,
+   "price_max": 6000,
+   "note": "Mid range."
+  },
+  "luxury": {
+   "area": "Better resort or lakeside lodging",
+   "price_min": 6500,
+   "price_max": 10000,
+   "note": "Check options."
+  }
+ },
+ "rules": [
+  "Use life jackets.",
+  "No littering."
+ ],
+ "packing": [
+  "Rain jacket",
+  "Sunscreen",
+  "Water",
+  "Power bank"
+ ],
+ "nearby": [
+  "rangamati",
+  "bandarban",
+  "chattogram"
+ ],
+ "country": "Bangladesh"
+}

@@ -1,0 +1,250 @@
+{
+ "id": "istanbul",
+ "name": "Istanbul",
+ "bn": "ইস্তাম্বুল",
+ "aliases": [
+  "istambul",
+  "instanbul",
+  "constantinople",
+  "istanbul turkey",
+  "turkey",
+  "turkiye"
+ ],
+ "country": "Turkey",
+ "region": "Istanbul",
+ "lat": 41.0082,
+ "lng": 28.9784,
+ "summary": "Where Europe meets Asia: Hagia Sophia, Blue Mosque, bazaars, Bosphorus cruises and Turkish food.",
+ "best_months": [
+  4,
+  5,
+  9,
+  10
+ ],
+ "season_note": "April-May and September-October are mild and sunny. Summer is hot; winter is cold and wet.",
+ "avoid_note": "July-August are crowded and hot.",
+ "tags": [
+  "city",
+  "history",
+  "culture",
+  "food",
+  "shopping",
+  "spiritual",
+  "photography",
+  "romantic"
+ ],
+ "days": {
+  "min": 4,
+  "ideal": 5
+ },
+ "emergency": {
+  "police": "112",
+  "ambulance": "112"
+ },
+ "entry_note": "Turkey: visa is required for Bangladeshi passport holders (e-Visa may be available with conditions); check the latest rules with the embassy before booking.",
+ "reach": [
+  {
+   "mode": "Flight",
+   "how": "Dhaka to Istanbul Airport (IST) (Turkish Airlines; via Dubai/Doha) (Turkish Airlines, Emirates, Qatar)",
+   "hours": 9,
+   "fare_min": 45000,
+   "fare_max": 80000,
+   "note": "Direct flights or connection; Turkish Airlines flies from Dhaka."
+  }
+ ],
+ "local": [
+  {
+   "mode": "Tram / metro / ferry",
+   "group_fare": "40-120 BDT per ride",
+   "note": "Use Istanbulkart."
+  },
+  {
+   "mode": "Taxi",
+   "group_fare": "500-2500 BDT",
+   "note": "Insist on meter."
+  }
+ ],
+ "attractions": [
+  {
+   "id": "hagia-sophia",
+   "name": "Hagia Sophia",
+   "area": "Sultanahmet",
+   "tags": [
+    "history",
+    "spiritual",
+    "culture"
+   ],
+   "mins": 90,
+   "fee": 2500,
+   "what": "A 6th-century Byzantine landmark now a mosque.",
+   "tip": "Dress modestly; check entry rules.",
+   "best": "morning",
+   "indoor": true
+  },
+  {
+   "id": "blue-mosque",
+   "name": "Blue Mosque (Sultanahmet)",
+   "area": "Sultanahmet",
+   "tags": [
+    "spiritual",
+    "history",
+    "photography"
+   ],
+   "mins": 60,
+   "fee": 0,
+   "what": "Famous six-minaret mosque.",
+   "tip": "Closed during prayer; modest dress.",
+   "best": "morning",
+   "indoor": true
+  },
+  {
+   "id": "topkapi",
+   "name": "Topkapi Palace",
+   "area": "Sultanahmet",
+   "tags": [
+    "history",
+    "culture"
+   ],
+   "mins": 150,
+   "fee": 2500,
+   "what": "Ottoman palace and treasury.",
+   "tip": "Closed Tuesdays.",
+   "best": "afternoon",
+   "indoor": false
+  },
+  {
+   "id": "grand-bazaar",
+   "name": "Grand Bazaar",
+   "area": "Beyazit",
+   "tags": [
+    "shopping",
+    "culture"
+   ],
+   "mins": 150,
+   "fee": 0,
+   "what": "Over 4,000 shops.",
+   "tip": "Bargain.",
+   "best": "afternoon",
+   "indoor": true
+  },
+  {
+   "id": "bosphorus",
+   "name": "Bosphorus Cruise",
+   "area": "Eminonu",
+   "tags": [
+    "water",
+    "photography",
+    "romantic"
+   ],
+   "mins": 120,
+   "fee": 600,
+   "what": "Ferry between Europe and Asia.",
+   "tip": "Sunset cruise is best.",
+   "best": "sunset",
+   "indoor": false
+  },
+  {
+   "id": "galata",
+   "name": "Galata Tower",
+   "area": "Galata",
+   "tags": [
+    "history",
+    "photography"
+   ],
+   "mins": 60,
+   "fee": 1800,
+   "what": "Medieval tower with views.",
+   "tip": "Queue early.",
+   "best": "sunset",
+   "indoor": false
+  },
+  {
+   "id": "basilica-cistern",
+   "name": "Basilica Cistern",
+   "area": "Sultanahmet",
+   "tags": [
+    "history",
+    "photography"
+   ],
+   "mins": 60,
+   "fee": 2000,
+   "what": "Underground Roman reservoir.",
+   "tip": "Go early.",
+   "best": "morning",
+   "indoor": true
+  },
+  {
+   "id": "spice",
+   "name": "Spice Bazaar and Karakoy",
+   "area": "Eminonu",
+   "tags": [
+    "food",
+    "shopping"
+   ],
+   "mins": 90,
+   "fee": 0,
+   "what": "Turkish delight, spices and tea.",
+   "tip": "Taste before buying.",
+   "best": "afternoon",
+   "indoor": false
+  }
+ ],
+ "food": [
+  {
+   "dish": "Kebab and pide",
+   "where": "Local restaurants",
+   "cost": 700
+  },
+  {
+   "dish": "Simit",
+   "where": "Street",
+   "cost": 50
+  },
+  {
+   "dish": "Baklava and Turkish tea",
+   "where": "Sweet shops",
+   "cost": 250
+  },
+  {
+   "dish": "Fish sandwich",
+   "where": "Eminonu",
+   "cost": 350
+  }
+ ],
+ "stay": {
+  "budget": {
+   "area": "Sultanahmet, Taksim",
+   "price_min": 5500,
+   "price_max": 11000,
+   "note": "Guesthouses."
+  },
+  "mid": {
+   "area": "Sultanahmet, Taksim",
+   "price_min": 12000,
+   "price_max": 24000,
+   "note": "3-4 star hotels."
+  },
+  "luxury": {
+   "area": "Bosphorus, Besiktas",
+   "price_min": 30000,
+   "price_max": 80000,
+   "note": "5-star hotels."
+  }
+ },
+ "rules": [
+  "Dress modestly and remove shoes in mosques.",
+  "Beware of taxi scams and street touts.",
+  "Respect prayer times.",
+  "Photography restricted in some museum areas."
+ ],
+ "packing": [
+  "Layers",
+  "Comfortable shoes",
+  "Scarf for mosques",
+  "Power adapter",
+  "Cash in TRY"
+ ],
+ "nearby": [
+  "dubai"
+ ]
+}

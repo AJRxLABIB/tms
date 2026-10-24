@@ -1,0 +1,186 @@
+{
+ "id": "narayanganj",
+ "name": "Narayanganj",
+ "bn": "নারায়ণগঞ্জ",
+ "aliases": [
+  "narayanganj",
+  "narayangonj",
+  "narayanganj dhaka",
+  "narayangonj port"
+ ],
+ "region": "Dhaka Division",
+ "lat": 23.6238,
+ "lng": 90.5,
+ "summary": "A port city on the Shitalakshya river, a short hop from Dhaka, with Sonakanda Fort, Hajiganj Fort and nearby Panam Nagar and Sonargaon.",
+ "best_months": [
+  10,
+  11,
+  12,
+  1,
+  2,
+  3
+ ],
+ "season_note": "Winter is best for walking. Summer is hot and crowded.",
+ "tags": [
+  "history",
+  "culture",
+  "city",
+  "family",
+  "water"
+ ],
+ "days": {
+  "min": 1,
+  "ideal": 1
+ },
+ "reach": [
+  {
+   "mode": "Bus / CNG",
+   "how": "Bus or CNG from Dhaka (Gulistan/Sayedabad) to Narayanganj",
+   "hours": 1.5,
+   "fare_min": 50,
+   "fare_max": 300,
+   "note": "Traffic is heavy."
+  }
+ ],
+ "local": [
+  {
+   "mode": "Rickshaw / CNG",
+   "group_fare": "50-250 BDT inside the city",
+   "note": "Agree fare first."
+  },
+  {
+   "mode": "Boat on the Shitalakshya",
+   "group_fare": "500-1500 BDT",
+   "note": "Short rides."
+  }
+ ],
+ "attractions": [
+  {
+   "id": "sonakanda",
+   "name": "Sonakanda Fort",
+   "area": "Narayanganj",
+   "tags": [
+    "history"
+   ],
+   "mins": 45,
+   "fee": 0,
+   "what": "Mughal-era riverside fort ruin.",
+   "tip": "Check access before going.",
+   "best": "afternoon",
+   "indoor": false
+  },
+  {
+   "id": "hajiganj",
+   "name": "Hajiganj Fort",
+   "area": "Narayanganj",
+   "tags": [
+    "history"
+   ],
+   "mins": 45,
+   "fee": 0,
+   "what": "A Mughal-era fort near the Shitalakshya.",
+   "tip": "Quiet site; go in daylight.",
+   "best": "afternoon",
+   "indoor": false
+  },
+  {
+   "id": "shitalakshya",
+   "name": "Shitalakshya river",
+   "area": "Narayanganj",
+   "tags": [
+    "water",
+    "relaxing",
+    "photography"
+   ],
+   "mins": 60,
+   "fee": 0,
+   "what": "Boat views of the river and busy ghats.",
+   "tip": "Sunset ride.",
+   "best": "sunset",
+   "indoor": false
+  },
+  {
+   "id": "panam",
+   "name": "Panam Nagar (see Sonargaon)",
+   "area": "Sonargaon",
+   "tags": [
+    "history",
+    "culture",
+    "photography"
+   ],
+   "mins": 90,
+   "fee": 0,
+   "what": "Historic merchant street of old mansions, about 30 minutes away.",
+   "tip": "Mind your step in old buildings.",
+   "best": "morning",
+   "indoor": false
+  },
+  {
+   "id": "jamdani",
+   "name": "Jamdani weaving area",
+   "area": "Rupganj",
+   "tags": [
+    "shopping",
+    "culture"
+   ],
+   "mins": 60,
+   "fee": 0,
+   "what": "Visit looms and buy handwoven fabric.",
+   "tip": "Compare prices.",
+   "best": "afternoon",
+   "indoor": false
+  }
+ ],
+ "food": [
+  {
+   "dish": "Rice and curry",
+   "where": "Restaurants",
+   "cost": 250
+  },
+  {
+   "dish": "Hilsa fry",
+   "where": "Restaurants",
+   "cost": 450
+  },
+  {
+   "dish": "Tea",
+   "where": "Stalls",
+   "cost": 20
+  }
+ ],
+ "stay": {
+  "budget": {
+   "area": "No stay at the site; use the nearby town",
+   "price_min": 0,
+   "price_max": 0,
+   "note": "Day-trip place."
+  },
+  "mid": {
+   "area": "No stay at the site; use the nearby town",
+   "price_min": 0,
+   "price_max": 0,
+   "note": "Day-trip place."
+  },
+  "luxury": {
+   "area": "No stay at the site; use the nearby town",
+   "price_min": 0,
+   "price_max": 0,
+   "note": "Day-trip place."
+  }
+ },
+ "rules": [
+  "Dress modestly at religious sites.",
+  "Do not climb ruins."
+ ],
+ "packing": [
+  "Sunscreen",
+  "Water",
+  "Comfortable shoes"
+ ],
+ "nearby": [
+  "sonargaon",
+  "dhaka",
+  "munshiganj"
+ ],
+ "country": "Bangladesh"
+}

@@ -1,0 +1,209 @@
+{
+ "id": "langkawi",
+ "name": "Langkawi",
+ "bn": "লাংকাওয়ি",
+ "aliases": [
+  "langkawi island",
+  "langkawi malaysia",
+  "langkavi",
+  "langkaui"
+ ],
+ "country": "Malaysia",
+ "region": "Kedah",
+ "lat": 6.35,
+ "lng": 99.8,
+ "summary": "A duty-free island with beaches, mangroves, cable car and calm seas; a favourite honeymoon spot.",
+ "best_months": [
+  11,
+  12,
+  1,
+  2,
+  3,
+  4
+ ],
+ "season_note": "November to April is dry; September-October are wettest.",
+ "avoid_note": "Monsoon storms can cancel ferries.",
+ "tags": [
+  "beach",
+  "relaxing",
+  "romantic",
+  "family",
+  "nature"
+ ],
+ "days": {
+  "min": 3,
+  "ideal": 4
+ },
+ "emergency": {
+  "police": "999",
+  "ambulance": "999"
+ },
+ "entry_note": "Malaysia: visa generally required for Bangladeshi passport holders; check the latest rules with the embassy before booking.",
+ "reach": [
+  {
+   "mode": "Flight",
+   "how": "Dhaka to Langkawi (via Kuala Lumpur) (Biman, US-Bangla, Singapore Airlines, Malaysia Airlines, Batik)",
+   "hours": 6,
+   "fare_min": 22000,
+   "fare_max": 40000,
+   "note": "Usually via KL with onward Malaysia Airlines/Batik Air/AirAsia flights."
+  }
+ ],
+ "local": [
+  {
+   "mode": "Taxi (fixed fare)",
+   "group_fare": "500-1500 BDT"
+  },
+  {
+   "mode": "Car or scooter hire",
+   "group_fare": "1500-3500 BDT per day"
+  }
+ ],
+ "attractions": [
+  {
+   "id": "cable-car",
+   "name": "Langkawi Cable Car and Sky Bridge",
+   "area": "Oriental Village",
+   "tags": [
+    "hills",
+    "photography",
+    "family"
+   ],
+   "mins": 150,
+   "fee": 1800,
+   "what": "A steep cable car to a curved bridge.",
+   "tip": "Closed in bad weather.",
+   "best": "morning",
+   "indoor": false
+  },
+  {
+   "id": "mangrove",
+   "name": "Kilim Mangrove Tour",
+   "area": "Kilim",
+   "tags": [
+    "nature",
+    "wildlife",
+    "adventure"
+   ],
+   "mins": 180,
+   "fee": 1500,
+   "what": "Boat tour through limestone caves, eagles and fish farms.",
+   "tip": "Hire a licensed boat.",
+   "best": "morning",
+   "indoor": false
+  },
+  {
+   "id": "pantai-cenang",
+   "name": "Pantai Cenang",
+   "area": "West",
+   "tags": [
+    "beach",
+    "family",
+    "relaxing"
+   ],
+   "mins": 180,
+   "fee": 0,
+   "what": "The main beach with cafes.",
+   "tip": "Sunset is lovely.",
+   "best": "sunset",
+   "indoor": false
+  },
+  {
+   "id": "island-hopping",
+   "name": "Island Hopping to Pulau Payar",
+   "area": "Archipelago",
+   "tags": [
+    "water",
+    "adventure"
+   ],
+   "mins": 300,
+   "fee": 2500,
+   "what": "Marine park snorkelling.",
+   "tip": "Book with licensed operator.",
+   "best": "morning",
+   "indoor": false
+  },
+  {
+   "id": "kuah",
+   "name": "Kuah Town and Eagle Square",
+   "area": "Kuah",
+   "tags": [
+    "shopping",
+    "culture"
+   ],
+   "mins": 90,
+   "fee": 0,
+   "what": "Duty-free shops.",
+   "tip": "Check duty limits.",
+   "best": "afternoon",
+   "indoor": false
+  },
+  {
+   "id": "telaga-tujuh",
+   "name": "Seven Wells Waterfall",
+   "area": "Kampung Burau",
+   "tags": [
+    "nature",
+    "adventure"
+   ],
+   "mins": 90,
+   "fee": 0,
+   "what": "Natural pools.",
+   "tip": "Slippery rocks.",
+   "best": "morning",
+   "indoor": false
+  }
+ ],
+ "food": [
+  {
+   "dish": "Nasi lemak",
+   "where": "Local eateries",
+   "cost": 150
+  },
+  {
+   "dish": "Grilled seafood",
+   "where": "Restaurants",
+   "cost": 700
+  },
+  {
+   "dish": "Laksa",
+   "where": "Stalls",
+   "cost": 200
+  }
+ ],
+ "stay": {
+  "budget": {
+   "area": "Cenang",
+   "price_min": 3500,
+   "price_max": 7000,
+   "note": "Guesthouses."
+  },
+  "mid": {
+   "area": "Cenang, Tengah",
+   "price_min": 8000,
+   "price_max": 16000,
+   "note": "Beach hotels."
+  },
+  "luxury": {
+   "area": "Datai, Tanjung Rhu",
+   "price_min": 25000,
+   "price_max": 70000,
+   "note": "Luxury resorts."
+  }
+ },
+ "rules": [
+  "Dress modestly away from beach.",
+  "Do not touch coral.",
+  "Alcohol is cheap but public drinking is frowned upon.",
+  "Respect local customs."
+ ],
+ "packing": [
+  "Swimwear",
+  "Sunscreen",
+  "Sun hat",
+  "Light clothes"
+ ],
+ "nearby": [
+  "kuala-lumpur"
+ ]
+}

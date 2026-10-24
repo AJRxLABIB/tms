@@ -1,0 +1,195 @@
+{
+ "id": "panchagarh",
+ "name": "Panchagarh",
+ "bn": "পঞ্চগড়",
+ "aliases": [
+  "panchagarh",
+  "panchagar",
+  "panchagarh tea",
+  "banglabandha",
+  "panchagarh tetulia"
+ ],
+ "region": "Rangpur Division",
+ "lat": 26.34,
+ "lng": 88.55,
+ "summary": "Bangladesh northernmost district with tea gardens, Banglabandha land port, Tetulia and views of Kanchenjunga in clear winter weather.",
+ "best_months": [
+  11,
+  12,
+  1,
+  2,
+  3
+ ],
+ "season_note": "Winter is cold and clear; Kanchenjunga is visible on very clear days. Monsoon is wet.",
+ "tags": [
+  "tea",
+  "nature",
+  "hills",
+  "photography",
+  "family"
+ ],
+ "days": {
+  "min": 2,
+  "ideal": 2
+ },
+ "reach": [
+  {
+   "mode": "Bus",
+   "how": "Bus Dhaka to Panchagarh",
+   "hours": 10,
+   "fare_min": 900,
+   "fare_max": 1900,
+   "note": "Overnight coaches."
+  },
+  {
+   "mode": "Train",
+   "how": "Train to Panchagarh (via Dinajpur) or to Thakurgaon/Rangpur then bus",
+   "hours": 12,
+   "fare_min": 400,
+   "fare_max": 1100,
+   "note": "Check timetable."
+  }
+ ],
+ "local": [
+  {
+   "mode": "CNG / rickshaw",
+   "group_fare": "50-300 BDT",
+   "note": "In town."
+  },
+  {
+   "mode": "Car hire",
+   "group_fare": "5000-8000 BDT per day",
+   "note": "For tea gardens and border."
+  }
+ ],
+ "attractions": [
+  {
+   "id": "tea",
+   "name": "Tetulia tea gardens",
+   "area": "Tetulia",
+   "tags": [
+    "tea",
+    "nature",
+    "photography"
+   ],
+   "mins": 120,
+   "fee": 0,
+   "what": "Green tea gardens in the far north.",
+   "tip": "Ask before entering estates.",
+   "best": "morning",
+   "indoor": false
+  },
+  {
+   "id": "banglabandha",
+   "name": "Banglabandha",
+   "area": "Tentulia",
+   "tags": [
+    "nature",
+    "city"
+   ],
+   "mins": 60,
+   "fee": 0,
+   "what": "Northernmost land port; Zero Point.",
+   "tip": "Carry ID.",
+   "best": "afternoon",
+   "indoor": false
+  },
+  {
+   "id": "kanchenjunga",
+   "name": "Kanchenjunga view point",
+   "area": "Tetulia",
+   "tags": [
+    "nature",
+    "photography"
+   ],
+   "mins": 60,
+   "fee": 0,
+   "what": "On clear winter mornings you can see the distant snow peaks.",
+   "tip": "Go very early.",
+   "best": "morning",
+   "indoor": false
+  },
+  {
+   "id": "tetulia",
+   "name": "Tetulia Dak Bungalow area",
+   "area": "Tetulia",
+   "tags": [
+    "history",
+    "relaxing"
+   ],
+   "mins": 45,
+   "fee": 0,
+   "what": "Old colonial-era building area (see Tetulia entry).",
+   "tip": "Check access.",
+   "best": "afternoon",
+   "indoor": false
+  },
+  {
+   "id": "rajbari",
+   "name": "Panchagarh Rajbari",
+   "area": "Panchagarh",
+   "tags": [
+    "history",
+    "culture"
+   ],
+   "mins": 45,
+   "fee": 0,
+   "what": "Old palace of local rulers.",
+   "tip": "Check access.",
+   "best": "afternoon",
+   "indoor": false
+  }
+ ],
+ "food": [
+  {
+   "dish": "Rice and curry",
+   "where": "Restaurants",
+   "cost": 250
+  },
+  {
+   "dish": "Tea",
+   "where": "Tea stalls",
+   "cost": 20
+  },
+  {
+   "dish": "Fish fry",
+   "where": "Local",
+   "cost": 250
+  }
+ ],
+ "stay": {
+  "budget": {
+   "area": "Simple hotel",
+   "price_min": 700,
+   "price_max": 1500,
+   "note": "Basic."
+  },
+  "mid": {
+   "area": "Mid hotel",
+   "price_min": 2000,
+   "price_max": 4000,
+   "note": "Limited."
+  },
+  "luxury": {
+   "area": "Better hotel",
+   "price_min": 4500,
+   "price_max": 7500,
+   "note": "Few."
+  }
+ },
+ "rules": [
+  "Respect border guard instructions.",
+  "No littering."
+ ],
+ "packing": [
+  "Warm clothes in winter",
+  "Camera",
+  "Water"
+ ],
+ "nearby": [
+  "tetulia",
+  "dinajpur",
+  "thakurgaon"
+ ],
+ "country": "Bangladesh"
+}

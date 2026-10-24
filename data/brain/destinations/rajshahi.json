@@ -1,0 +1,192 @@
+{
+ "id": "rajshahi",
+ "name": "Rajshahi and Puthia",
+ "bn": "রাজশাহী",
+ "aliases": [
+  "rajshahi city",
+  "puthia temple complex",
+  "varendra museum",
+  "silk city"
+ ],
+ "region": "Rajshahi Division",
+ "lat": 24.3745,
+ "lng": 88.6042,
+ "summary": "The silk city by the Padma: broad tree-lined streets, mangoes in season, the Varendra Museum, and the Puthia temple complex.",
+ "best_months": [
+  11,
+  12,
+  1,
+  2,
+  3
+ ],
+ "season_note": "Winter is cool; summer is very hot, but mango season in June is a highlight for some visitors.",
+ "avoid_note": "Summer afternoons are very hot.",
+ "tags": [
+  "history",
+  "culture",
+  "food",
+  "relaxing",
+  "shopping"
+ ],
+ "days": {
+  "min": 1,
+  "ideal": 2
+ },
+ "reach": [
+  {
+   "mode": "Train",
+   "how": "Silk City, Padma Express, Dhumketu from Kamalapur",
+   "hours": 7,
+   "fare_min": 450,
+   "fare_max": 1500,
+   "note": ""
+  },
+  {
+   "mode": "Bus",
+   "how": "AC coach from Dhaka (Gabtoli)",
+   "hours": 7,
+   "fare_min": 900,
+   "fare_max": 1900,
+   "note": ""
+  },
+  {
+   "mode": "Flight",
+   "how": "Dhaka to Shah Makhdum Airport",
+   "hours": 1,
+   "fare_min": 3500,
+   "fare_max": 7000,
+   "note": ""
+  }
+ ],
+ "local": [
+  {
+   "mode": "Rickshaw / auto",
+   "group_fare": "100-400 BDT",
+   "note": ""
+  }
+ ],
+ "attractions": [
+  {
+   "id": "varendra",
+   "name": "Varendra Research Museum",
+   "area": "City",
+   "tags": [
+    "history",
+    "culture"
+   ],
+   "mins": 90,
+   "fee": 30,
+   "what": "The oldest museum in the country, with sculptures and inscriptions.",
+   "tip": "Check opening hours.",
+   "best": "afternoon",
+   "indoor": true
+  },
+  {
+   "id": "padma",
+   "name": "Padma River bank (Padma Garden)",
+   "area": "Padma bank",
+   "tags": [
+    "relaxing",
+    "photography"
+   ],
+   "mins": 90,
+   "fee": 0,
+   "what": "A river-side walk, especially at sunset.",
+   "tip": "Go in the late afternoon.",
+   "best": "sunset",
+   "indoor": false
+  },
+  {
+   "id": "puthia",
+   "name": "Puthia Temple Complex",
+   "area": "Puthia, 30 km",
+   "tags": [
+    "history",
+    "culture",
+    "photography"
+   ],
+   "mins": 150,
+   "fee": 50,
+   "what": "A cluster of terracotta temples and a palace from the 18th and 19th centuries.",
+   "tip": "Check light for photos; go in the morning.",
+   "best": "morning",
+   "indoor": false
+  },
+  {
+   "id": "silk",
+   "name": "Silk shops and Rajshahi silk",
+   "area": "City market",
+   "tags": [
+    "shopping",
+    "culture"
+   ],
+   "mins": 90,
+   "fee": 0,
+   "what": "Buy genuine silk and handloom sarees and fabric.",
+   "tip": "Ask for Bangladesh Silk Board marks.",
+   "best": "afternoon",
+   "indoor": true
+  },
+  {
+   "id": "mango",
+   "name": "Mango orchards (in season)",
+   "area": "Outskirts",
+   "tags": [
+    "food",
+    "nature"
+   ],
+   "mins": 90,
+   "fee": 0,
+   "what": "Taste and buy local mangoes in June and July.",
+   "tip": "Seasonal only.",
+   "best": "morning",
+   "indoor": false
+  }
+ ],
+ "food": [
+  {
+   "dish": "Local mango sweets",
+   "where": "City stalls",
+   "cost": 100
+  },
+  {
+   "dish": "Fish and rice",
+   "where": "Restaurants",
+   "cost": 250
+  }
+ ],
+ "stay": {
+  "budget": {
+   "area": "City centre",
+   "price_min": 1200,
+   "price_max": 2500,
+   "note": ""
+  },
+  "mid": {
+   "area": "City",
+   "price_min": 3000,
+   "price_max": 6000,
+   "note": ""
+  },
+  "luxury": {
+   "area": "City hotels",
+   "price_min": 6500,
+   "price_max": 13000,
+   "note": ""
+  }
+ },
+ "rules": [
+  "Ask before photographing people.",
+  "Take water in the hot season."
+ ],
+ "packing": [
+  "Hat",
+  "Water",
+  "Sunscreen"
+ ],
+ "nearby": [
+  "paharpur",
+  "mahasthangarh"
+ ],
+ "country": "Bangladesh"
+}

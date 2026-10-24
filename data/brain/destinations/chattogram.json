@@ -1,0 +1,250 @@
+{
+ "id": "chattogram",
+ "name": "Chattogram",
+ "bn": "চট্টগ্রাম",
+ "aliases": [
+  "chittagong",
+  "chittagonj",
+  "chittagang",
+  "ctg",
+  "chattagram"
+ ],
+ "region": "Chattogram Division",
+ "lat": 22.3569,
+ "lng": 91.7832,
+ "summary": "The port city: hills, sea and rivers in one city. Patenga beach, Foy's Lake, the hill views of Batali, and strong food.",
+ "best_months": [
+  11,
+  12,
+  1,
+  2,
+  3
+ ],
+ "season_note": "Winter is cool and dry.",
+ "avoid_note": "Traffic and jams are heavy at peak hours. Check the weather in the monsoon.",
+ "tags": [
+  "city",
+  "beach",
+  "food",
+  "history",
+  "family",
+  "shopping"
+ ],
+ "days": {
+  "min": 1,
+  "ideal": 2
+ },
+ "reach": [
+  {
+   "mode": "Train",
+   "how": "Mahanagar, Turna Nishita, Subarna and others from Kamalapur (check e-ticket)",
+   "hours": 6,
+   "fare_min": 350,
+   "fare_max": 1500,
+   "note": "Frequent."
+  },
+  {
+   "mode": "Bus",
+   "how": "AC coach from Dhaka (Sayedabad, Kamalapur)",
+   "hours": 6,
+   "fare_min": 800,
+   "fare_max": 1800,
+   "note": ""
+  },
+  {
+   "mode": "Flight",
+   "how": "Dhaka to Shah Amanat International Airport",
+   "hours": 1,
+   "fare_min": 3200,
+   "fare_max": 7000,
+   "note": ""
+  }
+ ],
+ "local": [
+  {
+   "mode": "CNG auto",
+   "group_fare": "150-400 BDT",
+   "note": "Fare by meter or by agreement."
+  },
+  {
+   "mode": "Ride-share",
+   "group_fare": "200-700 BDT",
+   "note": ""
+  }
+ ],
+ "attractions": [
+  {
+   "id": "patenga",
+   "name": "Patenga Beach",
+   "area": "Patenga",
+   "tags": [
+    "beach",
+    "family",
+    "sunset"
+   ],
+   "mins": 90,
+   "fee": 0,
+   "what": "The city's beach with food stalls, boats and evening crowds.",
+   "tip": "Do not swim far: currents are strong.",
+   "best": "sunset",
+   "indoor": false
+  },
+  {
+   "id": "foys-lake",
+   "name": "Foy's Lake and Amusement Park",
+   "area": "Pahartali",
+   "tags": [
+    "family",
+    "nature"
+   ],
+   "mins": 150,
+   "fee": 100,
+   "what": "A hill lake with a park, boat rides and a view over the water.",
+   "tip": "Go on weekday afternoons to avoid crowds.",
+   "best": "afternoon",
+   "indoor": false
+  },
+  {
+   "id": "batali",
+   "name": "Batali Hill",
+   "area": "Batali",
+   "tags": [
+    "photography",
+    "relaxing"
+   ],
+   "mins": 60,
+   "fee": 0,
+   "what": "A hill park with views over the city.",
+   "tip": "Evening is best.",
+   "best": "sunset",
+   "indoor": false
+  },
+  {
+   "id": "ethnological",
+   "name": "Ethnological Museum",
+   "area": "Agrabad",
+   "tags": [
+    "culture",
+    "history"
+   ],
+   "mins": 60,
+   "fee": 50,
+   "what": "A museum showing the cultures of the hill peoples.",
+   "tip": "Check opening hours.",
+   "best": "afternoon",
+   "indoor": true
+  },
+  {
+   "id": "war-cemetery",
+   "name": "Chittagong War Cemetery",
+   "area": "Badshah Mia",
+   "tags": [
+    "history"
+   ],
+   "mins": 45,
+   "fee": 0,
+   "what": "A quiet Commonwealth war graves site.",
+   "tip": "Respect the silence.",
+   "best": "morning",
+   "indoor": false
+  },
+  {
+   "id": "sitakunda",
+   "name": "Sitakunda Eco Park and Chandranath Hill",
+   "area": "Sitakunda",
+   "tags": [
+    "nature",
+    "spiritual",
+    "adventure"
+   ],
+   "mins": 180,
+   "fee": 50,
+   "what": "A forest park and a hilltop temple.",
+   "tip": "Wear shoes for climbing.",
+   "best": "morning",
+   "indoor": false
+  },
+  {
+   "id": "fish-harbour",
+   "name": "Fishermen's Harbour (Fishery Ghat)",
+   "area": "Fishery Ghat",
+   "tags": [
+    "culture",
+    "food"
+   ],
+   "mins": 60,
+   "fee": 0,
+   "what": "The busy fishing port with boats and ice.",
+   "tip": "Go early.",
+   "best": "morning",
+   "indoor": false
+  },
+  {
+   "id": "mezban",
+   "name": "Mezban beef feast and Chattogram food",
+   "area": "City",
+   "tags": [
+    "food",
+    "culture"
+   ],
+   "mins": 90,
+   "fee": 0,
+   "what": "Try the famous Mezbani beef and local sweets.",
+   "tip": "Eat at popular places.",
+   "best": "afternoon",
+   "indoor": false
+  }
+ ],
+ "food": [
+  {
+   "dish": "Mezbani beef curry",
+   "where": "Local restaurants",
+   "cost": 350
+  },
+  {
+   "dish": "Shutki (dry-fish) dishes",
+   "where": "Local eateries",
+   "cost": 250
+  },
+  {
+   "dish": "Hilsa and Chattogram-style biryani",
+   "where": "Restaurants",
+   "cost": 400
+  }
+ ],
+ "stay": {
+  "budget": {
+   "area": "Agrabad, Station Road",
+   "price_min": 1500,
+   "price_max": 3000,
+   "note": ""
+  },
+  "mid": {
+   "area": "GEC, Agrabad",
+   "price_min": 4500,
+   "price_max": 8500,
+   "note": ""
+  },
+  "luxury": {
+   "area": "Khulshi, Agrabad",
+   "price_min": 10000,
+   "price_max": 25000,
+   "note": ""
+  }
+ },
+ "rules": [
+  "Do not swim in rough sea.",
+  "Keep valuables safe in crowds."
+ ],
+ "packing": [
+  "Comfortable shoes",
+  "Sunscreen",
+  "Light jacket in winter"
+ ],
+ "nearby": [
+  "coxs-bazar",
+  "bandarban",
+  "rangamati"
+ ],
+ "country": "Bangladesh"
+}

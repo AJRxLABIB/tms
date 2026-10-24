@@ -20,10 +20,10 @@ final class AIProviderResolver
     /** Embedding-only model names: installed, but they cannot chat. */
     private const EMBED_HINTS = ['embed', 'bge-', 'bge:', 'minilm', 'e5-', 'gte-', 'snowflake-arctic-embed', 'mxbai', 'rerank'];
 
-    /** A real Google AI Studio key: "AIza" followed by 35 URL-safe characters. */
+    /** A Google AI Studio key: the classic "AIza" + 35 characters, or the newer authorization key that starts with "AQ." (AI Studio issues these since May 2026). */
     public static function geminiKeyLooksValid(string $key): bool
     {
-        return (bool)preg_match('/^AIza[0-9A-Za-z_\-]{35}$/', trim($key));
+        return (bool)preg_match('/^(?:AIza[0-9A-Za-z_\-]{35}|AQ\.[0-9A-Za-z_\-]{20,120})$/', trim($key));
     }
 
     public static function isEmbeddingModel(string $name): bool
@@ -77,7 +77,7 @@ final class AIProviderResolver
             if (self::geminiKeyLooksValid($geminiKey)) {
                 return ['provider' => 'gemini', 'model' => '', 'reason' => 'auto_gemini', 'detail' => $ollamaNote . ' Using the configured Gemini key (data is sent to Google).'];
             }
-            return ['provider' => 'none', 'model' => '', 'reason' => 'invalid_key', 'detail' => $ollamaNote . ' GEMINI_API_KEY is set but is not a valid Google AI Studio key (those start with "AIza" and are 39 characters), so it was not used.'];
+            return ['provider' => 'none', 'model' => '', 'reason' => 'invalid_key', 'detail' => $ollamaNote . ' GEMINI_API_KEY is set but is not a valid Google AI Studio key (they start with "AIza" or "AQ."), so it was not used.'];
         }
         return ['provider' => 'none', 'model' => '', 'reason' => $ollamaReason === 'ollama_no_model' ? 'ollama_no_model' : 'not_configured', 'detail' => $ollamaNote . ' No Gemini key is configured.'];
     }

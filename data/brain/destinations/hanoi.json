@@ -1,0 +1,212 @@
+{
+ "id": "hanoi",
+ "name": "Hanoi and Ha Long Bay",
+ "bn": "হ্যানয়",
+ "aliases": [
+  "hanoi",
+  "halong",
+  "ha long",
+  "vietnam",
+  "halong bay",
+  "hanoy"
+ ],
+ "country": "Vietnam",
+ "region": "Northern Vietnam",
+ "lat": 21.0285,
+ "lng": 105.8542,
+ "summary": "Vietnam's old capital with French colonial streets, motorbike traffic and street food; Ha Long Bay is a UNESCO limestone seascape.",
+ "best_months": [
+  10,
+  11,
+  3,
+  4
+ ],
+ "season_note": "October-November and March-April are mild; summer is hot and stormy; winter is cold and misty.",
+ "avoid_note": "Typhoons in July-September can cancel Ha Long cruises.",
+ "tags": [
+  "city",
+  "culture",
+  "food",
+  "history",
+  "water",
+  "photography"
+ ],
+ "days": {
+  "min": 4,
+  "ideal": 5
+ },
+ "emergency": {
+  "police": "113",
+  "ambulance": "115"
+ },
+ "entry_note": "Vietnam: visa required for Bangladeshi passport holders (e-visa available); check the latest rules with the embassy before booking.",
+ "reach": [
+  {
+   "mode": "Flight",
+   "how": "Dhaka to Noi Bai International Airport (via Bangkok/Singapore) (Biman, US-Bangla, Emirates, flydubai, Turkish)",
+   "hours": 7,
+   "fare_min": 28000,
+   "fare_max": 50000,
+   "note": "Usually one stop."
+  }
+ ],
+ "local": [
+  {
+   "mode": "Grab bike/car",
+   "group_fare": "150-700 BDT"
+  },
+  {
+   "mode": "Cyclo",
+   "group_fare": "500-1500 BDT"
+  }
+ ],
+ "attractions": [
+  {
+   "id": "hoan-kiem",
+   "name": "Hoan Kiem Lake and Old Quarter",
+   "area": "Old Quarter",
+   "tags": [
+    "city",
+    "culture",
+    "food",
+    "relaxing"
+   ],
+   "mins": 150,
+   "fee": 0,
+   "what": "Heart of Hanoi with street food and shops.",
+   "tip": "Walk the lake at dusk.",
+   "best": "sunset",
+   "indoor": false
+  },
+  {
+   "id": "temple-literature",
+   "name": "Temple of Literature",
+   "area": "Dong Da",
+   "tags": [
+    "history",
+    "culture"
+   ],
+   "mins": 75,
+   "fee": 150,
+   "what": "Vietnam's first university.",
+   "tip": "Quiet mornings.",
+   "best": "morning",
+   "indoor": false
+  },
+  {
+   "id": "ho-chi-minh",
+   "name": "Ho Chi Minh Mausoleum",
+   "area": "Ba Dinh",
+   "tags": [
+    "history",
+    "culture"
+   ],
+   "mins": 90,
+   "fee": 0,
+   "what": "Open mornings only.",
+   "tip": "Closed some months; dress modestly.",
+   "best": "morning",
+   "indoor": false
+  },
+  {
+   "id": "halong",
+   "name": "Ha Long Bay Cruise",
+   "area": "Quang Ninh, 160 km",
+   "tags": [
+    "water",
+    "nature",
+    "photography",
+    "romantic"
+   ],
+   "mins": 480,
+   "fee": 8000,
+   "what": "Cruise among limestone islands.",
+   "tip": "Book overnight cruise from reputable agency.",
+   "best": "morning",
+   "indoor": false
+  },
+  {
+   "id": "water-puppet",
+   "name": "Thang Long Water Puppet Theatre",
+   "area": "Hoan Kiem",
+   "tags": [
+    "culture",
+    "family"
+   ],
+   "mins": 60,
+   "fee": 500,
+   "what": "Traditional puppet show.",
+   "tip": "Book ahead.",
+   "best": "any",
+   "indoor": true
+  },
+  {
+   "id": "train-street",
+   "name": "Train Street Cafes",
+   "area": "Old Quarter",
+   "tags": [
+    "photography",
+    "culture"
+   ],
+   "mins": 60,
+   "fee": 0,
+   "what": "Cafes beside a railway.",
+   "tip": "Check current safety rules.",
+   "best": "afternoon",
+   "indoor": false
+  }
+ ],
+ "food": [
+  {
+   "dish": "Pho",
+   "where": "Street stalls",
+   "cost": 200
+  },
+  {
+   "dish": "Bun cha",
+   "where": "Local restaurants",
+   "cost": 250
+  },
+  {
+   "dish": "Egg coffee",
+   "where": "Cafes",
+   "cost": 150
+  }
+ ],
+ "stay": {
+  "budget": {
+   "area": "Old Quarter",
+   "price_min": 2500,
+   "price_max": 5000,
+   "note": "Hostels."
+  },
+  "mid": {
+   "area": "Old Quarter, Hoan Kiem",
+   "price_min": 6000,
+   "price_max": 13000,
+   "note": "Boutique hotels."
+  },
+  "luxury": {
+   "area": "Hoan Kiem, Tay Ho",
+   "price_min": 18000,
+   "price_max": 50000,
+   "note": "5-star hotels."
+  }
+ },
+ "rules": [
+  "Cross roads steadily; traffic does not stop.",
+  "Dress modestly at temples.",
+  "Negotiate prices at markets.",
+  "Keep valuables safe from snatchers."
+ ],
+ "packing": [
+  "Rain jacket",
+  "Light layers",
+  "Comfortable shoes",
+  "Power adapter",
+  "Sunscreen"
+ ],
+ "nearby": [
+  "bangkok"
+ ]
+}

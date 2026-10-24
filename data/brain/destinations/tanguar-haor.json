@@ -1,0 +1,187 @@
+{
+ "id": "tanguar-haor",
+ "name": "Tanguar Haor",
+ "bn": "টাঙ্গুয়ার হাওর",
+ "aliases": [
+  "tanguar",
+  "tanguar haor sunamganj",
+  "sunamganj",
+  "tanguar haor boat",
+  "shimul bagan"
+ ],
+ "region": "Sylhet Division (Sunamganj)",
+ "lat": 25.15,
+ "lng": 91.03,
+ "summary": "A huge wetland of lakes and floating villages with spectacular monsoon boat stays and big winter bird flocks. Best for slow boat travel.",
+ "best_months": [
+  7,
+  8,
+  9,
+  10,
+  11,
+  12,
+  1,
+  2
+ ],
+ "season_note": "July to October is the high-water season (boat travel at its best). Winter has migratory birds.",
+ "avoid_note": "Storms on open water: choose reliable boats with life jackets and check the forecast.",
+ "tags": [
+  "water",
+  "nature",
+  "wildlife",
+  "photography",
+  "adventure",
+  "relaxing"
+ ],
+ "days": {
+  "min": 2,
+  "ideal": 2
+ },
+ "reach": [
+  {
+   "mode": "Bus",
+   "how": "AC coach from Dhaka (Sayedabad, Kamalapur) to Sunamganj - about 8 hours",
+   "hours": 8,
+   "fare_min": 900,
+   "fare_max": 1600,
+   "note": "Boats usually leave from Tahirpur or Sunamganj."
+  },
+  {
+   "mode": "Train + road",
+   "how": "Train to Sylhet, then bus or car to Sunamganj",
+   "hours": 8,
+   "fare_min": 1200,
+   "fare_max": 3500,
+   "note": ""
+  }
+ ],
+ "local": [
+  {
+   "mode": "Boat package (house-boat)",
+   "group_fare": "15000-40000 BDT per boat for 2 days",
+   "note": "Price depends on boat size and group; negotiate through a reliable operator."
+  }
+ ],
+ "attractions": [
+  {
+   "id": "boat-stay",
+   "name": "Overnight house-boat on the haor",
+   "area": "Tanguar Haor",
+   "tags": [
+    "water",
+    "adventure",
+    "relaxing",
+    "photography"
+   ],
+   "mins": 480,
+   "fee": 0,
+   "what": "Sleep on a boat, watch the sunrise over the water and eat fresh fish.",
+   "tip": "Take a life jacket and a power bank.",
+   "best": "any",
+   "indoor": false
+  },
+  {
+   "id": "watch-tower",
+   "name": "Tanguar Haor watchtower",
+   "area": "Tahirpur",
+   "tags": [
+    "nature",
+    "wildlife",
+    "photography"
+   ],
+   "mins": 60,
+   "fee": 30,
+   "what": "A tower with a wide view over the haor.",
+   "tip": "Visit early in the morning.",
+   "best": "morning",
+   "indoor": false
+  },
+  {
+   "id": "shimul-bagan",
+   "name": "Shimul Bagan (Swamp forest)",
+   "area": "Tanguar Haor",
+   "tags": [
+    "nature",
+    "photography"
+   ],
+   "mins": 90,
+   "fee": 0,
+   "what": "A forest of swamp trees, beautiful in the monsoon.",
+   "tip": "Go by small boat.",
+   "best": "afternoon",
+   "indoor": false
+  },
+  {
+   "id": "birds",
+   "name": "Winter birds and fishing villages",
+   "area": "Haor",
+   "tags": [
+    "wildlife",
+    "culture",
+    "photography"
+   ],
+   "mins": 180,
+   "fee": 0,
+   "what": "Large flocks of migratory birds in winter and local fishing life.",
+   "tip": "Take binoculars.",
+   "best": "morning",
+   "indoor": false
+  },
+  {
+   "id": "jadukata",
+   "name": "Jadukata River and Barik Tila",
+   "area": "Tahirpur",
+   "tags": [
+    "nature",
+    "photography"
+   ],
+   "mins": 120,
+   "fee": 0,
+   "what": "A clear river and a small hill nearby.",
+   "tip": "Check the road and weather.",
+   "best": "afternoon",
+   "indoor": false
+  }
+ ],
+ "food": [
+  {
+   "dish": "Fresh haor fish and rice",
+   "where": "Boat kitchen",
+   "cost": 300
+  }
+ ],
+ "stay": {
+  "budget": {
+   "area": "Boat or village",
+   "price_min": 1500,
+   "price_max": 3000,
+   "note": ""
+  },
+  "mid": {
+   "area": "Boat package",
+   "price_min": 3500,
+   "price_max": 7000,
+   "note": ""
+  },
+  "luxury": {
+   "area": "Premium boat",
+   "price_min": 7000,
+   "price_max": 12000,
+   "note": ""
+  }
+ },
+ "rules": [
+  "Wear a life jacket on boats.",
+  "No loud music or littering."
+ ],
+ "packing": [
+  "Life jacket",
+  "Mosquito repellent",
+  "Rain jacket",
+  "Power bank"
+ ],
+ "nearby": [
+  "sylhet"
+ ],
+ "country": "Bangladesh"
+}

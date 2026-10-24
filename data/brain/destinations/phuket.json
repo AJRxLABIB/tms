@@ -1,0 +1,236 @@
+{
+ "id": "phuket",
+ "name": "Phuket",
+ "bn": "ফুকেট",
+ "aliases": [
+  "phuket thailand",
+  "phukit",
+  "fuket",
+  "patong",
+  "phi phi"
+ ],
+ "country": "Thailand",
+ "region": "Phuket",
+ "lat": 7.8804,
+ "lng": 98.3923,
+ "summary": "Thailand's largest island: Patong nightlife, quieter beaches, island-hopping to Phi Phi and James Bond Island.",
+ "best_months": [
+  11,
+  12,
+  1,
+  2,
+  3,
+  4
+ ],
+ "season_note": "November to April is dry; May-October is monsoon with strong waves and red flags.",
+ "avoid_note": "Monsoon beaches have dangerous rip currents; obey flags.",
+ "tags": [
+  "beach",
+  "water",
+  "adventure",
+  "relaxing",
+  "romantic",
+  "family",
+  "food"
+ ],
+ "days": {
+  "min": 3,
+  "ideal": 5
+ },
+ "emergency": {
+  "police": "191 (police), 1155 tourist police",
+  "ambulance": "1669"
+ },
+ "entry_note": "Thailand: visa required for Bangladeshi passport holders (e-visa via the Thai e-visa portal); check the latest rules with the embassy before booking.",
+ "reach": [
+  {
+   "mode": "Flight",
+   "how": "Dhaka to Phuket International Airport (via Bangkok) (Biman, US-Bangla, Thai, Bangladeshi carriers)",
+   "hours": 5,
+   "fare_min": 18000,
+   "fare_max": 34000,
+   "note": "Usually one stop via Bangkok."
+  }
+ ],
+ "local": [
+  {
+   "mode": "Taxi / Grab",
+   "group_fare": "500-1500 BDT per ride",
+   "note": "Taxis are expensive; use Grab or Bolt."
+  },
+  {
+   "mode": "Songthaew",
+   "group_fare": "100-300 BDT"
+  },
+  {
+   "mode": "Scooter hire",
+   "group_fare": "350-700 BDT per day",
+   "note": "Need license; wear helmet."
+  }
+ ],
+ "attractions": [
+  {
+   "id": "patong",
+   "name": "Patong Beach",
+   "area": "Patong",
+   "tags": [
+    "beach",
+    "adventure",
+    "city"
+   ],
+   "mins": 180,
+   "fee": 0,
+   "what": "Lively beach with water sports and nightlife.",
+   "tip": "Obey flag warnings.",
+   "best": "afternoon",
+   "indoor": false
+  },
+  {
+   "id": "phi-phi",
+   "name": "Phi Phi Islands Day Trip",
+   "area": "Krabi/Phuket",
+   "tags": [
+    "beach",
+    "water",
+    "photography"
+   ],
+   "mins": 480,
+   "fee": 3500,
+   "what": "Boat trip to Maya Bay and snorkelling.",
+   "tip": "Book a reputable operator.",
+   "best": "morning",
+   "indoor": false
+  },
+  {
+   "id": "big-buddha",
+   "name": "Big Buddha",
+   "area": "Nakkerd Hills",
+   "tags": [
+    "spiritual",
+    "photography"
+   ],
+   "mins": 60,
+   "fee": 0,
+   "what": "45m marble Buddha with views.",
+   "tip": "Dress modestly.",
+   "best": "sunset",
+   "indoor": false
+  },
+  {
+   "id": "old-town",
+   "name": "Phuket Old Town",
+   "area": "Old Town",
+   "tags": [
+    "history",
+    "culture",
+    "food",
+    "photography"
+   ],
+   "mins": 120,
+   "fee": 0,
+   "what": "Sino-Portuguese shophouses and cafes.",
+   "tip": "Visit Sunday walking street.",
+   "best": "sunset",
+   "indoor": false
+  },
+  {
+   "id": "james-bond",
+   "name": "James Bond Island and Phang Nga Bay",
+   "area": "Phang Nga",
+   "tags": [
+    "nature",
+    "adventure"
+   ],
+   "mins": 420,
+   "fee": 3500,
+   "what": "Limestone karsts and sea kayaking.",
+   "tip": "Book a full-day tour.",
+   "best": "morning",
+   "indoor": false
+  },
+  {
+   "id": "promthep",
+   "name": "Promthep Cape",
+   "area": "South",
+   "tags": [
+    "photography"
+   ],
+   "mins": 60,
+   "fee": 0,
+   "what": "Cliff viewpoint for sunset.",
+   "tip": "Crowded at sunset.",
+   "best": "sunset",
+   "indoor": false
+  },
+  {
+   "id": "kata",
+   "name": "Kata and Karon Beaches",
+   "area": "South",
+   "tags": [
+    "beach",
+    "family",
+    "relaxing"
+   ],
+   "mins": 180,
+   "fee": 0,
+   "what": "Calmer beaches for families.",
+   "tip": "Good for swimming.",
+   "best": "morning",
+   "indoor": false
+  }
+ ],
+ "food": [
+  {
+   "dish": "Seafood grill",
+   "where": "Rawai",
+   "cost": 800
+  },
+  {
+   "dish": "Pad Thai",
+   "where": "Street vendors",
+   "cost": 150
+  },
+  {
+   "dish": "Khao pad gai",
+   "where": "Local eateries",
+   "cost": 200
+  }
+ ],
+ "stay": {
+  "budget": {
+   "area": "Patong, Kata",
+   "price_min": 2500,
+   "price_max": 6000,
+   "note": "Guesthouses."
+  },
+  "mid": {
+   "area": "Kata, Karon, Patong",
+   "price_min": 7000,
+   "price_max": 16000,
+   "note": "Beach hotels."
+  },
+  "luxury": {
+   "area": "Kamala, Surin, Layan",
+   "price_min": 20000,
+   "price_max": 60000,
+   "note": "Beach resorts."
+  }
+ },
+ "rules": [
+  "Obey red flag warnings; drownings happen.",
+  "Do not rent jet skis from scammers (check damage deposit).",
+  "Vaping banned.",
+  "Dress modestly off-beach."
+ ],
+ "packing": [
+  "Swimwear",
+  "Sunscreen",
+  "Dry bag",
+  "Light cover-up",
+  "Reef-safe sunscreen"
+ ],
+ "nearby": [
+  "bangkok",
+  "pattaya"
+ ]
+}

@@ -1,0 +1,189 @@
+{
+ "id": "lalakhali",
+ "name": "Lalakhali",
+ "bn": "লালাখাল",
+ "aliases": [
+  "lalakhal",
+  "lala khal",
+  "lalakhali sylhet",
+  "lalakhali river"
+ ],
+ "region": "Sylhet Division (Jaintiapur / Companiganj)",
+ "lat": 25.0,
+ "lng": 92.0,
+ "summary": "A river with strikingly blue-green water, tea gardens on its banks and boat rides, a short day trip from Sylhet city.",
+ "best_months": [
+  10,
+  11,
+  12,
+  1,
+  2,
+  3,
+  4
+ ],
+ "season_note": "Water is clearest and bluest in winter and post-monsoon. Heavy monsoon makes it muddy and rides can be limited.",
+ "tags": [
+  "water",
+  "nature",
+  "photography",
+  "family"
+ ],
+ "days": {
+  "min": 1,
+  "ideal": 1
+ },
+ "reach": [
+  {
+   "mode": "Bus + CNG",
+   "how": "Bus Dhaka to Sylhet, then CNG or hired car to Lalakhal (about 1 hr)",
+   "hours": 8,
+   "fare_min": 1000,
+   "fare_max": 2300,
+   "note": "Make Lalakhal a day trip from Sylhet."
+  }
+ ],
+ "local": [
+  {
+   "mode": "Private car or CNG from Sylhet",
+   "group_fare": "1500-3500 BDT round trip",
+   "note": "Combine with Jaflong or Bichanakandi."
+  },
+  {
+   "mode": "Boat",
+   "group_fare": "800-1500 BDT per boat for 1-2 hours",
+   "note": "Bargain for a fixed time."
+  }
+ ],
+ "attractions": [
+  {
+   "id": "boat-ride",
+   "name": "Lalakhal boat ride",
+   "area": "Lalakhal ghat",
+   "tags": [
+    "water",
+    "photography",
+    "family"
+   ],
+   "mins": 90,
+   "fee": 0,
+   "what": "Paddle or motor boat along the blue-green river between tea-covered hills.",
+   "tip": "Agree boat fare and duration before boarding.",
+   "best": "morning",
+   "indoor": false
+  },
+  {
+   "id": "tea-garden",
+   "name": "Lalakhal tea garden",
+   "area": "Riverbank",
+   "tags": [
+    "tea",
+    "nature",
+    "photography"
+   ],
+   "mins": 60,
+   "fee": 0,
+   "what": "Tea slopes that come right down to the river, good for photos.",
+   "tip": "Do not pluck leaves; ask before entering working areas.",
+   "best": "morning",
+   "indoor": false
+  },
+  {
+   "id": "river-bank",
+   "name": "Riverbank walk",
+   "area": "Lalakhal",
+   "tags": [
+    "nature",
+    "relaxing"
+   ],
+   "mins": 45,
+   "fee": 0,
+   "what": "A calm walk on the bank watching boats and kids swim.",
+   "tip": "Rocks and mud can be slippery.",
+   "best": "afternoon",
+   "indoor": false
+  },
+  {
+   "id": "sunset-river",
+   "name": "River sunset",
+   "area": "Lalakhal",
+   "tags": [
+    "photography",
+    "romantic"
+   ],
+   "mins": 45,
+   "fee": 0,
+   "what": "Golden light on the water as the day trippers leave.",
+   "tip": "Stay till late afternoon for fewer crowds.",
+   "best": "sunset",
+   "indoor": false
+  },
+  {
+   "id": "local-snacks",
+   "name": "Roadside snack stalls",
+   "area": "Lalakhal ghat",
+   "tags": [
+    "food"
+   ],
+   "mins": 30,
+   "fee": 0,
+   "what": "Small stalls selling tea, jhalmuri and fried snacks.",
+   "tip": "Carry your rubbish back.",
+   "best": "any",
+   "indoor": false
+  }
+ ],
+ "food": [
+  {
+   "dish": "Tea with biscuits",
+   "where": "Roadside stalls",
+   "cost": 30
+  },
+  {
+   "dish": "Sylhet-style shatkora beef",
+   "where": "Restaurants in Sylhet city",
+   "cost": 350
+  },
+  {
+   "dish": "Jhalmuri",
+   "where": "Ghat stalls",
+   "cost": 40
+  }
+ ],
+ "stay": {
+  "budget": {
+   "area": "No stay at the site; use the nearby town",
+   "price_min": 0,
+   "price_max": 0,
+   "note": "Day-trip place."
+  },
+  "mid": {
+   "area": "No stay at the site; use the nearby town",
+   "price_min": 0,
+   "price_max": 0,
+   "note": "Day-trip place."
+  },
+  "luxury": {
+   "area": "No stay at the site; use the nearby town",
+   "price_min": 0,
+   "price_max": 0,
+   "note": "Day-trip place."
+  }
+ },
+ "rules": [
+  "Wear a life jacket if offered.",
+  "Do not litter the river.",
+  "Respect local fishing communities."
+ ],
+ "packing": [
+  "Hat and sunscreen",
+  "Water bottle",
+  "Cash in small notes",
+  "Power bank"
+ ],
+ "nearby": [
+  "sylhet",
+  "jaflong",
+  "ratargul"
+ ],
+ "country": "Bangladesh"
+}

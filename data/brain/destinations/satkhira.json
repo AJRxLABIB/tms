@@ -1,0 +1,183 @@
+{
+ "id": "satkhira",
+ "name": "Satkhira",
+ "bn": "সাতক্ষীরা",
+ "aliases": [
+  "satkhira",
+  "satkhera",
+  "shatkhira",
+  "satkhira sundarban"
+ ],
+ "region": "Khulna Division",
+ "lat": 22.7185,
+ "lng": 89.0705,
+ "summary": "A coastal district at the edge of the Sundarbans, with shrimp farms, mangrove creeks and western Sundarbans access.",
+ "best_months": [
+  11,
+  12,
+  1,
+  2,
+  3
+ ],
+ "season_note": "Dry winter is best. Cyclone and flood risk in monsoon.",
+ "tags": [
+  "nature",
+  "wildlife",
+  "water",
+  "culture"
+ ],
+ "days": {
+  "min": 2,
+  "ideal": 2
+ },
+ "reach": [
+  {
+   "mode": "Bus",
+   "how": "Bus Dhaka to Satkhira via Padma bridge",
+   "hours": 7,
+   "fare_min": 700,
+   "fare_max": 1400,
+   "note": "Direct coaches."
+  }
+ ],
+ "local": [
+  {
+   "mode": "CNG / rickshaw",
+   "group_fare": "50-300 BDT in town",
+   "note": "Agree fare first."
+  },
+  {
+   "mode": "Boat in the Sundarbans edge",
+   "group_fare": "4000-8000 BDT per boat per day",
+   "note": "Forest permission needed."
+  }
+ ],
+ "attractions": [
+  {
+   "id": "burigoalini",
+   "name": "Burigoalini and Sundarbans edge",
+   "area": "Shyamnagar",
+   "tags": [
+    "nature",
+    "wildlife",
+    "water"
+   ],
+   "mins": 240,
+   "fee": 200,
+   "what": "Gateway to the western Sundarbans.",
+   "tip": "Entry needs forest permission.",
+   "best": "morning",
+   "indoor": false
+  },
+  {
+   "id": "shrimp",
+   "name": "Shrimp farm area",
+   "area": "Kaliganj",
+   "tags": [
+    "culture"
+   ],
+   "mins": 60,
+   "fee": 0,
+   "what": "See aquaculture and local life.",
+   "tip": "Ask locals.",
+   "best": "afternoon",
+   "indoor": false
+  },
+  {
+   "id": "mangrove",
+   "name": "Mangrove walk",
+   "area": "Coastal",
+   "tags": [
+    "nature"
+   ],
+   "mins": 90,
+   "fee": 0,
+   "what": "Tidal creeks and mangroves.",
+   "tip": "Beware tides.",
+   "best": "morning",
+   "indoor": false
+  },
+  {
+   "id": "boat",
+   "name": "Creek boat ride",
+   "area": "Shyamnagar",
+   "tags": [
+    "water",
+    "relaxing"
+   ],
+   "mins": 120,
+   "fee": 0,
+   "what": "River boat among villages.",
+   "tip": "Bargain.",
+   "best": "afternoon",
+   "indoor": false
+  },
+  {
+   "id": "town",
+   "name": "Satkhira town market",
+   "area": "Satkhira",
+   "tags": [
+    "food",
+    "shopping"
+   ],
+   "mins": 45,
+   "fee": 0,
+   "what": "Local snacks.",
+   "tip": "Evening is best.",
+   "best": "sunset",
+   "indoor": false
+  }
+ ],
+ "food": [
+  {
+   "dish": "Shrimp curry",
+   "where": "Restaurants",
+   "cost": 350
+  },
+  {
+   "dish": "Fish fry",
+   "where": "Local eateries",
+   "cost": 250
+  },
+  {
+   "dish": "Tea",
+   "where": "Stalls",
+   "cost": 20
+  }
+ ],
+ "stay": {
+  "budget": {
+   "area": "Simple hotel",
+   "price_min": 700,
+   "price_max": 1600,
+   "note": "Basic."
+  },
+  "mid": {
+   "area": "Mid hotel",
+   "price_min": 2000,
+   "price_max": 4000,
+   "note": "Few."
+  },
+  "luxury": {
+   "area": "Better hotel",
+   "price_min": 4500,
+   "price_max": 7500,
+   "note": "Few."
+  }
+ },
+ "rules": [
+  "Follow forest rules.",
+  "No plastic."
+ ],
+ "packing": [
+  "Insect repellent",
+  "Sunscreen",
+  "Rain jacket"
+ ],
+ "nearby": [
+  "sundarbans",
+  "jessore",
+  "bagerhat"
+ ],
+ "country": "Bangladesh"
+}

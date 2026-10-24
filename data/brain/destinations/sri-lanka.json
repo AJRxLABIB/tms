@@ -1,0 +1,243 @@
+{
+ "id": "sri-lanka",
+ "name": "Sri Lanka (Colombo, Kandy and Galle)",
+ "bn": "শ্রীলঙ্কা",
+ "aliases": [
+  "colombo",
+  "kandy",
+  "galle",
+  "srilanka",
+  "sri lanka",
+  "ceylon",
+  "sigiriya"
+ ],
+ "country": "Sri Lanka",
+ "region": "Western and Central Province",
+ "lat": 6.9271,
+ "lng": 79.8612,
+ "summary": "Beaches, tea hills, ancient temples and wildlife; Colombo for city, Kandy for temples and Galle for the old fort.",
+ "best_months": [
+  12,
+  1,
+  2,
+  3
+ ],
+ "season_note": "December to March is the best on the south and west coasts; May-September is the best on the east coast.",
+ "avoid_note": "Monsoon rains vary by coast.",
+ "tags": [
+  "beach",
+  "hills",
+  "culture",
+  "history",
+  "nature",
+  "wildlife",
+  "tea",
+  "family"
+ ],
+ "days": {
+  "min": 5,
+  "ideal": 7
+ },
+ "emergency": {
+  "police": "119",
+  "ambulance": "1990"
+ },
+ "entry_note": "Sri Lanka: visa required for Bangladeshi passport holders (ETA available online); check the latest rules with the embassy before booking.",
+ "reach": [
+  {
+   "mode": "Flight",
+   "how": "Dhaka to Colombo Bandaranaike Airport (SriLankan Airlines, Biman, US-Bangla) (SriLankan Airlines, Biman, US-Bangla)",
+   "hours": 3.5,
+   "fare_min": 24000,
+   "fare_max": 48000,
+   "note": "About 3h30m."
+  }
+ ],
+ "local": [
+  {
+   "mode": "Tuk-tuk",
+   "group_fare": "150-600 BDT per ride",
+   "note": "Use PickMe app."
+  },
+  {
+   "mode": "Train (Kandy to Ella scenic)",
+   "group_fare": "200-800 BDT",
+   "note": "Book seats ahead."
+  },
+  {
+   "mode": "Car with driver",
+   "group_fare": "6000-10000 BDT per day"
+  }
+ ],
+ "attractions": [
+  {
+   "id": "temple-tooth",
+   "name": "Temple of the Sacred Tooth Relic",
+   "area": "Kandy",
+   "tags": [
+    "spiritual",
+    "culture"
+   ],
+   "mins": 90,
+   "fee": 1500,
+   "what": "Buddhism's holy relic temple.",
+   "tip": "Wear white or modest clothes.",
+   "best": "morning",
+   "indoor": true
+  },
+  {
+   "id": "sigiriya",
+   "name": "Sigiriya Rock Fortress",
+   "area": "Sigiriya",
+   "tags": [
+    "history",
+    "photography",
+    "adventure"
+   ],
+   "mins": 240,
+   "fee": 5500,
+   "what": "An ancient rock palace at 200m.",
+   "tip": "Go at 7am to avoid heat.",
+   "best": "morning",
+   "indoor": false
+  },
+  {
+   "id": "galle-fort",
+   "name": "Galle Fort",
+   "area": "Galle",
+   "tags": [
+    "history",
+    "culture",
+    "photography"
+   ],
+   "mins": 150,
+   "fee": 0,
+   "what": "A Dutch fort on the coast.",
+   "tip": "Walk the ramparts at sunset.",
+   "best": "sunset",
+   "indoor": false
+  },
+  {
+   "id": "nuwara",
+   "name": "Nuwara Eliya Tea Plantations",
+   "area": "Nuwara Eliya",
+   "tags": [
+    "tea",
+    "hills",
+    "nature"
+   ],
+   "mins": 240,
+   "fee": 400,
+   "what": "Cool tea highlands.",
+   "tip": "Take warm clothes.",
+   "best": "morning",
+   "indoor": false
+  },
+  {
+   "id": "yala",
+   "name": "Yala National Park Safari",
+   "area": "Yala",
+   "tags": [
+    "wildlife",
+    "nature",
+    "adventure"
+   ],
+   "mins": 300,
+   "fee": 7000,
+   "what": "Leopards and elephants.",
+   "tip": "Book jeep early.",
+   "best": "morning",
+   "indoor": false
+  },
+  {
+   "id": "mirissa",
+   "name": "Mirissa Beach and Whale Watching",
+   "area": "Mirissa",
+   "tags": [
+    "beach",
+    "water",
+    "wildlife"
+   ],
+   "mins": 300,
+   "fee": 6000,
+   "what": "Whales and surfing beaches.",
+   "tip": "Season Nov-April.",
+   "best": "morning",
+   "indoor": false
+  },
+  {
+   "id": "colombo-fort",
+   "name": "Colombo Fort and Galle Face Green",
+   "area": "Colombo",
+   "tags": [
+    "city",
+    "culture",
+    "relaxing"
+   ],
+   "mins": 120,
+   "fee": 0,
+   "what": "Evening promenade by the sea.",
+   "tip": "Street food at sunset.",
+   "best": "sunset",
+   "indoor": false
+  }
+ ],
+ "food": [
+  {
+   "dish": "Rice and curry",
+   "where": "Local restaurants",
+   "cost": 350
+  },
+  {
+   "dish": "Kottu roti",
+   "where": "Street",
+   "cost": 300
+  },
+  {
+   "dish": "Hoppers and string hoppers",
+   "where": "Local eateries",
+   "cost": 200
+  },
+  {
+   "dish": "Seafood",
+   "where": "Galle/Negombo",
+   "cost": 1500
+  }
+ ],
+ "stay": {
+  "budget": {
+   "area": "Colombo, Kandy",
+   "price_min": 3500,
+   "price_max": 7000,
+   "note": "Guesthouses."
+  },
+  "mid": {
+   "area": "Colombo, Kandy, Galle",
+   "price_min": 8000,
+   "price_max": 17000,
+   "note": "Boutique hotels."
+  },
+  "luxury": {
+   "area": "Colombo, Bentota",
+   "price_min": 22000,
+   "price_max": 70000,
+   "note": "Luxury hotels."
+  }
+ },
+ "rules": [
+  "Remove shoes and cover shoulders/knees at temples.",
+  "Do not pose with your back to Buddha statues.",
+  "Drone use needs permits.",
+  "Alcohol is not sold on Poya days."
+ ],
+ "packing": [
+  "Light cotton",
+  "Rain jacket",
+  "Sunscreen",
+  "Modest cover",
+  "Walking shoes"
+ ],
+ "nearby": [
+  "maldives"
+ ]
+}

@@ -1,0 +1,277 @@
+{
+ "id": "kolkata",
+ "name": "Kolkata",
+ "bn": "কলকাতা",
+ "aliases": [
+  "calcutta",
+  "kolkatta",
+  "kolkota",
+  "kolkata city",
+  "kalkata"
+ ],
+ "country": "India",
+ "region": "West Bengal",
+ "lat": 22.5726,
+ "lng": 88.3639,
+ "summary": "The City of Joy: colonial architecture, trams, the Hooghly, sweets, book streets and big shopping. The most popular India trip from Dhaka, only an hour by air.",
+ "best_months": [
+  10,
+  11,
+  12,
+  1,
+  2,
+  3
+ ],
+ "season_note": "October to February is cool and dry; Durga Puja (Sept/Oct) is spectacular but very crowded and hotels fill. June to September is hot and rainy.",
+ "avoid_note": "Peak summer (April-June) is hot and humid. Durga Puja days have heavy road closures.",
+ "tags": [
+  "city",
+  "history",
+  "culture",
+  "food",
+  "shopping",
+  "family",
+  "spiritual"
+ ],
+ "days": {
+  "min": 3,
+  "ideal": 4
+ },
+ "emergency": {
+  "police": "100 (or 112)",
+  "ambulance": "102 or 108"
+ },
+ "entry_note": "Indian visa is required for Bangladeshi passport holders (apply via the Indian Visa Application Centre, usually medical/tourist/e-visa categories as currently offered). Check the latest rules with the embassy before booking.",
+ "reach": [
+  {
+   "mode": "Flight",
+   "how": "Dhaka to Netaji Subhas Chandra Bose Airport (Biman, US-Bangla, IndiGo, Air India)",
+   "hours": 1.2,
+   "fare_min": 9000,
+   "fare_max": 18000,
+   "note": "Shortest route. Return fares are roughly double."
+  },
+  {
+   "mode": "Bus",
+   "how": "AC bus Dhaka to Kolkata via Benapole-Petrapole (Shyamoli, Green Line, Hanif, Sohag Paribahan)",
+   "hours": 12,
+   "fare_min": 1800,
+   "fare_max": 3500,
+   "note": "Immigration at the border can take 1-3 hours."
+  },
+  {
+   "mode": "Train",
+   "how": "Maitree Express Dhaka Cantonment to Kolkata (runs on set days; check schedule)",
+   "hours": 10,
+   "fare_min": 1500,
+   "fare_max": 3500,
+   "note": "Immigration on board/at station; book well ahead."
+  }
+ ],
+ "local": [
+  {
+   "mode": "Metro",
+   "group_fare": "15-60 BDT (5-30 INR) per ride",
+   "note": "Cleanest and fastest way across the city."
+  },
+  {
+   "mode": "Yellow taxi / app cab",
+   "group_fare": "300-900 BDT for typical city rides",
+   "note": "Use Uber/Ola or insist on the meter."
+  },
+  {
+   "mode": "Tram",
+   "group_fare": "10-15 BDT",
+   "note": "Slow but atmospheric."
+  }
+ ],
+ "attractions": [
+  {
+   "id": "victoria",
+   "name": "Victoria Memorial",
+   "area": "Maidan",
+   "tags": [
+    "history",
+    "culture",
+    "photography"
+   ],
+   "mins": 120,
+   "fee": 100,
+   "what": "A white-marble museum and gardens built in memory of Queen Victoria.",
+   "tip": "Gardens are free-ish; museum has a separate ticket. Closed on Mondays.",
+   "best": "afternoon",
+   "indoor": false
+  },
+  {
+   "id": "howrah",
+   "name": "Howrah Bridge and Flower Market",
+   "area": "Howrah",
+   "tags": [
+    "photography",
+    "culture",
+    "city"
+   ],
+   "mins": 90,
+   "fee": 0,
+   "what": "The giant cantilever bridge over the Hooghly and the huge Mullick Ghat flower market.",
+   "tip": "Go early morning for the market and watch for pickpockets.",
+   "best": "morning",
+   "indoor": false
+  },
+  {
+   "id": "newmarket",
+   "name": "New Market and Park Street",
+   "area": "Esplanade",
+   "tags": [
+    "shopping",
+    "food",
+    "city"
+   ],
+   "mins": 180,
+   "fee": 0,
+   "what": "Colonial-era market for clothes, leather, sweets and gifts; Park Street has famous cafes.",
+   "tip": "Bargain hard in New Market; many shops close on Sunday.",
+   "best": "afternoon",
+   "indoor": false
+  },
+  {
+   "id": "kalighat",
+   "name": "Kalighat Kali Temple",
+   "area": "South Kolkata",
+   "tags": [
+    "spiritual",
+    "culture"
+   ],
+   "mins": 90,
+   "fee": 0,
+   "what": "One of the most revered Hindu temples in Bengal.",
+   "tip": "Remove shoes, dress modestly, keep belongings secure in the queue.",
+   "best": "morning",
+   "indoor": true
+  },
+  {
+   "id": "dakshineswar",
+   "name": "Dakshineswar and Belur Math",
+   "area": "Hooghly bank",
+   "tags": [
+    "spiritual",
+    "culture",
+    "relaxing"
+   ],
+   "mins": 150,
+   "fee": 0,
+   "what": "Riverside temple and the Ramakrishna Mission headquarters, both calm and architecturally striking.",
+   "tip": "Belur Math has a midday closure; check timings.",
+   "best": "morning",
+   "indoor": false
+  },
+  {
+   "id": "indian-museum",
+   "name": "Indian Museum",
+   "area": "Chowringhee",
+   "tags": [
+    "history",
+    "culture",
+    "family"
+   ],
+   "mins": 120,
+   "fee": 40,
+   "what": "The oldest museum in India with Egyptian mummy, fossils and Mughal art.",
+   "tip": "Allow two hours; photography rules apply in some galleries.",
+   "best": "any",
+   "indoor": true
+  },
+  {
+   "id": "princep",
+   "name": "Prinsep Ghat and Hooghly Boat Ride",
+   "area": "Strand",
+   "tags": [
+    "photography",
+    "relaxing",
+    "romantic"
+   ],
+   "mins": 60,
+   "fee": 50,
+   "what": "Sunset spot by the river with the Vidyasagar Setu in view.",
+   "tip": "Take a short ferry ride at sunset.",
+   "best": "sunset",
+   "indoor": false
+  },
+  {
+   "id": "college-street",
+   "name": "College Street Boi Para",
+   "area": "Central",
+   "tags": [
+    "culture",
+    "shopping",
+    "history"
+   ],
+   "mins": 90,
+   "fee": 0,
+   "what": "Asia's largest second-hand book market and the famous Indian Coffee House.",
+   "tip": "Cheap books; bring cash.",
+   "best": "afternoon",
+   "indoor": false
+  }
+ ],
+ "food": [
+  {
+   "dish": "Kosha mangsho with luchi",
+   "where": "Local restaurants around Park Street/Esplanade",
+   "cost": 450
+  },
+  {
+   "dish": "Kolkata kathi roll",
+   "where": "Street-side rolls near New Market",
+   "cost": 150
+  },
+  {
+   "dish": "Rosogolla and mishti doi",
+   "where": "Sweet shops (Balaram Mullick-style) citywide",
+   "cost": 100
+  },
+  {
+   "dish": "Biryani with egg and potato",
+   "where": "Famous biryani houses",
+   "cost": 400
+  }
+ ],
+ "stay": {
+  "budget": {
+   "area": "Sudder Street, Esplanade",
+   "price_min": 2500,
+   "price_max": 5000,
+   "note": "Backpacker lodges; basic but central."
+  },
+  "mid": {
+   "area": "Park Street, Salt Lake",
+   "price_min": 6000,
+   "price_max": 12000,
+   "note": "Comfortable 3-4 star hotels."
+  },
+  "luxury": {
+   "area": "Park Street, New Town, Rajarhat",
+   "price_min": 14000,
+   "price_max": 28000,
+   "note": "5-star hotels and heritage-style properties."
+  }
+ },
+ "rules": [
+  "Keep passport/visa copies; foreigners must carry ID.",
+  "Dress modestly in temples and remove shoes.",
+  "Use app cabs or prepaid taxis from the airport to avoid overcharging.",
+  "Photography near bridges, military zones and inside some temples is restricted."
+ ],
+ "packing": [
+  "Light cotton clothes",
+  "Umbrella in monsoon",
+  "Comfortable walking shoes",
+  "Cash in INR in small notes",
+  "Power bank"
+ ],
+ "nearby": [
+  "darjeeling",
+  "gangtok",
+  "shillong"
+ ]
+}

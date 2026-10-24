@@ -1,0 +1,206 @@
+{
+ "id": "hong-kong",
+ "name": "Hong Kong",
+ "bn": "হংকং",
+ "aliases": [
+  "hongkong",
+  "honkong",
+  "hong kong china",
+  "hk",
+  "kowloon"
+ ],
+ "country": "Hong Kong SAR, China",
+ "region": "Hong Kong",
+ "lat": 22.3193,
+ "lng": 114.1694,
+ "summary": "A dense skyline harbour city with Victoria Peak, markets, dim sum and Disneyland; a transit shopping destination.",
+ "best_months": [
+  10,
+  11,
+  12,
+  3,
+  4
+ ],
+ "season_note": "October-December and March-April are the best; summer is hot and typhoon-prone.",
+ "avoid_note": "Typhoon signal 8+ closes most services.",
+ "tags": [
+  "city",
+  "shopping",
+  "food",
+  "family",
+  "photography",
+  "culture"
+ ],
+ "days": {
+  "min": 3,
+  "ideal": 4
+ },
+ "emergency": {
+  "police": "999",
+  "ambulance": "999"
+ },
+ "entry_note": "Hong Kong: visa/pre-arrival registration required for Bangladeshi passport holders; check the latest rules with the embassy before booking.",
+ "reach": [
+  {
+   "mode": "Flight",
+   "how": "Dhaka to Hong Kong International Airport (via Bangkok or Singapore or direct if available) (Biman, US-Bangla, Emirates, flydubai, Turkish)",
+   "hours": 5.5,
+   "fare_min": 30000,
+   "fare_max": 55000,
+   "note": "Check direct options."
+  }
+ ],
+ "local": [
+  {
+   "mode": "MTR",
+   "group_fare": "50-250 BDT per ride"
+  },
+  {
+   "mode": "Star Ferry",
+   "group_fare": "50 BDT"
+  }
+ ],
+ "attractions": [
+  {
+   "id": "peak",
+   "name": "Victoria Peak and Peak Tram",
+   "area": "Central",
+   "tags": [
+    "photography",
+    "city"
+   ],
+   "mins": 120,
+   "fee": 1500,
+   "what": "City skyline viewing.",
+   "tip": "Go on a clear evening.",
+   "best": "sunset",
+   "indoor": false
+  },
+  {
+   "id": "disneyland",
+   "name": "Hong Kong Disneyland",
+   "area": "Lantau",
+   "tags": [
+    "family"
+   ],
+   "mins": 420,
+   "fee": 7500,
+   "what": "Theme park.",
+   "tip": "Buy online.",
+   "best": "morning",
+   "indoor": false
+  },
+  {
+   "id": "big-buddha-hk",
+   "name": "Ngong Ping 360 and Tian Tan Buddha",
+   "area": "Lantau",
+   "tags": [
+    "spiritual",
+    "hills"
+   ],
+   "mins": 300,
+   "fee": 3500,
+   "what": "Cable car and giant Buddha.",
+   "tip": "Check cable car maintenance days.",
+   "best": "morning",
+   "indoor": false
+  },
+  {
+   "id": "temple-street",
+   "name": "Temple Street Night Market",
+   "area": "Yau Ma Tei",
+   "tags": [
+    "shopping",
+    "food"
+   ],
+   "mins": 120,
+   "fee": 0,
+   "what": "Market with street food.",
+   "tip": "Bargain.",
+   "best": "sunset",
+   "indoor": false
+  },
+  {
+   "id": "star-ferry",
+   "name": "Star Ferry and Avenue of Stars",
+   "area": "Tsim Sha Tsui",
+   "tags": [
+    "water",
+    "photography"
+   ],
+   "mins": 90,
+   "fee": 50,
+   "what": "Harbour view and skyline light show at 8pm.",
+   "tip": "Free.",
+   "best": "sunset",
+   "indoor": false
+  },
+  {
+   "id": "mong-kok",
+   "name": "Mong Kok Markets",
+   "area": "Mong Kok",
+   "tags": [
+    "shopping",
+    "city"
+   ],
+   "mins": 150,
+   "fee": 0,
+   "what": "Ladies Market and Sneaker Street.",
+   "tip": "Bargain.",
+   "best": "afternoon",
+   "indoor": false
+  }
+ ],
+ "food": [
+  {
+   "dish": "Dim sum",
+   "where": "Teahouses",
+   "cost": 600
+  },
+  {
+   "dish": "Wonton noodles",
+   "where": "Local shops",
+   "cost": 350
+  },
+  {
+   "dish": "Egg waffle",
+   "where": "Street",
+   "cost": 120
+  }
+ ],
+ "stay": {
+  "budget": {
+   "area": "Chungking Mansions, Mong Kok",
+   "price_min": 6500,
+   "price_max": 12000,
+   "note": "Very small rooms."
+  },
+  "mid": {
+   "area": "TST, Causeway Bay",
+   "price_min": 14000,
+   "price_max": 28000,
+   "note": "Compact 3-4 star hotels."
+  },
+  "luxury": {
+   "area": "Central, TST",
+   "price_min": 35000,
+   "price_max": 90000,
+   "note": "5-star hotels."
+  }
+ },
+ "rules": [
+  "Spitting and littering fined.",
+  "Hotels are tiny.",
+  "Vaping banned.",
+  "Respect local customs."
+ ],
+ "packing": [
+  "Light jacket",
+  "Umbrella",
+  "Comfortable shoes",
+  "Power adapter (UK type)"
+ ],
+ "nearby": [
+  "bangkok"
+ ]
+}

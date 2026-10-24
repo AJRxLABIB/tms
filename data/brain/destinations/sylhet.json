@@ -1,0 +1,275 @@
+{
+ "id": "sylhet",
+ "name": "Sylhet",
+ "bn": "সিলেট",
+ "aliases": [
+  "sylhet city",
+  "silet",
+  "sileth"
+ ],
+ "region": "Sylhet Division",
+ "lat": 24.8949,
+ "lng": 91.8687,
+ "summary": "Green hills, tea gardens, rivers and shrines in the north-east. Sylhet is the base for Ratargul swamp forest, Jaflong, Bichanakandi, Lalakhal and the tea estates.",
+ "best_months": [
+  10,
+  11,
+  12,
+  1,
+  2,
+  3
+ ],
+ "season_note": "October to March is dry and clear. June to September has heavy rain; Ratargul is best in the rainy season when the swamp fills, but roads can flood.",
+ "avoid_note": "Very heavy rain can close roads to Jaflong and Bichanakandi. Check the weather before the day trip.",
+ "tags": [
+  "nature",
+  "tea",
+  "water",
+  "photography",
+  "family",
+  "culture",
+  "spiritual",
+  "adventure"
+ ],
+ "days": {
+  "min": 2,
+  "ideal": 3
+ },
+ "reach": [
+  {
+   "mode": "Train",
+   "how": "Parabat Express, Jayantika Express, Upaban Express and others from Kamalapur to Sylhet (check e-ticket for times)",
+   "hours": 7,
+   "fare_min": 420,
+   "fare_max": 1300,
+   "note": "Most comfortable and reliable. Book early."
+  },
+  {
+   "mode": "Bus",
+   "how": "AC coaches from Dhaka (Sayedabad, Kamalapur) - Hanif, Ena, Shyamoli",
+   "hours": 7,
+   "fare_min": 900,
+   "fare_max": 2000,
+   "note": "Road traffic near Dhaka can add hours."
+  },
+  {
+   "mode": "Flight",
+   "how": "Dhaka to Osmani International Airport (Biman, US-Bangla, Novoair)",
+   "hours": 1,
+   "fare_min": 3800,
+   "fare_max": 7500,
+   "note": "Quick and good for a 2-day trip."
+  }
+ ],
+ "local": [
+  {
+   "mode": "CNG auto / rickshaw",
+   "group_fare": "100-300 BDT inside the city",
+   "note": "Agree the fare first."
+  },
+  {
+   "mode": "Private car or microbus (day hire)",
+   "group_fare": "5000-9000 BDT per day",
+   "note": "Best for Jaflong, Ratargul and Bichanakandi."
+  }
+ ],
+ "attractions": [
+  {
+   "id": "shahjalal",
+   "name": "Hazrat Shah Jalal (R.) Dargah",
+   "area": "City centre",
+   "tags": [
+    "spiritual",
+    "culture"
+   ],
+   "mins": 90,
+   "fee": 0,
+   "what": "A famous 14th-century Sufi shrine with a pond of old catfish. Pilgrims visit day and night.",
+   "tip": "Dress modestly. Remove shoes. Evenings are peaceful.",
+   "best": "afternoon",
+   "indoor": true
+  },
+  {
+   "id": "ratargul",
+   "name": "Ratargul Swamp Forest",
+   "area": "Gowainghat, 26 km",
+   "tags": [
+    "nature",
+    "photography",
+    "adventure"
+   ],
+   "mins": 240,
+   "fee": 300,
+   "what": "Take a boat through submerged trees in Bangladesh's only freshwater swamp forest. Calm, green and very photogenic.",
+   "tip": "Best in the rainy season (June-October). Life jackets are available; use them. Boat rental is per boat.",
+   "best": "morning",
+   "indoor": false
+  },
+  {
+   "id": "jaflong",
+   "name": "Jaflong",
+   "area": "Gowainghat, 60 km",
+   "tags": [
+    "nature",
+    "photography",
+    "family"
+   ],
+   "mins": 240,
+   "fee": 50,
+   "what": "Rocks and river on the Meghalaya border: stone-collection areas, the Piyain river and hills.",
+   "tip": "Go early. Roads are rough in rain. Bring cash for the boats.",
+   "best": "morning",
+   "indoor": false
+  },
+  {
+   "id": "bichanakandi",
+   "name": "Bichanakandi (Bichnakandi)",
+   "area": "Gowainghat",
+   "tags": [
+    "nature",
+    "photography"
+   ],
+   "mins": 180,
+   "fee": 30,
+   "what": "A clear, cool stream flowing from the hills with stone beds and boats. Some tourists go for the quiet and the view.",
+   "tip": "Wear shoes with grip. Visit in the dry season.",
+   "best": "morning",
+   "indoor": false
+  },
+  {
+   "id": "lalakhal",
+   "name": "Lalakhal",
+   "area": "Jaintiapur",
+   "tags": [
+    "nature",
+    "photography",
+    "water"
+   ],
+   "mins": 180,
+   "fee": 100,
+   "what": "A river with blue-green water and a boat ride through jungle edges.",
+   "tip": "Needs fair weather. Hire a boat with a life jacket.",
+   "best": "morning",
+   "indoor": false
+  },
+  {
+   "id": "tea-garden",
+   "name": "Malnichhara Tea Estate",
+   "area": "City edge",
+   "tags": [
+    "tea",
+    "nature",
+    "photography"
+   ],
+   "mins": 120,
+   "fee": 0,
+   "what": "One of the oldest tea estates, a short drive from the city centre.",
+   "tip": "Visit in the morning for soft light.",
+   "best": "morning",
+   "indoor": false
+  },
+  {
+   "id": "ali-amjad",
+   "name": "Ali Amjad's Clock",
+   "area": "Kinbridge area",
+   "tags": [
+    "history",
+    "culture"
+   ],
+   "mins": 45,
+   "fee": 0,
+   "what": "A colonial-era clock tower by the Surma river.",
+   "tip": "Combine with a walk on the river bridge.",
+   "best": "afternoon",
+   "indoor": false
+  },
+  {
+   "id": "museum",
+   "name": "Osmani Museum",
+   "area": "City",
+   "tags": [
+    "history",
+    "culture"
+   ],
+   "mins": 60,
+   "fee": 10,
+   "what": "A museum on Bangladesh's Liberation War commander General M. A. G. Osmani.",
+   "tip": "Check opening hours; closed some days.",
+   "best": "afternoon",
+   "indoor": true
+  },
+  {
+   "id": "panthumai",
+   "name": "Panthumai Waterfall (Kasia-Jaflong road)",
+   "area": "Gowainghat",
+   "tags": [
+    "nature",
+    "adventure"
+   ],
+   "mins": 120,
+   "fee": 50,
+   "what": "A small waterfall and clear water, usually best in the rains.",
+   "tip": "Ask drivers about the road condition.",
+   "best": "morning",
+   "indoor": false
+  }
+ ],
+ "food": [
+  {
+   "dish": "Shatkora beef curry",
+   "where": "Panshi Restaurant and others",
+   "cost": 350
+  },
+  {
+   "dish": "Seven-colour tea",
+   "where": "Nilkantha (Sreemangal)",
+   "cost": 100
+  },
+  {
+   "dish": "Akhni (spiced rice and meat)",
+   "where": "Local restaurants",
+   "cost": 300
+  },
+  {
+   "dish": "Patla khichuri with ilish",
+   "where": "Hotels",
+   "cost": 300
+  }
+ ],
+ "stay": {
+  "budget": {
+   "area": "Zindabazar, Amberkhana",
+   "price_min": 1500,
+   "price_max": 3000,
+   "note": "Simple hotels with basic AC rooms."
+  },
+  "mid": {
+   "area": "Zindabazar, Amberkhana, Kumarpara",
+   "price_min": 3500,
+   "price_max": 7000,
+   "note": "Good city hotels with breakfast."
+  },
+  "luxury": {
+   "area": "Hill and river resorts outside the city",
+   "price_min": 9000,
+   "price_max": 18000,
+   "note": "Resorts with pools and views."
+  }
+ },
+ "rules": [
+  "Take life jackets on every boat.",
+  "Do not buy stones or fossils collected illegally.",
+  "Carry cash: ATMs are limited at Jaflong and Ratargul."
+ ],
+ "packing": [
+  "Rain jacket or umbrella",
+  "Quick-dry clothes",
+  "Waterproof phone bag",
+  "Comfortable shoes with grip",
+  "Insect repellent"
+ ],
+ "nearby": [
+  "sreemangal"
+ ],
+ "country": "Bangladesh"
+}

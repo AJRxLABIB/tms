@@ -1,0 +1,273 @@
+{
+ "id": "darjeeling",
+ "name": "Darjeeling",
+ "bn": "দার্জিলিং",
+ "aliases": [
+  "darjiling",
+  "darjeling",
+  "dorjeeling",
+  "darjeeling hills"
+ ],
+ "country": "India",
+ "region": "West Bengal",
+ "lat": 27.036,
+ "lng": 88.2627,
+ "summary": "The Queen of Hills: Himalayan views of Kanchenjunga, tea estates, the Toy Train and Tibetan culture.",
+ "best_months": [
+  3,
+  4,
+  5,
+  10,
+  11
+ ],
+ "season_note": "March to May and October to November have the clearest mountain views. June to September is monsoon with landslides; December-February is very cold.",
+ "avoid_note": "Landslides can block the Siliguri-Darjeeling roads in heavy rain.",
+ "tags": [
+  "hills",
+  "tea",
+  "nature",
+  "photography",
+  "family",
+  "culture",
+  "romantic"
+ ],
+ "days": {
+  "min": 3,
+  "ideal": 4
+ },
+ "emergency": {
+  "police": "100 (or 112)",
+  "ambulance": "102 or 108"
+ },
+ "entry_note": "Indian visa is required for Bangladeshi passport holders (apply via the Indian Visa Application Centre, usually medical/tourist/e-visa categories as currently offered). Check the latest rules with the embassy before booking.",
+ "reach": [
+  {
+   "mode": "Flight",
+   "how": "Dhaka to Bagdogra (Siliguri) (Biman, US-Bangla, IndiGo, Air India)",
+   "hours": 1.3,
+   "fare_min": 9500,
+   "fare_max": 19000,
+   "note": "Then 3-4 hours by shared jeep to Darjeeling."
+  },
+  {
+   "mode": "Bus + jeep",
+   "how": "Dhaka to Siliguri via Banglabandha-Fulbari or Benapole route, then shared jeep to Darjeeling",
+   "hours": 16,
+   "fare_min": 3500,
+   "fare_max": 6500,
+   "note": "Long but cheaper. Bangladesh-Siliguri land routes may need prior permission, so check."
+  },
+  {
+   "mode": "Train",
+   "how": "Kolkata to New Jalpaiguri (e.g. Darjeeling Mail), then jeep to Darjeeling",
+   "hours": 12,
+   "fare_min": 1200,
+   "fare_max": 3000,
+   "note": "Combine with Dhaka-Kolkata trip."
+  }
+ ],
+ "local": [
+  {
+   "mode": "Shared jeep",
+   "group_fare": "100-200 BDT per seat for sightseeing hops"
+  },
+  {
+   "mode": "Private taxi (full day)",
+   "group_fare": "4000-7000 BDT for sightseeing circuit",
+   "note": "Tiger Hill early sunrise runs cost more."
+  },
+  {
+   "mode": "Toy Train joy ride",
+   "group_fare": "2500-3500 BDT per person",
+   "note": "Steam ride to Ghum and back."
+  }
+ ],
+ "attractions": [
+  {
+   "id": "tigerhill",
+   "name": "Tiger Hill Sunrise",
+   "area": "Ghum",
+   "tags": [
+    "photography",
+    "hills"
+   ],
+   "mins": 120,
+   "fee": 120,
+   "what": "Pre-dawn trip for sunrise over Kanchenjunga and sometimes Everest.",
+   "tip": "Leave around 3:30-4am; bring a warm jacket.",
+   "best": "morning",
+   "indoor": false
+  },
+  {
+   "id": "toytrain",
+   "name": "Darjeeling Himalayan Railway (Toy Train)",
+   "area": "Darjeeling/Ghum",
+   "tags": [
+    "history",
+    "family",
+    "photography"
+   ],
+   "mins": 120,
+   "fee": 2500,
+   "what": "A UNESCO World Heritage narrow-gauge steam ride through Batasia Loop.",
+   "tip": "Book ahead online; breakdowns happen.",
+   "best": "morning",
+   "indoor": false
+  },
+  {
+   "id": "batasia",
+   "name": "Batasia Loop and War Memorial",
+   "area": "Ghum",
+   "tags": [
+    "photography",
+    "history"
+   ],
+   "mins": 40,
+   "fee": 20,
+   "what": "A spiral rail loop with a garden and mountain views.",
+   "tip": "Come right after the toy train.",
+   "best": "morning",
+   "indoor": false
+  },
+  {
+   "id": "mall",
+   "name": "The Mall and Chowrasta",
+   "area": "Central",
+   "tags": [
+    "shopping",
+    "food",
+    "relaxing"
+   ],
+   "mins": 90,
+   "fee": 0,
+   "what": "The heart of town with cafes, shops and tea stalls.",
+   "tip": "Try tea at Chowrasta and shop for Darjeeling tea.",
+   "best": "afternoon",
+   "indoor": false
+  },
+  {
+   "id": "hhmi",
+   "name": "Himalayan Mountaineering Institute and Zoo",
+   "area": "Birch Hill",
+   "tags": [
+    "nature",
+    "history",
+    "family"
+   ],
+   "mins": 120,
+   "fee": 100,
+   "what": "Museum on Everest expeditions and the snow leopard breeding centre.",
+   "tip": "Tickets are combined; open daily except some Thursdays.",
+   "best": "any",
+   "indoor": false
+  },
+  {
+   "id": "tea-estate",
+   "name": "Happy Valley Tea Estate",
+   "area": "Lebong",
+   "tags": [
+    "tea",
+    "nature",
+    "photography"
+   ],
+   "mins": 90,
+   "fee": 60,
+   "what": "A working tea estate producing famous Darjeeling tea.",
+   "tip": "Factory tours are best in the morning.",
+   "best": "morning",
+   "indoor": false
+  },
+  {
+   "id": "monastery",
+   "name": "Ghum Monastery and Peace Pagoda",
+   "area": "Ghum/Jalapahar",
+   "tags": [
+    "spiritual",
+    "culture",
+    "photography"
+   ],
+   "mins": 90,
+   "fee": 0,
+   "what": "Tibetan Buddhist monasteries and a white peace pagoda with views.",
+   "tip": "Dress modestly; ask before photographing monks.",
+   "best": "any",
+   "indoor": true
+  },
+  {
+   "id": "rock-garden",
+   "name": "Rock Garden and Ganga Maya Park",
+   "area": "Ghoom-Darjeeling road",
+   "tags": [
+    "nature",
+    "family",
+    "photography"
+   ],
+   "mins": 90,
+   "fee": 60,
+   "what": "Landscaped garden with waterfall on a hill road.",
+   "tip": "Wear shoes with grip.",
+   "best": "morning",
+   "indoor": false
+  }
+ ],
+ "food": [
+  {
+   "dish": "Momos",
+   "where": "Street stalls around Chowrasta",
+   "cost": 120
+  },
+  {
+   "dish": "Thukpa",
+   "where": "Tibetan cafes on the Mall",
+   "cost": 200
+  },
+  {
+   "dish": "Darjeeling tea",
+   "where": "Tea shops",
+   "cost": 80
+  },
+  {
+   "dish": "Thali",
+   "where": "Local restaurants",
+   "cost": 300
+  }
+ ],
+ "stay": {
+  "budget": {
+   "area": "Chowrasta, Mall road",
+   "price_min": 2000,
+   "price_max": 4500,
+   "note": "Basic lodges; cold in winter, check for heater."
+  },
+  "mid": {
+   "area": "Mall area, Jalapahar",
+   "price_min": 5000,
+   "price_max": 10000,
+   "note": "Hotels with Kanchenjunga view rooms."
+  },
+  "luxury": {
+   "area": "Heritage hotels and resorts",
+   "price_min": 12000,
+   "price_max": 25000,
+   "note": "A few colonial-style hotels and tea resorts."
+  }
+ },
+ "rules": [
+  "Drone use is restricted in many areas of the Himalayan border region.",
+  "Dress modestly at monasteries; remove shoes.",
+  "Plastic bag bans operate in parts of the hills.",
+  "Inner-line style permits are not needed for Darjeeling itself."
+ ],
+ "packing": [
+  "Warm jacket and woollens",
+  "Rain jacket",
+  "Sturdy shoes",
+  "Motion sickness tablets",
+  "Sunscreen"
+ ],
+ "nearby": [
+  "gangtok",
+  "kolkata",
+  "kathmandu"
+ ]
+}

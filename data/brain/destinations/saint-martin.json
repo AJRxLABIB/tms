@@ -1,0 +1,187 @@
+{
+ "id": "saint-martin",
+ "name": "Saint Martin's Island",
+ "bn": "সেন্ট মার্টিন",
+ "aliases": [
+  "saint martin",
+  "st martin",
+  "sent martin",
+  "saint martins",
+  "narikel jinjira",
+  "coconut island"
+ ],
+ "region": "Chattogram Division",
+ "lat": 20.627,
+ "lng": 92.322,
+ "summary": "Bangladesh's only coral island: clear water, coconut palms, quiet beaches and sunset walks. A short trip from Teknaf, reachable only by ship.",
+ "best_months": [
+  11,
+  12,
+  1,
+  2,
+  3
+ ],
+ "season_note": "Ships run roughly November to March or April when the sea is calm. In the rough season trips stop.",
+ "avoid_note": "Rules for tourist numbers, overnight stays and ship schedules change. Always check the latest local government notice before you book.",
+ "tags": [
+  "beach",
+  "romantic",
+  "nature",
+  "photography",
+  "relaxing",
+  "water",
+  "adventure"
+ ],
+ "days": {
+  "min": 2,
+  "ideal": 3
+ },
+ "reach": [
+  {
+   "mode": "Bus + ship",
+   "how": "Bus or flight to Cox's Bazar, then road to Teknaf, then ship from Teknaf jetty (operators such as Keari Sindbad, Bay Cruise, Sea Truck)",
+   "hours": 12,
+   "fare_min": 2800,
+   "fare_max": 6500,
+   "note": "Ship takes 2 to 3 hours each way. Fares cover the ship ticket plus the road. Confirm the schedule the day before."
+  }
+ ],
+ "local": [
+  {
+   "mode": "Walking",
+   "group_fare": "free",
+   "note": "The island is small and walkable end to end in a few hours."
+  },
+  {
+   "mode": "Bicycle / battery van",
+   "group_fare": "100-300 BDT",
+   "note": "Good for the long beach road."
+  }
+ ],
+ "attractions": [
+  {
+   "id": "chera-dwip",
+   "name": "Chheradia (Cheradia) Island",
+   "area": "South tip of the island",
+   "tags": [
+    "beach",
+    "nature",
+    "photography"
+   ],
+   "mins": 120,
+   "fee": 0,
+   "what": "A rocky tip reached at low tide, with corals and tide pools. A good place for sunset.",
+   "tip": "Check the tide time before you go. Do not remove corals or shells.",
+   "best": "sunset",
+   "indoor": false
+  },
+  {
+   "id": "beach-walk",
+   "name": "West coast beach walk",
+   "area": "Whole island",
+   "tags": [
+    "beach",
+    "relaxing"
+   ],
+   "mins": 120,
+   "fee": 0,
+   "what": "Walk the long, quiet coastline under the coconut palms.",
+   "tip": "Evening walks are the best.",
+   "best": "afternoon",
+   "indoor": false
+  },
+  {
+   "id": "snorkel",
+   "name": "Snorkelling and swimming",
+   "area": "Clear-water spots",
+   "tags": [
+    "water",
+    "adventure"
+   ],
+   "mins": 120,
+   "fee": 300,
+   "what": "Swim and snorkel in the clear shallows where the sea is calm.",
+   "tip": "Rent a life jacket. Stay close to shore.",
+   "best": "morning",
+   "indoor": false
+  },
+  {
+   "id": "sunset",
+   "name": "Sunset point",
+   "area": "West beach",
+   "tags": [
+    "photography",
+    "romantic"
+   ],
+   "mins": 60,
+   "fee": 0,
+   "what": "Sit on the sand for one of the best sunsets in the country.",
+   "tip": "Bring a light jacket for the breeze.",
+   "best": "sunset",
+   "indoor": false
+  },
+  {
+   "id": "village",
+   "name": "Island village and local seafood",
+   "area": "Main village",
+   "tags": [
+    "culture",
+    "food"
+   ],
+   "mins": 90,
+   "fee": 0,
+   "what": "Walk through the fishing village, see dried fish and boats, eat the daily catch.",
+   "tip": "Support local stalls and take your rubbish back.",
+   "best": "afternoon",
+   "indoor": false
+  }
+ ],
+ "food": [
+  {
+   "dish": "Fresh grilled fish and lobster",
+   "where": "Island restaurants",
+   "cost": 700
+  },
+  {
+   "dish": "Coconut and local snacks",
+   "where": "Beach stalls",
+   "cost": 100
+  }
+ ],
+ "stay": {
+  "budget": {
+   "area": "Main village",
+   "price_min": 1500,
+   "price_max": 3000,
+   "note": "Basic rooms, limited electricity."
+  },
+  "mid": {
+   "area": "West beach",
+   "price_min": 3500,
+   "price_max": 7000,
+   "note": "Resort cottages."
+  },
+  "luxury": {
+   "area": "West beach resorts",
+   "price_min": 8000,
+   "price_max": 15000,
+   "note": "Best island resorts; book well ahead."
+  }
+ },
+ "rules": [
+  "Do not litter, pick corals or buy shells or turtles.",
+  "No loud music or bonfires: the island is a protected area.",
+  "Keep your ship ticket and ID with you."
+ ],
+ "packing": [
+  "Sunscreen",
+  "Power bank (electricity is limited)",
+  "Cash (ATMs are scarce)",
+  "Light clothes and swimwear",
+  "Reusable water bottle"
+ ],
+ "nearby": [
+  "coxs-bazar"
+ ],
+ "country": "Bangladesh"
+}

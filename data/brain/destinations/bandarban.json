@@ -1,0 +1,250 @@
+{
+ "id": "bandarban",
+ "name": "Bandarban",
+ "bn": "বান্দরবান",
+ "aliases": [
+  "bandorban",
+  "bandarbon",
+  "bandarban hills"
+ ],
+ "region": "Chattogram Hill Tracts",
+ "lat": 22.1953,
+ "lng": 92.2184,
+ "summary": "Bangladesh's highest hills: cloud-level views, waterfalls, river canyons and indigenous villages. Best for adventurers and photographers.",
+ "best_months": [
+  10,
+  11,
+  12,
+  1,
+  2,
+  3
+ ],
+ "season_note": "October to March is clear and cool. Monsoon brings clouds and slippery roads; waterfalls are strongest then but some roads close.",
+ "avoid_note": "Check current tourist permission and safety advice for Nilgiri, Nafakhum and remote treks before you go. Some routes require a local guide.",
+ "tags": [
+  "hills",
+  "adventure",
+  "nature",
+  "photography",
+  "water",
+  "culture",
+  "romantic"
+ ],
+ "days": {
+  "min": 2,
+  "ideal": 3
+ },
+ "reach": [
+  {
+   "mode": "Bus",
+   "how": "AC coach from Dhaka (Sayedabad, Kamalapur) via Chattogram, 9 to 11 hours - Hanif, S Alam, Eagle",
+   "hours": 10,
+   "fare_min": 900,
+   "fare_max": 1800,
+   "note": "Many people take a night coach and arrive at dawn."
+  },
+  {
+   "mode": "Bus + local",
+   "how": "Fly to Cox's Bazar or Chattogram and continue by road",
+   "hours": 6,
+   "fare_min": 2500,
+   "fare_max": 7500,
+   "note": "Faster but more expensive."
+  }
+ ],
+ "local": [
+  {
+   "mode": "Chander Gari (jeep)",
+   "group_fare": "5000-9000 BDT per day",
+   "note": "Standard way to reach the hill spots."
+  },
+  {
+   "mode": "CNG auto",
+   "group_fare": "200-500 BDT in town",
+   "note": "Only inside Bandarban town."
+  }
+ ],
+ "attractions": [
+  {
+   "id": "nilgiri",
+   "name": "Nilgiri Hills",
+   "area": "Thanchi road, 46 km",
+   "tags": [
+    "hills",
+    "photography",
+    "adventure"
+   ],
+   "mins": 180,
+   "fee": 50,
+   "what": "A high hilltop above the clouds with a view over the whole valley. Sunrise and sunset are famous.",
+   "tip": "Check permission and current rules; go with a local guide.",
+   "best": "sunset",
+   "indoor": false
+  },
+  {
+   "id": "nafakhum",
+   "name": "Nafakhum Waterfall",
+   "area": "Remakri, Thanchi",
+   "tags": [
+    "nature",
+    "adventure",
+    "water"
+   ],
+   "mins": 420,
+   "fee": 200,
+   "what": "A tall waterfall deep in the hills, reached by boat and a trek. Best from July to October.",
+   "tip": "Hard trip. Needs a guide and a full day.",
+   "best": "morning",
+   "indoor": false
+  },
+  {
+   "id": "shoilopropat",
+   "name": "Shoilopropat Waterfall",
+   "area": "Near Bandarban town",
+   "tags": [
+    "nature",
+    "water",
+    "family"
+   ],
+   "mins": 150,
+   "fee": 30,
+   "what": "An easy waterfall with a pool, popular for swimming.",
+   "tip": "Go early to avoid the crowd. Watch slippery rocks.",
+   "best": "morning",
+   "indoor": false
+  },
+  {
+   "id": "golden-temple",
+   "name": "Buddha Dhatu Jadi (Golden Temple)",
+   "area": "Balaghata",
+   "tags": [
+    "culture",
+    "spiritual",
+    "photography"
+   ],
+   "mins": 90,
+   "fee": 0,
+   "what": "The biggest Theravada Buddhist temple in the country, with gold-coloured buildings and a view over the town.",
+   "tip": "Dress modestly. Remove shoes.",
+   "best": "afternoon",
+   "indoor": true
+  },
+  {
+   "id": "meghla",
+   "name": "Meghla Tourism Complex and Sky View",
+   "area": "Bandarban town",
+   "tags": [
+    "nature",
+    "family",
+    "photography"
+   ],
+   "mins": 120,
+   "fee": 40,
+   "what": "A cable car, a viewpoint and a small park on a hill.",
+   "tip": "Good as an easy first-day stop.",
+   "best": "afternoon",
+   "indoor": false
+  },
+  {
+   "id": "boga-lake",
+   "name": "Boga Lake",
+   "area": "Ruma",
+   "tags": [
+    "hills",
+    "adventure",
+    "nature"
+   ],
+   "mins": 480,
+   "fee": 300,
+   "what": "A high natural lake in the hills, normally an overnight trek.",
+   "tip": "Hard. Check access, take a guide.",
+   "best": "morning",
+   "indoor": false
+  },
+  {
+   "id": "sangu",
+   "name": "Sangu River boat trip",
+   "area": "Sangu river",
+   "tags": [
+    "water",
+    "nature",
+    "photography"
+   ],
+   "mins": 180,
+   "fee": 100,
+   "what": "A scenic boat ride between hills and bamboo villages.",
+   "tip": "Take a life jacket.",
+   "best": "morning",
+   "indoor": false
+  },
+  {
+   "id": "chimbuk",
+   "name": "Chimbuk Hill",
+   "area": "Thanchi road",
+   "tags": [
+    "hills",
+    "photography"
+   ],
+   "mins": 150,
+   "fee": 40,
+   "what": "An easier viewpoint hill with a famous sunrise and views over clouds.",
+   "tip": "Go early. Roads are steep.",
+   "best": "morning",
+   "indoor": false
+  }
+ ],
+ "food": [
+  {
+   "dish": "Bamboo chicken and bamboo rice",
+   "where": "Local restaurants and villages",
+   "cost": 350
+  },
+  {
+   "dish": "Hill-style curry and mashed vegetables",
+   "where": "Local eateries",
+   "cost": 250
+  },
+  {
+   "dish": "Local tea and fruit",
+   "where": "Roadside stalls",
+   "cost": 80
+  }
+ ],
+ "stay": {
+  "budget": {
+   "area": "Bandarban town",
+   "price_min": 1200,
+   "price_max": 2800,
+   "note": "Basic hotels."
+  },
+  "mid": {
+   "area": "Bandarban town and hill resorts",
+   "price_min": 3500,
+   "price_max": 7000,
+   "note": "Hotels with views."
+  },
+  "luxury": {
+   "area": "Hill resorts (Nilachal, Shoilo Propat area)",
+   "price_min": 8000,
+   "price_max": 15000,
+   "note": "Resorts with valley views."
+  }
+ },
+ "rules": [
+  "Take a local guide for remote treks.",
+  "Respect indigenous villages: ask before you take photos.",
+  "Check the latest permission rules before heading to remote hills."
+ ],
+ "packing": [
+  "Sturdy shoes",
+  "Warm layer for the evening",
+  "Rain jacket",
+  "Power bank",
+  "Cash (ATMs are few)"
+ ],
+ "nearby": [
+  "coxs-bazar",
+  "rangamati"
+ ],
+ "country": "Bangladesh"
+}

@@ -246,6 +246,18 @@ final class OfflineAssistant
         if ($guard['block']) { $out['reply'] = InjectionGuard::refusal($language); return $out; }
         if ($pageContext !== '' && InjectionGuard::assess($pageContext)['block']) $pageContext = '';
 
+        // Built-in TourBuddy Brain first for travel-knowledge questions (routes, costs, best time, food, plans...). Catalogue
+        // questions (packages, hotels, bookings) and anything it does not understand continue to the catalogue tools below.
+        if (!preg_match('/\b(packages?|hotels?|bookings?|my trip)\b/i', $message)) {
+            try {
+                require_once dirname(__DIR__) . '/brain/BrainChat.php';
+                $sess = session_status() === PHP_SESSION_ACTIVE;
+                $b = BrainChat::reply($message, $sess && is_array($_SESSION['brain_ctx'] ?? null) ? $_SESSION['brain_ctx'] : []);
+                if ($b !== null && $sess) $_SESSION['brain_ctx'] = $b['state'];
+                if ($b === null) BrainChat::logUnknown($message);
+                if ($b !== null) { $out['reply'] = $b['reply']; $out['suggestions'] = $b['suggestions']; $out['engine'] = 'brain'; return $out; }
+            } catch (Throwable $e) { error_log('[TourBuddy Brain chat] ' . $e->getMessage()); }
+        }
         $signedIn = ($email !== 'guest' && $email !== '');
         $results = []; $browse = false;
         try {

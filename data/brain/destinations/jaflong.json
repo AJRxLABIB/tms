@@ -1,0 +1,193 @@
+{
+ "id": "jaflong",
+ "name": "Jaflong",
+ "bn": "জাফলং",
+ "aliases": [
+  "jaflong sylhet",
+  "zaflong",
+  "jaflang",
+  "jafflong"
+ ],
+ "region": "Sylhet Division (Gowainghat)",
+ "lat": 25.1633,
+ "lng": 92.0167,
+ "summary": "A border town on the Dawki river with stone collection, hills of Meghalaya in view, tea gardens and the Khasi village life.",
+ "best_months": [
+  10,
+  11,
+  12,
+  1,
+  2,
+  3
+ ],
+ "season_note": "Winter has clear views and calm water. Monsoon brings strong flow and spectacular waterfalls but can flood the road.",
+ "tags": [
+  "nature",
+  "water",
+  "adventure",
+  "photography",
+  "family",
+  "culture"
+ ],
+ "days": {
+  "min": 1,
+  "ideal": 1
+ },
+ "reach": [
+  {
+   "mode": "Bus + CNG",
+   "how": "Bus or train Dhaka to Sylhet, then car or bus to Jaflong (about 1.5 hrs)",
+   "hours": 9,
+   "fare_min": 1000,
+   "fare_max": 2400,
+   "note": "Often combined with Ratargul or Bichanakandi."
+  }
+ ],
+ "local": [
+  {
+   "mode": "Private car from Sylhet",
+   "group_fare": "4000-6500 BDT round trip",
+   "note": "Day hire often covers several sites."
+  },
+  {
+   "mode": "Local bus or CNG from Sylhet",
+   "group_fare": "80-300 BDT per person",
+   "note": "Check last return time."
+  }
+ ],
+ "attractions": [
+  {
+   "id": "piyain-river",
+   "name": "Piyain river and stone beds",
+   "area": "Jaflong",
+   "tags": [
+    "nature",
+    "water",
+    "photography"
+   ],
+   "mins": 120,
+   "fee": 0,
+   "what": "Wide river bed with piles of stones, boats and views of Meghalaya hills.",
+   "tip": "Beware slippery rocks and strong current in rainy season.",
+   "best": "morning",
+   "indoor": false
+  },
+  {
+   "id": "tea-estate",
+   "name": "Jaflong tea estate",
+   "area": "Jaflong",
+   "tags": [
+    "tea",
+    "nature",
+    "photography"
+   ],
+   "mins": 60,
+   "fee": 0,
+   "what": "Green tea slopes along the road with border hills.",
+   "tip": "Stay on paths.",
+   "best": "morning",
+   "indoor": false
+  },
+  {
+   "id": "khasi-punji",
+   "name": "Khasi village (Pan Punji)",
+   "area": "Near Jaflong",
+   "tags": [
+    "culture",
+    "nature"
+   ],
+   "mins": 90,
+   "fee": 50,
+   "what": "A Khasi village known for betel leaf cultivation and tidy hillside homes.",
+   "tip": "Ask before taking photos of people.",
+   "best": "afternoon",
+   "indoor": false
+  },
+  {
+   "id": "boat-dawki",
+   "name": "Boat ride on the Dawki river",
+   "area": "Jaflong",
+   "tags": [
+    "water",
+    "family",
+    "photography"
+   ],
+   "mins": 60,
+   "fee": 0,
+   "what": "Hired boat to see stone workers and views of the border hills.",
+   "tip": "Do not cross or touch the border line.",
+   "best": "any",
+   "indoor": false
+  },
+  {
+   "id": "zero-point",
+   "name": "Zero Point and border view",
+   "area": "Jaflong",
+   "tags": [
+    "nature",
+    "photography"
+   ],
+   "mins": 45,
+   "fee": 0,
+   "what": "Viewpoint of the border area; bring identity papers.",
+   "tip": "Follow BGB (border guard) instructions.",
+   "best": "afternoon",
+   "indoor": false
+  }
+ ],
+ "food": [
+  {
+   "dish": "Fish curry with rice",
+   "where": "Local restaurants",
+   "cost": 250
+  },
+  {
+   "dish": "Khasi betel leaf paan",
+   "where": "Stalls",
+   "cost": 20
+  },
+  {
+   "dish": "Sylhet tea and biscuits",
+   "where": "Tea stalls",
+   "cost": 30
+  }
+ ],
+ "stay": {
+  "budget": {
+   "area": "No stay at the site; use the nearby town",
+   "price_min": 0,
+   "price_max": 0,
+   "note": "Day-trip place."
+  },
+  "mid": {
+   "area": "No stay at the site; use the nearby town",
+   "price_min": 0,
+   "price_max": 0,
+   "note": "Day-trip place."
+  },
+  "luxury": {
+   "area": "No stay at the site; use the nearby town",
+   "price_min": 0,
+   "price_max": 0,
+   "note": "Day-trip place."
+  }
+ },
+ "rules": [
+  "Obey border guard instructions.",
+  "Do not collect stones from the river.",
+  "Keep your ID with you."
+ ],
+ "packing": [
+  "Hat",
+  "Water",
+  "Light rain jacket",
+  "Comfortable shoes with grip"
+ ],
+ "nearby": [
+  "sylhet",
+  "ratargul",
+  "lalakhali",
+  "sreemangal"
+ ],
+ "country": "Bangladesh"
+}

@@ -1,0 +1,193 @@
+{
+ "id": "bogura",
+ "name": "Bogura",
+ "bn": "বগুড়া",
+ "aliases": [
+  "bogura",
+  "bogra",
+  "bogurah",
+  "bogra sadar"
+ ],
+ "region": "Rajshahi Division",
+ "lat": 24.85,
+ "lng": 89.37,
+ "summary": "A major northern city, gateway to Mahasthangarh, famous for sweet curd (doi) and Behula Lakhindar Basar Ghar.",
+ "best_months": [
+  10,
+  11,
+  12,
+  1,
+  2,
+  3
+ ],
+ "season_note": "Winter is best. Summers are hot.",
+ "tags": [
+  "history",
+  "food",
+  "culture",
+  "family",
+  "city"
+ ],
+ "days": {
+  "min": 1,
+  "ideal": 2
+ },
+ "reach": [
+  {
+   "mode": "Bus",
+   "how": "Bus Dhaka to Bogura",
+   "hours": 5,
+   "fare_min": 500,
+   "fare_max": 1100,
+   "note": "Many AC coaches."
+  },
+  {
+   "mode": "Train",
+   "how": "Intercity trains from Kamalapur",
+   "hours": 6,
+   "fare_min": 250,
+   "fare_max": 900,
+   "note": "Check timetable."
+  }
+ ],
+ "local": [
+  {
+   "mode": "Rickshaw / CNG",
+   "group_fare": "50-250 BDT inside the city",
+   "note": "Agree fare first."
+  },
+  {
+   "mode": "Car hire to Mahasthan",
+   "group_fare": "1500-2500 BDT",
+   "note": "Short trip."
+  }
+ ],
+ "attractions": [
+  {
+   "id": "mahasthan",
+   "name": "Mahasthangarh and museum",
+   "area": "Mahasthan",
+   "tags": [
+    "history",
+    "culture"
+   ],
+   "mins": 180,
+   "fee": 100,
+   "what": "Ancient Pundravardhana fort site (see its own entry).",
+   "tip": "Combine with Behula Basar Ghar.",
+   "best": "morning",
+   "indoor": false
+  },
+  {
+   "id": "kherua",
+   "name": "Kherua Mosque",
+   "area": "Bogura",
+   "tags": [
+    "history",
+    "culture"
+   ],
+   "mins": 45,
+   "fee": 0,
+   "what": "A 16th-century brick mosque.",
+   "tip": "Dress modestly.",
+   "best": "morning",
+   "indoor": false
+  },
+  {
+   "id": "doi",
+   "name": "Bogurar doi (curd)",
+   "area": "Market",
+   "tags": [
+    "food"
+   ],
+   "mins": 30,
+   "fee": 0,
+   "what": "Famous sweet curd of Bogura in clay pots.",
+   "tip": "Take a small clay pot back.",
+   "best": "any",
+   "indoor": true
+  },
+  {
+   "id": "behula",
+   "name": "Behula Lakhindar Basar Ghar",
+   "area": "Mahasthan",
+   "tags": [
+    "history",
+    "culture"
+   ],
+   "mins": 45,
+   "fee": 0,
+   "what": "Archaeological site linked to the legend of Behula and Lakhindar.",
+   "tip": "Part of the Mahasthan area.",
+   "best": "afternoon",
+   "indoor": false
+  },
+  {
+   "id": "city-park",
+   "name": "City park",
+   "area": "Bogura",
+   "tags": [
+    "relaxing",
+    "family"
+   ],
+   "mins": 45,
+   "fee": 0,
+   "what": "Green space for families.",
+   "tip": "Evenings are best.",
+   "best": "sunset",
+   "indoor": false
+  }
+ ],
+ "food": [
+  {
+   "dish": "Bogurar doi",
+   "where": "Curd shops",
+   "cost": 100
+  },
+  {
+   "dish": "Beef kala bhuna",
+   "where": "Restaurants",
+   "cost": 350
+  },
+  {
+   "dish": "Tea",
+   "where": "Stalls",
+   "cost": 20
+  }
+ ],
+ "stay": {
+  "budget": {
+   "area": "Simple hotel",
+   "price_min": 900,
+   "price_max": 1800,
+   "note": "Basic."
+  },
+  "mid": {
+   "area": "Mid hotel",
+   "price_min": 2500,
+   "price_max": 5000,
+   "note": "AC rooms."
+  },
+  "luxury": {
+   "area": "Better hotel",
+   "price_min": 5500,
+   "price_max": 8500,
+   "note": "Few."
+  }
+ },
+ "rules": [
+  "Dress modestly at religious places.",
+  "Do not climb ruins."
+ ],
+ "packing": [
+  "Sunscreen",
+  "Water",
+  "Comfortable shoes"
+ ],
+ "nearby": [
+  "mahasthangarh",
+  "paharpur",
+  "rajshahi"
+ ],
+ "country": "Bangladesh"
+}

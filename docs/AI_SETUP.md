@@ -28,7 +28,7 @@ instead of an error.
    Slower computer? `ollama pull qwen2.5:1.5b-instruct` is faster and a little less accurate.
 3. Optional, for better search and Bengali: `ollama pull bge-m3`, then in `.env` set `AI_EMBED_MODEL=bge-m3` and run
    `php scripts/sync_embeddings.php`.
-4. In `.env` leave `AI_PROVIDER` unset (or `auto`). **Delete a wrong `GEMINI_API_KEY` line** (a Gemini key starts with `AIza`).
+4. In `.env` leave `AI_PROVIDER` unset (or `auto`). **Delete a wrong `GEMINI_API_KEY` line** (a Gemini key starts with `AIza`, or `AQ.` for the newer authorization keys AI Studio issues since 2026).
 5. Check it: `php scripts/ai_setup_check.php --test` or open **Admin > AI Setup & Test** and press *Send one test request*.
 
 ## Speed
@@ -57,3 +57,27 @@ instead of an error.
 | `GEMINI_API_KEY ... not a valid Google AI Studio key` | Fix or delete the line. The key is never printed by the tools. |
 | Test times out on the first call | Model is still loading; run the test again. |
 | HTTP 429 / quota | Gemini free-tier limit reached; use Ollama or wait. |
+
+## Built-in AI: the TourBuddy Brain
+
+TourBuddy ships its own travel engine in `backend/brain/` with a curated knowledge base in `data/brain/` (23 Bangladesh destinations: routes, fares, seasons, food, stays, rules). It needs **no model, no API key, no download** and works offline.
+
+What it does: understands a question (intent classifier + typo-tolerant place matching, English/Banglish), answers routes, costs, best time, food, stays, safety, packing, compare and suggestions, and builds full day-by-day trip plans with timings, costs and a budget fit. Plans pass through the same validator and cost pipeline as AI plans.
+
+What it is not: a generative language model. It only knows what is in `data/brain`. Prices are approximate ranges; edit the JSON files to improve them. Bangla input is recognised, replies are English.
+
+Settings (`.env`):
+
+- `AI_PROVIDER=builtin` turns outside AI off completely; the Brain does everything.
+- `AI_PLANNER_ENGINE=auto` (default) uses the AI model and falls back to the Brain when it fails; `brain` always uses the Brain; `llm` never does.
+- The planner page also has a per-trip "Planner engine" choice.
+
+Add a destination by copying a file in `data/brain/destinations/` and filling the same fields.
+
+### Brain: 80 places, memory and admin tools
+
+- The knowledge base now covers 80 destinations (Bangladesh and popular international trips). International files carry `country`, `emergency` and `entry_note` (visa line). **These were written from general knowledge, not live sources: review visas, fares and emergency numbers before relying on them.**
+- Chat remembers the conversation: "plan 3 days in Sylhet", then "add a day", "for 4 people", "make it cheaper", "how to reach", "and Cox's Bazar?". Two questions in one message are both answered.
+- A place that is not in the knowledge base is never guessed: the Brain says so and logs it to `data/brain/unanswered.log`.
+- Admin, **AI > TourBuddy Brain** (`admin/brain.php`): try questions, see what people asked that it could not answer, edit or add destinations (validated, previous version kept as `.bak`).
+- Tests: `php tests/brain/brain_test.php`, `php tests/brain/validate_kb.php`, `php tests/brain/sweep_test.php`.

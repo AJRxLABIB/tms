@@ -1,0 +1,244 @@
+{
+ "id": "bhutan",
+ "name": "Bhutan (Thimphu and Paro)",
+ "bn": "ভুটান",
+ "aliases": [
+  "thimphu",
+  "paro",
+  "bhutan thimphu",
+  "buthan",
+  "bhutanese",
+  "taktsang"
+ ],
+ "country": "Bhutan",
+ "region": "Western Bhutan",
+ "lat": 27.4728,
+ "lng": 89.639,
+ "summary": "The Land of the Thunder Dragon: dzongs, monasteries, the Tiger's Nest and mountains; tightly regulated, high-quality tourism.",
+ "best_months": [
+  3,
+  4,
+  5,
+  9,
+  10,
+  11
+ ],
+ "season_note": "March-May and September-November have the best weather. Winter is cold; monsoon (June-Aug) is rainy.",
+ "avoid_note": "Heavy monsoon can disrupt roads.",
+ "tags": [
+  "hills",
+  "culture",
+  "spiritual",
+  "nature",
+  "photography",
+  "history",
+  "adventure"
+ ],
+ "days": {
+  "min": 4,
+  "ideal": 6
+ },
+ "emergency": {
+  "police": "113",
+  "ambulance": "112"
+ },
+ "entry_note": "Bhutan: Bangladeshi passport holders usually need a visa through an authorised tour operator and the Sustainable Development Fee (SDF) applies; check the latest rules with the embassy before booking.",
+ "reach": [
+  {
+   "mode": "Flight",
+   "how": "Dhaka to Paro International Airport (Drukair/Bhutan Airlines; often via Kolkata or Bangkok) (Drukair, Bhutan Airlines)",
+   "hours": 4,
+   "fare_min": 30000,
+   "fare_max": 60000,
+   "note": "Only Druk Air and Bhutan Airlines fly to Paro; check Dhaka-Paro availability."
+  },
+  {
+   "mode": "Bus",
+   "how": "Dhaka to Phuentsholing via Banglabandha/Siliguri then Thimphu by road",
+   "hours": 30,
+   "fare_min": 5000,
+   "fare_max": 9000,
+   "note": "Check land-route permissions; most use flights."
+  }
+ ],
+ "local": [
+  {
+   "mode": "Taxi",
+   "group_fare": "1500-4000 BDT per day within Thimphu/Paro",
+   "note": "Licensed taxis."
+  },
+  {
+   "mode": "Guide and driver",
+   "group_fare": "Included in package"
+  }
+ ],
+ "attractions": [
+  {
+   "id": "tigers-nest",
+   "name": "Taktsang (Tiger Nest) Monastery",
+   "area": "Paro",
+   "tags": [
+    "spiritual",
+    "hills",
+    "photography",
+    "adventure"
+   ],
+   "mins": 360,
+   "fee": 0,
+   "what": "A famous cliffside monastery reached by a 2-3 hour hike.",
+   "tip": "Start early; carry water.",
+   "best": "morning",
+   "indoor": false
+  },
+  {
+   "id": "thimphu-dzong",
+   "name": "Tashichho Dzong",
+   "area": "Thimphu",
+   "tags": [
+    "history",
+    "culture"
+   ],
+   "mins": 90,
+   "fee": 0,
+   "what": "The seat of government and monastic body.",
+   "tip": "Dress formally.",
+   "best": "afternoon",
+   "indoor": false
+  },
+  {
+   "id": "buddha-dordenma",
+   "name": "Buddha Dordenma",
+   "area": "Thimphu",
+   "tags": [
+    "spiritual",
+    "photography"
+   ],
+   "mins": 60,
+   "fee": 0,
+   "what": "A giant golden Buddha statue overlooking the valley.",
+   "tip": "Sunset views.",
+   "best": "sunset",
+   "indoor": false
+  },
+  {
+   "id": "paro-dzong",
+   "name": "Rinpung Dzong and National Museum",
+   "area": "Paro",
+   "tags": [
+    "history",
+    "culture"
+   ],
+   "mins": 120,
+   "fee": 0,
+   "what": "A fortress monastery and museum in the old watchtower.",
+   "tip": "Wear long clothing.",
+   "best": "morning",
+   "indoor": false
+  },
+  {
+   "id": "dochula",
+   "name": "Dochula Pass",
+   "area": "Dochula, 30 km",
+   "tags": [
+    "hills",
+    "photography"
+   ],
+   "mins": 60,
+   "fee": 0,
+   "what": "108 chortens with Himalayan views.",
+   "tip": "Cloud-free mornings are best.",
+   "best": "morning",
+   "indoor": false
+  },
+  {
+   "id": "weekend-market",
+   "name": "Centenary Farmers Market",
+   "area": "Thimphu",
+   "tags": [
+    "food",
+    "culture",
+    "shopping"
+   ],
+   "mins": 90,
+   "fee": 0,
+   "what": "Weekend produce and handicraft market.",
+   "tip": "Go on Saturday/Sunday.",
+   "best": "morning",
+   "indoor": false
+  },
+  {
+   "id": "punakha",
+   "name": "Punakha Dzong",
+   "area": "Punakha",
+   "tags": [
+    "history",
+    "photography"
+   ],
+   "mins": 120,
+   "fee": 0,
+   "what": "The most beautiful dzong at the river meeting.",
+   "tip": "Day trip from Thimphu.",
+   "best": "morning",
+   "indoor": false
+  }
+ ],
+ "food": [
+  {
+   "dish": "Ema datshi",
+   "where": "Local restaurants",
+   "cost": 300
+  },
+  {
+   "dish": "Momos",
+   "where": "Cafes",
+   "cost": 200
+  },
+  {
+   "dish": "Red rice with pork",
+   "where": "Local restaurants",
+   "cost": 400
+  },
+  {
+   "dish": "Suja butter tea",
+   "where": "Cafes",
+   "cost": 80
+  }
+ ],
+ "stay": {
+  "budget": {
+   "area": "Thimphu, Paro",
+   "price_min": 4000,
+   "price_max": 8000,
+   "note": "Approved 3-star lodges (priced in package)."
+  },
+  "mid": {
+   "area": "Thimphu, Paro",
+   "price_min": 9000,
+   "price_max": 18000,
+   "note": "3-4 star hotels."
+  },
+  "luxury": {
+   "area": "Thimphu, Paro, Punakha",
+   "price_min": 25000,
+   "price_max": 60000,
+   "note": "Luxury lodges."
+  }
+ },
+ "rules": [
+  "Tourism is by guided package; SDF applies.",
+  "Dress modestly at dzongs; remove hats and shoes.",
+  "Smoking and tobacco sales are heavily restricted.",
+  "Do not point feet at Buddha statues."
+ ],
+ "packing": [
+  "Warm layers",
+  "Walking shoes",
+  "Rain jacket",
+  "Sunscreen",
+  "Power bank"
+ ],
+ "nearby": [
+  "kathmandu",
+  "darjeeling"
+ ]
+}

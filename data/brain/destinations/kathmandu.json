@@ -1,0 +1,261 @@
+{
+ "id": "kathmandu",
+ "name": "Kathmandu",
+ "bn": "কাঠমান্ডু",
+ "aliases": [
+  "kathmandu valley",
+  "katmandu",
+  "kathmandu nepal",
+  "kathmando",
+  "nepal"
+ ],
+ "country": "Nepal",
+ "region": "Bagmati",
+ "lat": 27.7172,
+ "lng": 85.324,
+ "summary": "Nepal's capital: ancient durbar squares, Swayambhunath, Pashupatinath, Boudhanath and the gateway to Himalayan treks.",
+ "best_months": [
+  10,
+  11,
+  3,
+  4
+ ],
+ "season_note": "October-November and March-April have clear skies and good mountain views. June-September is monsoon; December-January is cold.",
+ "avoid_note": "Monsoon brings landslides and cloud that hides mountains.",
+ "tags": [
+  "culture",
+  "history",
+  "spiritual",
+  "hills",
+  "shopping",
+  "food",
+  "photography",
+  "adventure"
+ ],
+ "days": {
+  "min": 3,
+  "ideal": 5
+ },
+ "emergency": {
+  "police": "100",
+  "ambulance": "102"
+ },
+ "entry_note": "Nepal: Bangladeshi passport holders can usually get a visa on arrival at Tribhuvan airport (fee and conditions apply) or apply at the embassy. Check the latest rules with the embassy before booking.",
+ "reach": [
+  {
+   "mode": "Flight",
+   "how": "Dhaka to Tribhuvan International Airport (Biman, US-Bangla, Nepal Airlines)",
+   "hours": 2.0,
+   "fare_min": 14000,
+   "fare_max": 26000,
+   "note": "Direct flights (Biman, Nepal Airlines, US-Bangla); about 1h45m."
+  },
+  {
+   "mode": "Bus",
+   "how": "Dhaka to Kakarbhitta (Banglabandha-Panitanki-Kakarbhitta) then bus to Kathmandu",
+   "hours": 30,
+   "fare_min": 3500,
+   "fare_max": 6000,
+   "note": "Long overland route with several border formalities."
+  }
+ ],
+ "local": [
+  {
+   "mode": "Taxi",
+   "group_fare": "500-1200 BDT for city rides",
+   "note": "Insist on meter or agree first."
+  },
+  {
+   "mode": "Micro-bus",
+   "group_fare": "30-80 BDT",
+   "note": "Crowded but cheap."
+  }
+ ],
+ "attractions": [
+  {
+   "id": "pashupatinath",
+   "name": "Pashupatinath Temple",
+   "area": "Gaushala",
+   "tags": [
+    "spiritual",
+    "culture"
+   ],
+   "mins": 120,
+   "fee": 1000,
+   "what": "A major Hindu temple complex on the Bagmati; cremation ghats.",
+   "tip": "Non-Hindus can see only from the outside courtyards; stay respectful.",
+   "best": "afternoon",
+   "indoor": false
+  },
+  {
+   "id": "boudhanath",
+   "name": "Boudhanath Stupa",
+   "area": "Boudha",
+   "tags": [
+    "spiritual",
+    "culture",
+    "photography"
+   ],
+   "mins": 90,
+   "fee": 350,
+   "what": "One of the largest Buddhist stupas in the world.",
+   "tip": "Walk clockwise; cafes with stupa view.",
+   "best": "sunset",
+   "indoor": false
+  },
+  {
+   "id": "swayambhunath",
+   "name": "Swayambhunath (Monkey Temple)",
+   "area": "West Kathmandu",
+   "tags": [
+    "spiritual",
+    "photography"
+   ],
+   "mins": 90,
+   "fee": 300,
+   "what": "Hilltop stupa with city views and monkeys.",
+   "tip": "Climb stairs early; watch bags from monkeys.",
+   "best": "morning",
+   "indoor": false
+  },
+  {
+   "id": "durbar",
+   "name": "Kathmandu Durbar Square",
+   "area": "Old city",
+   "tags": [
+    "history",
+    "culture",
+    "photography"
+   ],
+   "mins": 120,
+   "fee": 1000,
+   "what": "Royal palaces and temples; partly damaged by the 2015 earthquake.",
+   "tip": "Hire a licensed guide.",
+   "best": "morning",
+   "indoor": false
+  },
+  {
+   "id": "bhaktapur",
+   "name": "Bhaktapur Durbar Square",
+   "area": "Bhaktapur",
+   "tags": [
+    "history",
+    "culture",
+    "photography"
+   ],
+   "mins": 180,
+   "fee": 1900,
+   "what": "A medieval city of brick and carved wood.",
+   "tip": "Visit in the morning light.",
+   "best": "morning",
+   "indoor": false
+  },
+  {
+   "id": "patan",
+   "name": "Patan Durbar Square",
+   "area": "Lalitpur",
+   "tags": [
+    "history",
+    "culture",
+    "shopping"
+   ],
+   "mins": 150,
+   "fee": 1000,
+   "what": "Newar art, museums and temples.",
+   "tip": "Try local craft shops.",
+   "best": "afternoon",
+   "indoor": false
+  },
+  {
+   "id": "thamel",
+   "name": "Thamel",
+   "area": "Central",
+   "tags": [
+    "shopping",
+    "food",
+    "city"
+   ],
+   "mins": 150,
+   "fee": 0,
+   "what": "Tourist lanes with trekking shops, cafes and souvenirs.",
+   "tip": "Bargain; confirm trek quality.",
+   "best": "afternoon",
+   "indoor": false
+  },
+  {
+   "id": "nagarkot",
+   "name": "Nagarkot Sunrise",
+   "area": "Nagarkot, 32 km",
+   "tags": [
+    "hills",
+    "photography",
+    "relaxing"
+   ],
+   "mins": 240,
+   "fee": 0,
+   "what": "Hill station with Himalayan sunrise view.",
+   "tip": "Overnight to catch dawn.",
+   "best": "morning",
+   "indoor": false
+  }
+ ],
+ "food": [
+  {
+   "dish": "Dal bhat",
+   "where": "Local restaurants",
+   "cost": 250
+  },
+  {
+   "dish": "Momo",
+   "where": "Street stalls",
+   "cost": 150
+  },
+  {
+   "dish": "Newari khaja set",
+   "where": "Local eateries",
+   "cost": 350
+  },
+  {
+   "dish": "Thukpa",
+   "where": "Cafes",
+   "cost": 200
+  }
+ ],
+ "stay": {
+  "budget": {
+   "area": "Thamel",
+   "price_min": 1500,
+   "price_max": 3500,
+   "note": "Guesthouses."
+  },
+  "mid": {
+   "area": "Thamel, Lazimpat",
+   "price_min": 4000,
+   "price_max": 8500,
+   "note": "Boutique hotels."
+  },
+  "luxury": {
+   "area": "Lazimpat, Durbarmarg",
+   "price_min": 12000,
+   "price_max": 28000,
+   "note": "Heritage hotels."
+  }
+ },
+ "rules": [
+  "Remove shoes and avoid leather in temples; walk clockwise around stupas.",
+  "Non-Hindus not allowed in some inner sanctums.",
+  "Drone use needs permits.",
+  "Carry passport copy."
+ ],
+ "packing": [
+  "Layers for hills",
+  "Rain jacket",
+  "Comfortable walking shoes",
+  "Sunscreen",
+  "Power bank"
+ ],
+ "nearby": [
+  "pokhara",
+  "bhutan"
+ ]
+}

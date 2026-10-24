@@ -1,0 +1,231 @@
+{
+ "id": "pokhara",
+ "name": "Pokhara",
+ "bn": "পোখরা",
+ "aliases": [
+  "pokhara nepal",
+  "pokhra",
+  "pokhera",
+  "phewa lake"
+ ],
+ "country": "Nepal",
+ "region": "Gandaki",
+ "lat": 28.2096,
+ "lng": 83.9856,
+ "summary": "Lakeside city under the Annapurna range; paragliding, boating, peaceful cafes and the base for treks.",
+ "best_months": [
+  10,
+  11,
+  3,
+  4
+ ],
+ "season_note": "October-November and March-April have the clearest mountain views. Monsoon (June-Sept) is wet.",
+ "avoid_note": "Monsoon clouds hide mountains.",
+ "tags": [
+  "nature",
+  "water",
+  "adventure",
+  "relaxing",
+  "photography",
+  "family",
+  "romantic"
+ ],
+ "days": {
+  "min": 3,
+  "ideal": 4
+ },
+ "emergency": {
+  "police": "100",
+  "ambulance": "102"
+ },
+ "entry_note": "Nepal: Bangladeshi passport holders can usually get a visa on arrival at Tribhuvan airport (fee and conditions apply) or apply at the embassy. Check the latest rules with the embassy before booking.",
+ "reach": [
+  {
+   "mode": "Flight",
+   "how": "Dhaka to Pokhara International Airport (via Kathmandu or direct if operating) (Biman, US-Bangla, Novoair)",
+   "hours": 3.5,
+   "fare_min": 16000,
+   "fare_max": 30000,
+   "note": "Most flights go via Kathmandu; check schedules."
+  },
+  {
+   "mode": "Bus",
+   "how": "Kathmandu to Pokhara tourist bus (6-8 hours)",
+   "hours": 7,
+   "fare_min": 500,
+   "fare_max": 1200,
+   "note": "Combine after Kathmandu."
+  }
+ ],
+ "local": [
+  {
+   "mode": "Taxi",
+   "group_fare": "500-1500 BDT"
+  },
+  {
+   "mode": "Boat on Phewa Lake",
+   "group_fare": "500-800 BDT per boat per hour"
+  }
+ ],
+ "attractions": [
+  {
+   "id": "phewa",
+   "name": "Phewa Lake Boating",
+   "area": "Lakeside",
+   "tags": [
+    "water",
+    "relaxing",
+    "romantic",
+    "photography"
+   ],
+   "mins": 120,
+   "fee": 500,
+   "what": "Row to the Tal Barahi Temple island.",
+   "tip": "Sunrise is calm.",
+   "best": "morning",
+   "indoor": false
+  },
+  {
+   "id": "sarangkot",
+   "name": "Sarangkot Sunrise",
+   "area": "Sarangkot",
+   "tags": [
+    "hills",
+    "photography"
+   ],
+   "mins": 150,
+   "fee": 100,
+   "what": "Viewpoint for Annapurna and Machhapuchhre.",
+   "tip": "Leave before 5am.",
+   "best": "morning",
+   "indoor": false
+  },
+  {
+   "id": "paragliding",
+   "name": "Paragliding",
+   "area": "Sarangkot",
+   "tags": [
+    "adventure"
+   ],
+   "mins": 120,
+   "fee": 12000,
+   "what": "Tandem flights over the lake.",
+   "tip": "Choose registered operators; fly in clear mornings.",
+   "best": "morning",
+   "indoor": false
+  },
+  {
+   "id": "worldpeace",
+   "name": "World Peace Pagoda",
+   "area": "Anadu Hill",
+   "tags": [
+    "spiritual",
+    "photography",
+    "hills"
+   ],
+   "mins": 120,
+   "fee": 0,
+   "what": "White stupa with lake and mountain views.",
+   "tip": "Take a boat and short hike.",
+   "best": "afternoon",
+   "indoor": false
+  },
+  {
+   "id": "davis",
+   "name": "Davis Falls and Gupteshwor Cave",
+   "area": "Pokhara",
+   "tags": [
+    "nature"
+   ],
+   "mins": 60,
+   "fee": 150,
+   "what": "A waterfall that disappears into the ground.",
+   "tip": "Slippery rocks.",
+   "best": "any",
+   "indoor": false
+  },
+  {
+   "id": "begnas",
+   "name": "Begnas Lake",
+   "area": "Pokhara outskirts",
+   "tags": [
+    "relaxing",
+    "nature"
+   ],
+   "mins": 120,
+   "fee": 0,
+   "what": "A quiet lake away from the crowds.",
+   "tip": "Good for picnic.",
+   "best": "afternoon",
+   "indoor": false
+  },
+  {
+   "id": "mountain-museum",
+   "name": "International Mountain Museum",
+   "area": "Pokhara",
+   "tags": [
+    "culture",
+    "history"
+   ],
+   "mins": 90,
+   "fee": 500,
+   "what": "Museum on peaks and mountaineering.",
+   "tip": "Allow 1.5 hours.",
+   "best": "any",
+   "indoor": true
+  }
+ ],
+ "food": [
+  {
+   "dish": "Dal bhat",
+   "where": "Local restaurants",
+   "cost": 250
+  },
+  {
+   "dish": "Fresh lake fish",
+   "where": "Lakeside cafes",
+   "cost": 450
+  },
+  {
+   "dish": "Momo",
+   "where": "Street stalls",
+   "cost": 150
+  }
+ ],
+ "stay": {
+  "budget": {
+   "area": "Lakeside",
+   "price_min": 1500,
+   "price_max": 3500,
+   "note": "Guesthouses."
+  },
+  "mid": {
+   "area": "Lakeside",
+   "price_min": 4000,
+   "price_max": 8500,
+   "note": "Boutique hotels."
+  },
+  "luxury": {
+   "area": "Lakeside, Hemja",
+   "price_min": 12000,
+   "price_max": 28000,
+   "note": "Resorts."
+  }
+ },
+ "rules": [
+  "Do not litter near lakes.",
+  "Paragliding is weather-dependent.",
+  "Drone rules apply.",
+  "Remove shoes in temples."
+ ],
+ "packing": [
+  "Light jacket",
+  "Sunscreen",
+  "Walking shoes",
+  "Rain jacket",
+  "Sunglasses"
+ ],
+ "nearby": [
+  "kathmandu"
+ ]
+}

@@ -33,7 +33,13 @@ require_once __DIR__ . '/totp.php';
 // (every feature then answers from the catalogue). Decided per request in AIClient::resolution() -- see
 // backend/ai/AIProviderResolver.php. OpenAI is never auto-selected, and nothing is sent to an external provider unless an
 // operator configured it. Run `php scripts/ai_setup_check.php` to see what is selected and why.
-define('AI_PROVIDER',     strtolower(trim((string) tms_env('AI_PROVIDER', 'auto'))));
+// AI_PROVIDER=builtin (alias: brain) means: no outside AI at all, the TourBuddy Brain (backend/brain) answers and plans.
+$tmsProviderRaw = strtolower(trim((string) tms_env('AI_PROVIDER', 'auto')));
+define('AI_BUILTIN',      in_array($tmsProviderRaw, ['builtin', 'brain'], true));
+define('AI_PROVIDER',     AI_BUILTIN ? 'none' : $tmsProviderRaw);
+// AI_PLANNER_ENGINE: auto (AI model, Brain as the fallback) | brain (always the built-in engine) | llm (AI model only).
+$tmsEngine = strtolower(trim((string) tms_env('AI_PLANNER_ENGINE', 'auto')));
+define('AI_PLANNER_ENGINE', in_array($tmsEngine, ['auto', 'brain', 'llm'], true) ? $tmsEngine : 'auto');
 
 define('GEMINI_API_KEY',  tms_env('GEMINI_API_KEY', ''));
 define('GEMINI_MODEL',    tms_env('GEMINI_MODEL', 'gemini-2.5-flash')); // free-tier model as of mid-2026 (gemini-1.5-flash is shut down)
@@ -107,9 +113,9 @@ if (AI_PROVIDER === 'openai') {
             . 'fallback. Create a .env file in the project root containing GEMINI_API_KEY=... '
             . '(get a free key at https://aistudio.google.com). See .env.example.');
     }
-    if (GEMINI_API_KEY !== '' && !str_starts_with(GEMINI_API_KEY, 'AIza')) {
+    if (GEMINI_API_KEY !== '' && !str_starts_with(GEMINI_API_KEY, 'AIza') && !str_starts_with(GEMINI_API_KEY, 'AQ.')) {
         error_log('[TourBuddy Config] GEMINI_API_KEY does not look like a standard Google AI Studio key '
-            . '(those normally start with "AIza"). If AI-powered features (Explore Mode overview, '
+            . '(those start with "AIza" or, since 2026, "AQ."). If AI-powered features (Explore Mode overview, '
             . 'AI Recommender, chatbots) are failing, regenerate a fresh key at '
             . 'https://aistudio.google.com and update .env.');
     }
@@ -144,7 +150,7 @@ define('EXPLORE_CACHE_TTL_PLACES',  60 * 60 * 6);        // nearby places cached
 define('DB_HOST', tms_env('DB_HOST', PHP_OS_FAMILY === 'Windows' ? '127.0.0.1' : 'localhost'));
 define('DB_USER', tms_env('DB_USER', 'root'));
 define('DB_PASS', tms_env('DB_PASS', ''));
-define('DB_NAME', tms_env('DB_NAME', 'tms'));
+define('DB_NAME', tms_env('DB_NAME', 'tourbuddy'));
 
 // ─── Application settings ─────────────────────────────────────────────────────
 define('APP_NAME',    tms_env('APP_NAME', 'TourBuddy AI Travel Copilot'));
@@ -206,6 +212,7 @@ require_once __DIR__ . '/PricingEngine.php';
 $tmsCache = new CacheService($dbh, false);
 // Optional timing (TMS_PROFILE=1): Server-Timing header + one log line per page. Off by default.
 require_once __DIR__ . '/Profiler.php';
+require_once __DIR__ . '/ContentHelpers.php';   // placeholder-image and filler-text helpers: pages such as package-details.php call them before header.php is included
 TmsProfiler::init();
 TmsProfiler::mark('db_connected');
 

@@ -1,0 +1,194 @@
+{
+ "id": "bhola",
+ "name": "Bhola",
+ "bn": "ভোলা",
+ "aliases": [
+  "bhola",
+  "bhola island",
+  "vola",
+  "bhola district"
+ ],
+ "region": "Barishal Division",
+ "lat": 22.6859,
+ "lng": 90.6482,
+ "summary": "Bangladesh largest island district, with Meghna river views, chars and a laid-back river life.",
+ "best_months": [
+  11,
+  12,
+  1,
+  2,
+  3
+ ],
+ "season_note": "Winter is dry. Rivers are rough in monsoon.",
+ "tags": [
+  "water",
+  "nature",
+  "culture",
+  "relaxing"
+ ],
+ "days": {
+  "min": 2,
+  "ideal": 2
+ },
+ "reach": [
+  {
+   "mode": "Launch",
+   "how": "Launch Dhaka (Sadarghat) to Bhola, overnight",
+   "hours": 10,
+   "fare_min": 600,
+   "fare_max": 2500,
+   "note": "Check schedule."
+  },
+  {
+   "mode": "Bus + ferry",
+   "how": "Bus Dhaka to Barishal, then launch or speedboat to Bhola",
+   "hours": 8,
+   "fare_min": 700,
+   "fare_max": 1500,
+   "note": "Via Padma bridge."
+  }
+ ],
+ "local": [
+  {
+   "mode": "CNG / rickshaw",
+   "group_fare": "50-300 BDT in town",
+   "note": "Agree fare first."
+  },
+  {
+   "mode": "Boat",
+   "group_fare": "1500-4000 BDT per hired boat",
+   "note": "For char visits."
+  }
+ ],
+ "attractions": [
+  {
+   "id": "meghna",
+   "name": "Meghna river",
+   "area": "Bhola",
+   "tags": [
+    "water",
+    "nature",
+    "photography"
+   ],
+   "mins": 90,
+   "fee": 0,
+   "what": "Wide river with boats and sunsets.",
+   "tip": "Watch for strong current.",
+   "best": "sunset",
+   "indoor": false
+  },
+  {
+   "id": "monpura",
+   "name": "Monpura island",
+   "area": "Monpura",
+   "tags": [
+    "nature",
+    "wildlife",
+    "culture"
+   ],
+   "mins": 240,
+   "fee": 0,
+   "what": "Remote char with buffalo herds and fish drying.",
+   "tip": "Needs a boat trip; plan a day.",
+   "best": "morning",
+   "indoor": false
+  },
+  {
+   "id": "town",
+   "name": "Bhola town",
+   "area": "Bhola",
+   "tags": [
+    "culture",
+    "food"
+   ],
+   "mins": 45,
+   "fee": 0,
+   "what": "Local market and ghat.",
+   "tip": "Evening visit.",
+   "best": "sunset",
+   "indoor": false
+  },
+  {
+   "id": "buffalo",
+   "name": "Buffalo farms and dairy",
+   "area": "Char",
+   "tags": [
+    "culture",
+    "food"
+   ],
+   "mins": 60,
+   "fee": 0,
+   "what": "Try local buffalo curd (doi).",
+   "tip": "Buy fresh.",
+   "best": "morning",
+   "indoor": false
+  },
+  {
+   "id": "river-life",
+   "name": "River life walk",
+   "area": "Ghat",
+   "tags": [
+    "culture",
+    "relaxing"
+   ],
+   "mins": 60,
+   "fee": 0,
+   "what": "Fishermen and boats.",
+   "tip": "Respect privacy.",
+   "best": "sunset",
+   "indoor": false
+  }
+ ],
+ "food": [
+  {
+   "dish": "Buffalo curd (doi)",
+   "where": "Local shops",
+   "cost": 100
+  },
+  {
+   "dish": "Hilsa curry",
+   "where": "Restaurants",
+   "cost": 400
+  },
+  {
+   "dish": "Tea",
+   "where": "Stalls",
+   "cost": 20
+  }
+ ],
+ "stay": {
+  "budget": {
+   "area": "Simple guest house",
+   "price_min": 700,
+   "price_max": 1600,
+   "note": "Basic."
+  },
+  "mid": {
+   "area": "Mid hotel",
+   "price_min": 2000,
+   "price_max": 4000,
+   "note": "Limited."
+  },
+  "luxury": {
+   "area": "Better hotel",
+   "price_min": 4500,
+   "price_max": 7000,
+   "note": "Few."
+  }
+ },
+ "rules": [
+  "Follow boat safety rules.",
+  "No littering on the river."
+ ],
+ "packing": [
+  "Sunscreen",
+  "Rain jacket",
+  "Water"
+ ],
+ "nearby": [
+  "barishal",
+  "patuakhali",
+  "nijhum-dwip"
+ ],
+ "country": "Bangladesh"
+}

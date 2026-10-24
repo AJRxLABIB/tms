@@ -17,3 +17,5 @@ database/tourbuddy*.sql
 
 # Live AI quality run outputs (local measurements)
 tests/ai/results/
+data/brain/unanswered.log
+data/brain/destinations/*.bak

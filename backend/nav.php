@@ -8,6 +8,18 @@ $tmsnLogged = !empty($_SESSION['login']);
 $tmsnLanding = !empty($tms_landing_mode);
 $tmsnEmail = $tmsnLogged ? (string)$_SESSION['login'] : '';
 $tmsnName = $tmsnLogged ? explode('@', $tmsnEmail)[0] : '';
+// Show the member's real name (not the e-mail address). Cached in the session per e-mail; falls back to the e-mail prefix.
+if ($tmsnLogged) {
+    if (($_SESSION['nav_name_for'] ?? '') === $tmsnEmail && !empty($_SESSION['nav_name'])) { $tmsnName = (string)$_SESSION['nav_name']; }
+    elseif (isset($dbh) && $dbh instanceof PDO) {
+        try {
+            $nmq = $dbh->prepare('SELECT FullName FROM tblusers WHERE EmailId = :e LIMIT 1');
+            $nmq->execute([':e' => $tmsnEmail]);
+            $full = trim((string)$nmq->fetchColumn());
+            if ($full !== '') { $tmsnName = $full; $_SESSION['nav_name'] = $full; $_SESSION['nav_name_for'] = $tmsnEmail; }
+        } catch (Throwable $e) { /* keep the e-mail prefix */ }
+    }
+}
 // Primary links: [href, label, icon, pages that count as "this section"]. Logged-in visitors also get My Trips and Saved Places.
 // Explore / Map are protected pages: a signed-out click goes through the login gate (tms_require_user) and returns.
 $tmsnPkgPages = ['package-list.php', 'package-details.php', 'hotels.php', 'hotel-details.php', 'activities.php', 'activity-details.php'];

@@ -1,0 +1,195 @@
+{
+ "id": "patuakhali",
+ "name": "Patuakhali",
+ "bn": "পটুয়াখালী",
+ "aliases": [
+  "patuakhali",
+  "potuakhali",
+  "patuakhali kuakata",
+  "patuakhali barisal"
+ ],
+ "region": "Barishal Division",
+ "lat": 22.3596,
+ "lng": 90.3298,
+ "summary": "A southern coastal district with Kuakata beach nearby, mangrove creeks and river-delta villages.",
+ "best_months": [
+  11,
+  12,
+  1,
+  2,
+  3
+ ],
+ "season_note": "Winter is calm. Cyclone seasons (April-May, Oct-Nov) need care.",
+ "tags": [
+  "beach",
+  "water",
+  "nature",
+  "culture",
+  "family"
+ ],
+ "days": {
+  "min": 2,
+  "ideal": 2
+ },
+ "reach": [
+  {
+   "mode": "Bus",
+   "how": "Bus Dhaka to Patuakhali via Padma bridge",
+   "hours": 7,
+   "fare_min": 600,
+   "fare_max": 1300,
+   "note": "Many AC coaches."
+  },
+  {
+   "mode": "Launch",
+   "how": "Overnight launch Dhaka (Sadarghat) to Patuakhali",
+   "hours": 12,
+   "fare_min": 500,
+   "fare_max": 3000,
+   "note": "Riverside overnight experience."
+  }
+ ],
+ "local": [
+  {
+   "mode": "CNG / rickshaw",
+   "group_fare": "50-300 BDT in town",
+   "note": "Agree fare first."
+  },
+  {
+   "mode": "Car to Kuakata",
+   "group_fare": "3500-6000 BDT",
+   "note": "About 2 hrs."
+  }
+ ],
+ "attractions": [
+  {
+   "id": "kuakata",
+   "name": "Kuakata sea beach",
+   "area": "Kuakata",
+   "tags": [
+    "beach",
+    "photography",
+    "family"
+   ],
+   "mins": 150,
+   "fee": 0,
+   "what": "A wide beach where you can see both sunrise and sunset over the sea.",
+   "tip": "Do not swim in rough water.",
+   "best": "sunset",
+   "indoor": false
+  },
+  {
+   "id": "creek-boat",
+   "name": "River and creek boat trip",
+   "area": "Kalapara",
+   "tags": [
+    "nature",
+    "water",
+    "photography"
+   ],
+   "mins": 180,
+   "fee": 0,
+   "what": "Boat trip on delta rivers toward mangrove areas.",
+   "tip": "Hire boats at the ghat; take life jackets.",
+   "best": "morning",
+   "indoor": false
+  },
+  {
+   "id": "town",
+   "name": "Patuakhali town",
+   "area": "Patuakhali",
+   "tags": [
+    "culture",
+    "food"
+   ],
+   "mins": 45,
+   "fee": 0,
+   "what": "Local markets and river ghat.",
+   "tip": "Evening visit.",
+   "best": "sunset",
+   "indoor": false
+  },
+  {
+   "id": "mangrove",
+   "name": "Mangrove forest creek",
+   "area": "Kalapara",
+   "tags": [
+    "nature",
+    "wildlife"
+   ],
+   "mins": 120,
+   "fee": 0,
+   "what": "Quiet creeks of the delta.",
+   "tip": "Beware tides.",
+   "best": "morning",
+   "indoor": false
+  },
+  {
+   "id": "river-ghat",
+   "name": "Launch ghat",
+   "area": "Patuakhali",
+   "tags": [
+    "water",
+    "culture"
+   ],
+   "mins": 30,
+   "fee": 0,
+   "what": "Busy ghat with river life.",
+   "tip": "Photograph politely.",
+   "best": "morning",
+   "indoor": false
+  }
+ ],
+ "food": [
+  {
+   "dish": "Hilsa fry",
+   "where": "Restaurants",
+   "cost": 400
+  },
+  {
+   "dish": "Crab curry",
+   "where": "Kuakata stalls",
+   "cost": 500
+  },
+  {
+   "dish": "Tea",
+   "where": "Stalls",
+   "cost": 20
+  }
+ ],
+ "stay": {
+  "budget": {
+   "area": "Simple guest house",
+   "price_min": 700,
+   "price_max": 1600,
+   "note": "Basic."
+  },
+  "mid": {
+   "area": "Mid hotel",
+   "price_min": 2000,
+   "price_max": 4500,
+   "note": "Limited."
+  },
+  "luxury": {
+   "area": "Resort in Kuakata",
+   "price_min": 5000,
+   "price_max": 9000,
+   "note": "See Kuakata entry."
+  }
+ },
+ "rules": [
+  "Follow weather signals.",
+  "No littering."
+ ],
+ "packing": [
+  "Sunscreen",
+  "Rain jacket",
+  "Water"
+ ],
+ "nearby": [
+  "kuakata",
+  "barishal",
+  "bhola"
+ ],
+ "country": "Bangladesh"
+}

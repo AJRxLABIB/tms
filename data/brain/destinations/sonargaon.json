@@ -1,0 +1,175 @@
+{
+ "id": "sonargaon",
+ "name": "Sonargaon (Panam City)",
+ "bn": "সোনারগাঁও",
+ "aliases": [
+  "panam city",
+  "panam nagar",
+  "sonargaon museum",
+  "folk art museum"
+ ],
+ "region": "Dhaka Division (Narayanganj)",
+ "lat": 23.6578,
+ "lng": 90.597,
+ "summary": "The old capital of Bengal near Dhaka: the faded merchants' street of Panam City, the Folk Art and Crafts Museum and village life.",
+ "best_months": [
+  10,
+  11,
+  12,
+  1,
+  2
+ ],
+ "season_note": "Winter is best for walking around.",
+ "avoid_note": "A half-day or full-day trip from Dhaka. Avoid rush hours on the Dhaka-Chattogram road.",
+ "tags": [
+  "history",
+  "culture",
+  "family",
+  "photography"
+ ],
+ "days": {
+  "min": 1,
+  "ideal": 1
+ },
+ "reach": [
+  {
+   "mode": "Bus / Car",
+   "how": "From Dhaka by road via Narayanganj or the Dhaka-Sylhet highway (1.5 to 3 hours)",
+   "hours": 2,
+   "fare_min": 200,
+   "fare_max": 600,
+   "note": "Traffic can double the time."
+  }
+ ],
+ "local": [
+  {
+   "mode": "Rickshaw / auto",
+   "group_fare": "100-400 BDT",
+   "note": "Between the sights."
+  }
+ ],
+ "attractions": [
+  {
+   "id": "panam",
+   "name": "Panam City (Panam Nagar)",
+   "area": "Panam",
+   "tags": [
+    "history",
+    "photography",
+    "culture"
+   ],
+   "mins": 90,
+   "fee": 200,
+   "what": "A street of decaying 19th-century merchant houses, great for photos and a slow walk.",
+   "tip": "Go in the morning light. Wear shoes for uneven ground.",
+   "best": "morning",
+   "indoor": false
+  },
+  {
+   "id": "folk-museum",
+   "name": "Folk Art and Crafts Museum (Sonargaon Museum)",
+   "area": "Sonargaon",
+   "tags": [
+    "culture",
+    "history",
+    "family"
+   ],
+   "mins": 90,
+   "fee": 100,
+   "what": "A museum with craft collections and an open-air folk-art area.",
+   "tip": "Closed one weekday; check.",
+   "best": "afternoon",
+   "indoor": true
+  },
+  {
+   "id": "goaldi",
+   "name": "Goaldi Mosque",
+   "area": "Goaldi",
+   "tags": [
+    "history",
+    "spiritual"
+   ],
+   "mins": 30,
+   "fee": 0,
+   "what": "A 15th-century mosque with simple old architecture.",
+   "tip": "Dress modestly.",
+   "best": "afternoon",
+   "indoor": true
+  },
+  {
+   "id": "panam-bridge",
+   "name": "Panam Bridge (Panam Sheti)",
+   "area": "Panam",
+   "tags": [
+    "photography",
+    "history"
+   ],
+   "mins": 30,
+   "fee": 0,
+   "what": "A well-known old brick bridge.",
+   "tip": "Combine with Panam City.",
+   "best": "afternoon",
+   "indoor": false
+  },
+  {
+   "id": "sardar-bari",
+   "name": "Sardar Bari and Sonargaon village",
+   "area": "Sonargaon",
+   "tags": [
+    "culture",
+    "history"
+   ],
+   "mins": 60,
+   "fee": 0,
+   "what": "Old homes and the daily life of local weavers.",
+   "tip": "Ask before taking photos.",
+   "best": "afternoon",
+   "indoor": false
+  }
+ ],
+ "food": [
+  {
+   "dish": "Local pitha and snacks",
+   "where": "Roadside stalls",
+   "cost": 80
+  },
+  {
+   "dish": "Fish curry with rice",
+   "where": "Local restaurants",
+   "cost": 250
+  }
+ ],
+ "stay": {
+  "budget": {
+   "area": "Day trip from Dhaka",
+   "price_min": 0,
+   "price_max": 0,
+   "note": "Most travellers return the same day."
+  },
+  "mid": {
+   "area": "Dhaka",
+   "price_min": 0,
+   "price_max": 0,
+   "note": ""
+  },
+  "luxury": {
+   "area": "Dhaka",
+   "price_min": 0,
+   "price_max": 0,
+   "note": ""
+  }
+ },
+ "rules": [
+  "Ask before photographing residents.",
+  "Do not climb on old walls."
+ ],
+ "packing": [
+  "Sunscreen",
+  "Comfortable shoes",
+  "Water"
+ ],
+ "nearby": [
+  "dhaka"
+ ],
+ "country": "Bangladesh"
+}

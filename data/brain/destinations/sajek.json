@@ -1,0 +1,180 @@
+{
+ "id": "sajek",
+ "name": "Sajek Valley",
+ "bn": "সাজেক ভ্যালি",
+ "aliases": [
+  "sajek",
+  "sajek valley",
+  "sajekvalley",
+  "shajek"
+ ],
+ "region": "Chattogram Hill Tracts (Rangamati district)",
+ "lat": 23.38,
+ "lng": 92.29,
+ "summary": "A hilltop valley above the clouds with cottages, sunrise views and tribal villages. Popular for a one-night escape.",
+ "best_months": [
+  10,
+  11,
+  12,
+  1,
+  2,
+  3
+ ],
+ "season_note": "Winter mornings are clear and cold with cloud seas. Monsoon is green but wet.",
+ "avoid_note": "Travel is by army-escorted convoy times from Khagrachhari or Dighinala. Check the current schedule and permission.",
+ "tags": [
+  "hills",
+  "photography",
+  "adventure",
+  "romantic",
+  "nature"
+ ],
+ "days": {
+  "min": 2,
+  "ideal": 2
+ },
+ "reach": [
+  {
+   "mode": "Bus + Chander Gari",
+   "how": "Bus Dhaka to Khagrachhari, then a hired Chander Gari to Sajek on the allowed convoy time",
+   "hours": 9,
+   "fare_min": 1200,
+   "fare_max": 3500,
+   "note": "Plan to arrive at least a day ahead for the early convoy."
+  }
+ ],
+ "local": [
+  {
+   "mode": "Chander Gari (jeep)",
+   "group_fare": "7000-12000 BDT round trip from Khagrachhari",
+   "note": "Fixed convoy times. Booking through your hotel helps."
+  }
+ ],
+ "attractions": [
+  {
+   "id": "konglak",
+   "name": "Konglak Para",
+   "area": "Sajek",
+   "tags": [
+    "hills",
+    "culture",
+    "photography"
+   ],
+   "mins": 90,
+   "fee": 0,
+   "what": "A Pangkhua community village and the high viewpoint of Sajek.",
+   "tip": "Dress warmly at dawn.",
+   "best": "morning",
+   "indoor": false
+  },
+  {
+   "id": "ruilui",
+   "name": "Ruilui Para and Helipad",
+   "area": "Sajek",
+   "tags": [
+    "hills",
+    "photography"
+   ],
+   "mins": 90,
+   "fee": 0,
+   "what": "A large flat viewpoint known for cloud views.",
+   "tip": "Go for sunrise.",
+   "best": "morning",
+   "indoor": false
+  },
+  {
+   "id": "sunset-point",
+   "name": "Sajek sunset point",
+   "area": "Sajek",
+   "tags": [
+    "photography",
+    "romantic"
+   ],
+   "mins": 60,
+   "fee": 0,
+   "what": "Watch clouds roll over the valley.",
+   "tip": "Bring a warm layer.",
+   "best": "sunset",
+   "indoor": false
+  },
+  {
+   "id": "tribal-village",
+   "name": "Tribal villages (Lushai, Pangkhua)",
+   "area": "Sajek",
+   "tags": [
+    "culture"
+   ],
+   "mins": 90,
+   "fee": 0,
+   "what": "Walk through villages and see bamboo houses and local weaving.",
+   "tip": "Ask before taking photos.",
+   "best": "afternoon",
+   "indoor": false
+  },
+  {
+   "id": "kachalong",
+   "name": "Kacahalong Waterfall",
+   "area": "Near Sajek",
+   "tags": [
+    "nature",
+    "water",
+    "adventure"
+   ],
+   "mins": 150,
+   "fee": 100,
+   "what": "A quiet waterfall requiring a local guide and a walk.",
+   "tip": "Hire a local guide.",
+   "best": "morning",
+   "indoor": false
+  }
+ ],
+ "food": [
+  {
+   "dish": "Bamboo chicken",
+   "where": "Sajek cottages",
+   "cost": 400
+  },
+  {
+   "dish": "Local rice and hill vegetables",
+   "where": "Resorts and local homes",
+   "cost": 250
+  }
+ ],
+ "stay": {
+  "budget": {
+   "area": "Simple cottage",
+   "price_min": 2000,
+   "price_max": 3500,
+   "note": "Often shared rooms."
+  },
+  "mid": {
+   "area": "Cottage resort",
+   "price_min": 4000,
+   "price_max": 8000,
+   "note": "Typical tourist cottage."
+  },
+  "luxury": {
+   "area": "Premium cottage with view",
+   "price_min": 8000,
+   "price_max": 14000,
+   "note": "Few options; book ahead."
+  }
+ },
+ "rules": [
+  "Follow the convoy timings and local rules.",
+  "Be quiet and respectful in villages.",
+  "No littering."
+ ],
+ "packing": [
+  "Warm jacket (cold in winter nights)",
+  "Torch and power bank",
+  "Cash",
+  "Rain jacket",
+  "Comfortable shoes"
+ ],
+ "nearby": [
+  "khagrachhari",
+  "rangamati"
+ ],
+ "country": "Bangladesh"
+}

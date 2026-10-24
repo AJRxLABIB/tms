@@ -19,7 +19,9 @@ $down = fn() => null;
 
 // ── key format ──
 t('valid Google AI Studio key shape accepted', AIProviderResolver::geminiKeyLooksValid($goodKey));
-t('key without AIza prefix rejected', !AIProviderResolver::geminiKeyLooksValid(str_repeat('a', 39)));
+t('key without a known prefix rejected', !AIProviderResolver::geminiKeyLooksValid(str_repeat('a', 39)));
+t('new AI Studio authorization key (AQ.) accepted', AIProviderResolver::geminiKeyLooksValid('AQ.' . str_repeat('x', 50)));
+t('AQ. key that is too short rejected', !AIProviderResolver::geminiKeyLooksValid('AQ.abc'));
 t('key of wrong length rejected', !AIProviderResolver::geminiKeyLooksValid('AIza' . str_repeat('x', 20)));
 t('empty key rejected', !AIProviderResolver::geminiKeyLooksValid(''));
 t('key with illegal characters rejected', !AIProviderResolver::geminiKeyLooksValid('AIza' . str_repeat('x', 34) . '!'));

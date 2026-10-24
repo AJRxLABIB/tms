@@ -1,0 +1,196 @@
+{
+ "id": "madhabkunda",
+ "name": "Madhabkunda Waterfall",
+ "bn": "মাধবকুণ্ড",
+ "aliases": [
+  "madhabkunda",
+  "madhabkundo",
+  "madhab kunda",
+  "madhobkundo",
+  "madhabkunda waterfall"
+ ],
+ "region": "Sylhet Division (Moulvibazar, Barlekha)",
+ "lat": 24.6389,
+ "lng": 92.2381,
+ "summary": "The best known waterfall of Bangladesh, falling about 160 ft into a pool in a forest park.",
+ "best_months": [
+  7,
+  8,
+  9,
+  10,
+  11,
+  12
+ ],
+ "season_note": "Water is strongest during and just after the monsoon (July to October). In dry winter the fall is a thin stream.",
+ "avoid_note": "Slippery rocks can cause injuries.",
+ "tags": [
+  "nature",
+  "water",
+  "adventure",
+  "family",
+  "photography"
+ ],
+ "days": {
+  "min": 1,
+  "ideal": 2
+ },
+ "reach": [
+  {
+   "mode": "Bus",
+   "how": "Bus Dhaka to Moulvibazar or Kulaura, then bus or CNG to Madhabkunda (about 1 hr)",
+   "hours": 7,
+   "fare_min": 700,
+   "fare_max": 1500,
+   "note": "Often combined with Sreemangal."
+  },
+  {
+   "mode": "Train + CNG",
+   "how": "Train Dhaka to Kulaura, then CNG or bus",
+   "hours": 6,
+   "fare_min": 400,
+   "fare_max": 1100,
+   "note": "Check train timetable."
+  }
+ ],
+ "local": [
+  {
+   "mode": "CNG or microbus from Kulaura/Sreemangal",
+   "group_fare": "1500-3500 BDT round trip",
+   "note": "Negotiate for waiting time."
+  }
+ ],
+ "attractions": [
+  {
+   "id": "main-fall",
+   "name": "Madhabkunda waterfall",
+   "area": "Barlekha",
+   "tags": [
+    "water",
+    "nature",
+    "photography",
+    "family"
+   ],
+   "mins": 90,
+   "fee": 50,
+   "what": "A tall waterfall that drops into a natural pool surrounded by forest.",
+   "tip": "Do not swim near the fall; rocks are slippery.",
+   "best": "morning",
+   "indoor": false
+  },
+  {
+   "id": "eco-park",
+   "name": "Madhabkunda eco park trail",
+   "area": "Park area",
+   "tags": [
+    "nature",
+    "adventure"
+   ],
+   "mins": 90,
+   "fee": 0,
+   "what": "Forest trail with steps down to the pool and viewpoints.",
+   "tip": "Wear shoes with grip.",
+   "best": "morning",
+   "indoor": false
+  },
+  {
+   "id": "picnic-spot",
+   "name": "Picnic spots by the stream",
+   "area": "Below the fall",
+   "tags": [
+    "family",
+    "relaxing"
+   ],
+   "mins": 60,
+   "fee": 0,
+   "what": "Shallow stream area for families to sit and eat.",
+   "tip": "Keep the area clean.",
+   "best": "afternoon",
+   "indoor": false
+  },
+  {
+   "id": "tea-nearby",
+   "name": "Tea garden nearby",
+   "area": "Barlekha",
+   "tags": [
+    "tea",
+    "nature",
+    "photography"
+   ],
+   "mins": 60,
+   "fee": 0,
+   "what": "Tea slopes near the road to the falls.",
+   "tip": "Do not enter without permission.",
+   "best": "afternoon",
+   "indoor": false
+  },
+  {
+   "id": "forest-walk",
+   "name": "Forest walk",
+   "area": "Madhabkunda forest",
+   "tags": [
+    "nature",
+    "wildlife"
+   ],
+   "mins": 60,
+   "fee": 0,
+   "what": "Short walk through hill forest with birds and monkeys.",
+   "tip": "Do not feed animals.",
+   "best": "morning",
+   "indoor": false
+  }
+ ],
+ "food": [
+  {
+   "dish": "Local tea",
+   "where": "Stalls",
+   "cost": 30
+  },
+  {
+   "dish": "Fish thali",
+   "where": "Moulvibazar restaurants",
+   "cost": 300
+  },
+  {
+   "dish": "Seven-colour tea",
+   "where": "Sreemangal",
+   "cost": 100
+  }
+ ],
+ "stay": {
+  "budget": {
+   "area": "Basic guest house in Barlekha/Kulaura",
+   "price_min": 700,
+   "price_max": 1500,
+   "note": "Limited options."
+  },
+  "mid": {
+   "area": "Hotel in Moulvibazar or Sreemangal",
+   "price_min": 2000,
+   "price_max": 4500,
+   "note": "Stay in Sreemangal for more choice."
+  },
+  "luxury": {
+   "area": "Resort in Sreemangal",
+   "price_min": 6000,
+   "price_max": 12000,
+   "note": "Best to stay there and day-trip."
+  }
+ },
+ "rules": [
+  "Stay out of fast water.",
+  "No littering.",
+  "Follow park rules."
+ ],
+ "packing": [
+  "Rain jacket",
+  "Shoes with grip",
+  "Water",
+  "Change of clothes"
+ ],
+ "nearby": [
+  "sreemangal",
+  "sylhet",
+  "jaflong"
+ ],
+ "country": "Bangladesh"
+}

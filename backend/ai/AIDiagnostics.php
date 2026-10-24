@@ -16,7 +16,7 @@ final class AIDiagnostics
     public static function redact(string $s, int $max = 300): string
     {
         $s = strip_tags($s);
-        $s = preg_replace('/AIza[0-9A-Za-z_\-]{20,}/', '[redacted-key]', $s);
+        $s = preg_replace('/(?:AIza|AQ\.)[0-9A-Za-z_\-]{20,}/', '[redacted-key]', $s);
         $s = preg_replace('/\bsk-[A-Za-z0-9_\-]{10,}/', '[redacted-key]', $s);
         $s = preg_replace('/(Bearer\s+|key=|api[_-]?key["\']?\s*[:=]\s*["\']?)[A-Za-z0-9_\-\.]{12,}/i', '$1[redacted]', $s);
         $s = preg_replace('/\s+/', ' ', (string)$s);
@@ -82,7 +82,7 @@ final class AIDiagnostics
                 $steps[] = 'Ollama is running but has no chat model. In a terminal run: ollama pull qwen2.5:3b-instruct';
             }
             if (!empty($s['gemini_key_set']) && empty($s['gemini_key_valid'])) {
-                $steps[] = 'GEMINI_API_KEY in .env is not a valid Google AI Studio key (they start with "AIza" and are 39 characters). Fix it, or delete the line to use only local AI. Never paste a key anywhere except .env.';
+                $steps[] = 'GEMINI_API_KEY in .env is not a valid Google AI Studio key (they start with "AIza" or "AQ."). Fix it, or delete the line to use only local AI. Never paste a key anywhere except .env.';
             }
             if ($explicit === 'auto' && empty($s['gemini_key_set'])) {
                 $steps[] = 'Optional cloud fallback: put a free key from https://aistudio.google.com in .env as GEMINI_API_KEY=... (customer text would then be sent to Google when Ollama is down).';

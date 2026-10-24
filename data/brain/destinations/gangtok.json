@@ -1,0 +1,264 @@
+{
+ "id": "gangtok",
+ "name": "Gangtok (Sikkim)",
+ "bn": "গ্যাংটক",
+ "aliases": [
+  "gangtok",
+  "sikkim",
+  "gangtok sikkim",
+  "gantok",
+  "ganktok"
+ ],
+ "country": "India",
+ "region": "Sikkim",
+ "lat": 27.3389,
+ "lng": 88.6065,
+ "summary": "Sikkim's tidy hill capital with views of Kanchenjunga, monasteries, MG Marg and day trips to Tsomgo Lake and Nathula.",
+ "best_months": [
+  3,
+  4,
+  5,
+  10,
+  11
+ ],
+ "season_note": "March to May has rhododendrons and clear weather; October-November is crisp with good views. Winter is cold and snowy; monsoon causes landslides.",
+ "avoid_note": "Landslides can shut north Sikkim routes in the monsoon; Nathula may close in bad weather.",
+ "tags": [
+  "hills",
+  "nature",
+  "photography",
+  "culture",
+  "family",
+  "romantic",
+  "spiritual"
+ ],
+ "days": {
+  "min": 4,
+  "ideal": 5
+ },
+ "emergency": {
+  "police": "100 (or 112)",
+  "ambulance": "102 or 108"
+ },
+ "entry_note": "Indian visa required; Sikkim restricted areas (Nathula, Tsomgo, Yumthang) need a permit arranged through a local operator. Check the latest rules with the embassy before booking.",
+ "reach": [
+  {
+   "mode": "Flight",
+   "how": "Dhaka to Bagdogra (Siliguri) (Biman, US-Bangla, IndiGo, Air India)",
+   "hours": 1.3,
+   "fare_min": 9500,
+   "fare_max": 19000,
+   "note": "About 5 hours by shared jeep to Gangtok."
+  },
+  {
+   "mode": "Bus + jeep",
+   "how": "Dhaka to Siliguri by road, then shared jeep Siliguri to Gangtok",
+   "hours": 18,
+   "fare_min": 3500,
+   "fare_max": 7000,
+   "note": "Check Bangladesh-India land-border rules for Siliguri."
+  },
+  {
+   "mode": "Train",
+   "how": "Kolkata to New Jalpaiguri then jeep",
+   "hours": 14,
+   "fare_min": 1500,
+   "fare_max": 3500,
+   "note": "Combine with Kolkata."
+  }
+ ],
+ "local": [
+  {
+   "mode": "Shared taxi",
+   "group_fare": "100-200 BDT per seat inside town"
+  },
+  {
+   "mode": "Private cab (day sightseeing)",
+   "group_fare": "4500-8000 BDT",
+   "note": "Required for permit routes like Tsomgo/Nathula."
+  }
+ ],
+ "attractions": [
+  {
+   "id": "mg-marg",
+   "name": "MG Marg",
+   "area": "Central",
+   "tags": [
+    "shopping",
+    "food",
+    "relaxing",
+    "city"
+   ],
+   "mins": 90,
+   "fee": 0,
+   "what": "A pedestrian-only promenade with cafes and shops.",
+   "tip": "Visit in the evening; no vehicles or smoking.",
+   "best": "sunset",
+   "indoor": false
+  },
+  {
+   "id": "tsomgo",
+   "name": "Tsomgo (Changu) Lake",
+   "area": "East Sikkim, 38 km",
+   "tags": [
+    "nature",
+    "photography",
+    "hills"
+   ],
+   "mins": 180,
+   "fee": 1500,
+   "what": "A high-altitude glacial lake at 3,780m, often frozen in winter.",
+   "tip": "Permit via a local operator; altitude can affect you.",
+   "best": "morning",
+   "indoor": false
+  },
+  {
+   "id": "nathula",
+   "name": "Nathula Pass",
+   "area": "Indo-China border",
+   "tags": [
+    "history",
+    "photography",
+    "adventure"
+   ],
+   "mins": 240,
+   "fee": 3000,
+   "what": "A mountain pass on the border; visits are allowed some days with permit.",
+   "tip": "Closed some days; carry passport and permit.",
+   "best": "morning",
+   "indoor": false
+  },
+  {
+   "id": "rumtek",
+   "name": "Rumtek Monastery",
+   "area": "Rumtek",
+   "tags": [
+    "spiritual",
+    "culture",
+    "photography"
+   ],
+   "mins": 120,
+   "fee": 100,
+   "what": "One of the biggest and most important monasteries in Sikkim.",
+   "tip": "Dress modestly; no photos inside the main hall.",
+   "best": "afternoon",
+   "indoor": true
+  },
+  {
+   "id": "enchey",
+   "name": "Enchey Monastery",
+   "area": "Gangtok",
+   "tags": [
+    "spiritual",
+    "culture"
+   ],
+   "mins": 45,
+   "fee": 0,
+   "what": "A small, peaceful 200-year-old monastery above the town.",
+   "tip": "Try to catch prayer time.",
+   "best": "morning",
+   "indoor": true
+  },
+  {
+   "id": "ropeway",
+   "name": "Gangtok Ropeway and Ganesh Tok",
+   "area": "Central",
+   "tags": [
+    "photography",
+    "family"
+   ],
+   "mins": 60,
+   "fee": 200,
+   "what": "A cable car ride with views of the town and mountains.",
+   "tip": "Good for first-day orientation.",
+   "best": "afternoon",
+   "indoor": false
+  },
+  {
+   "id": "hanuman",
+   "name": "Hanuman Tok and Tashi View Point",
+   "area": "Gangtok edge",
+   "tags": [
+    "photography",
+    "spiritual",
+    "hills"
+   ],
+   "mins": 60,
+   "fee": 0,
+   "what": "A hilltop temple and a viewpoint for Kanchenjunga.",
+   "tip": "Best on a clear morning.",
+   "best": "morning",
+   "indoor": false
+  },
+  {
+   "id": "banjhakri",
+   "name": "Banjhakri Falls Energy Park",
+   "area": "Ranka Road",
+   "tags": [
+    "nature",
+    "family"
+   ],
+   "mins": 90,
+   "fee": 80,
+   "what": "A landscaped park with waterfall, shamans and walkways.",
+   "tip": "Good for families.",
+   "best": "afternoon",
+   "indoor": false
+  }
+ ],
+ "food": [
+  {
+   "dish": "Momo and thukpa",
+   "where": "Street cafes on MG Marg",
+   "cost": 130
+  },
+  {
+   "dish": "Sikkimese thali",
+   "where": "Local eateries",
+   "cost": 300
+  },
+  {
+   "dish": "Gundruk soup",
+   "where": "Home-style restaurants",
+   "cost": 160
+  }
+ ],
+ "stay": {
+  "budget": {
+   "area": "Tibet Road, Zero Point",
+   "price_min": 2500,
+   "price_max": 4500,
+   "note": "Basic lodges."
+  },
+  "mid": {
+   "area": "MG Marg area",
+   "price_min": 5500,
+   "price_max": 10000,
+   "note": "Mid-range hotels with views."
+  },
+  "luxury": {
+   "area": "Ranka Road, Rumtek",
+   "price_min": 12000,
+   "price_max": 25000,
+   "note": "Resort-style hotels."
+  }
+ },
+ "rules": [
+  "Alcohol is legal but drinking in public is frowned upon.",
+  "Smoking and spitting banned in public areas.",
+  "Permit rules: carry passport and permits.",
+  "Plastic bag bans operate."
+ ],
+ "packing": [
+  "Warm jacket and gloves",
+  "Rain jacket",
+  "Walking shoes",
+  "Altitude sickness tablets",
+  "Photocopy of passport"
+ ],
+ "nearby": [
+  "darjeeling",
+  "kolkata",
+  "bhutan"
+ ]
+}

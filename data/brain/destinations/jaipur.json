@@ -1,0 +1,234 @@
+{
+ "id": "jaipur",
+ "name": "Jaipur",
+ "bn": "জয়পুর",
+ "aliases": [
+  "pink city",
+  "jaipur rajasthan",
+  "jaypur",
+  "jaipure"
+ ],
+ "country": "India",
+ "region": "Rajasthan",
+ "lat": 26.9124,
+ "lng": 75.7873,
+ "summary": "Rajasthan's Pink City with forts, palaces, bazaars and handicrafts.",
+ "best_months": [
+  10,
+  11,
+  12,
+  1,
+  2,
+  3
+ ],
+ "season_note": "October to March is pleasant; summer is very hot.",
+ "avoid_note": "April to June is dangerously hot at midday.",
+ "tags": [
+  "city",
+  "history",
+  "culture",
+  "shopping",
+  "photography",
+  "family"
+ ],
+ "days": {
+  "min": 2,
+  "ideal": 3
+ },
+ "emergency": {
+  "police": "100 (or 112)",
+  "ambulance": "102 or 108"
+ },
+ "entry_note": "Indian visa is required for Bangladeshi passport holders (apply via the Indian Visa Application Centre; category as currently offered). Check the latest rules with the embassy before booking.",
+ "reach": [
+  {
+   "mode": "Flight",
+   "how": "Dhaka to Jaipur (via Delhi/Kolkata) (Biman, US-Bangla, IndiGo, Air India; often via Kolkata)",
+   "hours": 6,
+   "fare_min": 16000,
+   "fare_max": 30000,
+   "note": "Usually a connecting flight; or fly to Delhi and drive 5 hours."
+  },
+  {
+   "mode": "Train/Bus",
+   "how": "Delhi to Jaipur by Shatabdi/Vande Bharat or AC bus",
+   "hours": 5,
+   "fare_min": 500,
+   "fare_max": 1500,
+   "note": "Frequent services."
+  }
+ ],
+ "local": [
+  {
+   "mode": "Auto / e-rickshaw",
+   "group_fare": "150-500 BDT"
+  },
+  {
+   "mode": "Private cab per day",
+   "group_fare": "5000-9000 BDT",
+   "note": "For Amer, Nahargarh and Jaigarh."
+  }
+ ],
+ "attractions": [
+  {
+   "id": "amber",
+   "name": "Amber Fort",
+   "area": "Amer, 11 km",
+   "tags": [
+    "history",
+    "photography",
+    "culture"
+   ],
+   "mins": 150,
+   "fee": 1000,
+   "what": "A hilltop fort-palace with mirror-work halls.",
+   "tip": "Go early to avoid queues; avoid elephant rides.",
+   "best": "morning",
+   "indoor": false
+  },
+  {
+   "id": "city-palace",
+   "name": "City Palace",
+   "area": "Old city",
+   "tags": [
+    "history",
+    "culture"
+   ],
+   "mins": 120,
+   "fee": 1000,
+   "what": "Royal residence with museums and courtyards.",
+   "tip": "Combine with Jantar Mantar.",
+   "best": "morning",
+   "indoor": false
+  },
+  {
+   "id": "hawa-mahal",
+   "name": "Hawa Mahal",
+   "area": "Old city",
+   "tags": [
+    "history",
+    "photography"
+   ],
+   "mins": 45,
+   "fee": 300,
+   "what": "The honeycomb 'Palace of Winds'.",
+   "tip": "Best photographed from a cafe across the street in the morning.",
+   "best": "morning",
+   "indoor": false
+  },
+  {
+   "id": "jantar",
+   "name": "Jantar Mantar",
+   "area": "Old city",
+   "tags": [
+    "history",
+    "culture"
+   ],
+   "mins": 60,
+   "fee": 300,
+   "what": "A UNESCO astronomical observatory with giant instruments.",
+   "tip": "Hire a guide for explanation.",
+   "best": "any",
+   "indoor": false
+  },
+  {
+   "id": "nahargarh",
+   "name": "Nahargarh Fort sunset",
+   "area": "Aravalli hills",
+   "tags": [
+    "photography",
+    "history"
+   ],
+   "mins": 90,
+   "fee": 200,
+   "what": "A hill fort with city views at sunset.",
+   "tip": "Take a cab; the road is steep.",
+   "best": "sunset",
+   "indoor": false
+  },
+  {
+   "id": "johari",
+   "name": "Johari Bazaar",
+   "area": "Old city",
+   "tags": [
+    "shopping",
+    "culture"
+   ],
+   "mins": 120,
+   "fee": 0,
+   "what": "Jewellery, fabrics, mojari shoes and blockprints.",
+   "tip": "Bargain and check authenticity.",
+   "best": "afternoon",
+   "indoor": false
+  },
+  {
+   "id": "jal-mahal",
+   "name": "Jal Mahal (viewpoint)",
+   "area": "Man Sagar Lake",
+   "tags": [
+    "photography",
+    "relaxing"
+   ],
+   "mins": 30,
+   "fee": 0,
+   "what": "A palace in the middle of the lake, viewed from the road.",
+   "tip": "No entry inside.",
+   "best": "sunset",
+   "indoor": false
+  }
+ ],
+ "food": [
+  {
+   "dish": "Dal baati churma",
+   "where": "Rajasthani restaurants",
+   "cost": 400
+  },
+  {
+   "dish": "Laal maas",
+   "where": "Local eateries",
+   "cost": 500
+  },
+  {
+   "dish": "Ghewar (sweet)",
+   "where": "Sweet shops",
+   "cost": 120
+  }
+ ],
+ "stay": {
+  "budget": {
+   "area": "Bani Park, MI Road",
+   "price_min": 2000,
+   "price_max": 4500,
+   "note": "Guesthouses."
+  },
+  "mid": {
+   "area": "MI Road, C-Scheme",
+   "price_min": 6000,
+   "price_max": 13000,
+   "note": "Mid-range hotels."
+  },
+  "luxury": {
+   "area": "Amer Road, Jaipur outskirts",
+   "price_min": 18000,
+   "price_max": 40000,
+   "note": "Palace hotels."
+  }
+ },
+ "rules": [
+  "Dress modestly at forts and temples.",
+  "Shopping: bargain; beware of fake gems.",
+  "Do not ride elephants; animal welfare concerns.",
+  "Drones need permission."
+ ],
+ "packing": [
+  "Sun hat",
+  "Sunscreen",
+  "Light cotton",
+  "Comfortable shoes",
+  "Cash in INR"
+ ],
+ "nearby": [
+  "delhi",
+  "agra"
+ ]
+}
