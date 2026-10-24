@@ -1,10 +1,10 @@
 # ─────────────────────────────────────────────────────────────────────────────
-# TMS — Apache configuration
+# TourBuddy — Apache configuration
 # ─────────────────────────────────────────────────────────────────────────────
 
 # 1. Never serve secrets, dumps, or internal notes over HTTP.
 #    .env sits inside the document root, so without this rule anyone could read
-#    the API keys at http://<host>/tms/.env
+#    the API keys at http://<host>/tourbuddy/.env
 <FilesMatch "^\.env|\.(env|sql|md|log|ini|bak|old|orig|py|sh|yml|yaml)$">
     <IfModule mod_authz_core.c>
         Require all denied
@@ -22,8 +22,13 @@
     RewriteEngine On
     RewriteCond %{HTTP:Authorization} .
     RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
-    # robots.txt is generated so its paths and absolute Sitemap URL match wherever the site is installed (/ or /tms/).
-    RewriteRule ^robots\.txt$ robots.php [L]
+    # robots.txt is generated so its paths and absolute Sitemap URL match wherever the site is installed (/ or /tourbuddy/).
+    RewriteRule ^robots\.txt$ index.php [L]
+    # Folder structure: every public page lives in frontend/ (webhooks in backend/webhooks/). The root holds only index.php,
+    # which runs the right page for URLs like /hotels.php, so all existing links and gateway callback URLs keep working.
+    RewriteCond %{REQUEST_FILENAME} !-f
+    RewriteCond %{REQUEST_FILENAME} !-d
+    RewriteRule ^([A-Za-z0-9_-]+)\.php$ index.php [QSA,L]
 </IfModule>
 
 # 3. Don't advertise the directory listing of folders without an index file.
@@ -114,6 +119,6 @@ Options -Indexes
 </IfModule>
 
 # 6. Friendly error pages. Inline text responses on purpose: an ErrorDocument file path must be an absolute URL path
-#    ("/tms/404.html"), which breaks when the site is installed at another path; a quoted message works anywhere.
+#    ("/tourbuddy/404.html"), which breaks when the site is installed at another path; a quoted message works anywhere.
 ErrorDocument 404 "<!doctype html><html lang='en'><head><meta charset='utf-8'><meta name='viewport' content='width=device-width,initial-scale=1'><meta name='robots' content='noindex'><title>Page not found | TMS</title><style>body{font-family:system-ui,Arial,sans-serif;background:#f7f5f0;color:#22302a;margin:0;display:flex;min-height:100vh;align-items:center;justify-content:center;text-align:center;padding:24px}main{max-width:460px}h1{font-size:64px;margin:0;color:#104B3A}a,button{display:inline-block;margin-top:18px;padding:12px 22px;border-radius:8px;background:#104B3A;color:#fff;text-decoration:none;border:0;font-size:16px;cursor:pointer}a:focus-visible,button:focus-visible{outline:3px solid #7fd6b2;outline-offset:2px}</style></head><body><main><h1>404</h1><h2>We could not find that page</h2><p>The link may be old or mistyped.</p><button type='button' onclick='history.back()'>Go back</button></main></body></html>"
 ErrorDocument 500 "<!doctype html><html lang='en'><head><meta charset='utf-8'><meta name='viewport' content='width=device-width,initial-scale=1'><meta name='robots' content='noindex'><title>Something went wrong | TMS</title><style>body{font-family:system-ui,Arial,sans-serif;background:#f7f5f0;color:#22302a;margin:0;display:flex;min-height:100vh;align-items:center;justify-content:center;text-align:center;padding:24px}main{max-width:460px}h1{font-size:64px;margin:0;color:#104B3A}button{margin-top:18px;padding:12px 22px;border-radius:8px;background:#104B3A;color:#fff;border:0;font-size:16px;cursor:pointer}button:focus-visible{outline:3px solid #7fd6b2;outline-offset:2px}</style></head><body><main><h1>500</h1><h2>Something went wrong on our side</h2><p>Please try again in a moment. Your booking and payment data have not been changed by this error page.</p><button type='button' onclick='location.reload()'>Try again</button></main></body></html>"

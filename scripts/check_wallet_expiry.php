@@ -11,8 +11,8 @@
  * window even after already notifying at the further one.
  *
  * Schedule: daily, e.g.
- *   Windows Task Scheduler: php.exe "C:\xampp\htdocs\tms\scripts\check_wallet_expiry.php"
- *   Linux cron: 0 8 * * * php /path/to/tms/scripts/check_wallet_expiry.php
+ *   Windows Task Scheduler: php.exe "C:\xampp\htdocs\tourbuddy\scripts\check_wallet_expiry.php"
+ *   Linux cron: 0 8 * * * php /path/to/tourbuddy/scripts/check_wallet_expiry.php
  */
 
 declare(strict_types=1);

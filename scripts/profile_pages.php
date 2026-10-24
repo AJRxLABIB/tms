@@ -2,9 +2,9 @@
 /**
  * scripts/profile_pages.php — measure how fast the main pages respond. CLI only.
  *
- *   php scripts/profile_pages.php http://localhost/tms            (each page requested 3 times, anonymous)
- *   php scripts/profile_pages.php http://localhost/tms --runs=5
- *   php scripts/profile_pages.php http://localhost/tms --cookie="PHPSESSID=abc123"   (signed-in view)
+ *   php scripts/profile_pages.php http://localhost/tourbuddy            (each page requested 3 times, anonymous)
+ *   php scripts/profile_pages.php http://localhost/tourbuddy --runs=5
+ *   php scripts/profile_pages.php http://localhost/tourbuddy --cookie="PHPSESSID=abc123"   (signed-in view)
  *
  * Prints, per page: HTTP status, time to first byte (server think time), total time, size, and the Server-Timing header
  * when the site runs with TMS_PROFILE=1 in .env (adds boot/db marks). The first run is slow because PHP/MySQL are cold;
@@ -16,7 +16,7 @@ if (PHP_SAPI !== 'cli') { http_response_code(403); exit('CLI only.'); }
 
 $base = rtrim((string)($argv[1] ?? ''), '/');
 if ($base === '' || !preg_match('#^https?://#', $base)) {
-    fwrite(STDERR, "Usage: php scripts/profile_pages.php http://localhost/tms [--runs=3] [--cookie=\"PHPSESSID=...\"]\n");
+    fwrite(STDERR, "Usage: php scripts/profile_pages.php http://localhost/tourbuddy [--runs=3] [--cookie=\"PHPSESSID=...\"]\n");
     exit(2);
 }
 $runs = 3; $cookie = '';

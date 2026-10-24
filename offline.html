@@ -42,7 +42,7 @@ h1{color:#3F84B1;font-size:36px;}p{color:#666;font-size:18px;}
         return;
       }
       emptyEl.remove();
-      var metaP = cache.match('/tms/__tripkit-meta.json').then(function (r) { return r ? r.json() : {}; }).catch(function () { return {}; });
+      var metaP = cache.match('/tourbuddy/__tripkit-meta.json').then(function (r) { return r ? r.json() : {}; }).catch(function () { return {}; });
       requests = requests.filter(function (rq) { return rq.url.indexOf('__tripkit-meta') === -1; });
       metaP.then(function (meta) {
         var times = Object.keys(meta).map(function (k) { return Date.parse(meta[k]); }).filter(function (n) { return !isNaN(n); });

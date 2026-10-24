@@ -14,8 +14,8 @@
  * (same dedup idiom as check_wallet_expiry.php's ExpiryNotifiedAt).
  *
  * Schedule: daily, e.g.
- *   Windows Task Scheduler: php.exe "C:\xampp\htdocs\tms\scripts\check_budget_overspend.php"
- *   Linux cron: 0 9 * * * php /path/to/tms/scripts/check_budget_overspend.php
+ *   Windows Task Scheduler: php.exe "C:\xampp\htdocs\tourbuddy\scripts\check_budget_overspend.php"
+ *   Linux cron: 0 9 * * * php /path/to/tourbuddy/scripts/check_budget_overspend.php
  */
 
 declare(strict_types=1);

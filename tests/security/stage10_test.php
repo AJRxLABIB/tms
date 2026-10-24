@@ -66,8 +66,8 @@ t('copilot alert: the owner still gets their own cached alert', ($cp->generatePr
 $bad = ['/\\evil.com', '//evil.com', 'https://evil.com', 'javascript:alert(1)', '\\\\evil', "/ok\r\nSet-Cookie: x=1", 'data:text/html,x', 'HTTP://EVIL.COM'];
 $allOk = true; foreach ($bad as $x) if (tms_safe_redirect($x) !== 'index.php') { $allOk = false; echo "   leaked: " . json_encode($x) . "\n"; }
 t('safe redirect: backslash / protocol-relative / absolute / scheme / CRLF all fall back', $allOk);
-t('safe redirect: normal relative targets keep working', tms_safe_redirect('/tms/package-list.php?type=Beach&page=2') === '/tms/package-list.php?type=Beach&page=2' && tms_safe_redirect('dashboard.php#top') === 'dashboard.php#top');
-$_SERVER['HTTP_HOST'] = 'evil.com/x'; $_SERVER['SCRIPT_NAME'] = '/tms/frontend/forgot-password.php';
+t('safe redirect: normal relative targets keep working', tms_safe_redirect('/tourbuddy/package-list.php?type=Beach&page=2') === '/tourbuddy/package-list.php?type=Beach&page=2' && tms_safe_redirect('dashboard.php#top') === 'dashboard.php#top');
+$_SERVER['HTTP_HOST'] = 'evil.com/x'; $_SERVER['SCRIPT_NAME'] = '/tourbuddy/frontend/forgot-password.php';
 t('public base URL: a malformed Host header is replaced, not echoed', !str_contains(tms_public_base_url(), 'evil.com'));
 $_SERVER['HTTP_HOST'] = 'shop.example.test';
 t('public base URL: a valid Host is accepted when APP_URL is not configured', str_contains(tms_public_base_url(), 'shop.example.test') || (string)tms_env('APP_URL', '') !== '');

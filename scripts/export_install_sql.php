@@ -22,7 +22,7 @@ if (PHP_SAPI !== 'cli') { http_response_code(403); die('This script is CLI-only.
 
 require_once __DIR__ . '/lib/export_sql_lib.php';
 
-$opts = ['mode' => 'catalog', 'out' => __DIR__ . '/../database/tms_install.sql', 'insert' => 500000, 'split' => 0, 'ack' => false];
+$opts = ['mode' => 'catalog', 'out' => __DIR__ . '/../database/tourbuddy.sql', 'insert' => 500000, 'split' => 0, 'ack' => false];
 foreach (array_slice($argv ?? [], 1) as $a) {
     if ($a === '--full') $opts['mode'] = 'full';
     elseif ($a === '--structure-only') $opts['mode'] = 'structure';

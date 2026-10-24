@@ -1,69 +1,42 @@
-# ✈ TMS — Tourism Management System
+# TourBuddy — Tourism Management System
 
-**Version:** 6.0 | **Language:** PHP 8+ | **Database:** MySQL | **Framework:** None (pure PHP + Bootstrap 3)
+PHP 8+ · MySQL/MariaDB · plain PHP + Bootstrap 3 + vanilla JS (no framework).
 
----
+## Quick start (XAMPP)
+1. Copy this folder to `htdocs/tourbuddy`, start Apache and MySQL.
+2. In phpMyAdmin create a database named `tms`, open **Import** and import the one file: `database/tourbuddy.sql`.
+3. Copy `.env.example` to `.env` and set `DB_NAME`, `DB_USER`, `DB_PASS`.
+4. Open `http://localhost/tourbuddy/`.
+5. Create an admin: `php tools/create-admin.php` (prints a random password once), then sign in at `/tourbuddy/admin/`.
 
-## Quick Start
-1. Install XAMPP → start Apache + MySQL
-2. Copy `tms/` folder to `htdocs/`
-3. Import `database/legacy-sql/tms.sql` then `database/legacy-sql/v6_migration.sql` into phpMyAdmin (database name: `tms`)
-4. Edit `backend/config.php` with your DB credentials
-5. Open `http://localhost/tms/`
-6. Create an admin: `php tools/create-admin.php` (prints a random password once), then sign in at `http://localhost/tms/admin/`
+Windows PHP path: `D:\XAMPP\php\php.exe`. Hosting for free: `docs/DEPLOY_INFINITYFREE.md`.
 
-**See `INSTALL.html` for the complete step-by-step guide with screenshots and troubleshooting.**
-
----
-
-## Project Structure
-
+## Folder structure
 ```
-tms/
-├── frontend/     Real implementation of every customer-facing page
-│                 (hotels.php, checkout.php, dashboard.php, ...).
-├── backend/      Shared PHP logic used by frontend/ and admin/: config,
-│                 session/auth, payments/, ai/ (AI features), phpmailer/,
-│                 caching, pricing, i18n, etc.
-├── admin/        The admin panel (its own header/footer/config live in
-│                 admin/includes/ — a separate, admin-only wrapper, not
-│                 to be confused with backend/).
-├── database/     Schema migrations (migrate.php + database/migrations/) and
-│                 the original pre-migration-system baseline SQL files, kept
-│                 for reference (database/legacy-sql/).
-├── api/          JSON API endpoints (ai.php, chat.php, explore.php, ...).
-├── tests/        Automated test runner (run.php) plus tests/manual/ —
-│                 one-off QA/session-simulation helper scripts used while
-│                 developing (never linked from the live app).
-├── css/ js/ images/ fonts/   Static assets (kept at the project root, not
-│                 nested under frontend/, so nothing else has to change).
-└── *.php         Thin one-line "shims" — e.g. root hotels.php is just
-                  `require __DIR__ . '/frontend/hotels.php';`. They exist
-                  so every public URL, redirect, fetch() call, sitemap
-                  entry, and robots.txt rule that already points at
-                  `/hotels.php` keeps working unchanged, while the real
-                  code lives in frontend/. See SESSION_SUMMARY_INDEX-1.md,
-                  Round 50, for the full rationale.
+index.php     Front controller: the only PHP file in the root. It runs the page for URLs such as /hotels.php,
+              so every link and payment-callback URL still works.
+.htaccess     Security headers, CSP, and the rule that sends page URLs to index.php (needs mod_rewrite).
+frontend/     Every customer page (hotels.php, checkout.php, dashboard.php, ...).
+admin/        Admin panel.
+supplier/     Supplier portal.
+backend/      Shared PHP: config, auth, payments, ai/, services/, map code, header/nav/footer, i18n.
+api/          JSON endpoints (ai, chat, explore, map, REST).
+database/     tourbuddy.sql (the one install file) + migrations/ and migrate.php for later upgrades.
+css/ js/ images/ fonts/   Static assets.
+scripts/      CLI jobs (backups, expiry, exports, map import, deploy package).
+tools/        One-off admin tools (create-admin, scan-secrets).
+data/         Seed JSON used to fill sample packages/hotels/activities.
+tests/        Automated tests (php tests/run.php).
+docs/         Setup, deployment, security, API, AI and other guides.
+uploads/      User uploads (protected, not in git).
 ```
 
----
+## Database
+- **Fresh install:** import `database/tourbuddy.sql` once. It has every table and the public catalogue.
+- **Rebuild that file from your local database:** `php scripts/export_install_sql.php` (catalogue only, no customer data).
+- **Upgrade an existing database later:** `php database/migrate.php --status`, then `php database/migrate.php`.
 
-## Default Coupon Codes
-| Code | Discount |
-|------|----------|
-| `WELCOME10` | 10% off |
-| `SUMMER20` | 20% off |
-| `TMS2026` | 15% off |
+## Useful commands
+`php scripts/check_env.php` (check settings) · `php tests/run.php` · `php scripts/make_deploy_package.php` · `php scripts/make_brand_assets.php` (logo icons)
 
-## Default seed accounts (local development only)
-
-This project's `database/legacy-sql/tms.sql` seeds one demo admin and one
-demo user account so you can log in immediately after a fresh install.
-**If this site is public or hosted anywhere outside your own machine,
-change both passwords immediately** (admin: Admin > Change Password once
-logged in, or `admin/manage-admins.php` as a superadmin; user: Profile >
-Change Password) — the credentials that used to be printed here were real,
-working passwords for a publicly-documented file, which is a real
-credential exposure once this repo or its docs are shared (Rule 5). Check
-`database/legacy-sql/tms.sql` directly if you need the exact seeded
-username/email for your local copy.
+Under PHP's built-in server use: `php -S 127.0.0.1:8099 index.php`.

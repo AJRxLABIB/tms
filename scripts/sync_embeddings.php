@@ -6,7 +6,7 @@
  *   php scripts/sync_embeddings.php [--limit=200] [--seconds=240]
  *
  * Needs AI_EMBED_MODEL in .env and a running Ollama (see .env.example). Without them it says so and exits without changing anything.
- * Run it once after enabling, then daily (or whenever packages change), e.g. Windows Task Scheduler: php.exe "D:\XAMPP\htdocs\tms\scripts\sync_embeddings.php"
+ * Run it once after enabling, then daily (or whenever packages change), e.g. Windows Task Scheduler: php.exe "D:\XAMPP\htdocs\tourbuddy\scripts\sync_embeddings.php"
  */
 declare(strict_types=1);
 if (PHP_SAPI !== 'cli') { http_response_code(403); die('This script is CLI-only.'); }

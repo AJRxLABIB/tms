@@ -137,7 +137,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !isset($_POST['btn-verify-2fa'])) {
                 $redirect = $_SESSION['post_login_redirect'];
                 unset($_SESSION['post_login_redirect']);
             }
-            // Allow same-site paths (including the leading "/tms/..." this
+            // Allow same-site paths (including the leading "/tourbuddy/..." this
             // app is hosted under) but block open-redirect vectors: a
             // protocol-relative URL ("//evil.com") or any absolute URL
             // ("https://evil.com").

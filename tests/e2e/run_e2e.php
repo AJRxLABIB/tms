@@ -56,7 +56,7 @@
  * built-in server itself. Point it at one with the E2E_BASE_URL env var:
  *   - CI (.github/workflows/ci.yml): starts `php -S 127.0.0.1:8000` first,
  *     matching this script's default base URL.
- *   - Local XAMPP: E2E_BASE_URL=http://localhost/tms php tests/e2e/run_e2e.php
+ *   - Local XAMPP: E2E_BASE_URL=http://localhost/tourbuddy php tests/e2e/run_e2e.php
  */
 
 declare(strict_types=1);

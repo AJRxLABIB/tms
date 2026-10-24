@@ -151,7 +151,7 @@ define('APP_NAME',    tms_env('APP_NAME', 'TourBuddy AI Travel Copilot'));
 define('APP_VERSION', '7.0');
 define('APP_ENV',     tms_env('APP_ENV', 'local'));
 define('APP_DEBUG',   (bool) tms_env('APP_DEBUG', false));   // safe default: raw PHP errors are never shown unless APP_DEBUG=true is set explicitly
-define('APP_URL',     tms_env('APP_URL', 'http://localhost/tms'));
+define('APP_URL',     tms_env('APP_URL', 'http://localhost/tourbuddy'));
 
 // ─── Debug/error-display wiring (Round 115 security hardening) ────────────────
 // APP_DEBUG was previously DEFINED here but never actually CONSULTED anywhere

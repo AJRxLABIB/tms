@@ -1,8 +1,8 @@
 <?php
 /**
  * Cross-account / authorization / cookie tests over REAL HTTP against a running copy of the site.
- *   php tests/security/run.php [base-url]        default http://127.0.0.1:8099  (php -S 127.0.0.1:8099 from the project root)
- *   XAMPP: php tests\security\run.php http://localhost/tms
+ *   php tests/security/run.php [base-url]        default http://127.0.0.1:8099  (php -S 127.0.0.1:8099 index.php from the project root)
+ *   XAMPP: php tests\security\run.php http://localhost/tourbuddy
  * Creates two throw-away customers (@idor-test.example.test), one booking, one group trip and one wallet file owned by
  * customer A, then proves customer B and anonymous visitors cannot read or change them. Deletes everything afterwards.
  * Exit code 1 on any failure.
@@ -70,7 +70,7 @@ t('session cookie is HttpOnly', (bool)preg_match('/Set-Cookie: PHPSESSID=[^;]+;.
 t('session cookie has SameSite', (bool)preg_match('/Set-Cookie: PHPSESSID=[^;]+;.*SameSite=(Lax|Strict)/i', $h));
 t('server refuses a session ID it did not issue (strict mode)', (function () use ($base) {
     // The cookie must be scoped to the host actually under test (it was hard-coded to 127.0.0.1, so against
-    // http://localhost/tms the forged cookie was never sent and the check could not pass).
+    // http://localhost/tourbuddy the forged cookie was never sent and the check could not pass).
     $host = (string)parse_url($base, PHP_URL_HOST);
     $c = new Client(); file_put_contents($c->jar, "#HttpOnly_{$host}\tFALSE\t/\tFALSE\t0\tPHPSESSID\tattackerchosenid1234567890\n");
     $r = $c->req($base . '/index.php'); return !str_contains(file_get_contents($c->jar), 'attackerchosenid1234567890'); })());

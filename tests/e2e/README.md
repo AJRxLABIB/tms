@@ -19,7 +19,7 @@ to run repeatedly against a real database.
 php tests/e2e/run_e2e.php
 
 # Against a local XAMPP install
-E2E_BASE_URL=http://localhost/tms php tests/e2e/run_e2e.php
+E2E_BASE_URL=http://localhost/tourbuddy php tests/e2e/run_e2e.php
 ```
 
 **Honest scope, not everything (Rule 73):** this is a first real slice --

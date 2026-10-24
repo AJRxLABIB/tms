@@ -57,9 +57,7 @@ jobs:
 
       - name: Load base schema
         run: |
-          for f in tms v6_migration AI_MIGRATION explore_migration schema_repair_migration; do
-            mysql -h127.0.0.1 -uroot tms < database/legacy-sql/$f.sql
-          done
+          mysql -h127.0.0.1 -uroot tms < database/tourbuddy.sql
 
       - name: Configure environment
         run: |

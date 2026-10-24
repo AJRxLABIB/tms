@@ -9,7 +9,7 @@
  *   php scripts/check_trip_disruptions.php [--days=30] [--limit=50] [--no-ai]
  *
  * --no-ai skips the planner entirely (alerts only, no revised plan, no weather lookup). --limit caps AI calls per run.
- * Schedule daily, e.g. Windows Task Scheduler: php.exe "D:\XAMPP\htdocs\tms\scripts\check_trip_disruptions.php"
+ * Schedule daily, e.g. Windows Task Scheduler: php.exe "D:\XAMPP\htdocs\tourbuddy\scripts\check_trip_disruptions.php"
  */
 declare(strict_types=1);
 if (PHP_SAPI !== 'cli') { http_response_code(403); die('This script is CLI-only.'); }

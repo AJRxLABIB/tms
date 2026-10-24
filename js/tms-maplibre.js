@@ -9,7 +9,7 @@
  *   TmsMapGL.createMap(container, opts) -> controller
  *       container  element or id
  *       opts.config        object from api/map.php?action=config  {styles:[{id,label,url}], default_style, center:[lng,lat], zoom, lang, attribution}
- *       opts.base          site base URL prefix ('' or '/tms/'), used to locate the worker file (default: derived from <script src>)
+ *       opts.base          site base URL prefix ('' or '/tourbuddy/'), used to locate the worker file (default: derived from <script src>)
  *       opts.styleId       style id to start with (default config.default_style, else first style)
  *       opts.fallbackStyle style URL or style object tried when the chosen style fails (default: plain OSM raster style)
  *       opts.maxStyleAttempts  total style load attempts before giving up (default 2). No automatic retry beyond that.

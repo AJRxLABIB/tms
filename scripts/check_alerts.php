@@ -11,9 +11,9 @@
  * schedule it with the OS's own scheduler:
  *
  *   Windows (Task Scheduler): run every 30-60 min:
- *     php.exe "C:\xampp\htdocs\tms\scripts\check_alerts.php"
+ *     php.exe "C:\xampp\htdocs\tourbuddy\scripts\check_alerts.php"
  *   Linux/shared hosting (cron):
- *     every 30 minutes: php /path/to/tms/scripts/check_alerts.php >> /path/to/tms/scripts/alerts.log 2>&1
+ *     every 30 minutes: php /path/to/tourbuddy/scripts/check_alerts.php >> /path/to/tourbuddy/scripts/alerts.log 2>&1
  *
  * CLI-only by design -- this does real writes (fires notifications, flips
  * alerts inactive) and must never be reachable over HTTP.

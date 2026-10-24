@@ -23,8 +23,8 @@ const TRIPKIT_CACHE = 'tms-tripkit';
 // emergency and packing pages only.
 const NEVER_SAVE = /\/(payment|pay-now|checkout|cart|login|logout|register|forgot-password|change-password|two-factor-setup|wallet-document|google-login|google-callback|google-link|export-my-data|admin|supplier|api)(\/|\.php|$)/i;
 // Metadata (when each page was saved) lives under this key in TRIPKIT_CACHE; it is never listed as a page.
-const TRIPKIT_META = '/tms/__tripkit-meta.json';
-const PRECACHE = ['/', '/tms/', '/tms/index.php', '/tms/css/style.min.css', '/tms/offline.html'];
+const TRIPKIT_META = '/tourbuddy/__tripkit-meta.json';
+const PRECACHE = ['/', '/tourbuddy/', '/tourbuddy/index.php', '/tourbuddy/css/style.min.css', '/tourbuddy/offline.html'];
 
 // REAL GAP FOUND AND CLOSED (Phase H continuation -- auditing what
 // TRIPKIT_CACHE actually guarantees, not just what pages it lists): the
@@ -45,18 +45,18 @@ const PRECACHE = ['/', '/tms/', '/tms/index.php', '/tms/css/style.min.css', '/tm
 // TripKit pages' actual <link>/<script> tags: none of these assets were in
 // PRECACHE either, so nothing already covered them under TRIPKIT_CACHE.
 const TRIPKIT_STATIC_ASSETS = [
-  '/tms/css/bootstrap.min2.css',
-  '/tms/css/font-awesome.min2.css',
-  '/tms/css/style.min.css',
-  '/tms/css/animate.css',
-  '/tms/css/modern-theme.css',
-  '/tms/js/jquery-1.12.0.min.js',
-  '/tms/js/bootstrap.min.js',
-  '/tms/js/wow.min.js',
-  '/tms/js/qrcode.js',
-  '/tms/js/ai-feedback.js',
-  '/tms/fonts/fa-solid-900.woff2',
-  '/tms/fonts/fa-regular-400.woff2',
+  '/tourbuddy/css/bootstrap.min2.css',
+  '/tourbuddy/css/font-awesome.min2.css',
+  '/tourbuddy/css/style.min.css',
+  '/tourbuddy/css/animate.css',
+  '/tourbuddy/css/modern-theme.css',
+  '/tourbuddy/js/jquery-1.12.0.min.js',
+  '/tourbuddy/js/bootstrap.min.js',
+  '/tourbuddy/js/wow.min.js',
+  '/tourbuddy/js/qrcode.js',
+  '/tourbuddy/js/ai-feedback.js',
+  '/tourbuddy/fonts/fa-solid-900.woff2',
+  '/tourbuddy/fonts/fa-regular-400.woff2',
 ];
 
 self.addEventListener('install', e => {
@@ -124,7 +124,7 @@ self.addEventListener('fetch', e => {
 
   if (isPrivate) {
     e.respondWith(
-      fetch(e.request).catch(() => caches.match(e.request, { cacheName: TRIPKIT_CACHE }).then(r => r || caches.match('/tms/offline.html')))
+      fetch(e.request).catch(() => caches.match(e.request, { cacheName: TRIPKIT_CACHE }).then(r => r || caches.match('/tourbuddy/offline.html')))
     );
     return;
   }
@@ -151,7 +151,7 @@ self.addEventListener('fetch', e => {
         });
       }
       return res;
-    }).catch(() => caches.match(e.request).then(r => r || caches.match('/tms/offline.html')))
+    }).catch(() => caches.match(e.request).then(r => r || caches.match('/tourbuddy/offline.html')))
   );
 });
 

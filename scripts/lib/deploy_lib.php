@@ -4,7 +4,7 @@
  */
 
 /** Top-level folders never copied to production. */
-const TMS_DEPLOY_EXCLUDE_DIRS = ['.git', '.github', '.vscode', '.idea', 'tests', 'tools', '_deprecated', 'deploy', 'node_modules', 'vendor-dev'];
+const TMS_DEPLOY_EXCLUDE_DIRS = ['.git', '.github', '.vscode', '.idea', 'tests', 'tools', '_deprecated', 'docs', 'pw', 'deploy', 'node_modules', 'vendor-dev'];
 
 /** Top-level markdown/doc files that ARE copied (everything else *.md and the planning/audit documents are not). */
 const TMS_DEPLOY_KEEP_DOCS = ['README.md', 'DEPLOYMENT.md', 'DEPLOY_INFINITYFREE.md'];

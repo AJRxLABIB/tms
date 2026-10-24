@@ -16,9 +16,9 @@ externalDocs:
   url: ../API_DOCUMENTATION.md
 
 servers:
-  - url: /tms/api/v1
+  - url: /tourbuddy/api/v1
     description: Versioned (recommended for new integrations)
-  - url: /tms/api
+  - url: /tourbuddy/api
     description: Legacy unversioned path (kept working indefinitely)
 
 components:

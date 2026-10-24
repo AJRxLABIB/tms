@@ -5,7 +5,7 @@
  *   D:\XAMPP\php\php.exe scripts/make_deploy_package.php
  *
  * Then upload the CONTENTS of deploy/htdocs/ directly into the host's htdocs folder (index.php must end up at
- * htdocs/index.php, not htdocs/tms/index.php). Safe to re-run: deploy/htdocs is rebuilt from scratch.
+ * htdocs/index.php, not htdocs/tourbuddy/index.php). Safe to re-run: deploy/htdocs is rebuilt from scratch.
  */
 declare(strict_types=1);
 
