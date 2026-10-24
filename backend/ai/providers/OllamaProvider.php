@@ -101,7 +101,7 @@ class OllamaProvider implements AIProviderInterface {
 
         if ($httpCode !== 200) {
             $detail = is_array($data) ? (string)($data['error'] ?? '') : '';
-            error_log('[TMS AI Ollama] HTTP ' . $httpCode . ': ' . substr($detail !== '' ? $detail : $rawBody, 0, 200));
+            error_log('[TourBuddy AI Ollama] HTTP ' . $httpCode . ': ' . substr($detail !== '' ? $detail : $rawBody, 0, 200));
             if ($httpCode === 404) { // model not pulled
                 return ['success' => false, 'error' => 'The AI assistant is not set up on this site yet.', 'kind' => 'config', 'retriable' => false];
             }

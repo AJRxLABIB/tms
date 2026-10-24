@@ -33,7 +33,7 @@ if(isset($_POST['submit1']))
         $query->bindParam(':mobile',      $mobile,      PDO::PARAM_STR);
         $query->bindParam(':subject',     $subject,     PDO::PARAM_STR);
         $query->bindParam(':description', $description, PDO::PARAM_STR);
-        try { $query->execute(); } catch (PDOException $e) { error_log('[TMS enquiry] ' . $e->getMessage()); }
+        try { $query->execute(); } catch (PDOException $e) { error_log('[TourBuddy enquiry] ' . $e->getMessage()); }
         if ($dbh->lastInsertId()) {
             $msg = "Enquiry successfully submitted!";
         } else {
@@ -51,9 +51,9 @@ if(isset($_POST['submit1']))
 <link rel="apple-touch-icon" href="images/icon-192.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="TMS">
+<meta name="apple-mobile-web-app-title" content="TourBuddy">
 <meta name="mobile-web-app-capable" content="yes">
-<title>TMS | Tourism Management System</title>
+<title>TourBuddy | Tourism Management System</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
 <meta name="keywords" content="Tourism Management System In PHP" />
@@ -93,7 +93,7 @@ if(isset($_POST['submit1']))
 <?php include('backend/header.php');?>
 <div class="banner-1 ">
 	<div class="container">
-		<h1 class="wow zoomIn animated animated" data-wow-delay=".1s" style="visibility: visible; animation-delay: 0.5s; animation-name: zoomIn;">TMS-Tourism Management System</h1>
+		<h1 class="wow zoomIn animated animated" data-wow-delay=".1s" style="visibility: visible; animation-delay: 0.5s; animation-name: zoomIn;">TourBuddy â Tourism Management System</h1>
 	</div>
 </div>
 <!--- /banner-1 ---->
@@ -134,13 +134,13 @@ if (in_array($pagetype, ['aboutus', 'contact'], true) && tms_active_language() !
     if ($pagetype === 'aboutus') {
         $T = tms_translate_batch([
             'heading'          => 'About Us',
-            'intro'            => "TMS (Tourism Management System) helps travellers discover, plan and book unforgettable trips across Bangladesh and beyond — from the sandy shores of Cox's Bazar to the hill tracts of Bandarban and destinations worldwide.",
+            'intro'            => "TourBuddy (Tourism Management System) helps travellers discover, plan and book unforgettable trips across Bangladesh and beyond — from the sandy shores of Cox's Bazar to the hill tracts of Bandarban and destinations worldwide.",
             'mission_title'    => 'Our Mission',
             'mission_body'     => 'To make trustworthy, affordable and unforgettable travel accessible to everyone — pairing local expertise with modern technology so every trip we plan is safe, well-organised, and genuinely memorable.',
             'vision_title'     => 'Our Vision',
             'vision_body'      => 'To become the most trusted tourism platform in Bangladesh and the wider region, known for reliability, transparent pricing, and putting travellers first at every step of their journey.',
             'story_title'      => 'Our Story',
-            'story_body'       => "TMS started with a simple frustration: booking a trip shouldn't mean juggling five different websites for packages, weather, maps and reviews. We built a single place where you can explore any destination, see live weather and nearby places, compare packages, and book — all without leaving the site.",
+            'story_body'       => "TourBuddy started with a simple frustration: booking a trip shouldn't mean juggling five different websites for packages, weather, maps and reviews. We built a single place where you can explore any destination, see live weather and nearby places, compare packages, and book — all without leaving the site.",
             'stat_packages'    => 'Tour Packages',
             'stat_travellers'  => 'Happy Travellers',
             'stat_destinations'=> 'Destinations',
@@ -180,7 +180,7 @@ function tms_page_t(array $T, string $key, string $fallback): string {
 	<?php if ($cms && trim(strip_tags($cms->detail)) !== ''): ?>
 	<p><?php echo HtmlSanitizer::clean((string)$cms->detail); ?></p>
 	<?php else: ?>
-	<p><?php echo htmlspecialchars(tms_page_t($T, 'intro', "TMS (Tourism Management System) helps travellers discover, plan and book unforgettable trips across Bangladesh and beyond — from the sandy shores of Cox's Bazar to the hill tracts of Bandarban and destinations worldwide."), ENT_QUOTES, 'UTF-8'); ?></p>
+	<p><?php echo htmlspecialchars(tms_page_t($T, 'intro', "TourBuddy (Tourism Management System) helps travellers discover, plan and book unforgettable trips across Bangladesh and beyond — from the sandy shores of Cox's Bazar to the hill tracts of Bandarban and destinations worldwide."), ENT_QUOTES, 'UTF-8'); ?></p>
 	<?php endif; ?>
 
 	<div class="row wow fadeInUp" style="margin-top:20px;">
@@ -200,7 +200,7 @@ function tms_page_t(array $T, string $key, string $fallback): string {
 
 	<div class="pkg-card wow fadeInUp" style="padding:24px;margin-bottom:20px;">
 		<h4 style="font-weight:700;"><i class="fa fa-book" style="color:var(--secondary)"></i> <?php echo htmlspecialchars(tms_page_t($T, 'story_title', 'Our Story'), ENT_QUOTES, 'UTF-8'); ?></h4>
-		<p style="color:#555;"><?php echo htmlspecialchars(tms_page_t($T, 'story_body', "TMS started with a simple frustration: booking a trip shouldn't mean juggling five different websites for packages, weather, maps and reviews. We built a single place where you can explore any destination, see live weather and nearby places, compare packages, and book — all without leaving the site."), ENT_QUOTES, 'UTF-8'); ?></p>
+		<p style="color:#555;"><?php echo htmlspecialchars(tms_page_t($T, 'story_body', "TourBuddy started with a simple frustration: booking a trip shouldn't mean juggling five different websites for packages, weather, maps and reviews. We built a single place where you can explore any destination, see live weather and nearby places, compare packages, and book — all without leaving the site."), ENT_QUOTES, 'UTF-8'); ?></p>
 	</div>
 
 	<?php
@@ -320,18 +320,22 @@ function tms_page_t(array $T, string $key, string $fallback): string {
 		</div>
 	</div>
 	<?php if ($tmsHasMap): ?>
-	<link rel="stylesheet" href="js/vendor/leaflet/leaflet.css" />
-	<script src="js/vendor/leaflet/leaflet.js"></script>
+	<script src="<?php echo tms_asset_ver('js/tms-map-pages.js'); ?>"></script>
 	<script>
-	window.addEventListener('load', function () {
-		if (typeof L === 'undefined') return;
-		var pos = [<?php echo (float)$tmsOffLat; ?>, <?php echo (float)$tmsOffLng; ?>];
-		var map = L.map('contactMap', { scrollWheelZoom: false }).setView(pos, 14);
-		L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-			attribution: '&copy; OpenStreetMap contributors'
-		}).addTo(map);
-		L.marker(pos).addTo(map).bindPopup('TMS office');
-	});
+	(function () {
+		var el = document.getElementById('contactMap');
+		var lat = <?php echo (float)$tmsOffLat; ?>, lng = <?php echo (float)$tmsOffLng; ?>;   // office coordinates come from .env (admin-entered), never invented
+		if (!el || !window.TmsMapPages) return;
+		// Loaded only when the map is about to scroll into view.
+		TmsMapPages.lazyMount(el, { base: '', lang: document.documentElement.lang || 'en', center: [lng, lat], zoom: 14, cooperativeGestures: true,
+			controls: { geolocate: false, fullscreen: false } }, function (ctl) {
+			TmsMapPages.pins(ctl, 'office', { color: '#176B50', cluster: false, popup: true })
+				.set([{ lat: lat, lng: lng, title: 'TourBuddy office' }]);
+		}, function () {
+			el.textContent = 'The map could not be loaded right now.';
+			el.style.cssText += ';display:flex;align-items:center;justify-content:center;color:#94a3b8;font-size:13px;text-align:center;padding:12px';
+		});
+	})();
 	</script>
 	<?php endif; ?>
 

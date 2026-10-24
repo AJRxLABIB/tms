@@ -40,12 +40,12 @@
 function tms_wallet_encryption_key(): ?string {
     $encKey = tms_env('WALLET_ENCRYPTION_KEY', '');
     if (empty($encKey)) {
-        error_log('[TMS Wallet] WALLET_ENCRYPTION_KEY is not set in .env -- cannot encrypt/decrypt wallet documents.');
+        error_log('[TourBuddy Wallet] WALLET_ENCRYPTION_KEY is not set in .env -- cannot encrypt/decrypt wallet documents.');
         return null;
     }
     $keyBin = @hex2bin($encKey);
     if ($keyBin === false || strlen($keyBin) !== 32) {
-        error_log('[TMS Wallet] WALLET_ENCRYPTION_KEY must be a 64-character hex string (32 bytes).');
+        error_log('[TourBuddy Wallet] WALLET_ENCRYPTION_KEY must be a 64-character hex string (32 bytes).');
         return null;
     }
     return $keyBin;
@@ -61,7 +61,7 @@ function tms_wallet_encrypt_bytes(string $plaintext, string $keyBin) {
     $tag = '';
     $ciphertext = openssl_encrypt($plaintext, 'aes-256-gcm', $keyBin, OPENSSL_RAW_DATA, $iv, $tag);
     if ($ciphertext === false) {
-        error_log('[TMS Wallet] openssl_encrypt failed: ' . (openssl_error_string() ?: 'unknown error'));
+        error_log('[TourBuddy Wallet] openssl_encrypt failed: ' . (openssl_error_string() ?: 'unknown error'));
         return false;
     }
     return $iv . $tag . $ciphertext;
@@ -75,7 +75,7 @@ function tms_wallet_encrypt_bytes(string $plaintext, string $keyBin) {
  */
 function tms_wallet_decrypt_bytes(string $raw, string $keyBin): ?string {
     if (strlen($raw) < 28) { // 12-byte IV + 16-byte tag minimum
-        error_log('[TMS Wallet] Encrypted document file is too short to contain a valid IV+tag.');
+        error_log('[TourBuddy Wallet] Encrypted document file is too short to contain a valid IV+tag.');
         return null;
     }
     $iv         = substr($raw, 0, 12);
@@ -83,7 +83,7 @@ function tms_wallet_decrypt_bytes(string $raw, string $keyBin): ?string {
     $ciphertext = substr($raw, 28);
     $plain = openssl_decrypt($ciphertext, 'aes-256-gcm', $keyBin, OPENSSL_RAW_DATA, $iv, $tag);
     if ($plain === false) {
-        error_log('[TMS Wallet] openssl_decrypt failed (wrong key or corrupted/tampered file).');
+        error_log('[TourBuddy Wallet] openssl_decrypt failed (wrong key or corrupted/tampered file).');
         return null;
     }
     return $plain;

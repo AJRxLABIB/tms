@@ -71,7 +71,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['create_admin'])) {
                 tms_log_activity($dbh, $_SESSION['alogin'], 'Admin Created', "Created admin '$newUser' with role '$newRole'", 'admin', $newUser, null, $newRole);
                 $msg = "Admin '$newUser' created with role '$newRole'."; $msgType = 'success';
             } catch (Exception $e) {
-                error_log('[TMS Admin] Failed to create admin: ' . $e->getMessage());
+                error_log('[TourBuddy Admin] Failed to create admin: ' . $e->getMessage());
                 $msg = 'Could not create admin account. Please try again.'; $msgType = 'error';
             }
         }
@@ -151,7 +151,7 @@ $admins = $dbh->query("SELECT id, UserName, Role, updationDate FROM admin ORDER 
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>TMS | Manage Admins</title>
+<title>TourBuddy | Manage Admins</title>
 <link href="css/font-awesome.css" rel="stylesheet">
 <link href="css/bootstrap.min.css" rel="stylesheet">
 <link href="<?php echo tms_asset_ver('css/admin-v6.css'); ?>" rel="stylesheet">

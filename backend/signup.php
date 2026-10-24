@@ -12,7 +12,7 @@
     <!-- Header -->
     <div style="background:linear-gradient(135deg,#176B50,#104B3A);padding:24px 28px 20px;color:#fff;position:relative;">
       <button onclick="closeModal('signupModal')" style="position:absolute;top:14px;right:16px;background:rgba(255,255,255,.2);border:none;color:#fff;width:28px;height:28px;border-radius:50%;cursor:pointer;font-size:16px;line-height:1;">&times;</button>
-      <div style="font-size:20px;font-weight:800;"><i class="fa fa-globe"></i> TMS</div>
+      <div style="font-size:20px;font-weight:800;"><i class="fa fa-globe"></i> TourBuddy</div>
       <div style="font-size:15px;font-weight:600;margin-top:6px;opacity:.9;"><i class="fa fa-user-plus"></i> Create Account</div>
     </div>
 

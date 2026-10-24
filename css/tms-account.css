@@ -1,0 +1,216 @@
+/* TourBuddy account / auth / booking pages — "Tropical Journey". Load AFTER css/tms-theme.css.
+   Sections: 1 auth split-screen · 2 form controls · 3 page shell · 4 summary cards · 5 chips & filters
+             6 booking cards · 7 steps & checkout · 8 confetti · 9 empty & skeleton · 10 account list */
+
+/* ═════ 1. AUTH SPLIT-SCREEN ═════ */
+html body.tms-auth-page { margin: 0; background: var(--tms-bg); color: var(--tms-text); font-family: var(--tms-font, 'Inter', system-ui, sans-serif); }
+.tms-auth { display: grid; grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr); min-height: 100vh; }
+.tms-auth-art {
+  position: relative; overflow: hidden; color: #fff; display: flex; flex-direction: column; justify-content: flex-start; padding: 48px 56px;
+  background: linear-gradient(160deg, rgba(5, 52, 60, .78), rgba(14, 124, 134, .35) 60%, rgba(255, 122, 89, .25)), var(--auth-img, none) center / cover no-repeat, var(--tms-primary-strong, #0b4a52);
+}
+.tms-auth-art .brand { position: relative; z-index: 3; font-size: 24px; font-weight: 800; letter-spacing: -.02em; color: #fff; text-decoration: none; display: inline-flex; gap: 10px; align-items: center; }
+.tms-auth-art .brand i { width: 38px; height: 38px; border-radius: 12px; background: var(--tms-accent, #ff7a59); color: #1d0c05; display: inline-flex; align-items: center; justify-content: center; font-size: 18px; }
+.tms-auth-art h2 { position: relative; z-index: 3; font-size: clamp(28px, 3.2vw, 44px); line-height: 1.12; font-weight: 800; margin: 12vh 0 12px; max-width: 14em; text-shadow: 0 2px 18px rgba(0, 0, 0, .25); }
+.tms-auth-art p { position: relative; z-index: 3; font-size: 17px; max-width: 28em; opacity: .94; margin: 0; }
+.tms-auth-art .tms-scene { height: 40%; }
+.tms-auth-main { display: flex; align-items: center; justify-content: center; padding: 40px 24px; background: var(--tms-bg); }
+.tms-auth-card { width: 100%; max-width: 440px; }
+.tms-auth-card h1 { font-size: 30px; font-weight: 800; letter-spacing: -.02em; margin: 0 0 6px; color: var(--tms-text); }
+.tms-auth-card .lead { color: var(--tms-muted); margin: 0 0 26px; font-size: 15px; }
+.tms-auth-card .alt { text-align: center; margin-top: 22px; font-size: 14px; color: var(--tms-muted); }
+.tms-auth-card .alt a, .tms-auth-card .link { color: var(--tms-link); font-weight: 700; text-decoration: none; }
+.tms-auth-card .alt a:hover, .tms-auth-card .link:hover { text-decoration: underline; }
+.tms-auth-card .or { display: flex; align-items: center; gap: 12px; margin: 20px 0; color: var(--tms-muted); font-size: 12px; text-transform: uppercase; letter-spacing: .08em; }
+.tms-auth-card .or::before, .tms-auth-card .or::after { content: ""; flex: 1; height: 1px; background: var(--tms-border); }
+.tms-auth-card .tms-theme-corner { position: fixed; top: 16px; right: 16px; z-index: 5; }
+@media (max-width: 860px) {
+  .tms-auth { grid-template-columns: 1fr; }
+  .tms-auth-art { min-height: 200px; padding: 24px; }
+  .tms-auth-art h2 { margin: 18px 0 6px; font-size: 24px; }
+  .tms-auth-art p, .tms-auth-art .tms-scene { display: none; }
+  .tms-auth-main { padding: 28px 18px 40px; align-items: flex-start; }
+}
+
+/* ═════ 2. FORM CONTROLS ═════ */
+.tms-field { margin-bottom: 18px; }
+.tms-field > label { display: block; font-size: 14px; font-weight: 700; color: var(--tms-text); margin-bottom: 6px; }
+.tms-input { position: relative; }
+.tms-input > i.fi { position: absolute; left: 16px; top: 50%; transform: translateY(-50%); color: var(--tms-muted); font-size: 15px; pointer-events: none; }
+html body .tms-input input, html body .tms-input select, html body .tms-input textarea, html body input.tms-control {
+  width: 100%; height: 54px; padding: 0 16px 0 46px; font-size: 16px; color: var(--tms-text); background: var(--tms-surface);
+  border: 2px solid var(--tms-border); border-radius: 14px; transition: border-color .2s var(--tms-ease), box-shadow .2s var(--tms-ease);
+}
+html body input.tms-control { padding-left: 16px; }
+html body .tms-input input:focus, html body input.tms-control:focus { outline: none; border-color: var(--tms-primary); box-shadow: var(--tms-ring); }
+html body .tms-input input[aria-invalid="true"] { border-color: var(--tms-bad); }
+.tms-input .eye-btn {
+  position: absolute; right: 6px; top: 50%; transform: translateY(-50%); width: 44px; height: 44px; border: 0; background: none;
+  color: var(--tms-muted); cursor: pointer; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 16px;
+}
+.tms-input .eye-btn:hover { color: var(--tms-text); background: var(--tms-surface-2); }
+.tms-input .eye-btn:focus-visible { outline: 3px solid var(--tms-primary); }
+.tms-input.has-eye input { padding-right: 54px; }
+.tms-field .tms-err { display: none; color: var(--tms-bad); font-size: 13px; margin-top: 6px; font-weight: 600; }
+.tms-field.invalid .tms-err { display: block; }
+.tms-field .tms-hint { color: var(--tms-muted); font-size: 13px; margin-top: 6px; }
+.tms-strength { height: 6px; border-radius: 6px; margin-top: 8px; background: var(--tms-border); overflow: hidden; }
+.tms-strength > div { height: 100%; width: 0; border-radius: 6px; transition: width .3s var(--tms-ease), background .3s; }
+
+html body .tms-btn-primary, html body .tms-btn-pay {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px; width: 100%; min-height: 54px; border: 0; border-radius: 14px; cursor: pointer;
+  font-size: 16px; font-weight: 800; color: var(--tms-accent-ink, #1d0c05); text-decoration: none;
+  background: linear-gradient(135deg, var(--tms-accent), color-mix(in srgb, var(--tms-accent) 78%, #ffb347));
+  box-shadow: 0 10px 24px color-mix(in srgb, var(--tms-accent) 40%, transparent); transition: transform .2s var(--tms-ease), box-shadow .2s var(--tms-ease);
+}
+html body .tms-btn-primary:hover, html body .tms-btn-pay:hover { transform: translateY(-2px); box-shadow: 0 14px 30px color-mix(in srgb, var(--tms-accent) 50%, transparent); }
+html body .tms-btn-primary:disabled, html body .tms-btn-pay:disabled { opacity: .7; transform: none; cursor: progress; }
+html body .tms-btn-primary:focus-visible, html body .tms-btn-pay:focus-visible { outline: 3px solid var(--tms-primary); outline-offset: 3px; }
+html body .tms-btn-ghost {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 44px; padding: 0 18px; border-radius: 12px; font-weight: 700; font-size: 14px;
+  color: var(--tms-link); background: transparent; border: 2px solid var(--tms-border); text-decoration: none; cursor: pointer;
+}
+html body .tms-btn-ghost:hover { border-color: var(--tms-primary); background: var(--tms-surface-2); }
+html body .tms-btn-ghost.danger { color: var(--tms-bad); }
+html body .tms-btn-ghost.danger:hover { border-color: var(--tms-bad); }
+.tms-alert { display: flex; gap: 10px; align-items: flex-start; border-radius: 14px; padding: 13px 16px; margin-bottom: 18px; font-size: 14px; font-weight: 600; }
+.tms-alert.bad { background: var(--tms-bad-bg); color: var(--tms-bad); }
+.tms-alert.ok { background: var(--tms-ok-bg); color: var(--tms-ok); }
+.tms-alert a { color: inherit; text-decoration: underline; }
+
+/* ═════ 3. PAGE SHELL (logged-in pages) ═════ */
+.tms-acct { max-width: 1100px; margin: 0 auto; padding: 28px 18px 64px; }
+.tms-acct-hero {
+  position: relative; overflow: hidden; border-radius: 24px; padding: 30px 32px; margin-bottom: 24px; color: #fff;
+  background: linear-gradient(120deg, var(--tms-primary-strong), var(--tms-primary) 60%, color-mix(in srgb, var(--tms-accent) 55%, var(--tms-primary)));
+  box-shadow: var(--tms-shadow-lg);
+}
+.tms-acct-hero h1 { margin: 0 0 4px; font-size: clamp(24px, 3vw, 34px); font-weight: 800; letter-spacing: -.02em; color: #fff; }
+.tms-acct-hero p { margin: 0; opacity: .92; font-size: 16px; }
+.tms-acct-hero::after { content: ""; position: absolute; right: -60px; top: -60px; width: 220px; height: 220px; border-radius: 50%; background: rgba(255, 255, 255, .12); }
+.tms-card { background: var(--tms-surface); border: 1px solid var(--tms-border); border-radius: var(--tms-radius); box-shadow: var(--tms-shadow); padding: 22px; margin-bottom: 20px; }
+.tms-card > h2, .tms-card-title { font-size: 18px; font-weight: 800; margin: 0 0 14px; color: var(--tms-text); }
+.tms-actions { display: flex; flex-wrap: wrap; gap: 10px; margin: 0 0 24px; }
+.tms-actions .tms-btn-ghost { background: var(--tms-surface); }
+
+/* ═════ 4. SUMMARY CARDS ═════ */
+.tms-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 16px; margin-bottom: 24px; }
+.tms-stat { display: flex; gap: 14px; align-items: center; background: var(--tms-surface); border: 1px solid var(--tms-border); border-radius: var(--tms-radius); padding: 18px; box-shadow: var(--tms-shadow); text-decoration: none; color: var(--tms-text); transition: transform .2s var(--tms-ease), box-shadow .2s var(--tms-ease); }
+a.tms-stat:hover { transform: translateY(-3px); box-shadow: var(--tms-shadow-lg); color: var(--tms-text); text-decoration: none; }
+.tms-stat .ico { flex: 0 0 48px; height: 48px; border-radius: 14px; display: flex; align-items: center; justify-content: center; font-size: 20px; background: var(--tms-info-bg); color: var(--tms-primary); }
+.tms-stat:nth-child(2) .ico { background: var(--tms-ok-bg); color: var(--tms-ok); }
+.tms-stat:nth-child(3) .ico { background: var(--tms-warn-bg); color: var(--tms-warn); }
+.tms-stat:nth-child(4) .ico { background: var(--tms-bad-bg); color: var(--tms-bad); }
+.tms-stat b { display: block; font-size: 26px; line-height: 1.1; font-weight: 800; }
+.tms-stat span { color: var(--tms-muted); font-size: 13px; }
+
+/* ═════ 5. CHIPS & FILTERS ═════ */
+.tms-chip { display: inline-flex; align-items: center; gap: 6px; padding: 4px 12px; border-radius: 999px; font-size: 13px; font-weight: 700; background: var(--tms-info-bg); color: var(--tms-info); white-space: nowrap; }
+.tms-chip.ok { background: var(--tms-ok-bg); color: var(--tms-ok); }
+.tms-chip.warn { background: var(--tms-warn-bg); color: var(--tms-warn); }
+.tms-chip.bad { background: var(--tms-bad-bg); color: var(--tms-bad); }
+.tms-filters { display: flex; flex-wrap: wrap; gap: 8px; margin: 0 0 18px; }
+.tms-filters button, .tms-filters a {
+  min-height: 44px; padding: 0 20px; border-radius: 999px; border: 2px solid var(--tms-border); background: var(--tms-surface); color: var(--tms-text);
+  font-weight: 700; font-size: 14px; cursor: pointer; text-decoration: none; display: inline-flex; align-items: center;
+}
+.tms-filters button[aria-pressed="true"], .tms-filters a[aria-current="true"] { background: var(--tms-primary); border-color: var(--tms-primary); color: var(--tms-primary-ink); }
+.tms-filters button:focus-visible, .tms-filters a:focus-visible { outline: 3px solid var(--tms-primary); outline-offset: 2px; }
+
+/* ═════ 6. BOOKING CARDS (tables become cards on mobile) ═════ */
+.tms-booking { display: grid; grid-template-columns: 1fr auto; gap: 8px 16px; align-items: center; background: var(--tms-surface); border: 1px solid var(--tms-border); border-radius: var(--tms-radius); padding: 18px; margin-bottom: 14px; box-shadow: var(--tms-shadow); }
+.tms-booking h3 { margin: 0 0 4px; font-size: 17px; font-weight: 800; }
+.tms-booking .meta { color: var(--tms-muted); font-size: 14px; }
+.tms-booking .acts { display: flex; flex-wrap: wrap; gap: 8px; justify-content: flex-end; }
+@media (max-width: 700px) {
+  .tms-booking { grid-template-columns: 1fr; }
+  .tms-booking .acts { justify-content: flex-start; }
+  table.tms-cards, table.tms-cards tbody, table.tms-cards tr, table.tms-cards td { display: block; width: 100%; }
+  table.tms-cards thead { position: absolute; left: -9999px; }
+  table.tms-cards tr { background: var(--tms-surface); border: 1px solid var(--tms-border); border-radius: var(--tms-radius); padding: 12px 14px; margin-bottom: 12px; box-shadow: var(--tms-shadow); }
+  table.tms-cards td { border: 0 !important; padding: 5px 0 !important; }
+  table.tms-cards td[data-label]::before { content: attr(data-label) ": "; font-weight: 700; color: var(--tms-muted); }
+}
+
+/* ═════ 7. STEPS & CHECKOUT ═════ */
+.tms-stepper { display: flex; align-items: center; gap: 0; list-style: none; padding: 0; margin: 0 0 26px; counter-reset: s; }
+.tms-stepper li { flex: 1; display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 14px; color: var(--tms-muted); counter-increment: s; position: relative; }
+.tms-stepper li::before { content: counter(s); width: 34px; height: 34px; flex: 0 0 34px; border-radius: 50%; display: flex; align-items: center; justify-content: center; background: var(--tms-surface-2); border: 2px solid var(--tms-border); font-size: 14px; }
+.tms-stepper li:not(:last-child)::after { content: ""; flex: 1; height: 2px; margin: 0 12px; background: var(--tms-border); }
+.tms-stepper li.done, .tms-stepper li.now { color: var(--tms-text); }
+.tms-stepper li.done::before { content: "✓"; background: var(--tms-ok); border-color: var(--tms-ok); color: #fff; }
+.tms-stepper li.now::before { background: var(--tms-primary); border-color: var(--tms-primary); color: var(--tms-primary-ink); box-shadow: var(--tms-ring); }
+.tms-stepper li.done:not(:last-child)::after { background: var(--tms-ok); }
+.tms-checkout { display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(280px, 1fr); gap: 24px; align-items: start; }
+.tms-summary { position: sticky; top: 90px; }
+.tms-summary .row { display: flex; justify-content: space-between; gap: 12px; padding: 8px 0; border-bottom: 1px dashed var(--tms-border); font-size: 15px; }
+.tms-summary .row.total { border: 0; font-size: 20px; font-weight: 800; padding-top: 14px; }
+.tms-sandbox { display: inline-flex; gap: 8px; align-items: center; padding: 8px 14px; border-radius: 12px; background: var(--tms-warn-bg); color: var(--tms-warn); font-size: 13px; font-weight: 700; margin-bottom: 16px; }
+@media (max-width: 900px) { .tms-checkout { grid-template-columns: 1fr; } .tms-summary { position: static; order: -1; } .tms-stepper li span { display: none; } }
+
+/* ═════ 8. CONFETTI (thank-you) ═════ */
+.tms-confetti { position: fixed; inset: 0; pointer-events: none; overflow: hidden; z-index: 40; }
+.tms-confetti i { position: absolute; top: -14px; width: 10px; height: 16px; border-radius: 2px; opacity: 0; animation: tms-fall 3.4s ease-in forwards; }
+.tms-confetti i:nth-child(5n+1) { background: var(--tms-accent); left: 6%; animation-delay: .05s; }
+.tms-confetti i:nth-child(5n+2) { background: var(--tms-primary); left: 22%; animation-delay: .35s; }
+.tms-confetti i:nth-child(5n+3) { background: var(--tms-sky); left: 40%; animation-delay: .15s; }
+.tms-confetti i:nth-child(5n+4) { background: var(--tms-warn); left: 62%; animation-delay: .5s; }
+.tms-confetti i:nth-child(5n+5) { background: var(--tms-ok); left: 84%; animation-delay: .25s; }
+.tms-confetti i:nth-child(3n) { width: 8px; height: 8px; border-radius: 50%; margin-left: 30px; animation-duration: 4s; }
+.tms-confetti i:nth-child(4n) { margin-left: -24px; animation-duration: 3s; }
+@keyframes tms-fall { 0% { opacity: 1; transform: translateY(0) rotate(0); } 100% { opacity: 0; transform: translateY(105vh) rotate(540deg); } }
+.tms-done-icon { width: 84px; height: 84px; border-radius: 50%; margin: 0 auto 16px; display: flex; align-items: center; justify-content: center; font-size: 40px; color: #fff; background: var(--tms-ok); box-shadow: 0 0 0 10px var(--tms-ok-bg); animation: tms-pop .6s var(--tms-ease) both; }
+@keyframes tms-pop { from { transform: scale(.3); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+.tms-next { list-style: none; padding: 0; margin: 0; display: grid; gap: 10px; }
+.tms-next li { display: flex; gap: 12px; align-items: center; padding: 12px 14px; background: var(--tms-surface-2); border-radius: 12px; font-weight: 600; }
+.tms-next li i { color: var(--tms-primary); width: 22px; text-align: center; }
+
+/* ═════ 9. EMPTY STATES & SKELETONS ═════ */
+.tms-empty { text-align: center; padding: 44px 20px; color: var(--tms-muted); }
+.tms-empty svg { width: 120px; height: 96px; margin-bottom: 12px; color: var(--tms-primary); }
+.tms-empty h3 { color: var(--tms-text); font-size: 19px; font-weight: 800; margin: 0 0 6px; }
+.tms-empty p { margin: 0 0 16px; }
+.tms-skel { border-radius: 12px; min-height: 18px; background: linear-gradient(90deg, var(--tms-surface-2) 25%, var(--tms-border) 37%, var(--tms-surface-2) 63%); background-size: 400% 100%; animation: tms-skel 1.4s ease infinite; }
+@keyframes tms-skel { from { background-position: 100% 50%; } to { background-position: 0 50%; } }
+
+/* ═════ 10. ACCOUNT & PRIVACY LIST ═════ */
+.tms-list { list-style: none; padding: 0; margin: 0; }
+.tms-list li a { display: flex; align-items: center; gap: 14px; padding: 14px 6px; border-bottom: 1px solid var(--tms-border); color: var(--tms-text); text-decoration: none; min-height: 52px; font-weight: 600; }
+.tms-list li:last-child a { border-bottom: 0; }
+.tms-list li a:hover { background: var(--tms-surface-2); }
+.tms-list li a i.l { width: 36px; height: 36px; border-radius: 10px; background: var(--tms-info-bg); color: var(--tms-primary); display: flex; align-items: center; justify-content: center; }
+.tms-list li a small { display: block; color: var(--tms-muted); font-weight: 500; }
+.tms-list li a i.r { margin-left: auto; color: var(--tms-muted); }
+
+@media (prefers-reduced-motion: reduce) {
+  .tms-confetti { display: none; }
+  .tms-skel, .tms-done-icon { animation: none; }
+  html body .tms-btn-primary, html body .tms-btn-pay, .tms-stat, .tms-strength > div { transition: none; }
+}
+.tms-alert[hidden]{display:none}
+
+/* ═════ 11. LEGACY ACCOUNT PAGES (wishlist, notifications, loyalty, alerts, groups, appeal, wallet, ticket, custom-trip) ═════
+   These pages keep their markup; the shared classes below give them the same look. */
+html body .page-title, html body .banner-1.tms-acct-banner {
+  position: relative; overflow: hidden; margin: 0 0 28px; padding: 44px 0 40px; color: #fff;
+  background: linear-gradient(120deg, var(--tms-primary-strong), var(--tms-primary) 60%, color-mix(in srgb, var(--tms-accent) 55%, var(--tms-primary)));
+}
+html body .page-title h2 { color: #fff; font-weight: 800; letter-spacing: -.02em; font-size: clamp(24px, 3vw, 32px); }
+html body .page-title::after { content: ""; position: absolute; right: -50px; top: -70px; width: 220px; height: 220px; border-radius: 50%; background: rgba(255, 255, 255, .12); pointer-events: none; }
+html body .empty-state { text-align: center; padding: 56px 20px; color: var(--tms-muted); }
+html body .empty-state > i { display: block; font-size: 56px; margin-bottom: 14px; color: var(--tms-primary); opacity: .55; }
+html body .empty-state h3 { color: var(--tms-text); font-weight: 800; }
+html body .btn-primary, html body .btn-success { background: var(--tms-primary); border-color: var(--tms-primary); color: var(--tms-primary-ink); border-radius: 12px; }
+html body .btn-primary:hover { background: var(--tms-primary-strong); border-color: var(--tms-primary-strong); }
+html body .btn-danger { border-radius: 12px; }
+html body .wish-card, html body .notif-box { background: var(--tms-surface); border: 1px solid var(--tms-border); border-radius: var(--tms-radius); box-shadow: var(--tms-shadow); }
+html body .notif-row { color: var(--tms-text); border-color: var(--tms-border); }
+html body .notif-row.was-unread { background: var(--tms-info-bg); }
+html body .alert-success { background: var(--tms-ok-bg); color: var(--tms-ok); border: 0; border-radius: 14px; }
+html body .alert-danger { background: var(--tms-bad-bg); color: var(--tms-bad); border: 0; border-radius: 14px; }
+html body .alert-info { background: var(--tms-info-bg); color: var(--tms-info); border: 0; border-radius: 14px; }
+html body .form-control { border-radius: 12px; min-height: 46px; border: 2px solid var(--tms-border); background: var(--tms-surface); color: var(--tms-text); }
+html body .form-control:focus { border-color: var(--tms-primary); box-shadow: var(--tms-ring); outline: none; }
+html body .custom-hero { position: relative; overflow: hidden; margin: 0 0 24px; padding: 44px 0 38px; color: #fff; text-align: center;
+  background: linear-gradient(120deg, var(--tms-primary-strong), var(--tms-primary) 60%, color-mix(in srgb, var(--tms-accent) 55%, var(--tms-primary))); }
+html body .custom-hero h1 { color: #fff; font-weight: 800; letter-spacing: -.02em; }

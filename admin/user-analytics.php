@@ -11,7 +11,7 @@ tms_admin_require_role($dbh, ['superadmin', 'operations', 'finance']);
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>TMS | User Analytics</title>
+<title>TourBuddy | User Analytics</title>
 <link href="css/font-awesome.css" rel="stylesheet">
 <link href="css/bootstrap.min.css" rel="stylesheet">
 <link href="<?php echo tms_asset_ver('css/admin-v6.css'); ?>" rel="stylesheet">

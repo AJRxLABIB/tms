@@ -33,7 +33,7 @@ class FlightTracker {
     private PDO $db;
     private CacheService $cache;
     private const OPENSKY_BASE = 'https://opensky-network.org/api/states/all';
-    private const UA = 'TMS-Flight-Tracker/1.0 (Final Year Project)';
+    private const UA = 'TourBuddy-Flight-Tracker/1.0 (Final Year Project)';
 
     /** Default bounding box: roughly South/Southeast Asia (covers Bangladesh
      *  and neighboring flight paths). [lamin, lomin, lamax, lomax] */

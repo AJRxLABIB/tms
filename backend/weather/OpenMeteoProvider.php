@@ -85,7 +85,7 @@ class OpenMeteoProvider implements WeatherProviderInterface {
                 'fetched_at'  => date('c'),
             ];
         } catch (Throwable $e) {
-            error_log('[TMS Weather] Open-Meteo path failed: ' . $e->getMessage());
+            error_log('[TourBuddy Weather] Open-Meteo path failed: ' . $e->getMessage());
             return ['ok' => false, 'error' => $e->getMessage()];
         }
     }

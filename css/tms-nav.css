@@ -1,0 +1,145 @@
+/* tms-nav.css — single sticky header, account menu, mobile slide-over, compact footer.
+   Prefix: tmsn-. Colours come from tokens defined by css/tms-theme.css; every token has
+   a fallback so this file also works on its own. */
+.tmsn, .tmsn *, .tmsn-foot, .tmsn-foot * { box-sizing: border-box; }
+.tmsn {
+  --n-bg: var(--tms-surface, #ffffff);
+  --n-text: var(--tms-text, #12303a);
+  --n-muted: var(--tms-text-muted, #5b7480);
+  --n-line: var(--tms-line, rgba(18, 48, 58, .12));
+  --n-primary: var(--tms-primary, #0e7c86);
+  --n-primary-ink: var(--tms-primary-ink, #ffffff);
+  --n-hover: var(--tms-hover, rgba(14, 124, 134, .09));
+  --n-radius: var(--tms-radius, 12px);
+  --n-shadow: var(--tms-shadow-lg, 0 12px 32px rgba(10, 40, 50, .16));
+  position: sticky; top: 0; z-index: 1000; width: 100%;
+  border-bottom: 1px solid transparent;
+  color: var(--n-text); font-family: var(--tms-font-body, var(--font-body, inherit));
+  transition: transform .28s ease, box-shadow .2s ease, background .2s ease, border-color .2s ease;
+}
+html[data-theme="dark"] .tmsn {
+  --n-bg: var(--tms-surface, #14232b); --n-text: var(--tms-text, #e6eef2); --n-muted: var(--tms-text-muted, #9db3bd);
+  --n-line: var(--tms-line, rgba(255, 255, 255, .14)); --n-hover: var(--tms-hover, rgba(255, 255, 255, .08));
+  --n-primary: var(--tms-primary, #3cc3cf); --n-primary-ink: var(--tms-primary-ink, #062a30);
+}
+/* glass background lives on a pseudo-element: backdrop-filter on .tmsn itself would turn it into the
+   containing block of the position:fixed drawer */
+.tmsn::before { content: ""; position: absolute; inset: 0; z-index: -1; background: var(--n-bg); background: color-mix(in srgb, var(--n-bg) 92%, transparent);
+  -webkit-backdrop-filter: saturate(1.4) blur(12px); backdrop-filter: saturate(1.4) blur(12px); transition: background .2s; }
+.tmsn.is-scrolled { border-bottom-color: var(--n-line); box-shadow: 0 2px 14px rgba(10, 40, 50, .08); }
+.tmsn.is-hidden { transform: translateY(-100%); }
+/* The header stays a solid surface with dark text on every page (including over a hero): a transparent header made the
+   white links invisible whenever another rule painted a light background behind it. */
+.tmsn-bar { max-width: 1240px; margin: 0 auto; padding: 0 20px; height: 64px; display: flex; align-items: center; gap: 18px; }
+.tmsn-logo { display: inline-flex; align-items: center; gap: 10px; color: var(--n-text); text-decoration: none; font-weight: 800; font-size: 18px; letter-spacing: .2px; flex: none; }
+.tmsn-logo:hover, .tmsn-logo:focus { color: var(--n-text); text-decoration: none; }
+.tmsn-logo-mark { width: 36px; height: 36px; border-radius: 11px; display: grid; place-items: center; color: var(--n-primary-ink); font-size: 17px;
+  background: linear-gradient(135deg, var(--tms-primary, #0e7c86), var(--tms-accent, #f59e0b)); }
+.tmsn-links { display: flex; align-items: center; gap: 2px; list-style: none; margin: 0 0 0 8px; padding: 0; flex: 1; }
+.tmsn-links a { display: inline-flex; align-items: center; min-height: 40px; padding: 0 14px; border-radius: 999px; color: var(--n-text); font-weight: 600; font-size: 14.5px; text-decoration: none; white-space: nowrap; transition: background .15s, color .15s; }
+.tmsn-links a:hover, .tmsn-links a:focus-visible { background: var(--n-hover); text-decoration: none; color: var(--n-text); }
+.tmsn-links a[aria-current="page"] { background: var(--n-hover); color: var(--n-primary); }
+.tmsn-links .tmsn-plan a { background: var(--n-primary); color: var(--n-primary-ink); }
+.tmsn-links .tmsn-plan a:hover { filter: brightness(1.08); background: var(--n-primary); color: var(--n-primary-ink); }
+.tmsn-right { margin-left: auto; display: flex; align-items: center; gap: 8px; flex: none; }
+.tmsn-iconbtn { position: relative; width: 40px; height: 40px; border-radius: 50%; border: 0; background: transparent; color: var(--n-text); display: inline-grid; place-items: center; cursor: pointer; font-size: 17px; transition: background .15s; }
+.tmsn-iconbtn:hover, .tmsn-iconbtn:focus-visible { background: var(--n-hover); }
+.tmsn-badge { position: absolute; top: 3px; right: 2px; min-width: 17px; height: 17px; padding: 0 4px; border-radius: 9px; background: #e5484d; color: #fff; font-size: 10.5px; font-weight: 700; display: grid; place-items: center; line-height: 1; }
+.tmsn-select { height: 36px; border: 1px solid var(--n-line); border-radius: 999px; background: transparent; color: var(--n-text); font-size: 13px; font-weight: 600; padding: 0 10px; cursor: pointer; max-width: 96px; }
+.tmsn-select option { color: #111; background: #fff; }
+.tmsn-btn { display: inline-flex; align-items: center; justify-content: center; min-height: 40px; padding: 0 18px; border-radius: 999px; font-weight: 700; font-size: 14px; border: 1px solid transparent; cursor: pointer; text-decoration: none; white-space: nowrap; transition: transform .12s, filter .15s, background .15s; }
+.tmsn-btn:hover { text-decoration: none; transform: translateY(-1px); }
+.tmsn-btn-primary { background: var(--n-primary); color: var(--n-primary-ink); }
+.tmsn-btn-primary:hover { color: var(--n-primary-ink); filter: brightness(1.08); }
+.tmsn-btn-ghost { background: transparent; color: var(--n-text); border-color: var(--n-line); }
+.tmsn-btn-ghost:hover { color: var(--n-text); background: var(--n-hover); }
+.tmsn-install { display: none; }
+.tmsn-install.is-on { display: inline-grid; }
+
+/* dropdowns (account, notifications) */
+.tmsn-dd { position: relative; }
+.tmsn-panel { position: absolute; right: 0; top: calc(100% + 10px); min-width: 230px; max-width: 92vw; background: var(--n-bg); color: var(--n-text); border: 1px solid var(--n-line); border-radius: var(--n-radius); box-shadow: var(--n-shadow); padding: 8px; opacity: 0; visibility: hidden; transform: translateY(-6px); transition: opacity .16s, transform .16s, visibility .16s; }
+.tmsn-dd.is-open > .tmsn-panel { opacity: 1; visibility: visible; transform: none; }
+.tmsn-account-btn { display: inline-flex; align-items: center; gap: 8px; height: 40px; padding: 0 10px 0 4px; border-radius: 999px; border: 1px solid var(--n-line); background: transparent; color: var(--n-text); cursor: pointer; font-weight: 600; font-size: 14px; }
+.tmsn-account-btn:hover, .tmsn-account-btn:focus-visible { background: var(--n-hover); }
+.tmsn-avatar { width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; background: var(--n-primary); color: var(--n-primary-ink); font-weight: 800; font-size: 13px; text-transform: uppercase; }
+.tmsn-uname { max-width: 110px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tmsn-who { padding: 8px 12px 10px; border-bottom: 1px solid var(--n-line); margin-bottom: 6px; font-size: 12.5px; color: var(--n-muted); overflow: hidden; text-overflow: ellipsis; }
+.tmsn-panel a.tmsn-item, .tmsn-panel button.tmsn-item { display: flex; align-items: center; gap: 12px; width: 100%; min-height: 42px; padding: 0 12px; border: 0; border-radius: 9px; background: transparent; color: var(--n-text); font: inherit; font-size: 14px; font-weight: 600; text-align: left; text-decoration: none; cursor: pointer; }
+.tmsn-panel .tmsn-item i { width: 18px; text-align: center; color: var(--n-muted); }
+.tmsn-panel .tmsn-item:hover, .tmsn-panel .tmsn-item:focus-visible { background: var(--n-hover); text-decoration: none; color: var(--n-text); }
+.tmsn-sep { height: 1px; background: var(--n-line); margin: 6px 4px; }
+.tmsn-theme { display: flex; gap: 4px; padding: 4px; margin: 2px 4px; background: var(--n-hover); border-radius: 10px; }
+.tmsn-theme button { flex: 1; min-height: 34px; border: 0; border-radius: 8px; background: transparent; color: var(--n-muted); font-size: 12.5px; font-weight: 700; cursor: pointer; }
+.tmsn-theme button[aria-pressed="true"] { background: var(--n-bg); color: var(--n-text); box-shadow: 0 1px 4px rgba(0,0,0,.14); }
+.tmsn-notif-panel { width: 340px; padding: 0; overflow: hidden; }
+.tmsn-notif-head { padding: 12px 16px; font-weight: 800; border-bottom: 1px solid var(--n-line); }
+.tmsn-notif-list { max-height: 340px; overflow-y: auto; }
+.tmsn-notif-list a { display: block; padding: 11px 16px; color: var(--n-text); text-decoration: none; border-bottom: 1px solid var(--n-line); font-size: 13.5px; }
+.tmsn-notif-list a:hover { background: var(--n-hover); text-decoration: none; color: var(--n-text); }
+.tmsn-notif-list a.unread { background: var(--n-hover); }
+.tmsn-notif-list small { display: block; color: var(--n-muted); margin-top: 2px; font-size: 11.5px; }
+.tmsn-notif-empty { padding: 22px 16px; text-align: center; color: var(--n-muted); font-size: 13.5px; }
+.tmsn-notif-all { display: block; text-align: center; padding: 11px; font-weight: 700; font-size: 13px; color: var(--n-primary); text-decoration: none; }
+
+/* hamburger + slide-over */
+.tmsn-burger { display: none; }
+.tmsn-scrim { position: fixed; inset: 0; background: rgba(6, 22, 28, .55); opacity: 0; visibility: hidden; transition: opacity .2s, visibility .2s; z-index: 1001; }
+.tmsn-drawer { position: fixed; top: 0; bottom: 0; right: 0; width: min(360px, 88vw); background: var(--n-bg); color: var(--n-text); z-index: 1002; display: flex; flex-direction: column; transform: translateX(100%); visibility: hidden; transition: transform .26s ease, visibility .26s; box-shadow: var(--n-shadow); overflow-y: auto; }
+html[dir="rtl"] .tmsn-drawer { right: auto; left: 0; transform: translateX(-100%); }
+.tmsn.is-open .tmsn-scrim { opacity: 1; visibility: visible; }
+.tmsn.is-open .tmsn-drawer { transform: none; visibility: visible; }
+.tmsn-drawer-head { display: flex; align-items: center; justify-content: space-between; padding: 14px 16px; border-bottom: 1px solid var(--n-line); }
+.tmsn-drawer nav { padding: 10px; display: flex; flex-direction: column; gap: 2px; }
+.tmsn-drawer nav a { display: flex; align-items: center; gap: 12px; min-height: 48px; padding: 0 14px; border-radius: 10px; color: var(--n-text); text-decoration: none; font-weight: 600; font-size: 15.5px; }
+.tmsn-drawer nav a i { width: 20px; text-align: center; color: var(--n-muted); }
+.tmsn-drawer nav a:hover, .tmsn-drawer nav a[aria-current="page"] { background: var(--n-hover); text-decoration: none; color: var(--n-text); }
+.tmsn-drawer-foot { margin-top: auto; padding: 14px 16px 22px; border-top: 1px solid var(--n-line); display: grid; gap: 10px; }
+
+@media (max-width: 991px) {
+  .tmsn-links, .tmsn-hide-sm { display: none !important; }
+  .tmsn-burger { display: inline-grid; }
+  .tmsn-bar { height: 58px; padding: 0 14px; gap: 10px; }
+  .tmsn-notif-panel { position: fixed; left: 10px; right: 10px; top: 64px; width: auto; }
+}
+@media (min-width: 992px) { .tmsn-drawer, .tmsn-scrim { display: none; } }
+@media (max-width: 420px) { .tmsn-uname { display: none; } .tmsn-account-btn { padding-right: 4px; } }
+@media (prefers-reduced-motion: reduce) { .tmsn, .tmsn-panel, .tmsn-drawer, .tmsn-scrim, .tmsn-btn { transition: none !important; } }
+
+/* ───────── compact footer ───────── */
+.tmsn-foot { background: var(--tms-footer-bg, #0c2a31); color: var(--tms-footer-text, rgba(255,255,255,.78)); padding: 44px 0 0; margin-top: 40px; font-size: 14px; }
+.tmsn-foot-in { max-width: 1240px; margin: 0 auto; padding: 0 20px; }
+.tmsn-foot-grid { display: grid; grid-template-columns: 1.5fr 1fr 1fr 1fr; gap: 32px; }
+.tmsn-foot h5 { margin: 0 0 12px; color: #fff; font-size: 13px; font-weight: 800; letter-spacing: .8px; text-transform: uppercase; }
+.tmsn-foot ul { list-style: none; margin: 0; padding: 0; }
+.tmsn-foot li { margin: 0 0 8px; }
+.tmsn-foot a { color: inherit; text-decoration: none; }
+.tmsn-foot a:hover { color: #fff; text-decoration: underline; }
+.tmsn-foot-brand p { margin: 12px 0 14px; max-width: 320px; line-height: 1.6; }
+.tmsn-foot-brand .tmsn-logo { color: #fff; }
+.tmsn-foot-phone { display: inline-flex; align-items: center; gap: 8px; color: #fff; font-weight: 700; }
+.tmsn-foot-social { display: flex; gap: 8px; margin-top: 14px; }
+.tmsn-foot-social a { width: 36px; height: 36px; border-radius: 50%; display: grid; place-items: center; background: rgba(255,255,255,.1); }
+.tmsn-foot-bottom { margin-top: 34px; padding: 16px 0; border-top: 1px solid rgba(255,255,255,.14); display: flex; flex-wrap: wrap; gap: 12px; justify-content: space-between; align-items: center; font-size: 12.5px; }
+.tmsn-foot-tools { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.tmsn-foot-tools button, .tmsn-foot-tools a { background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.2); color: rgba(255,255,255,.85); padding: 6px 14px; border-radius: 999px; font-size: 12px; cursor: pointer; font-family: inherit; }
+.tmsn-foot-tools a:hover { text-decoration: none; background: rgba(255,255,255,.16); }
+@media (max-width: 767px) { .tmsn-foot-grid { grid-template-columns: 1fr 1fr; gap: 24px; } .tmsn-foot-brand { grid-column: 1 / -1; } }
+
+/* ───────── plan hub ───────── */
+.tmsn-plan-hero { padding: 56px 20px 34px; text-align: center; background: var(--tms-hero-bg, linear-gradient(135deg, rgba(14,124,134,.14), rgba(245,158,11,.12))); }
+.tmsn-plan-hero h1 { margin: 0 0 8px; font-size: clamp(1.8rem, 4vw, 2.6rem); font-weight: 800; color: var(--tms-text, #12303a); }
+.tmsn-plan-hero p { margin: 0 auto; max-width: 560px; color: var(--tms-text-muted, #5b7480); font-size: 1.05rem; }
+.tmsn-plan-wrap { max-width: 1100px; margin: 0 auto; padding: 28px 20px 10px; }
+.tmsn-plan-wrap h2 { font-size: 1.1rem; font-weight: 800; margin: 26px 0 12px; color: var(--tms-text, #12303a); }
+.tmsn-plan-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 14px; }
+.tmsn-card { display: flex; gap: 14px; align-items: flex-start; padding: 16px; border-radius: 14px; background: var(--tms-surface, #fff); border: 1px solid var(--tms-line, rgba(18,48,58,.12)); color: var(--tms-text, #12303a); text-decoration: none; transition: transform .15s, box-shadow .15s, border-color .15s; }
+.tmsn-card:hover { transform: translateY(-3px); box-shadow: 0 10px 26px rgba(10,40,50,.12); border-color: var(--tms-primary, #0e7c86); text-decoration: none; color: var(--tms-text, #12303a); }
+.tmsn-card-ico { flex: none; width: 42px; height: 42px; border-radius: 12px; display: grid; place-items: center; font-size: 18px; color: var(--tms-primary-ink, #fff); background: var(--tms-primary, #0e7c86); }
+.tmsn-card strong { display: block; font-size: 15px; margin-bottom: 2px; }
+.tmsn-card span.d { display: block; font-size: 13px; color: var(--tms-text-muted, #5b7480); line-height: 1.45; }
+.tmsn-card.is-featured { grid-column: 1 / -1; background: linear-gradient(135deg, var(--tms-primary, #0e7c86), var(--tms-accent, #f59e0b)); border: 0; color: #fff; }
+.tmsn-card.is-featured .tmsn-card-ico { background: rgba(255,255,255,.22); }
+.tmsn-card.is-featured span.d, .tmsn-card.is-featured strong { color: #fff; }
+.tmsn-more { margin: 22px 0 6px; }
+.tmsn-more summary { cursor: pointer; font-weight: 700; color: var(--tms-primary, #0e7c86); padding: 10px 0; }

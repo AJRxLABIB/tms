@@ -16,7 +16,7 @@ $fld = function (string $k, string $label, string $type = 'text', string $extra 
 sup_head('Become a partner');
 ?>
 <div class="sp-auth" style="max-width:760px">
-  <h1>Become a TMS partner</h1>
+  <h1>Become a TourBuddy partner</h1>
   <p class="sp-sub">Tell us about your business. We verify every supplier before packages go live.</p>
   <?php if (!empty($errors['form'])): ?><div class="sp-alert bad" role="alert"><?php echo h($errors['form']); ?></div><?php endif; ?>
   <form method="post" class="sp-card sp-form" novalidate>

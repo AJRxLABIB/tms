@@ -57,7 +57,7 @@ class CacheService {
                 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
             ");
         } catch (Exception $e) {
-            error_log('[TMS CacheService] Table migration failed (non-fatal, cache will fail-soft): ' . $e->getMessage());
+            error_log('[TourBuddy CacheService] Table migration failed (non-fatal, cache will fail-soft): ' . $e->getMessage());
         }
     }
 
@@ -79,7 +79,7 @@ class CacheService {
             $decoded = json_decode($row, true);
             return $decoded === null && $row !== 'null' ? null : $decoded;
         } catch (Exception $e) {
-            error_log('[TMS CacheService] get() failed: ' . $e->getMessage());
+            error_log('[TourBuddy CacheService] get() failed: ' . $e->getMessage());
             return null; // fail-soft: caller treats this as a cache miss, not an error
         }
     }
@@ -103,7 +103,7 @@ class CacheService {
             ");
             $stmt->execute([$key, json_encode($value, JSON_UNESCAPED_UNICODE), max(1, $ttlSeconds)]);
         } catch (Exception $e) {
-            error_log('[TMS CacheService] set() failed: ' . $e->getMessage());
+            error_log('[TourBuddy CacheService] set() failed: ' . $e->getMessage());
             // fail-soft: a cache write failure should never break the calling feature
         }
     }
@@ -114,7 +114,7 @@ class CacheService {
         try {
             $this->db->prepare("DELETE FROM tblcache WHERE cache_key = ?")->execute([$key]);
         } catch (Exception $e) {
-            error_log('[TMS CacheService] delete() failed: ' . $e->getMessage());
+            error_log('[TourBuddy CacheService] delete() failed: ' . $e->getMessage());
         }
     }
 
@@ -139,7 +139,7 @@ class CacheService {
         try {
             $this->db->exec("DELETE FROM tblcache WHERE expires_at <= NOW()");
         } catch (Exception $e) {
-            error_log('[TMS CacheService] purgeExpired() failed: ' . $e->getMessage());
+            error_log('[TourBuddy CacheService] purgeExpired() failed: ' . $e->getMessage());
         }
     }
 }

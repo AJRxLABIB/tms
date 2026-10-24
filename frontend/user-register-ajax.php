@@ -115,18 +115,18 @@ try {
             $dbh->prepare("INSERT INTO tblloyalty_log(UserEmail,Points,Description) VALUES(:e,50,:d)")
                 ->execute([':e'=>$referrerEmail, ':d'=>'Referred a new traveler ('.$email.')']);
         } catch (Exception $e) {
-            error_log('[TMS Loyalty] Log insert failed (registration still succeeded): ' . $e->getMessage());
+            error_log('[TourBuddy Loyalty] Log insert failed (registration still succeeded): ' . $e->getMessage());
         }
-        try { tms_notify($dbh, $referrerEmail, "🎉 Someone joined TMS using your referral link — you both earned 50 loyalty points!", 'referral.php'); } catch (Exception $e) {}
+        try { tms_notify($dbh, $referrerEmail, "🎉 Someone joined TourBuddy using your referral link — you both earned 50 loyalty points!", 'referral.php'); } catch (Exception $e) {}
         setcookie('tms_ref', '', time() - 3600, '/'); // consumed — clear it
     }
 
     // Refresh CSRF token after use
     unset($_SESSION['csrf_token']);
 
-    tms_send_email($email, $fullName, 'Welcome to TMS Travel!', tms_email_template(
+    tms_send_email($email, $fullName, 'Welcome to TourBuddy Travel!', tms_email_template(
         'Welcome aboard, ' . $fullName . '!',
-        '<p>Your TMS account is ready. Start exploring tour packages, save your favorites to your wishlist, and earn loyalty points with every booking and review.</p>
+        '<p>Your TourBuddy account is ready. Start exploring tour packages, save your favorites to your wishlist, and earn loyalty points with every booking and review.</p>
          <p>Your personal referral code is <strong>' . htmlspecialchars($myReferralCode, ENT_QUOTES, 'UTF-8') . '</strong> — share it with friends and you\'ll both earn 50 points when they sign up. Find your referral link anytime on the <strong>Refer Friends</strong> page.</p>'
     ));
 

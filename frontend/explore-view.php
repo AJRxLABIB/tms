@@ -29,9 +29,9 @@ if ($destName === '' || $lat === null || $lng === null) {
 <link rel="apple-touch-icon" href="images/icon-192.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="TMS">
+<meta name="apple-mobile-web-app-title" content="TourBuddy">
 <meta name="mobile-web-app-capable" content="yes">
-<title>TMS | Explore — <?php echo htmlspecialchars($destName); ?></title>
+<title>TourBuddy | Explore — <?php echo htmlspecialchars($destName); ?></title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <link href="css/bootstrap.min2.css" rel='stylesheet' type='text/css' />
 <link href="<?php echo tms_asset_ver('css/style.min.css'); ?>" rel='stylesheet' type='text/css' />
@@ -41,12 +41,15 @@ if ($destName === '' || $lat === null || $lng === null) {
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="css/animate.css" rel="stylesheet">
 <link href="<?php echo tms_asset_ver('css/explore.css'); ?>" rel="stylesheet">
-<link rel="stylesheet" href="js/vendor/leaflet/leaflet.css" />
+<link rel="stylesheet" href="js/vendor/maplibre/maplibre-gl.css">
+<link rel="stylesheet" href="<?php echo tms_asset_ver('css/tms-map-ui.css'); ?>">
 <script src="js/jquery-1.12.0.min.js" defer></script>
 <script src="js/bootstrap.min.js" defer></script>
 <script src="js/wow.min.js" defer></script>
-<script src="js/vendor/leaflet/leaflet.js"></script>
-<script src="<?php echo tms_asset_ver('js/tms-map.js'); ?>"></script>
+<script src="js/vendor/maplibre/maplibre-gl-csp.js" defer></script>
+<script src="<?php echo tms_asset_ver('js/tms-maplibre.js'); ?>" defer></script>
+<script src="<?php echo tms_asset_ver('js/tms-map-pages.js'); ?>"></script>
+<script src="<?php echo tms_asset_ver('js/tms-poi-tiles.js'); ?>"></script>
 </head>
 <body data-explore-dest="<?php echo htmlspecialchars($destName, ENT_QUOTES); ?>">
 <?php include('backend/header.php'); ?>
@@ -89,17 +92,14 @@ if ($destName === '' || $lat === null || $lng === null) {
                  unaffected -- this banner only covers this Overview tab. -->
             <div class="tms-sample-banner" style="margin-bottom:16px;">
                 <i class="fa fa-robot"></i>
-                When an AI summary is shown it is generated for quick orientation, not sourced from a licensed travel database
-                (a note says so when only verified catalogue information is available) --
-                treat costs, culture notes, and history as estimates and verify anything time-sensitive (prices,
-                customs, safety) with an official source before relying on it.
+                Overview text is a quick orientation, not an official source. Verify prices, customs and safety before you travel.
             </div>
             <div id="overviewContent">
                 <div class="explore-loading"><i class="fa fa-spinner fa-spin spin"></i>Our AI travel researcher is gathering information about <?php echo htmlspecialchars($destName); ?>...</div>
             </div>
             <!-- NEW (Round 79, master prompt item 6 -- Destination System,
                  "Travel" tier): real, already-bookable packages/hotels/
-                 activities TMS sells for this destination's country. See
+                 activities TourBuddy sells for this destination's country. See
                  js/explore.js's renderLocalInventory(). -->
             <div id="localInventoryContent"></div>
         </div>

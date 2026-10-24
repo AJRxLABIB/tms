@@ -231,7 +231,7 @@ final class BusinessMetrics
                 case self::T_DEFINITIONS: return self::definitionsResult($dbh, $out);
             }
         } catch (Throwable $e) {
-            error_log('[TMS BusinessMetrics] ' . $template . ': ' . $e->getMessage());
+            error_log('[TourBuddy BusinessMetrics] ' . $template . ': ' . $e->getMessage());
             $out['error'] = 'This metric is not available right now (a table or column it needs could not be read).';
         }
         return $out;

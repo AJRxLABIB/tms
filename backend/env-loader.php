@@ -1,6 +1,6 @@
 <?php
 /**
- * TMS — Minimal .env loader (no Composer / phpdotenv dependency required)
+ * TourBuddy — Minimal .env loader (no Composer / phpdotenv dependency required)
  *
  * Reads KEY=VALUE pairs from a .env file into getenv()/$_ENV so the rest of
  * the app can read them via tms_env(). Safe to call multiple times.

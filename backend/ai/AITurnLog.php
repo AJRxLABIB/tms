@@ -69,7 +69,7 @@ final class AITurnLog
                 preg_replace('/[^a-z0-9_-]/i', '', mb_substr((string)($d['provider'] ?? ''), 0, 20)),
             ]);
             if (random_int(1, 200) === 1) $dbh->exec('DELETE FROM tbl_ai_turn_log WHERE created_at < DATE_SUB(NOW(), INTERVAL ' . self::RETENTION_DAYS . ' DAY)');
-        } catch (Throwable $e) { error_log('[TMS AI turnlog] ' . self::safeText($e->getMessage(), 300)); }
+        } catch (Throwable $e) { error_log('[TourBuddy AI turnlog] ' . self::safeText($e->getMessage(), 300)); }
     }
 
     /** @return array<string,mixed>|null null when the table is unavailable */

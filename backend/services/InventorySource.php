@@ -101,7 +101,7 @@ class InventorySource
                 $flag = $s->fetchColumn();
                 if ($flag !== false && (int)$flag === 1) $row = ($row ?? []) + ['IsSampleData' => 1];
             }
-        } catch (Throwable $e) { error_log('[TMS InventorySource] ' . $e->getMessage()); }
+        } catch (Throwable $e) { error_log('[TourBuddy InventorySource] ' . $e->getMessage()); }
         return self::classify($row);
     }
 

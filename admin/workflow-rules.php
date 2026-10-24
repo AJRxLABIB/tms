@@ -57,7 +57,7 @@ if ($installed && $_SERVER['REQUEST_METHOD'] === 'POST') {
     } elseif (isset($_POST['dry_run'])) {
         $dryRuleId = $rid;
         try { $dryResult = RulesEngine::evaluate($dbh, true, $rid); }
-        catch (Throwable $e) { error_log('[TMS workflow-rules] dry run: ' . $e->getMessage()); $flashErr = ['Dry run failed (see error log).']; }
+        catch (Throwable $e) { error_log('[TourBuddy workflow-rules] dry run: ' . $e->getMessage()); $flashErr = ['Dry run failed (see error log).']; }
         tms_log_activity($dbh, $actor, 'Workflow rule dry run', 'rule #' . $rid, 'workflow_rule', $rid);
     }
 }
@@ -71,7 +71,7 @@ if ($installed) {
             $q = $dbh->prepare("SELECT subject_key, detail, created_at FROM tbl_workflow_runs WHERE rule_id = ? AND dry_run = 1 ORDER BY id DESC LIMIT 20");
             $q->execute([$dryRuleId]); $dryRows = $q->fetchAll(PDO::FETCH_ASSOC);
         }
-    } catch (Throwable $e) { error_log('[TMS workflow-rules] ' . $e->getMessage()); }
+    } catch (Throwable $e) { error_log('[TourBuddy workflow-rules] ' . $e->getMessage()); }
 }
 ?>
 <!DOCTYPE html>
@@ -79,7 +79,7 @@ if ($installed) {
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>TMS | Admin | Workflow Rules</title>
+<title>TourBuddy | Admin | Workflow Rules</title>
 <link href="css/font-awesome.min2.css" rel="stylesheet">
 <link href="css/bootstrap.min.css" rel="stylesheet">
 <link href="<?php echo tms_asset_ver('css/admin-v6.css'); ?>" rel="stylesheet">

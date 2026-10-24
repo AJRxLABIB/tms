@@ -44,24 +44,28 @@ function sup_status_badge(string $status): string
 
 function sup_head(string $title, ?array $supplier = null, string $active = ''): void
 {
-    $nav = ['dashboard.php' => 'Dashboard', 'packages.php' => 'Packages', 'blackouts.php' => 'Blackout dates', 'bookings.php' => 'Bookings', 'settlements.php' => 'Settlements', 'quality.php' => 'Quality'];
+    $nav = ['dashboard.php' => 'Dashboard', 'packages.php' => 'Packages', 'bookings.php' => 'Bookings', 'settlements.php' => 'Payouts'];
+    $more = ['blackouts.php' => 'Blackout dates', 'quality.php' => 'Quality'];
     ?><!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex,nofollow">
-<title><?php echo h($title); ?> | TMS Supplier Portal</title>
+<title><?php echo h($title); ?> | TourBuddy Supplier Portal</title>
 <script>try{document.documentElement.setAttribute('data-theme',localStorage.getItem('tms-theme')||'light');}catch(e){}</script>
+<link rel="stylesheet" href="../css/tms-theme.css?v=1">
 <link rel="stylesheet" href="supplier.css?v=<?php echo (int)@filemtime(__DIR__ . '/supplier.css'); ?>">
 </head>
 <body>
 <a class="sp-skip" href="#main">Skip to content</a>
 <header class="sp-top"><div class="sp-top-in">
-  <a class="sp-brand" href="<?php echo $supplier ? 'dashboard.php' : 'login.php'; ?>">TMS <span>Supplier Portal</span></a>
+  <a class="sp-brand" href="<?php echo $supplier ? 'dashboard.php' : 'login.php'; ?>">TourBuddy <span>Supplier Portal</span></a>
   <?php if ($supplier): ?>
   <nav class="sp-nav" aria-label="Supplier navigation">
     <?php foreach ($nav as $file => $label): ?><a href="<?php echo $file; ?>"<?php echo $active === $file ? ' aria-current="page"' : ''; ?>><?php echo h($label); ?></a><?php endforeach; ?>
+    <details class="sp-more"><summary<?php echo isset($more[$active]) ? ' aria-current="page"' : ''; ?>>More</summary>
+      <div class="sp-more-list"><?php foreach ($more as $file => $label): ?><a href="<?php echo $file; ?>"<?php echo $active === $file ? ' aria-current="page"' : ''; ?>><?php echo h($label); ?></a><?php endforeach; ?></div></details>
   </nav>
   <div class="sp-tools"><span><?php echo h($supplier['BusinessName']); ?></span>
     <button type="button" class="btn secondary sm" id="themeBtn" aria-label="Toggle dark mode">Theme</button>

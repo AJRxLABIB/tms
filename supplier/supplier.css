@@ -8,6 +8,12 @@
   --ok-bg:#E3F4EA;--ok:#0B5A2C;--warn-bg:#FFF3D6;--warn:#7A4F0E;--bad-bg:#FBE4E4;--bad:#8F2323;--info-bg:#E4EEF9;--info:#1C4A7A;
   --radius:10px;--shadow:0 1px 3px rgba(16,40,30,.08),0 8px 24px rgba(16,40,30,.06);
 }
+/* Tropical Journey tokens (from css/tms-theme.css) override the old forest-green palette when available */
+html:root{
+  --bg:var(--tms-bg,#F7F8F5);--surface:var(--tms-surface,#fff);--text:var(--tms-text,#17231E);--muted:var(--tms-muted,#5F6D65);--border:var(--tms-border,#D9E0DB);
+  --primary:var(--tms-primary,#176B50);--primary-dark:var(--tms-primary-strong,#104B3A);--on-primary:var(--tms-primary-ink,#fff);--link:var(--tms-link,#176B50);
+  --radius:var(--tms-radius,12px);--shadow:var(--tms-shadow,0 8px 24px rgba(16,40,30,.08));
+}
 html[data-theme="dark"]{
   --bg:#0F1612;--surface:#18211C;--text:#EAF1EC;--muted:#AAB8AF;--border:#2A362F;
   --primary:#5CC79C;--primary-dark:#7ED6B2;--on-primary:#0E3B2D;--link:#7ED6B2;
@@ -65,3 +71,19 @@ tr:last-child td{border-bottom:0}
 .inline{display:inline}
 @media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 .sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+
+/* nav "More" menu + friendlier chrome */
+.sp-top{background:linear-gradient(90deg,var(--tms-primary-strong,#0b4a52),var(--tms-primary,#0e7c86));border-bottom:0}
+.sp-brand,.sp-brand span{color:#fff}.sp-brand span{opacity:.8}
+.sp-nav a,.sp-more summary{color:#fff}.sp-nav a:hover,.sp-more summary:hover{background:rgba(255,255,255,.14)}
+.sp-nav a[aria-current="page"],.sp-more summary[aria-current="page"]{background:var(--tms-accent,#ff7a59);color:var(--tms-accent-ink,#1d0c05)}
+.sp-tools,.sp-tools span{color:#E6F3F4}
+.sp-more{position:relative}
+.sp-more summary{list-style:none;cursor:pointer;padding:8px 12px;border-radius:8px;font-weight:600;font-size:14px;min-height:36px;display:inline-flex;align-items:center}
+.sp-more summary::-webkit-details-marker{display:none}
+.sp-more summary::after{content:"▾";margin-left:6px;font-size:11px}
+.sp-more-list{position:absolute;top:100%;left:0;min-width:180px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow);padding:6px;z-index:20}
+.sp-more-list a{display:flex;color:var(--text)}.sp-more-list a:hover{background:var(--bg)}
+.sp-card,.sp-stat{border-radius:var(--radius)}
+.sp-stat b{color:var(--primary)}
+.btn{border-radius:10px}

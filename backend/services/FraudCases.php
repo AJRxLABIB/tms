@@ -132,7 +132,7 @@ class FraudCases
             }
         };
         $guard = function (callable $fn, string $name) {
-            try { $fn(); } catch (Throwable $e) { error_log('[TMS FraudCases] signal ' . $name . ' failed: ' . $e->getMessage()); }
+            try { $fn(); } catch (Throwable $e) { error_log('[TourBuddy FraudCases] signal ' . $name . ' failed: ' . $e->getMessage()); }
         };
 
         if (self::tableExists($dbh, 'tblpayments') && self::tableExists($dbh, 'tblbooking')) {
@@ -244,7 +244,7 @@ class FraudCases
             return null;
         } catch (Throwable $e) {
             if ($dbh->inTransaction()) $dbh->rollBack();
-            error_log('[TMS FraudCases] decide failed: ' . $e->getMessage());
+            error_log('[TourBuddy FraudCases] decide failed: ' . $e->getMessage());
             return 'Could not save the decision.';
         }
     }
@@ -307,7 +307,7 @@ class FraudCases
             if ($dup->fetchColumn()) return 'An appeal for this case is already open.';
             $dbh->prepare('INSERT INTO tbl_fraud_appeals (case_id, user_email, message) VALUES (?,?,?)')->execute([$caseId, mb_substr($email, 0, 100), $message]);
             return null;
-        } catch (Throwable $e) { error_log('[TMS FraudCases] appeal failed: ' . $e->getMessage()); return 'Could not file the appeal.'; }
+        } catch (Throwable $e) { error_log('[TourBuddy FraudCases] appeal failed: ' . $e->getMessage()); return 'Could not file the appeal.'; }
     }
 
     /** A human answers an appeal; an upheld appeal reopens the case for review (it never changes the customer's account). @return string|null error */
@@ -333,7 +333,7 @@ class FraudCases
             return null;
         } catch (Throwable $e) {
             if ($dbh->inTransaction()) $dbh->rollBack();
-            error_log('[TMS FraudCases] appeal response failed: ' . $e->getMessage());
+            error_log('[TourBuddy FraudCases] appeal response failed: ' . $e->getMessage());
             return 'Could not save the response.';
         }
     }

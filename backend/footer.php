@@ -1,108 +1,79 @@
 </main>
-<!-- TMS Modern Footer Partial (used by inner pages) -->
-<!-- ════════════════ FOOTER ════════════════ -->
-<footer class="tms-footer">
-    <div class="tms-container">
-        <div class="tms-footer-grid">
-            <div class="tms-footer-col tms-footer-brand">
-                <a href="index.php" class="tms-logo" style="text-decoration:none;">
-                    <div class="tms-logo-icon"><i class="fa fa-globe"></i></div>
-                    <div class="tms-logo-text">
-                        <strong>TMS</strong>
-                        <span>Tourism Management</span>
-                    </div>
-                </a>
-                <p>Plan, compare and book tour packages with AI-assisted trip planning, live weather and multi-currency prices.</p>
-                <?php /* Round 14: these four buttons were all href="#" — clicking any of
-                         them just jumped to the top of the page. Set TMS_SOCIAL_* in .env
-                         to switch them on; until then they are not rendered at all, which
-                         is better than four dead links on every page. */ ?>
-                <?php
-                $tmsSocials = array_filter([
-                    'facebook'  => tms_env('TMS_SOCIAL_FACEBOOK', ''),
-                    'twitter'   => tms_env('TMS_SOCIAL_TWITTER', ''),
-                    'instagram' => tms_env('TMS_SOCIAL_INSTAGRAM', ''),
-                    'youtube'   => tms_env('TMS_SOCIAL_YOUTUBE', ''),
-                ]);
-                if ($tmsSocials): ?>
-                <div class="tms-footer-social">
-                    <?php foreach ($tmsSocials as $net => $url): ?>
-                    <a href="<?php echo htmlspecialchars($url, ENT_QUOTES, 'UTF-8'); ?>" target="_blank" rel="noopener"
-                       class="tms-social-btn" aria-label="<?php echo htmlspecialchars(ucfirst($net), ENT_QUOTES, 'UTF-8'); ?>">
-                       <i class="fa fa-<?php echo htmlspecialchars($net, ENT_QUOTES, 'UTF-8'); ?>"></i></a>
+<?php
+require_once __DIR__ . '/brand.php';
+// Compact footer: 4 columns. Page links that used to crowd the header live here.
+$tmsfE = function ($s) { return htmlspecialchars((string)$s, ENT_QUOTES, 'UTF-8'); };
+$tmsfLanding = !empty($tms_landing_mode);
+$tmsfSocials = array_filter([
+    'facebook'  => tms_env('TMS_SOCIAL_FACEBOOK', ''),
+    'twitter'   => tms_env('TMS_SOCIAL_TWITTER', ''),
+    'instagram' => tms_env('TMS_SOCIAL_INSTAGRAM', ''),
+    'youtube'   => tms_env('TMS_SOCIAL_YOUTUBE', ''),
+]);
+$tmsfPhone = trim((string)tms_env('TMS_SUPPORT_PHONE', '+880 1759-443004'));
+$tmsfCols = [
+    tms_t('footer_discover', 'Discover') => [
+        ['package-list.php', tms_t('nav_packages', 'Tour Packages')],
+        ['hotels.php', tms_t('nav_hotels', 'Hotels')],
+        ['activities.php', tms_t('nav_activities', 'Activities')],
+        ['destinations.php', tms_t('nav_destinations', 'Destinations')],
+        ['tour-map.php', tms_t('map_title', 'Tourism Map')],
+        ['blog.php', tms_t('nav_blog', 'Blog')],
+    ],
+    tms_t('footer_plan', 'Plan') => [
+        ['plan.php', tms_t('nav_plan', 'Plan a trip')],
+        ['ai-recommend.php', 'AI Recommender'],
+        ['budget-planner.php', 'Budget Planner'],
+        ['compare.php', tms_t('nav_compare', 'Compare')],
+        ['weather.php', 'Weather'],
+    ],
+    tms_t('footer_help', 'Help') => [
+        ['page.php?type=aboutus', tms_t('nav_about', 'About')],
+        ['page.php?type=contact', tms_t('nav_contact', 'Contact')],
+        ['issuetickets.php', 'Support Tickets'],
+        ['emergency.php', 'Safety & Emergency'],
+        ['page.php?type=terms', tms_t('label_terms', 'Terms of Service')],
+        ['page.php?type=privacy', tms_t('label_privacy_policy', 'Privacy Policy')],
+    ],
+];
+?>
+<footer class="tmsn-foot">
+    <div class="tmsn-foot-in">
+        <div class="tmsn-foot-grid">
+            <div class="tmsn-foot-brand">
+                <a href="index.php" class="tmsn-logo"><?php echo tms_brand_mark_html('40'); ?></a>
+                <p><?php echo $tmsfE(tms_t('footer_blurb', 'Plan, compare and book trips with AI help, live weather and prices in your currency.')); ?></p>
+                <?php if ($tmsfPhone !== ''): ?>
+                <a class="tmsn-foot-phone" href="tel:<?php echo $tmsfE(preg_replace('/[^0-9+]/', '', $tmsfPhone)); ?>"><i class="fa fa-phone" aria-hidden="true"></i> <?php echo $tmsfE($tmsfPhone); ?></a>
+                <?php endif; ?>
+                <?php if ($tmsfSocials): ?>
+                <div class="tmsn-foot-social">
+                    <?php foreach ($tmsfSocials as $net => $url): ?>
+                    <a href="<?php echo $tmsfE($url); ?>" target="_blank" rel="noopener" aria-label="<?php echo $tmsfE(ucfirst($net)); ?>"><i class="fa fa-<?php echo $tmsfE($net); ?>" aria-hidden="true"></i></a>
                     <?php endforeach; ?>
                 </div>
                 <?php endif; ?>
             </div>
-            <?php if (empty($tms_landing_mode)): ?>
-            <div class="tms-footer-col">
-                <h5><?php echo tms_t('footer_quick_links','Quick Links'); ?></h5>
+            <?php if (!$tmsfLanding): foreach ($tmsfCols as $tmsfTitle => $tmsfItems): ?>
+            <div>
+                <h5><?php echo $tmsfE($tmsfTitle); ?></h5>
                 <ul>
-                    <li><a href="index.php">Home</a></li>
-                    <li><a href="page.php?type=aboutus"><?php echo tms_t('nav_about','About Us'); ?></a></li>
-                    <li><a href="package-list.php"><?php echo tms_t('nav_packages','Tour Packages'); ?></a></li>
-                    <li><a href="blog.php"><?php echo tms_t('nav_blog','Travel Blog'); ?></a></li>
-                    <li><a href="enquiry.php">Enquiry</a></li>
-                    <li><a href="page.php?type=contact"><?php echo tms_t('nav_contact','Contact Us'); ?></a></li>
-                    <li><a href="page.php?type=terms"><?php echo tms_t('label_terms','Terms of Service'); ?></a></li>
-                    <li><a href="page.php?type=privacy"><?php echo tms_t('label_privacy_policy','Privacy Policy'); ?></a></li>
+                    <?php foreach ($tmsfItems as $it): ?>
+                    <li><a href="<?php echo $tmsfE($it[0]); ?>"><?php echo $tmsfE($it[1]); ?></a></li>
+                    <?php endforeach; ?>
                 </ul>
             </div>
-            <div class="tms-footer-col">
-                <h5><?php echo tms_t('footer_features','Features'); ?></h5>
-                <ul>
-                    <li><a href="explore.php">Explore Mode</a></li>
-                    <li><a href="ai-recommend.php">AI Recommender</a></li>
-                    <li><a href="tour-map.php">Interactive Map</a></li>
-                    <li><a href="weather.php">Weather Guide</a></li>
-                    <li><a href="budget-planner.php">Budget Planner</a></li>
-                    <li><a href="compare.php">Compare Packages</a></li>
-                    <li><a href="transport-compare.php">Transport Compare</a></li>
-                    <li><a href="emergency.php">Safety & Emergency</a></li>
-                </ul>
-            </div>
-            <div class="tms-footer-col">
-                <h5><?php echo tms_t('footer_support','Support'); ?></h5>
-                <ul>
-                    <li><a href="issuetickets.php">Support Tickets</a></li>
-                    <?php /* Round 14: includes/write-us.php renders the ONLY form that
-                             writes to tblissues, and nothing anywhere opened it — no
-                             button, no link, no data-target. The whole customer
-                             ticket channel was unreachable, so issuetickets.php showed
-                             its empty state forever and admin/manage-issues.php never
-                             had anything to answer. */ ?>
-                    <li><a href="#" data-toggle="modal" data-target="#myModal3">Write to Us</a></li>
-                    <li><a href="reviews.php">Reviews</a></li>
-                    <li><a href="loyalty.php">Loyalty Points</a></li>
-                    <li><a href="custom-trip.php">Custom Trips</a></li>
-                </ul>
-                <?php $tmsSupportPhone = trim((string)tms_env('TMS_SUPPORT_PHONE', '+880 1759-443004')); ?>
-                <?php if ($tmsSupportPhone !== ''): ?>
-                <div style="margin-top:20px;padding:14px;background:rgba(184,228,201,0.1);border-radius:10px;border:1px solid rgba(184,228,201,0.25);">
-                    <div style="color:var(--mint);font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;">Contact</div>
-                    <a href="tel:<?php echo htmlspecialchars(preg_replace('/[^0-9+]/', '', $tmsSupportPhone), ENT_QUOTES, 'UTF-8'); ?>" style="color:#fff;font-size:15px;font-weight:700;"><i class="fa fa-phone" aria-hidden="true"></i> <?php echo htmlspecialchars($tmsSupportPhone, ENT_QUOTES, 'UTF-8'); ?></a>
-                </div>
-                <?php endif; ?>
-            </div>
-            <?php endif; ?>
+            <?php endforeach; endif; ?>
         </div>
-        <div class="tms-footer-bottom">
-            <span>© <?php echo date('Y'); ?> TMS — Tourism Management System. <?php echo tms_t('footer_rights','All rights reserved.'); ?></span>
-            <?php if (empty($tms_landing_mode)): ?>
-            <div style="display:flex;align-items:center;gap:16px;">
-                <select class="tms-currency-select" aria-label="See price in" title="See price in" style="background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.2);color:rgba(255,255,255,0.85);">
-                    <?php foreach (TMS_CURRENCIES as $tmsFooterCurCode => $tmsFooterCurMeta): ?>
-                    <option value="<?php echo $tmsFooterCurCode; ?>" <?php echo tms_active_currency()===$tmsFooterCurCode?'selected':''; ?>>
-                        <?php echo $tmsFooterCurMeta['symbol'] . ' ' . $tmsFooterCurCode; ?>
-                    </option>
-                    <?php endforeach; ?>
-                </select>
-                <button type="button" id="tmsInstallBtnFooter" style="display:none;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.2);color:rgba(255,255,255,0.85);padding:6px 14px;border-radius:20px;font-size:12px;cursor:pointer;font-family:var(--font-body);">
-                    <i class="fa fa-download"></i> Install App
-                </button>
-                <button id="darkModeBtn" onclick="tmsToggleTheme()" style="background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.2);color:rgba(255,255,255,0.7);padding:6px 14px;border-radius:20px;font-size:12px;cursor:pointer;font-family:var(--font-body);">
-                    <i class="fa fa-moon-o" id="darkIcon"></i> <span id="darkLabel">Dark Mode</span>
-                </button>
+        <div class="tmsn-foot-bottom">
+            <span>© <?php echo date('Y'); ?> TourBuddy. <?php echo tms_t('footer_rights', 'All rights reserved.'); ?></span>
+            <?php if (!$tmsfLanding): ?>
+            <div class="tmsn-foot-tools">
+                <?php /* Round 14: "Write to Us" opens includes/write-us.php (#myModal3), the only form that writes to tblissues. */ ?>
+                <a href="#" data-toggle="modal" data-target="#myModal3"><?php echo tms_t('footer_write_us', 'Write to us'); ?></a>
+                <button type="button" id="tmsInstallBtnFooter" style="display:none;"><i class="fa fa-download" aria-hidden="true"></i> <?php echo $tmsfE(tms_t('nav_install', 'Install app')); ?></button>
+                <button type="button" id="darkModeBtn" onclick="tmsToggleTheme()"><i class="fa fa-moon-o" id="darkIcon" aria-hidden="true"></i> <span id="darkLabel">Dark Mode</span></button>
+                <?php if (empty($_SESSION['login'])): ?><a href="admin/index.php">Staff</a><?php endif; ?>
             </div>
             <?php endif; ?>
         </div>

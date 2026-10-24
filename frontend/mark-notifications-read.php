@@ -22,7 +22,7 @@ try {
         ->execute([':e' => $_SESSION['login']]);
     echo json_encode(['success' => true]);
 } catch (Exception $e) {
-    error_log('[TMS Notify] mark-read failed: ' . $e->getMessage());
+    error_log('[TourBuddy Notify] mark-read failed: ' . $e->getMessage());
     echo json_encode(['success' => false]);
 }
 exit;

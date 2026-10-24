@@ -1,6 +1,6 @@
 <?php
 /**
- * BudgetAutopilot.php — "TMS V2" prompt, AI Budget Autopilot.
+ * BudgetAutopilot.php — "TourBuddy V2" prompt, AI Budget Autopilot.
  *
  * Confirmed genuinely new before this: backend/ai/BudgetOptimizer.php and
  * frontend/expense-tracker.php already do real, REACTIVE budget tracking

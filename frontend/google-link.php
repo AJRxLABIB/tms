@@ -1,7 +1,7 @@
 <?php
 /**
- * google-link.php — an existing TMS account has the same e-mail as the Google account. Google is only attached after the visitor
- * proves they own the TMS account by entering its password (someone could have registered this address here beforehand).
+ * google-link.php — an existing TourBuddy account has the same e-mail as the Google account. Google is only attached after the visitor
+ * proves they own the TourBuddy account by entering its password (someone could have registered this address here beforehand).
  */
 require_once 'backend/config.php';
 require_once 'backend/auth/GoogleAuth.php';
@@ -36,7 +36,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <head>
   <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="robots" content="noindex">
-  <title>Connect Google — TMS</title>
+  <title>Connect Google — TourBuddy</title>
   <style>
     body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#0E3B2D,#104B3A 55%,#176B50);font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;padding:20px}
     .card{background:#fff;border-radius:16px;max-width:420px;width:100%;padding:28px 32px;box-shadow:0 24px 60px rgba(0,0,0,.4)}
@@ -52,11 +52,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <body>
 <main class="card">
   <h1>Connect your Google account</h1>
-  <p>A TMS account already exists for <strong><?php echo htmlspecialchars($email, ENT_QUOTES, 'UTF-8'); ?></strong>. Enter its TMS password once to confirm it is yours; after that you can sign in with Google.</p>
+  <p>A TourBuddy account already exists for <strong><?php echo htmlspecialchars($email, ENT_QUOTES, 'UTF-8'); ?></strong>. Enter its TourBuddy password once to confirm it is yours; after that you can sign in with Google.</p>
   <?php if ($error): ?><div class="err" role="alert"><?php echo htmlspecialchars($error, ENT_QUOTES, 'UTF-8'); ?></div><?php endif; ?>
   <form method="POST" action="google-link.php">
     <?php tms_csrf_field(); ?>
-    <label for="pw">TMS password</label>
+    <label for="pw">TourBuddy password</label>
     <input type="password" id="pw" name="Password" required autofocus autocomplete="current-password" maxlength="100">
     <button type="submit">Connect and sign in</button>
   </form>

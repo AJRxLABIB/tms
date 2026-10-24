@@ -97,9 +97,9 @@ function destUrl(array $overrides = []): string {
 <link rel="apple-touch-icon" href="images/icon-192.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="TMS">
+<meta name="apple-mobile-web-app-title" content="TourBuddy">
 <meta name="mobile-web-app-capable" content="yes">
-<title>TMS | Explore Destinations</title>
+<title>TourBuddy | Explore Destinations</title>
 <?php
 // NEW (Round 20, spec item 53 — SEO): canonical intentionally always points
 // at the base listing URL (query string stripped by tms_seo_meta's default)
@@ -181,6 +181,7 @@ html[data-theme="dark"] .no-results { color: var(--text-light) !important; }
 </head>
 <body>
 <?php include('backend/header.php'); ?>
+<link rel="stylesheet" href="<?php echo tms_asset_ver('css/tms-pages.css'); ?>">
 
 <div class="banner-3">
     <div class="container">
@@ -211,17 +212,6 @@ html[data-theme="dark"] .no-results { color: var(--text-light) !important; }
                             <?php endforeach; ?>
                         </select>
                     </div>
-                    <div style="flex:1;min-width:160px;">
-                        <label for="region_hidden"><i class="fa fa-map"></i> <?php echo tms_t('label_region','State / Division'); ?></label>
-                        <select name="region" id="region_hidden" class="form-control" onchange="this.form.submit()" <?php echo $country===''?'disabled':''; ?>>
-                            <option value=""><?php echo tms_t('dest_all_regions','All Regions'); ?></option>
-                            <?php foreach ($regions as $r): ?>
-                            <option value="<?php echo htmlspecialchars($r, ENT_QUOTES, 'UTF-8'); ?>" <?php echo $region===$r?'selected':''; ?>>
-                                <?php echo htmlspecialchars($r, ENT_QUOTES, 'UTF-8'); ?>
-                            </option>
-                            <?php endforeach; ?>
-                        </select>
-                    </div>
                     <div style="flex:2;min-width:220px;">
                         <label for="destSearch"><i class="fa fa-search"></i> <?php echo tms_t('label_search_destination','Search Destination'); ?></label>
                         <input type="text" name="search" id="destSearch" class="form-control" placeholder="<?php echo htmlspecialchars(tms_t('dest_search_placeholder',"Try 'beach', 'Cox's Bazar', 'Paris'…"), ENT_QUOTES, 'UTF-8'); ?>"
@@ -232,11 +222,30 @@ html[data-theme="dark"] .no-results { color: var(--text-light) !important; }
                         <button type="submit" class="btn-search"><i class="fa fa-search"></i> <?php echo tms_t('btn_search','Search'); ?></button>
                         <a href="destinations.php" class="btn-reset"><?php echo tms_t('btn_reset','Reset'); ?></a>
                     </div>
+                    <details class="tms-more-filters" style="flex:1 0 100%;"<?php echo ($region!==''||$category!=='') ? ' open' : ''; ?>>
+                    <summary>More filters</summary>
+                    <div class="tms-more-row">
+<div style="flex:1;min-width:160px;">
+                        <label for="region_hidden"><i class="fa fa-map"></i> <?php echo tms_t('label_region','State / Division'); ?></label>
+                        <select name="region" id="region_hidden" class="form-control" onchange="this.form.submit()" <?php echo $country===''?'disabled':''; ?>>
+                            <option value=""><?php echo tms_t('dest_all_regions','All Regions'); ?></option>
+                            <?php foreach ($regions as $r): ?>
+                            <option value="<?php echo htmlspecialchars($r, ENT_QUOTES, 'UTF-8'); ?>" <?php echo $region===$r?'selected':''; ?>>
+                                <?php echo htmlspecialchars($r, ENT_QUOTES, 'UTF-8'); ?>
+                            </option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+                    
+                    <div style="flex:2;min-width:220px;" class="tms-cat-slot"></div>
+                    </div>
+                    </details>
                 </div>
             </form>
         </div>
 
         <!-- ── Category filter pills ── -->
+        <details class="tms-more tms-more-cats"<?php echo $category!=='' ? ' open' : ''; ?>><summary>Categories</summary>
         <div class="cat-pills wow fadeIn">
             <a href="<?php echo destUrl(['category'=>'','page'=>1]); ?>" class="cat-pill <?php echo $category===''?'active':''; ?>"><?php echo tms_t('dest_all_categories','All Categories'); ?></a>
             <?php foreach ($categories as $cat): ?>
@@ -245,6 +254,7 @@ html[data-theme="dark"] .no-results { color: var(--text-light) !important; }
             </a>
             <?php endforeach; ?>
         </div>
+        </details>
 
         <?php if (!$hasFilters): ?>
 
@@ -311,7 +321,7 @@ html[data-theme="dark"] .no-results { color: var(--text-light) !important; }
         </div>
 
         <?php if (count($results) > 0): ?>
-        <div class="row">
+        <div class="tms-list-grid tms-dest-results">
             <?php foreach ($results as $r): ?>
             <div class="col-md-3 col-sm-6">
                 <div class="grid-card wow fadeInUp">
@@ -348,7 +358,7 @@ html[data-theme="dark"] .no-results { color: var(--text-light) !important; }
 
         <?php else: ?>
         <div class="no-results">
-            <i class="fa fa-map-o"></i>
+            <svg class="tms-empty-art" viewBox="0 0 120 90" width="120" height="90" aria-hidden="true"><path d="M20 20l26 8 28-8 26 8v50l-26-8-28 8-26-8z" fill="none" stroke="currentColor" stroke-width="5" stroke-linejoin="round"/><path d="M46 28v50M74 20v50" stroke="currentColor" stroke-width="4" opacity=".5"/></svg>
             <p><?php echo tms_t('dest_no_match','No destinations match your filters.'); ?></p>
             <a href="destinations.php"><?php echo tms_t('link_view_all_destinations','View all destinations'); ?></a>
         </div>

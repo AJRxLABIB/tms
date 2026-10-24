@@ -93,7 +93,7 @@ final class EntityIndex
         ];
         foreach ($q as $kind => $sql) {
             try { $rows[$kind] = $db->query($sql . (int)$limit)->fetchAll(PDO::FETCH_ASSOC) ?: []; }
-            catch (Throwable $e) { $rows[$kind] = []; error_log('[TMS AI entities] ' . $kind . ': ' . $e->getMessage()); }
+            catch (Throwable $e) { $rows[$kind] = []; error_log('[TourBuddy AI entities] ' . $kind . ': ' . $e->getMessage()); }
         }
         $ix = self::fromRows($rows);
         if (isset($tmsCache)) { try { $tmsCache->set($key, serialize($ix), 600); } catch (Throwable $e) {} }

@@ -31,7 +31,7 @@ $paymentService = new PaymentService($dbh);
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>TMS | Manage Bookings</title>
+<title>TourBuddy | Manage Bookings</title>
 <link href="css/font-awesome.css" rel="stylesheet">
 <link href="css/bootstrap.min.css" rel="stylesheet">
 <link href="<?php echo tms_asset_ver('css/admin-v6.css'); ?>" rel="stylesheet">
@@ -82,7 +82,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'], $_POST['id'
     $bid = (int)$_POST['id'];
     switch ($_POST['action']) {
         case 'confirm':
-            // GUARD (new "TMS V2" prompt -- booking state machine): nothing
+            // GUARD (new "TourBuddy V2" prompt -- booking state machine): nothing
             // previously stopped this action from "confirming" an
             // already-cancelled booking, silently resurrecting it (status
             // 2 -> 1) with no trace -- a real bug class, not a hypothetical
@@ -124,7 +124,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'], $_POST['id'
                 $dbh, $bid, "Your booking #$ref has been cancelled by our team. Please contact support if you have questions.",
                 "Your booking #$ref has been cancelled",
                 "<p>Your booking <strong>#$ref</strong> has been cancelled by our team.</p>
-                 <p>If you weren't expecting this or have questions, please reach out to TMS support and we'll help sort it out.</p>"
+                 <p>If you weren't expecting this or have questions, please reach out to TourBuddy support and we'll help sort it out.</p>"
             );
             $msg = "Booking #BK".str_pad($bid,3,'0',STR_PAD_LEFT)." cancelled.";
             $msgType = 'success';
@@ -195,7 +195,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'], $_POST['id'
             $prevRefundStmt = $dbh->prepare("SELECT RefundStatus FROM tblbooking WHERE BookingId=:id");
             $prevRefundStmt->execute([':id'=>$bid]);
             $prevRefundStatus = (string)$prevRefundStmt->fetchColumn();
-            // GUARD (new "TMS V2" prompt -- booking state machine): this
+            // GUARD (new "TourBuddy V2" prompt -- booking state machine): this
             // action had no check that a refund was ever actually
             // requested, so a stray/duplicate click could mark
             // RefundStatus='processed' on a booking with no refund
@@ -227,7 +227,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'], $_POST['id'
             $prevRefundStmt = $dbh->prepare("SELECT RefundStatus FROM tblbooking WHERE BookingId=:id");
             $prevRefundStmt->execute([':id'=>$bid]);
             $prevRefundStatus = (string)$prevRefundStmt->fetchColumn();
-            // GUARD (new "TMS V2" prompt -- booking state machine): same
+            // GUARD (new "TourBuddy V2" prompt -- booking state machine): same
             // reasoning as refund_processed above -- don't let this mark a
             // refund 'rejected' when none was ever requested.
             if (!BookingStateMachine::canTransitionRefundStatus($prevRefundStatus, 'rejected')) {
@@ -276,7 +276,7 @@ function tms_notify_booking_owner(PDO $dbh, int $bookingId, string $message, str
             }
         }
     } catch (Exception $e) {
-        error_log('[TMS] Could not notify booking owner: ' . $e->getMessage());
+        error_log('[TourBuddy] Could not notify booking owner: ' . $e->getMessage());
     }
 }
 

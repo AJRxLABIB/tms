@@ -39,7 +39,7 @@ if (isset($_POST['redeem'])) {
             $upd->execute([':used' => $used, ':used2' => $used, ':e' => $email]);
             if ($upd->rowCount() !== 1) { $dbh->rollBack(); $error = 'Could not redeem right now. Please try again.'; }
             else {
-                $coupon = 'TMS-' . strtoupper(bin2hex(random_bytes(4)));
+                $coupon = 'TourBuddy-' . strtoupper(bin2hex(random_bytes(4)));
                 $dbh->prepare("INSERT INTO tblcoupons(Code,DiscountPercent,UserEmail,ExpiryDate,IsUsed) VALUES(:c,:d,:e,DATE_ADD(NOW(),INTERVAL 30 DAY),0)")
                     ->execute([':c' => $coupon, ':d' => $discount, ':e' => $email]);
                 $dbh->prepare("INSERT INTO tblloyalty_log(UserEmail,Points,Description) VALUES(:e,:p,:d)")
@@ -54,7 +54,7 @@ if (isset($_POST['redeem'])) {
         }
     } catch (Throwable $e) {
         if ($dbh->inTransaction()) $dbh->rollBack();
-        error_log('[TMS Loyalty] redeem failed: ' . $e->getMessage());
+        error_log('[TourBuddy Loyalty] redeem failed: ' . $e->getMessage());
         $error = 'Could not redeem right now. Please try again.';
     }
     $q->execute([':e' => $email]);
@@ -91,9 +91,9 @@ $leaderboard = $achievementEngine->getLeaderboard(10);
 <link rel="apple-touch-icon" href="images/icon-192.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="TMS">
+<meta name="apple-mobile-web-app-title" content="TourBuddy">
 <meta name="mobile-web-app-capable" content="yes">
-<title>TMS | Loyalty Points</title>
+<title>TourBuddy | Loyalty Points</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <link href="css/bootstrap.min2.css" rel='stylesheet'/>
 <link href="<?php echo tms_asset_ver('css/style.min.css'); ?>" rel='stylesheet'/>
@@ -112,6 +112,7 @@ $leaderboard = $achievementEngine->getLeaderboard(10);
 .coupon-badge{background:#e8f5e9;border:2px dashed #4caf50;border-radius:8px;padding:12px 18px;margin-bottom:10px;display:flex;justify-content:space-between;align-items:center;}
 .coupon-code{font-family:monospace;font-size:18px;font-weight:700;color:#2e7d32;letter-spacing:2px;}
 </style>
+<link rel="stylesheet" href="css/tms-account.css?v=1">
 </head><body>
 <?php include('backend/header.php'); ?>
 <div class="page-title">

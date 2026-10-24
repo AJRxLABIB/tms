@@ -40,7 +40,7 @@ class ExploreService {
             ? TMS_CONTACT_EMAIL
             : (function_exists('tms_env') ? (tms_env('TMS_CONTACT_EMAIL', '') ?: '') : '');
         $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
-        $this->ua = 'TMS-Travel-Explorer/1.0 (+http://' . $host . '; contact: '
+        $this->ua = 'TourBuddy-Travel-Explorer/1.0 (+http://' . $host . '; contact: '
                   . ($contact !== '' ? $contact : 'admin@' . $host) . ')';
         $this->db    = $db;
         // ensureTable=false: includes/config.php already migrates the shared
@@ -917,7 +917,7 @@ class ExploreService {
     // (overview, attractions, costs, safety tips) comes from the AI or a
     // dedicated emergency-contacts table; none of it was ever connected to
     // this site's actual inventory, so a visitor exploring "Bali" had no way
-    // to see the real packages TMS sells there without leaving Explore Mode
+    // to see the real packages TourBuddy sells there without leaving Explore Mode
     // and running a separate search. Matches on exact Country only (not a
     // LIKE against free-text location strings) to avoid a false positive
     // like "France" matching "French Polynesia".
@@ -1050,10 +1050,10 @@ class ExploreService {
         try {
             $data = OverviewFallback::fromDb($this->db, $name, $country, $localInventory, $this->lookupEmergencyContacts($country));
         } catch (Throwable $e) {
-            error_log('[TMS Explore] catalogue overview failed: ' . $e->getMessage());
+            error_log('[TourBuddy Explore] catalogue overview failed: ' . $e->getMessage());
             return ['success' => false, 'error' => 'Destination information is not available right now.', 'local_inventory' => $localInventory];
         }
-        if ($reason !== '') error_log('[TMS Explore] AI overview unavailable, using catalogue overview: ' . substr(preg_replace('/\s+/', ' ', strip_tags($reason)), 0, 160));
+        if ($reason !== '') error_log('[TourBuddy Explore] AI overview unavailable, using catalogue overview: ' . substr(preg_replace('/\s+/', ' ', strip_tags($reason)), 0, 160));
         return ['success' => true, 'data' => $data, 'cached' => false, 'local_inventory' => $localInventory, 'ai_unavailable' => true];
     }
 
@@ -1064,7 +1064,7 @@ class ExploreService {
             $this->db->prepare("INSERT INTO tbl_explore_history (user_email, display_name, lat, lng) VALUES (?,?,?,?)")
                 ->execute([$userEmail, $name, $lat, $lng]);
         } catch (Exception $e) {
-            error_log('[TMS Explore] history insert failed: ' . $e->getMessage());
+            error_log('[TourBuddy Explore] history insert failed: ' . $e->getMessage());
         }
     }
 
@@ -1104,7 +1104,7 @@ class ExploreService {
             $stmt->execute();
             return $stmt->fetchAll(PDO::FETCH_ASSOC);
         } catch (Exception $e) {
-            error_log('[TMS Explore] getRecentHistory failed: ' . $e->getMessage());
+            error_log('[TourBuddy Explore] getRecentHistory failed: ' . $e->getMessage());
             return [];
         }
     }

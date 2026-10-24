@@ -110,9 +110,9 @@ $itinerary = tms_get_group_itinerary($dbh, $groupId);
 <link rel="apple-touch-icon" href="images/icon-192.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="TMS">
+<meta name="apple-mobile-web-app-title" content="TourBuddy">
 <meta name="mobile-web-app-capable" content="yes">
-<title>TMS | <?php echo htmlspecialchars($group->Name, ENT_QUOTES, 'UTF-8'); ?></title>
+<title>TourBuddy | <?php echo htmlspecialchars($group->Name, ENT_QUOTES, 'UTF-8'); ?></title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <link href="css/bootstrap.min2.css" rel='stylesheet'/>
 <link href="<?php echo tms_asset_ver('css/style.min.css'); ?>" rel='stylesheet'/>
@@ -166,7 +166,7 @@ $itinerary = tms_get_group_itinerary($dbh, $groupId);
       <input type="email" id="member_email" name="member_email" class="form-control" placeholder="friend@email.com" required style="width:240px;">
       <button type="submit" class="btn btn-primary"><i class="fa fa-user-plus"></i> Add Member</button>
     </form>
-    <p style="font-size:12px;color:var(--text-muted);">They must already have a TMS account.</p>
+    <p style="font-size:12px;color:var(--text-muted);">They must already have a TourBuddy account.</p>
     <?php endif; ?>
   </div>
 

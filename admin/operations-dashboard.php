@@ -133,7 +133,7 @@ foreach ($upcomingDestinations as $dest) {
 // changes data; each row links to the page where the action is taken (with its own permission check).
 function tms_ops_panel(callable $fn, int $limit = 10): array {
     try { return ['ok' => true, 'rows' => $fn($limit)]; }
-    catch (Throwable $e) { error_log('[TMS ops dashboard] panel failed: ' . $e->getMessage()); return ['ok' => false, 'rows' => []]; }
+    catch (Throwable $e) { error_log('[TourBuddy ops dashboard] panel failed: ' . $e->getMessage()); return ['ok' => false, 'rows' => []]; }
 }
 function tms_ops_age(?string $ts): string {
     if (!$ts) return '-';
@@ -229,7 +229,7 @@ $pageTitle = 'Operations Dashboard';
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>TMS Admin | Operations Dashboard</title>
+<title>TourBuddy Admin | Operations Dashboard</title>
 <link href="css/font-awesome.min2.css" rel="stylesheet">
 <link href="css/bootstrap.min.css" rel="stylesheet">
 <link href="<?php echo tms_asset_ver('css/admin-v6.css'); ?>" rel="stylesheet">
@@ -400,7 +400,7 @@ $pageTitle = 'Operations Dashboard';
     <?php endif; ?>
 
     <h4><i class="fa fa-plane" style="color:var(--text-muted);"></i> Flight disruptions</h4>
-    <p style="color:var(--text-muted);">Not applicable on this platform — TMS has no flight-booking model (no flight numbers, carriers, or a flight-booking table anywhere in the schema). <a href="../flight-status.php">Flight Status Lookup</a> is a standalone tool a visitor can use to check any flight, but it isn't tied to any booking here, so there is nothing real for this dashboard to monitor. Shown here rather than a fabricated widget, per this project's "no fake placeholder features" rule.</p>
+    <p style="color:var(--text-muted);">Not applicable on this platform — TourBuddy has no flight-booking model (no flight numbers, carriers, or a flight-booking table anywhere in the schema). <a href="../flight-status.php">Flight Status Lookup</a> is a standalone tool a visitor can use to check any flight, but it isn't tied to any booking here, so there is nothing real for this dashboard to monitor. Shown here rather than a fabricated widget, per this project's "no fake placeholder features" rule.</p>
 </div><!-- /.tms-content -->
 <?php include('includes/footer.php'); ?>
 </main>

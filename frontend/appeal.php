@@ -39,7 +39,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['file_appeal'])) {
 $cases = FraudCases::customerView($dbh, $email);
 ?>
 <!DOCTYPE HTML><html lang="<?php echo htmlspecialchars(tms_active_language(), ENT_QUOTES, 'UTF-8'); ?>"><head>
-<title>TMS | Appeal a Review</title>
+<title>TourBuddy | Appeal a Review</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex">
 <link href="css/bootstrap.min2.css" rel='stylesheet'/>
@@ -54,6 +54,7 @@ $cases = FraudCases::customerView($dbh, $email);
 .appeal-card h4{font-size:15px;font-weight:700;margin:0 0 8px;color:var(--primary);}
 .appeal-note{background:#f0fdf4;border:1px solid #bbf7d0;color:#166534;font-size:13px;padding:10px 14px;border-radius:8px;margin-bottom:18px;}
 </style>
+<link rel="stylesheet" href="css/tms-account.css?v=1">
 </head><body>
 <?php include('backend/header.php'); ?>
 <div class="page-title"><div class="container"><h2 style="margin:0;"><i class="fa fa-balance-scale"></i> Appeal a Review</h2>

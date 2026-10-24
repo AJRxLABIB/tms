@@ -127,7 +127,7 @@ final class TripAutopilot
             }
             self::resolveMissing($dbh, $bookingId, array_map(fn($x) => sha1(self::signalKey([$x])), $signals));
         } catch (Throwable $e) {
-            if (!($e instanceof PDOException && (string)$e->getCode() === '42S02')) error_log('[TMS Autopilot] recordDisruptions: ' . $e->getMessage());
+            if (!($e instanceof PDOException && (string)$e->getCode() === '42S02')) error_log('[TourBuddy Autopilot] recordDisruptions: ' . $e->getMessage());
         }
     }
 
@@ -321,7 +321,7 @@ final class TripAutopilot
             return ['ok' => true, 'status' => self::APPROVED, 'message' => 'Your itinerary was updated. Your booking itself was not changed.'];
         } catch (Throwable $e) {
             if ($dbh->inTransaction()) $dbh->rollBack();
-            error_log('[TMS Autopilot] approve: ' . $e->getMessage());
+            error_log('[TourBuddy Autopilot] approve: ' . $e->getMessage());
             return ['ok' => false, 'status' => 'error', 'message' => 'Could not apply the proposal right now.'];
         }
     }
@@ -370,7 +370,7 @@ final class TripAutopilot
                 $dur = max(1, (int)((strtotime($booking['ToDate']) - strtotime($booking['FromDate'])) / 86400) + 1);
                 $w = $planner->checkWeatherRisk($bid, $location, (string)$booking['FromDate'], $dur);
                 $weather = $w['flagged_days'] ?? [];
-            } catch (Throwable $e) { error_log('[TMS Autopilot] weather: ' . $e->getMessage()); }
+            } catch (Throwable $e) { error_log('[TourBuddy Autopilot] weather: ' . $e->getMessage()); }
         }
         $signals = self::buildSignals($matched, $weather);
         if (!$signals) {
@@ -388,7 +388,7 @@ final class TripAutopilot
             try {
                 $cand = $planner->regenerate($tripData, [self::replanInstruction($signals)], $email, $bid, false);
                 if (is_array($cand) && !empty($cand['days']) && !self::isFallbackItinerary($cand)) $proposed = $cand;
-            } catch (Throwable $e) { error_log('[TMS Autopilot] regenerate: ' . $e->getMessage()); }
+            } catch (Throwable $e) { error_log('[TourBuddy Autopilot] regenerate: ' . $e->getMessage()); }
         }
         if ($proposed) {
             $changed = count(self::diffDays($base, $proposed));

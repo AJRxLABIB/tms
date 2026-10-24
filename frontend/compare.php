@@ -78,9 +78,9 @@ foreach ($packages as $p) {
 <link rel="apple-touch-icon" href="images/icon-192.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="TMS">
+<meta name="apple-mobile-web-app-title" content="TourBuddy">
 <meta name="mobile-web-app-capable" content="yes">
-<title>TMS | Compare Packages</title>
+<title>TourBuddy | Compare Packages</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <link href="css/bootstrap.min2.css" rel='stylesheet'/>
 <link href="<?php echo tms_asset_ver('css/style.min.css'); ?>" rel='stylesheet'/>
@@ -107,6 +107,7 @@ foreach ($packages as $p) {
 </style>
 </head><body>
 <?php include('backend/header.php'); ?>
+<link rel="stylesheet" href="<?php echo tms_asset_ver('css/tms-pages.css'); ?>">
 <div class="page-title">
   <div class="container"><h2 style="margin:0;"><i class="fa fa-columns"></i> <?php echo tms_t('heading_compare_packages','Compare Packages'); ?></h2></div>
 </div>

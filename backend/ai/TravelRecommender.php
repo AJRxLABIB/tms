@@ -84,7 +84,7 @@ class TravelRecommender {
         $foodPreference = $clean($prefs['food_preference'] ?? '');
 
         $system = <<<SYSTEM
-You are an expert senior travel consultant at TMS, a premium travel platform specializing in destinations across Bangladesh, South Asia, and international locations.
+You are an expert senior travel consultant at TourBuddy, a premium travel platform specializing in destinations across Bangladesh, South Asia, and international locations.
 
 Your job is to analyze a traveler's profile and recommend the BEST matching destinations and packages from our inventory.
 

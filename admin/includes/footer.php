@@ -1,6 +1,6 @@
 <footer class="tms-footer">
   <span>&copy; <?= date('Y') ?> Tourism Management System. All rights reserved.</span>
-  <span>TMS Admin v6</span>
+  <span>TourBuddy Admin v6</span>
 </footer>
 </div><!-- /.tms-content -->
 </main><!-- /.tms-main -->

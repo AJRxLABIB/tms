@@ -40,7 +40,7 @@ class MapOsm
         return '[out:json][timeout:' . max(10, min(180, $timeout)) . '];(' . $body . ');out center tags ' . max(1, min(20000, $limit)) . ';';
     }
 
-    /** Map OSM tags to a TMS map category id plus a subcategory label, or null when the feature is not tourism relevant. */
+    /** Map OSM tags to a TourBuddy map category id plus a subcategory label, or null when the feature is not tourism relevant. */
     public static function classify(array $t): ?array
     {
         $v = static fn(string $k) => strtolower((string)($t[$k] ?? ''));

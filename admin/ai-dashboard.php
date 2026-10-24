@@ -432,7 +432,7 @@ if ($_GET['action'] === 'get_insights') {
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>AI Dashboard | TMS Admin</title>
+<title>AI Dashboard | TourBuddy Admin</title>
 <link href="../css/bootstrap.min2.css" rel="stylesheet">
 <link href="../css/font-awesome.min2.css" rel="stylesheet">
 <link href="<?php echo tms_asset_ver('../css/modern-theme.css'); ?>" rel="stylesheet">
@@ -554,7 +554,7 @@ html[data-theme="dark"] [style*="background:#fff"], html[data-theme="dark"] [sty
 <body>
 
 <div class="admin-header">
-  <div class="admin-brand"><i class="fa fa-magic"></i> TMS Admin — AI Dashboard</div>
+  <div class="admin-brand"><i class="fa fa-magic"></i> TourBuddy Admin — AI Dashboard</div>
   <div class="admin-nav">
     <a href="index.php">Overview</a>
     <a href="ai-dashboard.php" class="active">AI Dashboard</a>

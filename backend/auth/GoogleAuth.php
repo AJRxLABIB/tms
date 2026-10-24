@@ -208,7 +208,7 @@ final class GoogleAuth
             $dbh->commit();
         } catch (Throwable $e) {
             if ($dbh->inTransaction()) $dbh->rollBack();
-            error_log('[TMS Google] account creation failed: ' . $e->getMessage());
+            error_log('[TourBuddy Google] account creation failed: ' . $e->getMessage());
             return ['status' => 'blocked'];
         }
         return ['status' => 'created', 'user' => ['id' => $uid, 'EmailId' => $claims['email'], 'FullName' => $name, 'DeletedAt' => null, 'TwoFAEnabled' => 0, 'TwoFASecret' => null]];

@@ -118,7 +118,7 @@ final class SupplierService
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4",
         ];
         foreach ($t as $sql) {
-            try { $dbh->exec($sql); } catch (Throwable $e) { error_log('[TMS Suppliers] migration failed: ' . $e->getMessage()); }
+            try { $dbh->exec($sql); } catch (Throwable $e) { error_log('[TourBuddy Suppliers] migration failed: ' . $e->getMessage()); }
         }
         if (function_exists('tms_ensure_columns')) {
             tms_ensure_columns($dbh, 'tbltourpackages', [
@@ -135,7 +135,7 @@ final class SupplierService
         try {
             $dbh->prepare('INSERT INTO tbl_supplier_audit (SupplierId, Actor, Action, Detail) VALUES (?,?,?,?)')
                 ->execute([$supplierId, mb_substr($actor, 0, 80), mb_substr($action, 0, 60), mb_substr($detail, 0, 500)]);
-        } catch (Throwable $e) { error_log('[TMS Suppliers] audit failed: ' . $e->getMessage()); }
+        } catch (Throwable $e) { error_log('[TourBuddy Suppliers] audit failed: ' . $e->getMessage()); }
     }
 
     // ───────────────────────── accounts ─────────────────────────
@@ -170,7 +170,7 @@ final class SupplierService
             return ['ok' => true, 'errors' => [], 'id' => $id];
         } catch (PDOException $ex) {
             if ((string)$ex->getCode() === '23000') return ['ok' => false, 'errors' => ['email' => 'An account with this email already exists.'], 'id' => null];
-            error_log('[TMS Suppliers] register failed: ' . $ex->getMessage());
+            error_log('[TourBuddy Suppliers] register failed: ' . $ex->getMessage());
             return ['ok' => false, 'errors' => ['form' => 'Could not create the account. Please try again.'], 'id' => null];
         }
     }
@@ -243,7 +243,7 @@ final class SupplierService
             return ['ok' => true, 'error' => null];
         } catch (Throwable $e) {
             if ($dbh->inTransaction()) $dbh->rollBack();
-            error_log('[TMS Suppliers] setSupplierStatus: ' . $e->getMessage());
+            error_log('[TourBuddy Suppliers] setSupplierStatus: ' . $e->getMessage());
             return ['ok' => false, 'error' => 'Could not update the supplier.'];
         }
     }
@@ -320,7 +320,7 @@ final class SupplierService
             self::audit($dbh, $sid, 'supplier:' . $sid, 'package_create', "#$id");
             return ['ok' => true, 'errors' => [], 'id' => $id];
         } catch (Throwable $ex) {
-            error_log('[TMS Suppliers] savePackage: ' . $ex->getMessage());
+            error_log('[TourBuddy Suppliers] savePackage: ' . $ex->getMessage());
             return ['ok' => false, 'errors' => ['form' => 'Could not save the package. Please try again.'], 'id' => null];
         }
     }
@@ -357,7 +357,7 @@ final class SupplierService
             return ['ok' => true, 'error' => null];
         } catch (Throwable $e) {
             if ($dbh->inTransaction()) $dbh->rollBack();
-            error_log('[TMS Suppliers] reviewPackage: ' . $e->getMessage());
+            error_log('[TourBuddy Suppliers] reviewPackage: ' . $e->getMessage());
             return ['ok' => false, 'error' => 'Could not record the decision.'];
         }
     }
@@ -406,7 +406,7 @@ final class SupplierService
             $st->execute([$packageId, $toYmd, $fromYmd]);
             if ($st->fetchColumn()) return 'This package is not available for some of the dates you selected. Please choose different dates.';
         } catch (Throwable $e) {
-            error_log('[TMS Suppliers] blackout check failed: ' . $e->getMessage());
+            error_log('[TourBuddy Suppliers] blackout check failed: ' . $e->getMessage());
         }
         return null;
     }
@@ -518,7 +518,7 @@ final class SupplierService
             return ['ok' => true, 'error' => null, 'id' => $setId];
         } catch (Throwable $e) {
             if ($dbh->inTransaction()) $dbh->rollBack();
-            error_log('[TMS Suppliers] createSettlement: ' . $e->getMessage());
+            error_log('[TourBuddy Suppliers] createSettlement: ' . $e->getMessage());
             return ['ok' => false, 'error' => 'Could not create the settlement (a booking may already be in another settlement).', 'id' => null];
         }
     }
@@ -551,7 +551,7 @@ final class SupplierService
             return ['ok' => true, 'error' => null];
         } catch (Throwable $e) {
             if ($dbh->inTransaction()) $dbh->rollBack();
-            error_log('[TMS Suppliers] transitionSettlement: ' . $e->getMessage());
+            error_log('[TourBuddy Suppliers] transitionSettlement: ' . $e->getMessage());
             return ['ok' => false, 'error' => 'Could not update the settlement.'];
         }
     }

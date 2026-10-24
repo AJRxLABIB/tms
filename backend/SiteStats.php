@@ -25,7 +25,7 @@ if (!function_exists('tms_site_stats')) {
                 $r = $dbh->query($sql)->fetch(PDO::FETCH_ASSOC);
                 return is_array($r) ? $r : null;
             } catch (Throwable $e) {
-                error_log('[TMS SiteStats] ' . $e->getMessage());
+                error_log('[TourBuddy SiteStats] ' . $e->getMessage());
                 return null;
             }
         };

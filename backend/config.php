@@ -1,6 +1,6 @@
 <?php
 /**
- * TMS — Central Configuration
+ * TourBuddy — Central Configuration
  * AI-Powered Travel Copilot Edition
  *
  * ✅ Configured for Google Gemini AI (FREE tier — 1,500 requests/day)
@@ -88,7 +88,7 @@ define('ANTHROPIC_MODEL',   GEMINI_MODEL);
 // "GEMINI_API_KEY is empty" warning about a provider the site isn't using.
 if (AI_PROVIDER === 'openai') {
     if (OPENAI_API_KEY === '') {
-        error_log('[TMS Config] AI_PROVIDER=openai but OPENAI_API_KEY is empty — every AI '
+        error_log('[TourBuddy Config] AI_PROVIDER=openai but OPENAI_API_KEY is empty — every AI '
             . 'feature (chatbot, Explore overview, AI Recommender, planner, packing assistant) '
             . 'will return its non-AI fallback. Set OPENAI_API_KEY in .env. See .env.example.');
     }
@@ -102,13 +102,13 @@ if (AI_PROVIDER === 'openai') {
         // FIX (Round 14): the diagnostic below only fired for a MALFORMED key, so the
         // far more common "no .env at all" case logged nothing and every AI feature
         // silently degraded to canned fallback text with no clue why.
-        error_log('[TMS Config] GEMINI_API_KEY is empty — every AI feature (chatbot, Explore '
+        error_log('[TourBuddy Config] GEMINI_API_KEY is empty — every AI feature (chatbot, Explore '
             . 'overview, AI Recommender, planner, packing assistant) will return its non-AI '
             . 'fallback. Create a .env file in the project root containing GEMINI_API_KEY=... '
             . '(get a free key at https://aistudio.google.com). See .env.example.');
     }
     if (GEMINI_API_KEY !== '' && !str_starts_with(GEMINI_API_KEY, 'AIza')) {
-        error_log('[TMS Config] GEMINI_API_KEY does not look like a standard Google AI Studio key '
+        error_log('[TourBuddy Config] GEMINI_API_KEY does not look like a standard Google AI Studio key '
             . '(those normally start with "AIza"). If AI-powered features (Explore Mode overview, '
             . 'AI Recommender, chatbots) are failing, regenerate a fresh key at '
             . 'https://aistudio.google.com and update .env.');
@@ -147,7 +147,7 @@ define('DB_PASS', tms_env('DB_PASS', ''));
 define('DB_NAME', tms_env('DB_NAME', 'tms'));
 
 // ─── Application settings ─────────────────────────────────────────────────────
-define('APP_NAME',    tms_env('APP_NAME', 'TMS AI Travel Copilot'));
+define('APP_NAME',    tms_env('APP_NAME', 'TourBuddy AI Travel Copilot'));
 define('APP_VERSION', '7.0');
 define('APP_ENV',     tms_env('APP_ENV', 'local'));
 define('APP_DEBUG',   (bool) tms_env('APP_DEBUG', false));   // safe default: raw PHP errors are never shown unless APP_DEBUG=true is set explicitly
@@ -222,7 +222,7 @@ register_shutdown_function(function () {
     if (!$err || !in_array($err['type'], [E_ERROR, E_PARSE, E_CORE_ERROR, E_COMPILE_ERROR], true)) {
         return;
     }
-    error_log('[TMS Fatal] ' . $err['message'] . ' in ' . $err['file'] . ':' . $err['line']);
+    error_log('[TourBuddy Fatal] ' . $err['message'] . ' in ' . $err['file'] . ':' . $err['line']);
 
     // Don't clobber JSON API responses — those endpoints already catch
     // Throwable themselves and return a proper JSON error payload.
@@ -233,7 +233,7 @@ register_shutdown_function(function () {
     if (headers_sent()) return; // something was already streamed; leave it as-is
 
     http_response_code(500);
-    echo '<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><title>TMS — Temporarily Unavailable</title>'
+    echo '<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><title>TourBuddy — Temporarily Unavailable</title>'
        . '<meta name="viewport" content="width=device-width, initial-scale=1">'
        . '<style>body{font-family:Poppins,Arial,sans-serif;background:#F7F8F5;color:#17231e;display:flex;'
        . 'align-items:center;justify-content:center;min-height:100vh;margin:0;text-align:center;padding:20px;}'
@@ -408,7 +408,7 @@ if (!$tmsSchemaOk) {
     try {
         $dbh->exec("CREATE TABLE IF NOT EXISTS tbl_app_meta (k VARCHAR(60) NOT NULL PRIMARY KEY, v VARCHAR(120) NOT NULL, updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
         $dbh->prepare("INSERT INTO tbl_app_meta (k, v) VALUES ('schema_fingerprint', ?) ON DUPLICATE KEY UPDATE v = VALUES(v)")->execute([$tmsSchemaFp]);
-    } catch (Throwable $e) { error_log('[TMS Schema] could not store schema fingerprint: ' . $e->getMessage()); }
+    } catch (Throwable $e) { error_log('[TourBuddy Schema] could not store schema fingerprint: ' . $e->getMessage()); }
 }
 
 require_once __DIR__ . '/log-activity.php';
@@ -435,7 +435,7 @@ function tms_ensure_columns(PDO $dbh, string $table, array $colDefs): void {
         $stmt->execute([$table]);
         $existing = array_map('strtolower', $stmt->fetchAll(PDO::FETCH_COLUMN));
     } catch (Exception $e) {
-        error_log("[TMS Schema] Could not inspect columns for `$table`: " . $e->getMessage());
+        error_log("[TourBuddy Schema] Could not inspect columns for `$table`: " . $e->getMessage());
         return;
     }
 
@@ -443,9 +443,9 @@ function tms_ensure_columns(PDO $dbh, string $table, array $colDefs): void {
         if (in_array(strtolower($colName), $existing, true)) continue;
         try {
             $dbh->exec("ALTER TABLE `$table` ADD COLUMN $colDef");
-            error_log("[TMS Schema] Added missing column `$table`.`$colName`.");
+            error_log("[TourBuddy Schema] Added missing column `$table`.`$colName`.");
         } catch (Exception $e) {
-            error_log("[TMS Schema] FAILED adding `$table`.`$colName`: " . $e->getMessage());
+            error_log("[TourBuddy Schema] FAILED adding `$table`.`$colName`: " . $e->getMessage());
         }
     }
 }
@@ -463,14 +463,14 @@ function tms_widen_columns(PDO $dbh, string $table, array $cols): void {
         $st->execute([$table]);
         $have = [];
         foreach ($st->fetchAll(PDO::FETCH_NUM) as [$n, $len]) $have[strtolower($n)] = $len === null ? null : (int)$len;
-    } catch (Exception $e) { error_log("[TMS Schema] Could not inspect `$table`: " . $e->getMessage()); return; }
+    } catch (Exception $e) { error_log("[TourBuddy Schema] Could not inspect `$table`: " . $e->getMessage()); return; }
     foreach ($cols as $col => [$min, $def]) {
         $len = $have[strtolower($col)] ?? null;
         if ($len === null || $len >= $min) continue;
         try {
             $dbh->exec("ALTER TABLE `$table` MODIFY COLUMN $def");
-            error_log("[TMS Schema] Widened `$table`.`$col` from $len to $min+ characters.");
-        } catch (Exception $e) { error_log("[TMS Schema] FAILED widening `$table`.`$col`: " . $e->getMessage()); }
+            error_log("[TourBuddy Schema] Widened `$table`.`$col` from $len to $min+ characters.");
+        } catch (Exception $e) { error_log("[TourBuddy Schema] FAILED widening `$table`.`$col`: " . $e->getMessage()); }
     }
 }
 
@@ -630,13 +630,13 @@ function _tms_repair_schema_drift(PDO $dbh): void {
             foreach ($seedContacts as $row) { $ins->execute($row); }
         }
     } catch (Exception $e) {
-        error_log('[TMS Schema] emergency contacts seed failed: ' . $e->getMessage());
+        error_log('[TourBuddy Schema] emergency contacts seed failed: ' . $e->getMessage());
     }
 
     try {
         $dbh->exec("UPDATE tblbooking SET BookingDate = FromDate WHERE BookingDate IS NULL AND FromDate IS NOT NULL AND FromDate != ''");
     } catch (Exception $e) {
-        error_log('[TMS Schema] BookingDate backfill failed: ' . $e->getMessage());
+        error_log('[TourBuddy Schema] BookingDate backfill failed: ' . $e->getMessage());
     }
 
     // Persistent history for the site-wide chatbot widget. Keyed by chat_uid
@@ -663,7 +663,7 @@ function _tms_repair_schema_drift(PDO $dbh): void {
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
         ");
     } catch (Exception $e) {
-        error_log('[TMS] tbl_site_chat_messages migration failed: ' . $e->getMessage());
+        error_log('[TourBuddy] tbl_site_chat_messages migration failed: ' . $e->getMessage());
     }
 
     // A unique index, not just a column — two bookings sharing a
@@ -683,7 +683,7 @@ function _tms_repair_schema_drift(PDO $dbh): void {
             $dbh->exec("ALTER TABLE `tblbooking` ADD UNIQUE KEY `uq_booking_verification_code` (`VerificationCode`)");
         }
     } catch (Exception $e) {
-        error_log('[TMS Schema] Could not add unique index on tblbooking.VerificationCode: ' . $e->getMessage());
+        error_log('[TourBuddy Schema] Could not add unique index on tblbooking.VerificationCode: ' . $e->getMessage());
     }
     tms_ensure_columns($dbh, 'tblcart', [
         'DynamicPrice' => 'DynamicPrice INT DEFAULT NULL',
@@ -721,7 +721,7 @@ function _tms_repair_schema_drift(PDO $dbh): void {
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
         ");
     } catch (Exception $e) {
-        error_log('[TMS] tblexpenses migration failed: ' . $e->getMessage());
+        error_log('[TourBuddy] tblexpenses migration failed: ' . $e->getMessage());
     }
     // Feature Phase 2h: Gamification / Achievements
     try {
@@ -737,7 +737,7 @@ function _tms_repair_schema_drift(PDO $dbh): void {
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
         ");
     } catch (Exception $e) {
-        error_log('[TMS] tblachievements migration failed: ' . $e->getMessage());
+        error_log('[TourBuddy] tblachievements migration failed: ' . $e->getMessage());
     }
     // Feature Phase 2l: Digital Travel Wallet (documents). Files themselves
     // live in uploads/wallet/ (protected by .htaccess — see that directory),
@@ -759,7 +759,7 @@ function _tms_repair_schema_drift(PDO $dbh): void {
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
         ");
     } catch (Exception $e) {
-        error_log('[TMS] tbltraveldocuments migration failed: ' . $e->getMessage());
+        error_log('[TourBuddy] tbltraveldocuments migration failed: ' . $e->getMessage());
     }
     tms_ensure_columns($dbh, 'tblpages', [
         'UpdatedAt' => 'UpdatedAt TIMESTAMP NULL DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP',
@@ -858,7 +858,7 @@ function _tms_repair_schema_drift(PDO $dbh): void {
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
         ");
     } catch (Exception $e) {
-        error_log('[TMS] tblpackageaddons/tblbookingaddons/tblcartaddons migration failed: ' . $e->getMessage());
+        error_log('[TourBuddy] tblpackageaddons/tblbookingaddons/tblcartaddons migration failed: ' . $e->getMessage());
     }
     // Feature Phase 2c: persist the issues/highlights the AI was already
     // being asked for (and silently discarding), plus lightweight fake-review
@@ -1033,7 +1033,7 @@ function _tms_repair_schema_drift(PDO $dbh): void {
              SET w.PriceAtAdd = p.PackagePrice WHERE w.PriceAtAdd IS NULL"
         );
     } catch (Exception $e) {
-        error_log('[TMS Schema] Could not backfill tblwishlist.PriceAtAdd: ' . $e->getMessage());
+        error_log('[TourBuddy Schema] Could not backfill tblwishlist.PriceAtAdd: ' . $e->getMessage());
     }
 
     try {
@@ -1049,7 +1049,7 @@ function _tms_repair_schema_drift(PDO $dbh): void {
         $dbh->exec("CREATE INDEX idx_pkg_viewcount ON tbltourpackages(ViewCount)");
     } catch (Exception $e) { /* already exists — fine */ }
 
-    // "TMS V2" prompt -- AI Budget Autopilot: tracks the last time each
+    // "TourBuddy V2" prompt -- AI Budget Autopilot: tracks the last time each
     // booking was notified about approaching/exceeding its budget, so
     // scripts/check_budget_overspend.php (a periodic script, same idiom as
     // scripts/check_wallet_expiry.php -- Rule 73, no queue broker needed for
@@ -1066,7 +1066,7 @@ function _tms_repair_schema_drift(PDO $dbh): void {
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
         ");
     } catch (Exception $e) {
-        error_log('[TMS] tblbudget_alerts migration failed: ' . $e->getMessage());
+        error_log('[TourBuddy] tblbudget_alerts migration failed: ' . $e->getMessage());
     }
 
     // Now that the columns the seeder needs are guaranteed to exist, (re)try it.
@@ -1149,10 +1149,10 @@ function tms_backfill_realistic_pricing(PDO $dbh): void {
             $n++;
         }
         $dbh->commit();
-        if ($n > 0) error_log("[TMS Pricing] Converted $n seeded package price(s) from USD-scale to realistic BDT.");
+        if ($n > 0) error_log("[TourBuddy Pricing] Converted $n seeded package price(s) from USD-scale to realistic BDT.");
     } catch (Exception $e) {
         if ($dbh->inTransaction()) $dbh->rollBack();
-        error_log('[TMS Pricing] Backfill failed: ' . $e->getMessage());
+        error_log('[TourBuddy Pricing] Backfill failed: ' . $e->getMessage());
         return;
     }
 
@@ -1184,11 +1184,11 @@ function tms_backfill_realistic_pricing(PDO $dbh): void {
                 }
             }
             $dbh->commit();
-            if ($mFixed > 0) error_log("[TMS Pricing] Converted $mFixed package(s)' budget/luxury estimate ranges from USD to BDT.");
+            if ($mFixed > 0) error_log("[TourBuddy Pricing] Converted $mFixed package(s)' budget/luxury estimate ranges from USD to BDT.");
         }
     } catch (Exception $e) {
         if ($dbh->inTransaction()) $dbh->rollBack();
-        error_log('[TMS Pricing] Meta-range backfill failed: ' . $e->getMessage());
+        error_log('[TourBuddy Pricing] Meta-range backfill failed: ' . $e->getMessage());
     }
 }
 
@@ -1671,7 +1671,7 @@ function _tms_run_core_migrations(PDO $dbh): void {
                 $st = $dbh->prepare("INSERT INTO admin (UserName, Password) VALUES ('admin', ?)");
                 $st->execute([$hash]);
             } else {
-                error_log('[TMS] No admin account exists. Run `php tools/create-admin.php` (or set TMS_BOOTSTRAP_ADMIN_PASSWORD, 12+ chars, in .env).');
+                error_log('[TourBuddy] No admin account exists. Run `php tools/create-admin.php` (or set TMS_BOOTSTRAP_ADMIN_PASSWORD, 12+ chars, in .env).');
             }
         }
     } catch (Exception $e) {}
@@ -1682,7 +1682,7 @@ function _tms_run_core_migrations(PDO $dbh): void {
             $stmt = $dbh->prepare("INSERT INTO tblpages(type, detail) VALUES(:type, :detail)");
             $stmt->execute([
                 ':type'   => 'aboutus',
-                ':detail' => 'TMS (Tourism Management System) helps travelers discover, plan and book unforgettable trips. '
+                ':detail' => 'TourBuddy (Tourism Management System) helps travelers discover, plan and book unforgettable trips. '
                             . 'We combine curated tour packages, AI-powered trip planning and real-time travel information '
                             . 'to make every journey simple and memorable.',
             ]);
@@ -2161,7 +2161,7 @@ function tms_seed_hotels_activities(PDO $dbh): void {
             }
         }
     } catch (Exception $e) {
-        error_log('[TMS Seed] Hotel seed failed: ' . $e->getMessage());
+        error_log('[TourBuddy Seed] Hotel seed failed: ' . $e->getMessage());
     }
 
     try {
@@ -2185,7 +2185,7 @@ function tms_seed_hotels_activities(PDO $dbh): void {
             }
         }
     } catch (Exception $e) {
-        error_log('[TMS Seed] Activity seed failed: ' . $e->getMessage());
+        error_log('[TourBuddy Seed] Activity seed failed: ' . $e->getMessage());
     }
 }
 
@@ -2401,7 +2401,7 @@ function tms_compress_uploaded_image(string $absolutePath, int $maxDimension = 1
         imagedestroy($src);
         imagedestroy($dst);
     } catch (Exception $e) {
-        error_log('[TMS Images] Compression failed for ' . $absolutePath . ': ' . $e->getMessage());
+        error_log('[TourBuddy Images] Compression failed for ' . $absolutePath . ': ' . $e->getMessage());
         // Original uploaded file is untouched — safe to just move on.
     }
 }
@@ -2435,9 +2435,9 @@ function tms_backfill_package_images(PDO $dbh): void {
             $upd->execute([':img' => $new, ':id' => $r->PackageId]);
             $n++;
         }
-        if ($n > 0) error_log("[TMS Images] Backfilled themed images for $n package(s) with no real photo on disk.");
+        if ($n > 0) error_log("[TourBuddy Images] Backfilled themed images for $n package(s) with no real photo on disk.");
     } catch (Exception $e) {
-        error_log('[TMS Images] Backfill failed: ' . $e->getMessage());
+        error_log('[TourBuddy Images] Backfill failed: ' . $e->getMessage());
     }
 }
 
@@ -2529,10 +2529,10 @@ function tms_seed_tourism_packages(PDO $dbh): void {
             $i++;
         }
         $dbh->commit();
-        if ($i > 0) error_log("[TMS Seed] Inserted $i new tour package(s) from packages_seed.json.");
+        if ($i > 0) error_log("[TourBuddy Seed] Inserted $i new tour package(s) from packages_seed.json.");
     } catch (Exception $e) {
         if ($dbh->inTransaction()) $dbh->rollBack();
-        error_log('[TMS Seed] Package seed FAILED and was rolled back: ' . $e->getMessage());
+        error_log('[TourBuddy Seed] Package seed FAILED and was rolled back: ' . $e->getMessage());
     }
 }
 
@@ -2565,7 +2565,7 @@ function tms_csrf_validate(): void {
     // live email-availability check in includes/header.php), so it is now
     // safe to actually enforce the check instead of only logging it.
     if (empty($_POST['csrf_token']) || !hash_equals($_SESSION['csrf_token'] ?? '', $_POST['csrf_token'])) {
-        error_log('[TMS] CSRF token missing/mismatch for ' . ($_SERVER['REQUEST_URI'] ?? ''));
+        error_log('[TourBuddy] CSRF token missing/mismatch for ' . ($_SERVER['REQUEST_URI'] ?? ''));
         http_response_code(403);
         exit('Invalid or expired form submission. Please refresh the page and try again.');
     }
@@ -2743,7 +2743,7 @@ function tms_anonymize_user(PDO $dbh, string $email, int $userId): bool {
         try {
             $dbh->prepare("DELETE FROM tbltraveldocuments WHERE UserEmail = :e")->execute([':e' => $email]);
         } catch (Exception $e) {
-            error_log("[TMS Privacy] Could not delete tbltraveldocuments rows for user {$userId}: " . $e->getMessage());
+            error_log("[TourBuddy Privacy] Could not delete tbltraveldocuments rows for user {$userId}: " . $e->getMessage());
         }
 
         foreach (tms_privacy_tables() as [$table, $col]) {
@@ -2756,14 +2756,14 @@ function tms_anonymize_user(PDO $dbh, string $email, int $userId): bool {
                 // than aborting the whole deletion over one missing table --
                 // the tblusers row itself (the actual account/login) is
                 // already anonymized above regardless of what happens here.
-                error_log("[TMS Privacy] Could not anonymize `$table`.`$col` for user {$userId}: " . $e->getMessage());
+                error_log("[TourBuddy Privacy] Could not anonymize `$table`.`$col` for user {$userId}: " . $e->getMessage());
             }
         }
 
         $dbh->commit();
     } catch (Exception $e) {
         if ($dbh->inTransaction()) $dbh->rollBack();
-        error_log('[TMS Privacy] Account anonymization failed for user ' . $userId . ': ' . $e->getMessage());
+        error_log('[TourBuddy Privacy] Account anonymization failed for user ' . $userId . ': ' . $e->getMessage());
         return false;
     }
 
@@ -2849,7 +2849,7 @@ function tms_package_bookable(PDO $dbh, int $packageId): bool {
         $st = $dbh->prepare('SELECT 1 FROM tbltourpackages WHERE PackageId = ? AND ' . TMS_PKG_PUBLIC_SQL . ' LIMIT 1');
         $st->execute([$packageId]);
         return (bool)$st->fetchColumn();
-    } catch (Throwable $e) { error_log('[TMS] bookable check failed: ' . $e->getMessage()); return false; }
+    } catch (Throwable $e) { error_log('[TourBuddy] bookable check failed: ' . $e->getMessage()); return false; }
 }
 
 function tms_clean(string $val): string {
@@ -2980,7 +2980,7 @@ function tms_seo_meta(array $o): void {
     $type      = $o['type'] ?? 'website';
 
     echo '<link rel="canonical" href="' . htmlspecialchars($canonical, ENT_QUOTES, 'UTF-8') . '">' . "\n";
-    echo '<meta property="og:site_name" content="TMS">' . "\n";
+    echo '<meta property="og:site_name" content="TourBuddy">' . "\n";
     echo '<meta property="og:type" content="' . htmlspecialchars($type, ENT_QUOTES, 'UTF-8') . '">' . "\n";
     echo '<meta property="og:title" content="' . htmlspecialchars($title, ENT_QUOTES, 'UTF-8') . '">' . "\n";
     echo '<meta property="og:url" content="' . htmlspecialchars($canonical, ENT_QUOTES, 'UTF-8') . '">' . "\n";
@@ -3312,7 +3312,7 @@ function tms_track_recently_viewed(PDO $dbh, int $packageId, int $keep = 12): vo
             $dbh->exec("DELETE FROM tblrecentlyviewed WHERE id IN ($in)");
         }
     } catch (Exception $e) {
-        error_log('[TMS RecentlyViewed] track failed: ' . $e->getMessage());
+        error_log('[TourBuddy RecentlyViewed] track failed: ' . $e->getMessage());
     }
 }
 
@@ -3376,7 +3376,7 @@ function tms_admin_role(PDO $dbh): string {
         // tms_admin_require_role() degrades to a normal 403 -- so failing
         // closed here costs nothing except (correctly) refusing a
         // role-gated action when the role genuinely couldn't be verified.
-        error_log('[TMS RBAC] Role lookup failed, failing closed (no elevated role granted): ' . $e->getMessage());
+        error_log('[TourBuddy RBAC] Role lookup failed, failing closed (no elevated role granted): ' . $e->getMessage());
         return '';
     }
 }
@@ -3454,7 +3454,7 @@ function tms_notify(PDO $dbh, string $userEmail, string $message, string $link =
         $dbh->prepare("INSERT INTO tbl_notifications(UserEmail, Message, Link) VALUES(:e, :m, :l)")
             ->execute([':e' => $userEmail, ':m' => $message, ':l' => $link]);
     } catch (Exception $e) {
-        error_log('[TMS Notify] Failed to create notification: ' . $e->getMessage());
+        error_log('[TourBuddy Notify] Failed to create notification: ' . $e->getMessage());
     }
 }
 
@@ -3471,7 +3471,7 @@ function tms_notify_all(PDO $dbh, string $message, string $link = ''): void {
         );
         $stmt->execute([':m' => $message, ':l' => $link]);
     } catch (Exception $e) {
-        error_log('[TMS Notify] Broadcast failed: ' . $e->getMessage());
+        error_log('[TourBuddy Notify] Broadcast failed: ' . $e->getMessage());
     }
 }
 
@@ -3525,7 +3525,7 @@ function tms_login_lockout_minutes_remaining(PDO $dbh, string $email, string $ip
         }
         return $minsLeft > 0 ? max(1, (int)$minsLeft) : 0;
     } catch (Exception $e) {
-        error_log('[TMS Login] Lockout check failed: ' . $e->getMessage());
+        error_log('[TourBuddy Login] Lockout check failed: ' . $e->getMessage());
         return 0; // fail open — never lock people out due to an infra error
     }
 }
@@ -3549,7 +3549,7 @@ function tms_record_failed_login(PDO $dbh, string $email, string $ip): void {
             $dbh->exec("DELETE FROM tbl_login_attempts WHERE CreatedAt < DATE_SUB(NOW(), INTERVAL 1 DAY)");
         }
     } catch (Exception $e) {
-        error_log('[TMS Login] Could not record failed attempt: ' . $e->getMessage());
+        error_log('[TourBuddy Login] Could not record failed attempt: ' . $e->getMessage());
     }
 }
 
@@ -3560,7 +3560,7 @@ function tms_clear_login_attempts(PDO $dbh, string $email, string $ip): void {
         $dbh->prepare("DELETE FROM tbl_login_attempts WHERE Email = :e AND IPAddress = :ip")
             ->execute([':e' => $email, ':ip' => $ip]);
     } catch (Exception $e) {
-        error_log('[TMS Login] Could not clear attempts: ' . $e->getMessage());
+        error_log('[TourBuddy Login] Could not clear attempts: ' . $e->getMessage());
     }
 }
 
@@ -3624,7 +3624,7 @@ function tms_chat_history(PDO $dbh, string $chatUid, int $limit = 12): array {
         $rows = array_reverse($st->fetchAll(PDO::FETCH_ASSOC) ?: []);
         return array_map(fn($r) => ['role' => $r['role'], 'content' => (string)$r['message']], $rows);
     } catch (Throwable $e) {
-        error_log('[TMS Chat] history read failed: ' . $e->getMessage());
+        error_log('[TourBuddy Chat] history read failed: ' . $e->getMessage());
         return [];
     }
 }
@@ -3660,7 +3660,7 @@ function tms_chat_save(PDO $dbh, string $chatUid, string $role, string $message,
              )"
         )->execute([':uid' => $chatUid, ':uid2' => $chatUid, ':uid3' => $chatUid]);
     } catch (Throwable $e) {
-        error_log('[TMS Chat] history write failed: ' . $e->getMessage());
+        error_log('[TourBuddy Chat] history write failed: ' . $e->getMessage());
     }
 }
 
@@ -3807,7 +3807,7 @@ function _tms_http_get(string $url): ?string {
     curl_close($ch);
 
     if ($err !== 0 || $res === false) {
-        error_log('[TMS HTTP] request failed: ' . $emsg . ' — ' . parse_url($url, PHP_URL_HOST));
+        error_log('[TourBuddy HTTP] request failed: ' . $emsg . ' — ' . parse_url($url, PHP_URL_HOST));
         return null;
     }
 
@@ -3819,11 +3819,11 @@ function _tms_http_get(string $url): ?string {
     if ($code >= 400) {
         $host = parse_url($url, PHP_URL_HOST);
         if ($code === 401 || $code === 403) {
-            error_log("[TMS HTTP] {$host} rejected the API key (HTTP {$code}). Check the matching key in .env.");
+            error_log("[TourBuddy HTTP] {$host} rejected the API key (HTTP {$code}). Check the matching key in .env.");
         } elseif ($code === 429) {
-            error_log("[TMS HTTP] {$host} rate limit / quota exceeded (HTTP 429).");
+            error_log("[TourBuddy HTTP] {$host} rate limit / quota exceeded (HTTP 429).");
         } else {
-            error_log("[TMS HTTP] {$host} returned HTTP {$code}.");
+            error_log("[TourBuddy HTTP] {$host} returned HTTP {$code}.");
         }
         return null;
     }

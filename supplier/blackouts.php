@@ -17,7 +17,7 @@ $list = SupplierService::blackouts($dbh, $sid);
 sup_head('Blackout dates', $sup, 'blackouts.php');
 ?>
 <h1>Blackout dates</h1>
-<p class="sp-sub">Block dates when a package cannot run. TMS refuses new bookings that overlap them. Existing bookings are not cancelled automatically; contact TMS about those.</p>
+<p class="sp-sub">Block dates when a package cannot run. TourBuddy refuses new bookings that overlap them. Existing bookings are not cancelled automatically; contact TourBuddy about those.</p>
 <?php if ($msg): ?><div class="sp-alert ok" role="status"><?php echo h($msg); ?></div><?php endif; ?>
 <?php if ($err): ?><div class="sp-alert bad" role="alert"><?php echo h($err); ?></div><?php endif; ?>
 <?php if (!$pk): ?><div class="sp-card sp-empty">Add a package first.</div><?php else: ?>

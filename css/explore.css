@@ -1,7 +1,7 @@
 /* ============================================================
    Explore Mode — Stylesheet
    Reuses CSS variables from modern-theme.css for visual consistency
-   with the rest of TMS. Loaded only on explore.php / explore-view.php.
+   with the rest of TourBuddy. Loaded only on explore.php / explore-view.php.
    ============================================================ */
 
 .explore-hero {
@@ -212,44 +212,6 @@
 .weather-alert.info { background: #eef6ff; color: #1e5a8a; }
 .weather-alert.warning { background: #fff8e6; color: #8a6d1e; }
 
-/* ── Floating AI Explore Chatbot ───────────────────────────── */
-#exploreChatToggle {
-  position: fixed; bottom: 25px; right: 25px; width: 60px; height: 60px;
-  background: linear-gradient(135deg, var(--primary), var(--secondary)); border-radius: 50%;
-  box-shadow: 0 4px 20px rgba(15,76,129,.5); cursor: pointer; display: flex; align-items: center;
-  justify-content: center; z-index: 9999; border: none; transition: .3s;
-}
-#exploreChatToggle:hover { transform: scale(1.08); }
-#exploreChatToggle i { font-size: 23px; color: #fff; }
-
-#exploreChatPanel {
-  position: fixed; bottom: 100px; right: 25px; width: 370px; height: 520px; background: #fff;
-  border-radius: 16px; box-shadow: 0 10px 40px rgba(0,0,0,.22); z-index: 9998; display: none;
-  flex-direction: column; overflow: hidden;
-}
-#exploreChatPanel.open { display: flex; }
-.exp-chat-header { background: linear-gradient(135deg, var(--primary), var(--secondary)); padding: 15px 18px; color: #fff; display: flex; align-items: center; gap: 12px; }
-.exp-chat-avatar { width: 40px; height: 40px; background: rgba(255,255,255,.2); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 18px; }
-.exp-chat-header-info h5 { margin: 0; font-size: 14.5px; font-weight: 700; }
-.exp-chat-header-info p { margin: 0; font-size: 11.5px; opacity: .85; }
-.exp-chat-close { margin-left: auto; background: none; border: none; color: #fff; font-size: 18px; cursor: pointer; opacity: .85; }
-.exp-chat-messages { flex: 1; overflow-y: auto; padding: 15px; background: var(--bg); display: flex; flex-direction: column; gap: 12px; }
-.exp-msg { max-width: 88%; }
-.exp-msg-bot { align-self: flex-start; }
-.exp-msg-user { align-self: flex-end; }
-.exp-msg-bubble { padding: 10px 14px; border-radius: 12px; font-size: 13px; line-height: 1.5; }
-.exp-msg-bot .exp-msg-bubble { background: #fff; color: #333; box-shadow: 0 1px 5px rgba(0,0,0,.08); border-radius: 0 12px 12px 12px; }
-.exp-msg-user .exp-msg-bubble { background: linear-gradient(135deg, var(--primary), var(--secondary)); color: #fff; border-radius: 12px 0 12px 12px; }
-.exp-typing .exp-msg-bubble { padding: 12px 16px; }
-.exp-typing-dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: #aaa; margin: 0 2px; animation: expTypingDot 1.2s infinite; }
-.exp-typing-dot:nth-child(2) { animation-delay: .2s; }
-.exp-typing-dot:nth-child(3) { animation-delay: .4s; }
-@keyframes expTypingDot { 0%,60%,100% { transform: translateY(0); } 30% { transform: translateY(-6px); } }
-.exp-chat-input-area { padding: 12px 15px; border-top: 1px solid #eee; background: #fff; display: flex; gap: 8px; }
-.exp-chat-input { flex: 1; border: 2px solid #e0e0e0; border-radius: 20px; padding: 8px 14px; font-size: 13px; outline: none; }
-.exp-chat-input:focus { border-color: var(--secondary); }
-.exp-chat-send { width: 38px; height: 38px; background: linear-gradient(135deg, var(--primary), var(--secondary)); border: none; border-radius: 50%; cursor: pointer; flex-shrink: 0; }
-.exp-chat-send i { color: #fff; font-size: 14px; }
 
 /* Make the whole place card feel clickable */
 .place-card .place-card-open { display: block; text-decoration: none; color: inherit; cursor: pointer; }
@@ -373,7 +335,6 @@ html[data-theme="dark"] .pd-review { border-color: #2b3542; }
 html[data-theme="dark"] .pd-close-btn { background: rgba(255,255,255,.15); }
 
 @media (max-width: 640px) {
-  #exploreChatPanel { width: 92vw; right: 4vw; height: 65vh; bottom: 90px; }
   .cost-grid { grid-template-columns: 1fr; }
   .explore-tabs { justify-content: flex-start; }
   .place-detail-modal-overlay { padding: 0; align-items: stretch; }

@@ -4,7 +4,7 @@
  *
  * When on, every HTML page request:
  *   - is buffered so a `Server-Timing` header can be attached (visible in Chrome DevTools > Network > Timing),
- *   - writes one line to the PHP error log: "[TMS Profile] /path total=123ms boot=40ms db=3ms peak=8.0MB".
+ *   - writes one line to the PHP error log: "[TourBuddy Profile] /path total=123ms boot=40ms db=3ms peak=8.0MB".
  * Marks are added with TmsProfiler::mark('label'). Nothing secret (no query strings, params or cookies) is recorded.
  * JSON/API/CLI requests are never buffered. With TMS_PROFILE unset this file costs one function call.
  */
@@ -56,7 +56,7 @@ final class TmsProfiler
         $parts[] = 'total;dur=' . round($total, 1);
         if (!headers_sent()) { header('Server-Timing: ' . implode(', ', $parts)); }
         $path = (string)parse_url((string)($_SERVER['REQUEST_URI'] ?? ''), PHP_URL_PATH);
-        $line = '[TMS Profile] ' . $path . ' total=' . round($total) . 'ms';
+        $line = '[TourBuddy Profile] ' . $path . ' total=' . round($total) . 'ms';
         foreach (self::$marks as $k => $v) { $line .= ' ' . $k . '=' . round($v) . 'ms'; }
         $line .= ' bytes=' . strlen($buffer) . ' peak=' . round(memory_get_peak_usage(true) / 1048576, 1) . 'MB';
         error_log($line);

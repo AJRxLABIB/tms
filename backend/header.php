@@ -1,5 +1,5 @@
 <?php
-// header.php - Modern redesigned header for TMS
+// header.php - Modern redesigned header for TourBuddy
 $currentPage = basename($_SERVER['PHP_SELF']);
 require_once __DIR__ . '/ContentHelpers.php';   // placeholder images + filler-text filters (see that file)
 ?>
@@ -39,7 +39,10 @@ require_once __DIR__ . '/ContentHelpers.php';   // placeholder images + filler-t
         // not carry over and leave the visitor with no way to switch back.
         document.documentElement.setAttribute('data-theme', 'light');
         <?php else: ?>
-        var t = localStorage.getItem('tms-theme') || 'light';
+        var t = localStorage.getItem('tms-theme') || 'auto';
+        if (t !== 'dark' && t !== 'light') {   // 'auto' follows the device setting
+            t = (window.matchMedia && matchMedia('(prefers-color-scheme: dark)').matches) ? 'dark' : 'light';
+        }
         document.documentElement.setAttribute('data-theme', t);
         <?php endif; ?>
     } catch(e) {}
@@ -65,312 +68,8 @@ require_once __DIR__ . '/ContentHelpers.php';   // placeholder images + filler-t
 .tms-skip-link:focus { top: 8px; color: #fff; text-decoration: none; }
 </style>
 <link rel="stylesheet" href="css/tms-a11y.css">
-<!-- ═══════════════════════════════════════════ TOP BAR ═══════════════════════════════════════════ -->
-<?php if (empty($tms_landing_mode)): ?>
-<div class="tms-topbar">
-    <div class="container">
-        <div class="tms-topbar-left">
-            <?php if (empty($tms_landing_mode)): ?>
-            <a href="index.php"><i class="fa fa-home"></i> <?php echo tms_t('nav_home','Home'); ?></a>
-            <?php if(isset($_SESSION['login']) && !empty($_SESSION['login'])): ?>
-            <span class="tms-topbar-divider"></span>
-            <a href="dashboard.php" title="Dashboard"><i class="fa fa-th-large" aria-hidden="true"></i><span class="tms-tb-label"> Dashboard</span></a>
-            <a href="profile.php" title="<?php echo htmlspecialchars(tms_t('nav_profile','My Profile'), ENT_QUOTES, 'UTF-8'); ?>"><i class="fa fa-user-circle" aria-hidden="true"></i><span class="tms-tb-label"> <?php echo tms_t('nav_profile','My Profile'); ?></span></a>
-            <a href="tour-history.php" title="<?php echo htmlspecialchars(tms_t('nav_bookings','My Bookings'), ENT_QUOTES, 'UTF-8'); ?>"><i class="fa fa-suitcase" aria-hidden="true"></i><span class="tms-tb-label"> <?php echo tms_t('nav_bookings','My Bookings'); ?></span></a>
-            <a href="alerts.php" class="tms-tb-secondary" title="Price Alerts"><i class="fa fa-bell" aria-hidden="true"></i><span class="tms-tb-label"> Price Alerts</span></a>
-            <a href="group-trips.php" class="tms-tb-secondary" title="Group Trips"><i class="fa fa-users" aria-hidden="true"></i><span class="tms-tb-label"> Group Trips</span></a>
-            <a href="referral.php" class="tms-tb-secondary" title="Refer Friends"><i class="fa fa-gift" aria-hidden="true"></i><span class="tms-tb-label"> Refer Friends</span></a>
-            <a href="ai-memory.php" class="tms-tb-secondary" title="My AI memory"><i class="fa fa-bookmark" aria-hidden="true"></i><span class="tms-tb-label"> My AI memory</span></a>
-            <a href="privacy.php" class="tms-tb-secondary" title="Privacy &amp; My Data"><i class="fa fa-lock" aria-hidden="true"></i><span class="tms-tb-label"> Privacy &amp; My Data</span></a>
-            <?php else: ?>
-            <span class="tms-topbar-divider"></span>
-            <a href="admin/index.php"><i class="fa fa-shield"></i> Admin</a>
-            <?php endif; ?>
-            <?php endif; ?>
-        </div>
-        <div class="tms-topbar-right">
-            <?php if (empty($tms_landing_mode)): ?>
-            <!-- Global "See Price In" currency selector (Task 5 fix) — every
-                 price on the site is rendered by tms_currency(), which reads
-                 this choice from the session, so switching it here updates
-                 every price on every page after the reload. -->
-            <select id="tmsCurrencySelect" class="tms-currency-select" aria-label="See price in" title="See price in">
-                <?php foreach (TMS_CURRENCIES as $tmsCurCode => $tmsCurMeta): ?>
-                <option value="<?php echo $tmsCurCode; ?>" <?php echo tms_active_currency()===$tmsCurCode?'selected':''; ?>>
-                    <?php echo $tmsCurMeta['symbol'] . ' ' . $tmsCurCode; ?>
-                </option>
-                <?php endforeach; ?>
-            </select>
-            <span class="tms-topbar-divider"></span>
-            <?php $tmsHdrPhone = trim((string)tms_env('TMS_SUPPORT_PHONE', '+880 1759-443004')); ?>
-            <?php if ($tmsHdrPhone !== ''): ?>
-            <span class="tms-phone"><i class="fa fa-phone" aria-hidden="true"></i> Toll: <?php echo htmlspecialchars($tmsHdrPhone, ENT_QUOTES, 'UTF-8'); ?></span>
-            <?php endif; ?>
-            <span class="tms-topbar-divider"></span>
-            <?php endif; ?>
-            <?php if(empty($tms_landing_mode) && isset($_SESSION['login']) && !empty($_SESSION['login'])):
-                $tmsNotifUnread = 0;
-                $tmsNotifItems  = [];
-                try {
-                    $ncq = $dbh->prepare("SELECT COUNT(*) FROM tbl_notifications WHERE UserEmail=:e AND IsRead=0");
-                    $ncq->execute([':e' => $_SESSION['login']]);
-                    $tmsNotifUnread = (int)$ncq->fetchColumn();
-                    $nq = $dbh->prepare("SELECT Message, Link, IsRead, CreatedAt FROM tbl_notifications WHERE UserEmail=:e ORDER BY id DESC LIMIT 8");
-                    $nq->execute([':e' => $_SESSION['login']]);
-                    $tmsNotifItems = $nq->fetchAll(PDO::FETCH_OBJ);
-                } catch (Exception $e) { /* tables may not exist yet on first request — fail quiet */ }
-            ?>
-            <div class="tms-notif-wrap" id="tmsNotifWrap">
-                <button type="button" class="tms-notif-bell" id="tmsNotifBell" onclick="tmsToggleNotif(event)" aria-label="Notifications" title="Notifications" aria-haspopup="true" aria-expanded="false" aria-controls="tmsNotifDropdown">
-                    <i class="fa fa-bell-o"></i>
-                    <?php if ($tmsNotifUnread > 0): ?><span class="tms-notif-badge"><?php echo $tmsNotifUnread > 9 ? '9+' : $tmsNotifUnread; ?></span><?php endif; ?>
-                </button>
-                <div class="tms-notif-dropdown" id="tmsNotifDropdown">
-                    <div class="tms-notif-head">Notifications</div>
-                    <?php if (empty($tmsNotifItems)): ?>
-                        <div class="tms-notif-empty">You're all caught up — no notifications yet.</div>
-                    <?php else: foreach ($tmsNotifItems as $n): ?>
-                        <a class="tms-notif-item<?php echo $n->IsRead ? '' : ' unread'; ?>" href="<?php echo htmlspecialchars($n->Link ?: '#', ENT_QUOTES, 'UTF-8'); ?>">
-                            <div class="tms-notif-msg"><?php echo htmlspecialchars($n->Message, ENT_QUOTES, 'UTF-8'); ?></div>
-                            <div class="tms-notif-time"><?php echo htmlspecialchars($n->CreatedAt, ENT_QUOTES, 'UTF-8'); ?></div>
-                        </a>
-                    <?php endforeach; endif; ?>
-                    <a href="notifications.php" class="tms-notif-viewall" style="display:block;text-align:center;padding:10px;font-size:12.5px;font-weight:600;color:var(--secondary);border-top:1px solid #eef1f6;">View all notifications</a>
-                </div>
-            </div>
-            <span class="tms-topbar-divider"></span>
-            <?php endif; ?>
-            <?php if(isset($_SESSION['login']) && !empty($_SESSION['login'])): ?>
-            <span class="tms-topbar-welcome" title="<?php echo htmlspecialchars((string)$_SESSION['login'], ENT_QUOTES, 'UTF-8'); ?>" style="color:rgba(255,255,255,0.85);font-size:12.5px;"><?php echo tms_t('nav_welcome','Welcome'); ?>, <?php echo htmlspecialchars(explode('@',$_SESSION['login'])[0]); ?>!</span>
-            <a href="logout.php?t=<?php echo urlencode(tms_csrf_token()); ?>" class="btn-topbar-login"><i class="fa fa-sign-out"></i> <?php echo tms_t('nav_logout','Logout'); ?></a>
-            <?php else: ?>
-            <a href="javascript:void(0)" onclick="openModal('signupModal')" class="btn-topbar-signup"><i class="fa fa-user-plus"></i> <?php echo tms_t('nav_signup','Sign Up'); ?></a>
-            <a href="javascript:void(0)" onclick="openModal('signinModal')" class="btn-topbar-login"><i class="fa fa-sign-in"></i> <?php echo tms_t('nav_signin','Sign In'); ?></a>
-            <?php endif; ?>
-            <?php if (empty($tms_landing_mode)): ?>
-            <!-- PWA install button (Task 8): moved here from a bottom-center
-                 dismissible banner. Hidden until the browser actually confirms
-                 installability via 'beforeinstallprompt' (see footer.php) —
-                 never shown as a fake/always-on button. -->
-            <button type="button" id="tmsInstallBtn" class="tms-install-btn" style="display:none;" title="Install TMS as an app" aria-label="Install TMS as an app">
-                <i class="fa fa-download"></i> <span>Install App</span>
-            </button>
-            <span class="tms-topbar-divider" id="tmsInstallDivider" style="display:none;"></span>
-            <button type="button" id="tmsThemeToggle" class="tms-theme-switch" onclick="tmsToggleTheme()" aria-label="Toggle dark mode" title="Toggle dark / light mode">
-                <span class="tms-theme-track">
-                    <i class="fa fa-sun-o tms-track-icon tms-track-icon-sun"></i>
-                    <i class="fa fa-moon-o tms-track-icon tms-track-icon-moon"></i>
-                </span>
-                <span class="tms-theme-knob">
-                    <i class="fa fa-sun-o" id="tmsThemeIconSun"></i>
-                    <i class="fa fa-moon-o" id="tmsThemeIconMoon" style="display:none;"></i>
-                </span>
-            </button>
-            <?php endif; ?>
-        </div>
-    </div>
-</div>
-<?php endif; ?>
-
-<!-- ═══════════════════════════════════════════ MAIN NAVBAR ═══════════════════════════════════════════ -->
-<nav class="tms-navbar" id="tmsNavbar">
-    <div class="tms-navbar-inner">
-        <!-- Logo -->
-        <a href="index.php" class="tms-logo">
-            <div class="tms-logo-icon"><i class="fa fa-globe"></i></div>
-            <div class="tms-logo-text">
-                <strong>TMS</strong>
-                <span>Tourism Management</span>
-            </div>
-        </a>
-
-        <?php if (!empty($tms_landing_mode)): ?>
-        <div style="display:flex;gap:10px;align-items:center;">
-            <a href="javascript:void(0)" onclick="openModal('signupModal')" class="btn-topbar-signup" style="background:var(--secondary);color:#fff;padding:9px 20px;border-radius:24px;font-weight:600;font-size:13.5px;"><i class="fa fa-user-plus"></i> <?php echo tms_t('nav_signup','Sign Up'); ?></a>
-            <a href="javascript:void(0)" onclick="openModal('signinModal')" class="btn-topbar-login" style="background:var(--primary);color:#fff;padding:9px 20px;border-radius:24px;font-weight:600;font-size:13.5px;"><i class="fa fa-sign-in"></i> <?php echo tms_t('nav_signin','Sign In'); ?></a>
-        </div>
-        <?php else: ?>
-
-        <!-- Hamburger (mobile) -->
-        <button class="tms-hamburger" id="tmsHamburger" onclick="toggleMobileNav()" aria-label="Menu">
-            <span></span><span></span><span></span>
-        </button>
-
-        <!-- Nav Menu -->
-        <ul class="tms-nav-menu" id="tmsNavMenu">
-            <li <?php echo $currentPage=='index.php'?'class="active"':''; ?>>
-                <a href="index.php"><?php echo tms_t('nav_home','Home'); ?></a>
-            </li>
-            <li <?php echo $currentPage=='page.php'?'class="active"':''; ?>>
-                <a href="page.php?type=aboutus"><?php echo tms_t('nav_about','About'); ?></a>
-            </li>
-            <li <?php echo $currentPage=='package-list.php'?'class="active"':''; ?>>
-                <a href="package-list.php"><?php echo tms_t('nav_packages','Tour Packages'); ?></a>
-            </li>
-            <li <?php echo $currentPage=='hotels.php'||$currentPage=='hotel-details.php'?'class="active"':''; ?>>
-                <a href="hotels.php"><?php echo tms_t('nav_hotels','Hotels'); ?></a>
-            </li>
-            <li <?php echo $currentPage=='activities.php'||$currentPage=='activity-details.php'?'class="active"':''; ?>>
-                <a href="activities.php"><?php echo tms_t('nav_activities','Activities'); ?></a>
-            </li>
-            <li <?php echo $currentPage=='destinations.php'?'class="active"':''; ?>>
-                <a href="destinations.php"><i class="fa fa-map-marker" style="font-size:12px;"></i> <?php echo tms_t('nav_destinations','Destinations'); ?></a>
-            </li>
-            <li <?php echo ($currentPage=='explore.php'||$currentPage=='explore-view.php')?'class="active"':''; ?>>
-                <a href="explore.php"><i class="fa fa-compass" style="font-size:12px;"></i> <?php echo tms_t('nav_explore','Explore'); ?></a>
-            </li>
-
-            <!-- MEGA DROPDOWN -->
-            <li class="tms-has-mega" id="featDropdown">
-                <a href="javascript:void(0)" id="featMegaTrigger" onclick="toggleMegaMenu(event)" aria-haspopup="true" aria-expanded="false" aria-controls="featMegaMenu">
-                    <?php echo tms_t('nav_features','Features'); ?> <i class="fa fa-chevron-down" style="font-size:10px;margin-left:3px;"></i>
-                </a>
-                <div class="tms-mega-menu" id="featMegaMenu">
-                    <div class="tms-mega-grid">
-                        <!-- Col 1 -->
-                        <div class="tms-mega-col">
-                            <div class="tms-mega-title"><i class="fa fa-magic"></i> AI & Smart Tools</div>
-                            <a href="explore.php" class="tms-mega-item">
-                                <div class="tms-mega-icon icon-map" style="background:linear-gradient(135deg,#0F4C81,#00A8A8);"><i class="fa fa-compass"></i></div>
-                                <div class="tms-mega-label">
-                                    <strong>Explore Mode</strong>
-                                    <span>Travel any destination — no booking needed</span>
-                                </div>
-                            </a>
-                            <a href="ai-recommend.php" class="tms-mega-item">
-                                <div class="tms-mega-icon icon-ai"><i class="fa fa-magic"></i></div>
-                                <div class="tms-mega-label">
-                                    <strong>AI Recommender</strong>
-                                    <span>Personalized trip suggestions</span>
-                                </div>
-                            </a>
-                            <a href="budget-planner.php" class="tms-mega-item">
-                                <div class="tms-mega-icon icon-budget"><i class="fa fa-calculator"></i></div>
-                                <div class="tms-mega-label">
-                                    <strong>Budget Planner</strong>
-                                    <span>Smart travel cost calculator</span>
-                                </div>
-                            </a>
-                            <a href="weather.php" class="tms-mega-item">
-                                <div class="tms-mega-icon icon-weather"><i class="fa fa-cloud-sun" style="font-size:14px;"></i></div>
-                                <div class="tms-mega-label">
-                                    <strong>Weather Guide</strong>
-                                    <span>Live weather forecasts</span>
-                                </div>
-                            </a>
-                            <a href="compare.php" class="tms-mega-item">
-                                <div class="tms-mega-icon icon-compare"><i class="fa fa-columns"></i></div>
-                                <div class="tms-mega-label">
-                                    <strong>Compare Packages</strong>
-                                    <span>Side-by-side comparison</span>
-                                </div>
-                            </a>
-                        </div>
-                        <!-- Col 2 -->
-                        <div class="tms-mega-col">
-                            <div class="tms-mega-title"><i class="fa fa-user"></i> Trip Planning & User</div>
-                            <a href="tour-map.php" class="tms-mega-item">
-                                <div class="tms-mega-icon icon-map"><i class="fa fa-map-marker"></i></div>
-                                <div class="tms-mega-label">
-                                    <strong>Interactive Map</strong>
-                                    <span>Explore destinations visually</span>
-                                </div>
-                            </a>
-                            <a href="heatmap.php" class="tms-mega-item">
-                                <div class="tms-mega-icon icon-map"><i class="fa fa-fire"></i></div>
-                                <div class="tms-mega-label">
-                                    <strong>Travel Heat Map</strong>
-                                    <span>See where travelers are booking most</span>
-                                </div>
-                            </a>
-                            <a href="flight-status.php" class="tms-mega-item">
-                                <div class="tms-mega-icon icon-map"><i class="fa fa-plane"></i></div>
-                                <div class="tms-mega-label">
-                                    <strong>Flight Tracker</strong>
-                                    <span>Live aircraft position (beta)</span>
-                                </div>
-                            </a>
-                            <a href="transport-compare.php" class="tms-mega-item">
-                                <div class="tms-mega-icon icon-map"><i class="fa fa-random"></i></div>
-                                <div class="tms-mega-label">
-                                    <strong>Transport Compare</strong>
-                                    <span>Walking to flights — fastest, cheapest, greenest</span>
-                                </div>
-                            </a>
-                            <a href="custom-trip.php" class="tms-mega-item">
-                                <div class="tms-mega-icon icon-custom"><i class="fa fa-paint-brush"></i></div>
-                                <div class="tms-mega-label">
-                                    <strong>Custom Trip</strong>
-                                    <span>Build your own itinerary</span>
-                                </div>
-                            </a>
-                            <a href="wishlist.php" class="tms-mega-item">
-                                <div class="tms-mega-icon icon-wish"><i class="fa fa-heart"></i></div>
-                                <div class="tms-mega-label">
-                                    <strong>My Wishlist</strong>
-                                    <span>Save favourite packages</span>
-                                </div>
-                            </a>
-                            <a href="expense-tracker.php" class="tms-mega-item">
-                                <div class="tms-mega-icon icon-budget"><i class="fa fa-money"></i></div>
-                                <div class="tms-mega-label">
-                                    <strong>Expense Tracker</strong>
-                                    <span>Log spending, get AI insights</span>
-                                </div>
-                            </a>
-                            <a href="wallet.php" class="tms-mega-item">
-                                <div class="tms-mega-icon icon-budget"><i class="fa fa-briefcase"></i></div>
-                                <div class="tms-mega-label">
-                                    <strong>Travel Wallet</strong>
-                                    <span>Tickets & documents, secured</span>
-                                </div>
-                            </a>
-                            <a href="emergency.php" class="tms-mega-item">
-                                <div class="tms-mega-icon icon-safety"><i class="fa fa-shield"></i></div>
-                                <div class="tms-mega-label">
-                                    <strong>Safety & Emergency</strong>
-                                    <span>Emergency contacts & tips</span>
-                                </div>
-                            </a>
-                            <a href="travel-notices.php" class="tms-mega-item">
-                                <div class="tms-mega-icon icon-safety"><i class="fa fa-info-circle"></i></div>
-                                <div class="tms-mega-label">
-                                    <strong>Travel Notices</strong>
-                                    <span>Entry rules & advisories, with sources</span>
-                                </div>
-                            </a>
-                        </div>
-                    </div>
-                    <div style="border-top:1px solid #f0f4f8;margin-top:16px;padding-top:14px;display:flex;gap:10px;flex-wrap:wrap;">
-                        <a href="reviews.php" class="tms-mega-item" style="flex:1;min-width:140px;">
-                            <div class="tms-mega-icon icon-review"><i class="fa fa-star"></i></div>
-                            <div class="tms-mega-label"><strong>Tourist Reviews</strong><span>Community ratings</span></div>
-                        </a>
-                        <a href="loyalty.php" class="tms-mega-item" style="flex:1;min-width:140px;">
-                            <div class="tms-mega-icon icon-loyalty"><i class="fa fa-gift"></i></div>
-                            <div class="tms-mega-label"><strong>Loyalty Points</strong><span>Earn & redeem rewards</span></div>
-                        </a>
-                        <a href="language.php" class="tms-mega-item" style="flex:1;min-width:140px;">
-                            <div class="tms-mega-icon icon-lang"><i class="fa fa-language"></i></div>
-                            <div class="tms-mega-label"><strong>Language</strong><span>Multi-language support</span></div>
-                        </a>
-                    </div>
-                </div>
-            </li>
-
-            <li <?php echo $currentPage=='blog.php'?'class="active"':''; ?>>
-                <a href="blog.php"><?php echo tms_t('nav_blog','Blog'); ?></a>
-            </li>
-            <li <?php echo $currentPage=='compare.php'?'class="active"':''; ?>>
-                <a href="compare.php"><i class="fa fa-columns" style="font-size:12px;"></i> <?php echo tms_t('nav_compare','Compare'); ?></a>
-            </li>
-            <li>
-                <a href="page.php?type=contact"><?php echo tms_t('nav_contact','Contact'); ?></a>
-            </li>
-        </ul>
-        <?php endif; ?>
-    </div>
-</nav>
+<link rel="stylesheet" href="css/tms-theme.css?v=4"><script src="js/tms-motion.js?v=1" defer></script>
+<?php include __DIR__ . '/nav.php'; ?>
 <div id="tmsMainContent" tabindex="-1"></div>
 
 <!-- ═══════════════════════════════════════════ SIGN IN MODAL ═══════════════════════════════════════════ -->
@@ -380,7 +79,7 @@ require_once __DIR__ . '/ContentHelpers.php';   // placeholder images + filler-t
         <div class="tms-modal-header">
             <div class="tms-modal-icon"><i class="fa fa-sign-in"></i></div>
             <h3 id="signinModalTitle"><?php echo tms_t('modal_welcome_back','Welcome Back'); ?></h3>
-            <p><?php echo tms_t('modal_signin_subtitle','Sign in to your TMS account'); ?></p>
+            <p><?php echo tms_t('modal_signin_subtitle','Sign in to your TourBuddy account'); ?></p>
         </div>
         <?php if(isset($_SESSION['login_error'])): ?>
         <div class="tms-alert tms-alert-error" role="alert"><i class="fa fa-exclamation-circle"></i> <?php echo htmlspecialchars($_SESSION['login_error']); unset($_SESSION['login_error']); ?></div>
@@ -410,7 +109,7 @@ require_once __DIR__ . '/ContentHelpers.php';   // placeholder images + filler-t
         <button class="tms-modal-close" onclick="closeModal('signupModal')" aria-label="Close sign-up dialog">&times;</button>
         <div class="tms-modal-header">
             <div class="tms-modal-icon" style="background:linear-gradient(135deg,var(--secondary),var(--primary));"><i class="fa fa-user-plus"></i></div>
-            <h3 id="signupModalTitle"><?php echo tms_t('modal_join_tms','Join TMS'); ?></h3>
+            <h3 id="signupModalTitle"><?php echo tms_t('modal_join_tms','Join TourBuddy'); ?></h3>
             <p><?php echo tms_t('modal_signup_subtitle','Start planning your dream trip today'); ?></p>
         </div>
         <?php if(isset($_SESSION['reg_error'])): ?>
@@ -1107,7 +806,7 @@ document.addEventListener('keydown', function(e) {
 });
 // Sticky nav shadow on scroll
 window.addEventListener('scroll', function() {
-    document.getElementById('tmsNavbar').classList.toggle('scrolled', window.scrollY > 20);
+    var nb = document.getElementById('tmsNavbar'); if (nb) nb.classList.toggle('scrolled', window.scrollY > 20);
 });
 // FIX (Round 14): this used to decide whether to disable the signup button by
 // searching the response text for "already" or "red" — and the CSRF error

@@ -53,7 +53,7 @@ class CrowdPredictor {
             }
             return $months;
         } catch (Exception $e) {
-            error_log('[TMS CrowdPredictor] getBookingSeasonality failed: ' . $e->getMessage());
+            error_log('[TourBuddy CrowdPredictor] getBookingSeasonality failed: ' . $e->getMessage());
             return array_fill(1, 12, 0);
         }
     }

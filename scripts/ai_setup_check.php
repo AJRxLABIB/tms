@@ -21,7 +21,7 @@ AIClient::resetResolution();
 $s = AIDiagnostics::state();
 $sel = $s['selected'];
 
-echo "TMS AI setup check\n==================\n";
+echo "TourBuddy AI setup check\n==================\n";
 $line('INFO', 'AI_PROVIDER setting', $s['provider_setting']);
 $line($sel['provider'] === 'none' ? 'FAIL' : 'PASS', 'Selected provider', $sel['provider'] . ($sel['model'] !== '' ? ' (' . $sel['model'] . ')' : '') . ' — ' . AIProviderResolver::explain($sel['reason'], true));
 $line($s['ollama_reachable'] ? 'PASS' : 'WARN', 'Ollama runtime', $s['ollama_reachable'] ? 'reachable at ' . $s['ollama_base'] : 'not reachable at ' . $s['ollama_base']);

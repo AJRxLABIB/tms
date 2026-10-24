@@ -186,7 +186,7 @@ $showingTwoFactorPrompt = !empty($_SESSION['a2fa_pending']);
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>TMS | Admin Login</title>
+<title>TourBuddy | Admin Login</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <style>
@@ -262,7 +262,7 @@ body{font-family:'Inter',sans-serif;min-height:100vh;display:flex;background:#17
 <div class="login-left">
   <div class="login-brand">
     <div class="brand-icon">&#9992;</div>
-    <div class="brand-title">TMS Admin</div>
+    <div class="brand-title">TourBuddy Admin</div>
     <div class="brand-sub">Tourism Management System v6</div>
   </div>
   <div class="login-features">

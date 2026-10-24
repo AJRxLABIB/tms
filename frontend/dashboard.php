@@ -102,14 +102,14 @@ $statusMeta = [
 ];
 ?>
 <!DOCTYPE HTML><html lang="<?php echo htmlspecialchars(tms_active_language(), ENT_QUOTES, 'UTF-8'); ?>"><head>
-<title>TMS | My Dashboard</title>
+<title>TourBuddy | My Dashboard</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#104B3A">
 <link rel="apple-touch-icon" href="images/icon-192.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="TMS">
+<meta name="apple-mobile-web-app-title" content="TourBuddy">
 <meta name="mobile-web-app-capable" content="yes">
 <link href="css/bootstrap.min2.css" rel='stylesheet'/>
 <link href="<?php echo tms_asset_ver('css/style.min.css'); ?>" rel='stylesheet'/>
@@ -120,167 +120,90 @@ $statusMeta = [
 <script src="js/jquery-1.12.0.min.js" defer></script>
 <script src="js/bootstrap.min.js" defer></script>
 <script src="js/qrcode.js"></script>
+<link rel="stylesheet" href="css/tms-account.css?v=1">
 <style>
-.dash-hero{background:linear-gradient(160deg,var(--primary-dark),var(--primary) 60%,#0C3A4A);color:#fff;padding:44px 0 36px;}
-.dash-hero h1{font-family:var(--font-display);font-weight:600;font-size:30px;margin:0 0 4px;}
-.dash-hero p{opacity:.8;font-size:13.5px;margin:0;}
-
-.dash-stats{display:flex;gap:14px;flex-wrap:wrap;margin-top:26px;}
-.dash-stat{background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.14);border-radius:var(--radius-md);padding:14px 20px;flex:1;min-width:130px;}
-.dash-stat .num{font-family:var(--font-mono);font-size:24px;font-weight:700;line-height:1;}
-.dash-stat .lbl{font-size:11.5px;opacity:.75;margin-top:6px;}
-
-.dash-section{padding:36px 0;}
-.dash-card{background:var(--white);border-radius:var(--radius-md);box-shadow:var(--shadow-sm);padding:22px;margin-bottom:22px;}
-.dash-card h4{font-family:var(--font-display);font-weight:600;font-size:17px;color:var(--text);margin:0 0 16px;}
-
-/* Signature: the "next trip" boarding-pass preview card */
-.boarding-preview{position:relative;background:linear-gradient(120deg,var(--primary-dark),var(--primary));color:#fff;border-radius:var(--radius-lg);padding:26px 28px;display:flex;align-items:center;gap:24px;flex-wrap:wrap;overflow:hidden;}
-.boarding-preview::before{content:'';position:absolute;inset:0;background-image:radial-gradient(circle at 15% 20%, rgba(255,255,255,0.5) 1.5px, transparent 1.5px),radial-gradient(circle at 80% 70%, rgba(255,255,255,0.35) 1px, transparent 1px);opacity:.5;}
-.boarding-preview .content{position:relative;flex:1;min-width:220px;}
-.boarding-preview .eyebrow{font-family:var(--font-mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;opacity:.75;margin-bottom:6px;}
-.boarding-preview h3{font-family:var(--font-display);font-size:24px;font-weight:600;margin:0 0 6px;}
-.boarding-preview .meta{font-size:13px;opacity:.85;}
-.boarding-preview .countdown{position:relative;text-align:center;background:rgba(255,255,255,0.12);border:1px dashed rgba(255,255,255,0.4);border-radius:var(--radius-md);padding:14px 20px;flex-shrink:0;}
-.boarding-preview .countdown .n{font-family:var(--font-mono);font-size:30px;font-weight:700;line-height:1;}
-.boarding-preview .countdown .l{font-size:10.5px;opacity:.75;margin-top:4px;text-transform:uppercase;letter-spacing:.06em;}
-.boarding-preview .cta{position:relative;flex-shrink:0;}
-.boarding-preview .cta a{background:var(--accent);color:#fff;padding:11px 22px;border-radius:var(--radius-sm);font-weight:700;font-size:13.5px;display:inline-block;}
-
-.no-trip{background:var(--white);border-radius:var(--radius-lg);border:2px dashed var(--bg-dark);padding:34px 28px;text-align:center;}
-.no-trip i{font-size:34px;color:var(--secondary);margin-bottom:10px;}
-html[data-theme="dark"] .dash-primary-btn{color:#0E3B2D !important;}
-.no-trip a{background:var(--secondary);color:#fff;padding:10px 24px;border-radius:var(--radius-sm);font-weight:700;font-size:13.5px;display:inline-block;margin-top:12px;}
-html[data-theme="dark"] .no-trip a{color:#0E3B2D;}
-
-.quick-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:14px;}
-.quick-tile{background:var(--white);border-radius:var(--radius-md);box-shadow:var(--shadow-sm);padding:18px;text-align:center;transition:var(--transition);border:1px solid transparent;}
-.quick-tile:hover{box-shadow:var(--shadow-md);transform:translateY(-3px);border-color:rgba(23,107,80,0.25);}
-.quick-tile i{font-size:22px;color:var(--secondary);margin-bottom:8px;}
-.quick-tile .n{font-family:var(--font-mono);font-size:20px;font-weight:700;color:var(--text);}
-.quick-tile .l{font-size:11.5px;color:var(--text-muted);margin-top:2px;}
-.quick-tile .badge-alert{background:var(--accent);color:#fff;font-size:9.5px;font-weight:700;padding:1px 7px;border-radius:10px;margin-left:4px;vertical-align:top;}
-
-.recent-row{display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px dashed var(--bg-dark);}
-.recent-row:last-child{border-bottom:none;}
-.recent-status{font-size:10.5px;font-weight:700;padding:3px 10px;border-radius:20px;flex-shrink:0;}
+.tms-trip{position:relative;display:grid;grid-template-columns:1fr auto;gap:16px;align-items:center;padding:26px 28px;border-radius:24px;color:#fff;overflow:hidden;margin-bottom:24px;
+  background:linear-gradient(110deg,rgba(5,52,60,.88),rgba(14,124,134,.55)),var(--trip-img,none) center/cover,var(--tms-primary-strong);box-shadow:var(--tms-shadow-lg);}
+.tms-trip h3{margin:2px 0 6px;font-size:24px;font-weight:800;color:#fff}.tms-trip .eyebrow{font-size:12px;letter-spacing:.1em;text-transform:uppercase;opacity:.85;font-weight:700}
+.tms-trip .meta{opacity:.92;font-size:14px}.tms-trip .count{text-align:center;background:rgba(255,255,255,.16);border-radius:16px;padding:12px 20px;backdrop-filter:blur(6px)}
+.tms-trip .count b{display:block;font-size:34px;line-height:1}.tms-trip .count span{font-size:12px;opacity:.85}
+.tms-trip .cta{grid-column:1/-1}.tms-trip .cta a{display:inline-flex;gap:8px;align-items:center;background:var(--tms-accent);color:var(--tms-accent-ink,#1d0c05);font-weight:800;padding:12px 22px;border-radius:12px;text-decoration:none}
+.tms-two{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(0,1fr);gap:20px;align-items:start}
+@media(max-width:860px){.tms-two{grid-template-columns:1fr}.tms-trip{grid-template-columns:1fr}}
+.recent-row{display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px dashed var(--tms-border)}.recent-row:last-child{border:0}
+.recent-row .t{flex:1;font-weight:700}.recent-row .t small{display:block;color:var(--tms-muted);font-weight:500}
 </style>
 </head><body>
 <?php include('backend/header.php'); ?>
-
-<div class="dash-hero">
-  <div class="container">
+<?php
+$chipOf = function ($st) { $st=(int)$st; return $st===1 ? ['ok','check-circle'] : ($st===2 ? ['bad','times-circle'] : ['warn','clock-o']); };
+?>
+<main class="tms-acct">
+  <section class="tms-acct-hero reveal">
     <h1><?php echo htmlspecialchars(tms_t('dash_welcome_back_prefix','Welcome back,'), ENT_QUOTES, 'UTF-8'); ?> <?php echo htmlspecialchars($firstName, ENT_QUOTES, 'UTF-8'); ?></h1>
-    <p><?php echo $memberSince ? htmlspecialchars(tms_t('dash_traveling_since_prefix','Traveling with TMS since'), ENT_QUOTES, 'UTF-8') . ' ' . htmlspecialchars($memberSince, ENT_QUOTES, 'UTF-8') : htmlspecialchars(tms_t('dash_command_center','Your travel command center'), ENT_QUOTES, 'UTF-8'); ?></p>
-    <div class="dash-stats">
-      <div class="dash-stat"><div class="num"><?php echo $totalTrips; ?></div><div class="lbl"><?php echo htmlspecialchars(tms_t('dash_stat_trips_taken','Trips taken'), ENT_QUOTES, 'UTF-8'); ?></div></div>
-      <div class="dash-stat"><div class="num"><?php echo $loyaltyPoints; ?></div><div class="lbl"><?php echo htmlspecialchars(tms_t('dash_stat_loyalty_points','Loyalty points'), ENT_QUOTES, 'UTF-8'); ?></div></div>
-      <div class="dash-stat"><div class="num"><?php echo $wishlistCount; ?></div><div class="lbl"><?php echo htmlspecialchars(tms_t('dash_stat_wishlisted','Wishlisted'), ENT_QUOTES, 'UTF-8'); ?></div></div>
-      <div class="dash-stat"><div class="num"><?php echo $documentCount; ?></div><div class="lbl"><?php echo htmlspecialchars(tms_t('dash_stat_wallet_documents','Wallet documents'), ENT_QUOTES, 'UTF-8'); ?></div></div>
-    </div>
+    <p><?php echo $memberSince ? htmlspecialchars(tms_t('dash_traveling_since_prefix','Traveling with TourBuddy since'), ENT_QUOTES, 'UTF-8') . ' ' . htmlspecialchars($memberSince, ENT_QUOTES, 'UTF-8') : htmlspecialchars(tms_t('dash_command_center','Your travel command center'), ENT_QUOTES, 'UTF-8'); ?></p>
+  </section>
+
+  <div class="tms-stats">
+    <a class="tms-stat" href="<?php echo $nextTrip ? 'ticket.php?bkid=' . (int)$nextTrip->BookingId : 'package-list.php'; ?>"><span class="ico"><i class="fa fa-plane" aria-hidden="true"></i></span><div><b><?php echo $daysToGo !== null ? (int)$daysToGo : '–'; ?></b><span><?php echo $daysToGo !== null ? htmlspecialchars($daysToGo === 1 ? tms_t('dash_day_to_go','Day to go') : tms_t('dash_days_to_go','Days to go'), ENT_QUOTES, 'UTF-8') : 'No trip planned'; ?></span></div></a>
+    <a class="tms-stat" href="tour-history.php"><span class="ico"><i class="fa fa-suitcase" aria-hidden="true"></i></span><div><b><?php echo $totalTrips + $pendingTrips; ?></b><span><?php echo htmlspecialchars(tms_t('heading_my_bookings','My Bookings'), ENT_QUOTES, 'UTF-8'); ?><?php echo $pendingTrips ? ' · ' . (int)$pendingTrips . ' ' . htmlspecialchars(tms_t('dash_pending_badge_suffix','pending'), ENT_QUOTES, 'UTF-8') : ''; ?></span></div></a>
+    <a class="tms-stat" href="loyalty.php"><span class="ico"><i class="fa fa-star" aria-hidden="true"></i></span><div><b><?php echo $loyaltyPoints; ?></b><span><?php echo htmlspecialchars(tms_t('dash_tile_loyalty_points','Loyalty Points'), ENT_QUOTES, 'UTF-8'); ?></span></div></a>
+    <a class="tms-stat" href="wishlist.php"><span class="ico"><i class="fa fa-heart" aria-hidden="true"></i></span><div><b><?php echo $wishlistCount; ?></b><span><?php echo htmlspecialchars(tms_t('nav_wishlist','Wishlist'), ENT_QUOTES, 'UTF-8'); ?></span></div></a>
   </div>
-</div>
 
-<div class="dash-section">
-  <div class="container">
-
-    <?php if ($nextTrip): ?>
-    <div class="boarding-preview">
-      <div class="content">
-        <div class="eyebrow"><?php echo htmlspecialchars(tms_t('dash_your_next_trip','Your next trip'), ENT_QUOTES, 'UTF-8'); ?></div>
-        <h3><?php echo htmlspecialchars($nextTrip->PackageName, ENT_QUOTES, 'UTF-8'); ?></h3>
-        <div class="meta"><i class="fa fa-map-marker"></i> <?php echo htmlspecialchars($nextTrip->PackageLocation, ENT_QUOTES, 'UTF-8'); ?>
-          &nbsp;·&nbsp; <i class="fa fa-calendar"></i> <?php echo htmlspecialchars($nextTrip->FromDate, ENT_QUOTES, 'UTF-8'); ?>
-          &nbsp;·&nbsp; <i class="fa fa-users"></i> <?php echo (int)$nextTrip->NoOfPersons; ?> <?php echo htmlspecialchars((int)$nextTrip->NoOfPersons === 1 ? tms_t('label_traveler_word','traveler') : tms_t('label_travelers_word','travelers'), ENT_QUOTES, 'UTF-8'); ?></div>
-      </div>
-      <?php if ($daysToGo !== null): ?>
-      <div class="countdown">
-        <div class="n"><?php echo $daysToGo; ?></div>
-        <div class="l"><?php echo htmlspecialchars($daysToGo === 1 ? tms_t('dash_day_to_go','Day to go') : tms_t('dash_days_to_go','Days to go'), ENT_QUOTES, 'UTF-8'); ?></div>
-      </div>
-      <?php endif; ?>
-      <div class="cta"><a href="ticket.php?bkid=<?php echo (int)$nextTrip->BookingId; ?>"><i class="fa fa-ticket"></i> <?php echo htmlspecialchars(tms_t('dash_view_eticket','View E-Ticket'), ENT_QUOTES, 'UTF-8'); ?></a></div>
+  <?php if ($nextTrip): ?>
+  <section class="tms-trip" style="--trip-img:url('<?php echo htmlspecialchars('images/' . basename((string)($nextTrip->PackageImage ?: 'h1.jpg')), ENT_QUOTES, 'UTF-8'); ?>')">
+    <div>
+      <div class="eyebrow"><?php echo htmlspecialchars(tms_t('dash_your_next_trip','Your next trip'), ENT_QUOTES, 'UTF-8'); ?></div>
+      <h3><?php echo htmlspecialchars($nextTrip->PackageName, ENT_QUOTES, 'UTF-8'); ?></h3>
+      <div class="meta"><i class="fa fa-map-marker" aria-hidden="true"></i> <?php echo htmlspecialchars($nextTrip->PackageLocation, ENT_QUOTES, 'UTF-8'); ?>
+        &nbsp;·&nbsp; <i class="fa fa-calendar" aria-hidden="true"></i> <?php echo htmlspecialchars($nextTrip->FromDate, ENT_QUOTES, 'UTF-8'); ?>
+        &nbsp;·&nbsp; <i class="fa fa-users" aria-hidden="true"></i> <?php echo (int)$nextTrip->NoOfPersons; ?> <?php echo htmlspecialchars((int)$nextTrip->NoOfPersons === 1 ? tms_t('label_traveler_word','traveler') : tms_t('label_travelers_word','travelers'), ENT_QUOTES, 'UTF-8'); ?></div>
     </div>
-    <?php else: ?>
-    <div class="no-trip">
-      <i class="fa fa-compass"></i>
-      <h4 style="font-family:var(--font-display);color:var(--text);margin:0 0 6px;"><?php echo htmlspecialchars(tms_t('dash_no_upcoming_trips','No upcoming trips yet'), ENT_QUOTES, 'UTF-8'); ?></h4>
-      <p style="color:var(--text-muted);font-size:13.5px;margin:0;"><?php echo htmlspecialchars(tms_t('dash_next_adventure','Your next adventure is one search away.'), ENT_QUOTES, 'UTF-8'); ?></p>
-      <a href="package-list.php"><i class="fa fa-suitcase"></i> <?php echo htmlspecialchars(tms_t('btn_browse_packages','Browse Packages'), ENT_QUOTES, 'UTF-8'); ?></a>
-    </div>
-    <?php endif; ?>
+    <?php if ($daysToGo !== null): ?><div class="count"><b><?php echo $daysToGo; ?></b><span><?php echo htmlspecialchars($daysToGo === 1 ? tms_t('dash_day_to_go','Day to go') : tms_t('dash_days_to_go','Days to go'), ENT_QUOTES, 'UTF-8'); ?></span></div><?php endif; ?>
+    <div class="cta"><a href="ticket.php?bkid=<?php echo (int)$nextTrip->BookingId; ?>"><i class="fa fa-ticket" aria-hidden="true"></i> <?php echo htmlspecialchars(tms_t('dash_view_eticket','View E-Ticket'), ENT_QUOTES, 'UTF-8'); ?></a></div>
+  </section>
+  <?php else: ?>
+  <section class="tms-card tms-empty">
+    <svg viewBox="0 0 120 96" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="60" cy="48" r="30"/><path d="M60 18v12M60 66v12M30 48h12M78 48h12"/><path d="M72 36 54 54l-6 12 12-6 18-18z" fill="currentColor" opacity=".25"/></svg>
+    <h3><?php echo htmlspecialchars(tms_t('dash_no_upcoming_trips','No upcoming trips yet'), ENT_QUOTES, 'UTF-8'); ?></h3>
+    <p><?php echo htmlspecialchars(tms_t('dash_next_adventure','Your next adventure is one search away.'), ENT_QUOTES, 'UTF-8'); ?></p>
+    <a class="tms-btn-primary" style="width:auto;display:inline-flex;padding:0 26px" href="package-list.php"><i class="fa fa-suitcase" aria-hidden="true"></i> <?php echo htmlspecialchars(tms_t('btn_browse_packages','Browse Packages'), ENT_QUOTES, 'UTF-8'); ?></a>
+  </section>
+  <?php endif; ?>
 
-    <div class="row" style="margin-top:26px;">
-      <div class="col-md-8">
-        <div class="quick-grid">
-          <a href="tour-history.php" class="quick-tile" style="text-decoration:none;">
-            <i class="fa fa-suitcase"></i>
-            <div class="n"><?php echo $totalTrips + $pendingTrips; ?></div>
-            <div class="l"><?php echo htmlspecialchars(tms_t('heading_my_bookings','My Bookings'), ENT_QUOTES, 'UTF-8'); ?><?php echo $pendingTrips ? ' <span class="badge-alert">' . (int)$pendingTrips . ' ' . htmlspecialchars(tms_t('dash_pending_badge_suffix','pending'), ENT_QUOTES, 'UTF-8') . '</span>' : ''; ?></div>
-          </a>
-          <a href="loyalty.php" class="quick-tile" style="text-decoration:none;">
-            <i class="fa fa-star"></i>
-            <div class="n"><?php echo $loyaltyPoints; ?></div>
-            <div class="l"><?php echo htmlspecialchars(tms_t('dash_tile_loyalty_points','Loyalty Points'), ENT_QUOTES, 'UTF-8'); ?></div>
-          </a>
-          <a href="wishlist.php" class="quick-tile" style="text-decoration:none;">
-            <i class="fa fa-heart"></i>
-            <div class="n"><?php echo $wishlistCount; ?></div>
-            <div class="l"><?php echo htmlspecialchars(tms_t('nav_wishlist','Wishlist'), ENT_QUOTES, 'UTF-8'); ?></div>
-          </a>
-          <a href="wallet.php" class="quick-tile" style="text-decoration:none;">
-            <i class="fa fa-briefcase"></i>
-            <div class="n"><?php echo $documentCount; ?></div>
-            <div class="l"><?php echo htmlspecialchars(tms_t('heading_travel_wallet','Travel Wallet'), ENT_QUOTES, 'UTF-8'); ?></div>
-          </a>
-          <a href="my-marketplace-bookings.php" class="quick-tile" style="text-decoration:none;">
-            <i class="fa fa-hotel"></i>
-            <div class="n"><?php echo $marketplaceBookings; ?></div>
-            <div class="l"><?php echo htmlspecialchars(tms_t('dash_tile_marketplace_bookings','Marketplace Bookings'), ENT_QUOTES, 'UTF-8'); ?></div>
-          </a>
-          <a href="reviews.php" class="quick-tile" style="text-decoration:none;">
-            <i class="fa fa-comment"></i>
-            <div class="n"><?php echo $reviewCount; ?></div>
-            <div class="l"><?php echo htmlspecialchars(tms_t('dash_tile_my_reviews','My Reviews'), ENT_QUOTES, 'UTF-8'); ?></div>
-          </a>
-          <a href="issuetickets.php" class="quick-tile" style="text-decoration:none;">
-            <i class="fa fa-life-ring"></i>
-            <div class="n"><?php echo $openTickets; ?></div>
-            <div class="l"><?php echo htmlspecialchars(tms_t('link_support','Support'), ENT_QUOTES, 'UTF-8'); ?><?php echo $openTickets ? ' <span class="badge-alert">' . htmlspecialchars(tms_t('dash_open_badge','open'), ENT_QUOTES, 'UTF-8') . '</span>' : ''; ?></div>
-          </a>
-        </div>
-
-        <div class="dash-card" style="margin-top:22px;">
-          <h4><i class="fa fa-history"></i> <?php echo htmlspecialchars(tms_t('dash_recent_activity','Recent Activity'), ENT_QUOTES, 'UTF-8'); ?></h4>
-          <?php if (empty($recent)): ?>
-          <div style="color:var(--text-muted);font-size:13px;"><?php echo htmlspecialchars(tms_t('dash_no_bookings_recent',"No bookings yet — once you book a trip, it'll show up here."), ENT_QUOTES, 'UTF-8'); ?></div>
-          <?php else: foreach ($recent as $r): $sm = $statusMeta[(int)$r->status] ?? $statusMeta[0]; ?>
-          <div class="recent-row">
-            <div style="flex:1;">
-              <div style="font-size:13.5px;font-weight:600;color:var(--text);"><?php echo htmlspecialchars($r->PackageName, ENT_QUOTES, 'UTF-8'); ?></div>
-              <div style="font-size:11.5px;color:var(--text-muted);"><?php echo htmlspecialchars($r->PackageLocation, ENT_QUOTES, 'UTF-8'); ?><?php echo $r->FromDate ? ' · ' . htmlspecialchars($r->FromDate, ENT_QUOTES, 'UTF-8') : ''; ?></div>
-            </div>
-            <span class="recent-status" style="background:<?php echo $sm['bg']; ?>;color:<?php echo $sm['color']; ?>;"><?php echo $sm['label']; ?></span>
-          </div>
-          <?php endforeach; endif; ?>
-        </div>
-      </div>
-
-      <div class="col-md-4">
-        <div class="dash-card">
-          <h4><i class="fa fa-bolt"></i> <?php echo htmlspecialchars(tms_t('dash_quick_actions','Quick Actions'), ENT_QUOTES, 'UTF-8'); ?></h4>
-          <div style="display:flex;flex-direction:column;gap:10px;">
-            <a href="ai-planner.php" class="btn dash-primary-btn" style="background:var(--secondary);color:#fff;text-align:left;font-weight:600;font-size:13px;padding:11px 14px;border-radius:var(--radius-sm);"><i class="fa fa-magic"></i>&nbsp; <?php echo htmlspecialchars(tms_t('dash_plan_trip_ai','Plan a trip with AI'), ENT_QUOTES, 'UTF-8'); ?></a>
-            <a href="package-list.php" class="btn" style="background:var(--bg-dark);color:var(--text);text-align:left;font-weight:600;font-size:13px;padding:11px 14px;border-radius:var(--radius-sm);"><i class="fa fa-search"></i>&nbsp; <?php echo htmlspecialchars(tms_t('btn_browse_packages','Browse Packages'), ENT_QUOTES, 'UTF-8'); ?></a>
-            <a href="profile.php" class="btn" style="background:var(--bg-dark);color:var(--text);text-align:left;font-weight:600;font-size:13px;padding:11px 14px;border-radius:var(--radius-sm);"><i class="fa fa-user"></i>&nbsp; <?php echo htmlspecialchars(tms_t('dash_edit_profile','Edit Profile'), ENT_QUOTES, 'UTF-8'); ?></a>
-            <a href="issuetickets.php" class="btn" style="background:var(--bg-dark);color:var(--text);text-align:left;font-weight:600;font-size:13px;padding:11px 14px;border-radius:var(--radius-sm);"><i class="fa fa-life-ring"></i>&nbsp; <?php echo htmlspecialchars(tms_t('dash_get_support','Get Support'), ENT_QUOTES, 'UTF-8'); ?></a>
-          </div>
-        </div>
-      </div>
-    </div>
-
+  <div class="tms-actions">
+    <a class="tms-btn-ghost" href="ai-planner.php"><i class="fa fa-magic" aria-hidden="true"></i> <?php echo htmlspecialchars(tms_t('dash_plan_trip_ai','Plan a trip with AI'), ENT_QUOTES, 'UTF-8'); ?></a>
+    <a class="tms-btn-ghost" href="package-list.php"><i class="fa fa-search" aria-hidden="true"></i> <?php echo htmlspecialchars(tms_t('btn_browse_packages','Browse Packages'), ENT_QUOTES, 'UTF-8'); ?></a>
+    <a class="tms-btn-ghost" href="tour-history.php"><i class="fa fa-suitcase" aria-hidden="true"></i> <?php echo htmlspecialchars(tms_t('heading_my_bookings','My Bookings'), ENT_QUOTES, 'UTF-8'); ?></a>
+    <a class="tms-btn-ghost" href="issuetickets.php"><i class="fa fa-life-ring" aria-hidden="true"></i> <?php echo htmlspecialchars(tms_t('dash_get_support','Get Support'), ENT_QUOTES, 'UTF-8'); ?><?php echo $openTickets ? ' (' . (int)$openTickets . ')' : ''; ?></a>
   </div>
-</div>
+
+  <div class="tms-two">
+    <section class="tms-card">
+      <h2><?php echo htmlspecialchars(tms_t('dash_recent_activity','Recent Activity'), ENT_QUOTES, 'UTF-8'); ?></h2>
+      <?php if (empty($recent)): ?>
+      <p style="color:var(--tms-muted);margin:0;"><?php echo htmlspecialchars(tms_t('dash_no_bookings_recent',"No bookings yet — once you book a trip, it'll show up here."), ENT_QUOTES, 'UTF-8'); ?></p>
+      <?php else: foreach ($recent as $r): $sm = $statusMeta[(int)$r->status] ?? $statusMeta[0]; [$cc, $ci] = $chipOf($r->status); ?>
+      <div class="recent-row">
+        <div class="t"><?php echo htmlspecialchars($r->PackageName, ENT_QUOTES, 'UTF-8'); ?>
+          <small><?php echo htmlspecialchars($r->PackageLocation, ENT_QUOTES, 'UTF-8'); ?><?php echo $r->FromDate ? ' · ' . htmlspecialchars($r->FromDate, ENT_QUOTES, 'UTF-8') : ''; ?></small></div>
+        <span class="tms-chip <?php echo $cc; ?>"><i class="fa fa-<?php echo $ci; ?>" aria-hidden="true"></i> <?php echo $sm['label']; ?></span>
+      </div>
+      <?php endforeach; endif; ?>
+    </section>
+
+    <section class="tms-card">
+      <h2>Account &amp; more</h2>
+      <ul class="tms-list">
+        <li><a href="profile.php"><i class="fa fa-user l" aria-hidden="true"></i><span><?php echo htmlspecialchars(tms_t('dash_edit_profile','Edit Profile'), ENT_QUOTES, 'UTF-8'); ?><small>Name, password, privacy, 2FA</small></span><i class="fa fa-chevron-right r" aria-hidden="true"></i></a></li>
+        <li><a href="wallet.php"><i class="fa fa-briefcase l" aria-hidden="true"></i><span><?php echo htmlspecialchars(tms_t('heading_travel_wallet','Travel Wallet'), ENT_QUOTES, 'UTF-8'); ?><small><?php echo (int)$documentCount; ?> documents</small></span><i class="fa fa-chevron-right r" aria-hidden="true"></i></a></li>
+        <li><a href="my-marketplace-bookings.php"><i class="fa fa-hotel l" aria-hidden="true"></i><span><?php echo htmlspecialchars(tms_t('dash_tile_marketplace_bookings','Marketplace Bookings'), ENT_QUOTES, 'UTF-8'); ?><small><?php echo (int)$marketplaceBookings; ?> bookings</small></span><i class="fa fa-chevron-right r" aria-hidden="true"></i></a></li>
+        <li><a href="reviews.php"><i class="fa fa-comment l" aria-hidden="true"></i><span><?php echo htmlspecialchars(tms_t('dash_tile_my_reviews','My Reviews'), ENT_QUOTES, 'UTF-8'); ?><small><?php echo (int)$reviewCount; ?> reviews</small></span><i class="fa fa-chevron-right r" aria-hidden="true"></i></a></li>
+      </ul>
+    </section>
+  </div>
+</main>
 
 <?php include('backend/footer.php'); ?>
 </body></html>

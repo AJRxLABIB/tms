@@ -62,7 +62,7 @@ class EventBus
             $id = $q->fetchColumn();
             return $id === false ? null : (int)$id;
         } catch (Throwable $e) {
-            error_log('[TMS EventBus] publish failed (caller unaffected): ' . $e->getMessage());
+            error_log('[TourBuddy EventBus] publish failed (caller unaffected): ' . $e->getMessage());
             return null;
         }
     }
@@ -164,7 +164,7 @@ class EventBus
                     available_at = DATE_ADD(NOW(), INTERVAL :d SECOND)
              WHERE id = :id"
         )->execute([':s' => $dead ? 'dead' : 'failed', ':e' => mb_substr($error, 0, 490), ':d' => $dead ? 0 : $delay, ':id' => (int)$event['id']]);
-        if ($dead) error_log('[TMS EventBus] event ' . $event['id'] . ' (' . $event['event_type'] . ') dead-lettered: ' . $error);
+        if ($dead) error_log('[TourBuddy EventBus] event ' . $event['id'] . ' (' . $event['event_type'] . ') dead-lettered: ' . $error);
         return $dead ? 'dead' : 'failed';
     }
 

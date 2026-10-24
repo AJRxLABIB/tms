@@ -30,7 +30,7 @@ try {
     $dbh->prepare("UPDATE tbl_notifications SET IsRead=1 WHERE UserEmail=:e AND IsRead=0")
         ->execute([':e' => $email]);
 } catch (Exception $e) {
-    error_log('[TMS Notify] notifications.php mark-read failed: ' . $e->getMessage());
+    error_log('[TourBuddy Notify] notifications.php mark-read failed: ' . $e->getMessage());
 }
 
 $perPage = 20;
@@ -69,9 +69,9 @@ try {
 <link rel="apple-touch-icon" href="images/icon-192.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="TMS">
+<meta name="apple-mobile-web-app-title" content="TourBuddy">
 <meta name="mobile-web-app-capable" content="yes">
-<title>TMS | Notifications</title>
+<title>TourBuddy | Notifications</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <link href="css/bootstrap.min2.css" rel='stylesheet'/>
 <link href="<?php echo tms_asset_ver('css/style.min.css'); ?>" rel='stylesheet'/>
@@ -93,13 +93,14 @@ try {
 .notif-pager span.current{background:var(--secondary);color:#fff;}
 .notif-pager a.disabled{pointer-events:none;opacity:0.4;}
 </style>
+<link rel="stylesheet" href="css/tms-account.css?v=1">
 </head><body>
 <?php include('backend/header.php'); ?>
 <div class="page-title"><div class="container"><h2 style="margin:0;"><i class="fa fa-bell"></i> Notifications</h2></div></div>
 <div class="container" style="margin-bottom:20px;">
   <div class="notif-box">
     <?php if (empty($items)): ?>
-      <p style="color:var(--text-muted);padding:20px 0;">You're all caught up — no notifications yet.</p>
+      <div class="tms-empty"><svg viewBox="0 0 120 96" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M60 14a22 22 0 0 0-22 22c0 22-10 28-10 28h64s-10-6-10-28A22 22 0 0 0 60 14z" fill="currentColor" opacity=".15"/><path d="M52 74a8 8 0 0 0 16 0"/></svg><h3>You're all caught up</h3><p>No notifications yet.</p></div>
     <?php else: foreach ($items as $n): ?>
       <a class="notif-row<?php echo $n->IsRead ? '' : ' was-unread'; ?>" href="<?php echo htmlspecialchars($n->Link ?: '#', ENT_QUOTES, 'UTF-8'); ?>">
         <div class="notif-msg"><?php echo htmlspecialchars($n->Message, ENT_QUOTES, 'UTF-8'); ?></div>

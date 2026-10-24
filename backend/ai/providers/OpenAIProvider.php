@@ -13,7 +13,7 @@ require_once __DIR__ . '/AIProviderInterface.php';
  * I tried to re-confirm the current Chat Completions request/response shape
  * against platform.openai.com/docs before writing this, so it is built from
  * the long-stable, documented shape of that API rather than a freshly
- * checked source. This is why TMS ships with AI_PROVIDER=gemini as the
+ * checked source. This is why TourBuddy ships with AI_PROVIDER=gemini as the
  * default (unchanged from before this round) and this provider has NOT been
  * exercised against a real OpenAI account in this environment (no
  * OPENAI_API_KEY configured here to test with). Before relying on this in
@@ -103,7 +103,7 @@ class OpenAIProvider implements AIProviderInterface {
             $errType = $data['error']['type'] ?? '';
             $errCode = $data['error']['code'] ?? '';
             $detail  = $data['error']['message'] ?? ('HTTP ' . $httpCode . ' — ' . substr($rawBody, 0, 200));
-            error_log('[TMS AI OpenAI] API error: HTTP ' . $httpCode . ': ' . $detail);
+            error_log('[TourBuddy AI OpenAI] API error: HTTP ' . $httpCode . ': ' . $detail);
 
             if ($httpCode === 401 || $httpCode === 403) {
                 return ['success' => false, 'error' => 'The AI assistant is not configured correctly on this site.', 'kind' => 'config', 'retriable' => false];
@@ -138,7 +138,7 @@ class OpenAIProvider implements AIProviderInterface {
             if ($finishReason === 'length') {
                 return ['success' => false, 'error' => 'That answer was too long to finish. Try asking something more specific.', 'kind' => 'content', 'retriable' => false];
             }
-            error_log('[TMS AI OpenAI] empty response (finish_reason=' . $finishReason . ')');
+            error_log('[TourBuddy AI OpenAI] empty response (finish_reason=' . $finishReason . ')');
             return ['success' => false, 'error' => 'The AI assistant returned an empty answer. Please try again.', 'kind' => 'content', 'retriable' => false];
         }
 

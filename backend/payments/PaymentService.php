@@ -183,7 +183,7 @@ class PaymentService
             return true;
         } catch (Exception $e) {
             $this->dbh->rollBack();
-            error_log('[TMS Payments] confirmSandboxPayment failed: ' . $e->getMessage());
+            error_log('[TourBuddy Payments] confirmSandboxPayment failed: ' . $e->getMessage());
             return false;
         }
     }
@@ -226,7 +226,7 @@ class PaymentService
                 "INSERT INTO tblpayment_refunds(PaymentId, AmountMinor, Reason, Status) VALUES(:pid, :amt, :reason, 'pending')"
             )->execute([':pid' => $row['PaymentId'], ':amt' => $row['AmountMinor'], ':reason' => $reason]);
         } catch (Exception $e) {
-            error_log('[TMS Payments] logRefundRequest failed for booking ' . $bookingId . ': ' . $e->getMessage());
+            error_log('[TourBuddy Payments] logRefundRequest failed for booking ' . $bookingId . ': ' . $e->getMessage());
         }
     }
 
@@ -250,7 +250,7 @@ class PaymentService
             $this->dbh->prepare("UPDATE tblpayment_refunds SET Status='processed', ProcessedAt=NOW() WHERE PaymentId=:id AND Status='pending'")
                 ->execute([':id' => $paymentId]);
         } catch (Exception $e) {
-            error_log('[TMS Payments] markRefundProcessed failed for booking ' . $bookingId . ': ' . $e->getMessage());
+            error_log('[TourBuddy Payments] markRefundProcessed failed for booking ' . $bookingId . ': ' . $e->getMessage());
         }
     }
 
@@ -267,7 +267,7 @@ class PaymentService
             $this->dbh->prepare("UPDATE tblpayment_refunds SET Status='failed', Reason=:n, ProcessedAt=NOW() WHERE PaymentId=:id AND Status='pending'")
                 ->execute([':id' => $paymentId, ':n' => $note]);
         } catch (Exception $e) {
-            error_log('[TMS Payments] markRefundRejected failed for booking ' . $bookingId . ': ' . $e->getMessage());
+            error_log('[TourBuddy Payments] markRefundRejected failed for booking ' . $bookingId . ': ' . $e->getMessage());
         }
     }
 
@@ -379,7 +379,7 @@ class PaymentService
             $eventId = (int)$this->dbh->lastInsertId();
             }
         } catch (PDOException $e) {
-            error_log("[TMS Webhooks] {$providerName}: failed to log inbound event -- " . $e->getMessage());
+            error_log("[TourBuddy Webhooks] {$providerName}: failed to log inbound event -- " . $e->getMessage());
             return ['status' => 500, 'body' => ['status' => 'error', 'message' => 'Could not record event.']];
         }
 
@@ -396,7 +396,7 @@ class PaymentService
             };
         } catch (RuntimeException $e) {
             $this->markWebhookEvent($eventId, 'failed');
-            error_log("[TMS Webhooks] {$providerName}: provider not configured -- " . $e->getMessage());
+            error_log("[TourBuddy Webhooks] {$providerName}: provider not configured -- " . $e->getMessage());
             return ['status' => 503, 'body' => ['status' => 'error', 'message' => 'This payment provider is not configured on this server yet.']];
         }
 
@@ -412,7 +412,7 @@ class PaymentService
 
             if (!$signatureValid) {
                 $this->markWebhookEvent($eventId, 'rejected');
-                error_log("[TMS Webhooks] {$providerName}: rejected webhook with invalid/unverifiable signature.");
+                error_log("[TourBuddy Webhooks] {$providerName}: rejected webhook with invalid/unverifiable signature.");
                 return ['status' => 400, 'body' => ['status' => 'error', 'message' => 'Signature could not be verified.']];
             }
 
@@ -429,7 +429,7 @@ class PaymentService
         } catch (Throwable $e) {
             $this->dbh->prepare("UPDATE tblpayment_events SET ProcessingStatus = 'failed', RetryCount = RetryCount + 1 WHERE EventId = :id")
                 ->execute([':id' => $eventId]);
-            error_log("[TMS Webhooks] {$providerName}: processing error -- " . $e->getMessage());
+            error_log("[TourBuddy Webhooks] {$providerName}: processing error -- " . $e->getMessage());
             return ['status' => 500, 'body' => ['status' => 'error', 'message' => 'Internal error while processing webhook.']];
         }
     }

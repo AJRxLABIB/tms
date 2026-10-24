@@ -142,7 +142,7 @@ Return: {
             }
             return $count;
         } catch (Exception $e) {
-            error_log('[TMS Sentiment] Batch error: ' . $e->getMessage());
+            error_log('[TourBuddy Sentiment] Batch error: ' . $e->getMessage());
             return 0;
         }
     }
@@ -260,7 +260,7 @@ Return: {
             $stmt->execute();
             return $stmt->fetchAll(PDO::FETCH_OBJ);
         } catch (Exception $e) {
-            error_log('[TMS] ' . __METHOD__ . ' failed: ' . $e->getMessage());
+            error_log('[TourBuddy] ' . __METHOD__ . ' failed: ' . $e->getMessage());
             return [];
         }
     }
@@ -399,7 +399,7 @@ Return: {
                 $suspiciousReason ?: null,
             ]);
         } catch (Exception $e) {
-            error_log('[TMS Sentiment] Save error: ' . $e->getMessage());
+            error_log('[TourBuddy Sentiment] Save error: ' . $e->getMessage());
         }
 
         return $result;

@@ -1,0 +1,80 @@
+/* Admin chrome — Tropical Journey. Loaded AFTER css/tms-theme.css (which bridges the legacy admin variables).
+   Adds: grouped/collapsible sidebar + page filter, calmer topbar, friendlier cards/tables/buttons, dark-mode parity. */
+
+html:root {
+  --primary: var(--tms-primary); --primary-light: var(--tms-info-bg);
+  --text-primary: var(--tms-text); --text-secondary: var(--tms-muted); --text-muted: var(--tms-muted);
+  --border: var(--tms-border); --card-radius: var(--tms-radius);
+  --sidebar-hover: rgba(255, 255, 255, .08); --sidebar-active: var(--tms-accent);
+  --sidebar-text: #CFE6E9; --sidebar-text-active: #1d0c05; --sidebar-border: rgba(255, 255, 255, .10);
+  --topbar-bg: var(--tms-surface);
+}
+
+/* ── Sidebar shell ── */
+html body .tms-sidebar { background: linear-gradient(180deg, var(--sidebar-bg), #062a30 140%); }
+html body .sidebar-logo .logo-icon { background: var(--tms-accent); color: #1d0c05; border-radius: 12px; }
+html body .sidebar-logo .logo-text { color: #fff; }
+html body .sidebar-logo .logo-text span { color: var(--tms-sky); }
+
+/* ── Search box ── */
+.sidebar-search { position: relative; margin: 10px 14px 6px; }
+.sidebar-search i { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: #9CC3C8; font-size: 13px; pointer-events: none; }
+.sidebar-search input {
+  width: 100%; height: 38px; padding: 0 12px 0 34px; border-radius: 10px; font-size: 13px;
+  background: rgba(255, 255, 255, .08); border: 1px solid rgba(255, 255, 255, .14); color: #fff;
+}
+.sidebar-search input::placeholder { color: #A9CBCF; }
+.sidebar-search input:focus { outline: none; background: rgba(255, 255, 255, .14); box-shadow: 0 0 0 3px rgba(255, 255, 255, .25); }
+.tms-sidebar.collapsed .sidebar-search { display: none; }
+
+/* ── Groups ── */
+.nav-group { margin: 2px 0; }
+.nav-group[hidden], .nav-item[hidden], .nav-empty[hidden] { display: none !important; }
+.nav-group-head {
+  width: 100%; display: flex; align-items: center; gap: 10px; padding: 10px 20px; background: none; border: 0;
+  color: #E6F3F4; font-size: 13px; font-weight: 700; letter-spacing: .02em; text-align: left; cursor: pointer; min-height: 44px;
+}
+.nav-group-head:hover { background: rgba(255, 255, 255, .06); }
+.nav-group-head:focus-visible { outline: 3px solid var(--tms-sky); outline-offset: -3px; }
+.nav-group-head .nav-icon { width: 22px; text-align: center; color: var(--tms-sky); }
+.nav-group-head .nav-label { flex: 1; }
+.nav-caret { font-size: 11px; opacity: .8; transition: transform .2s var(--tms-ease); }
+.nav-group.open > .nav-group-head .nav-caret { transform: rotate(180deg); }
+.nav-group-list { display: none; margin: 0 0 6px !important; }
+.nav-group.open > .nav-group-list { display: block; }
+.nav-group .nav-item { padding: 1px 10px 1px 22px; }
+.nav-group .nav-item a { padding: 8px 12px; font-size: 13px; border-radius: 10px; min-height: 38px; }
+.nav-group .nav-item.active a { background: var(--tms-accent); color: #1d0c05; font-weight: 700; box-shadow: 0 4px 14px rgba(0, 0, 0, .25); }
+.nav-empty { color: #CFE6E9; font-size: 13px; padding: 12px 22px; }
+.tms-sidebar.collapsed .nav-group-head .nav-label, .tms-sidebar.collapsed .nav-caret { display: none; }
+.tms-sidebar.collapsed .nav-group-head { justify-content: center; padding: 10px; }
+.tms-sidebar.collapsed .nav-group-list { display: block; }
+.tms-sidebar.collapsed .nav-group .nav-item { padding: 1px 8px; }
+
+/* ── Topbar / content ── */
+html body .tms-topbar { background: var(--tms-surface); color: var(--tms-text); border-bottom: 1px solid var(--tms-border); box-shadow: var(--tms-shadow); }
+html body .tms-topbar a, html body .tms-topbar span { color: inherit; }
+html body .tms-topbar .bc-current { font-weight: 700; color: var(--tms-text); }
+html body .topbar-avatar { background: var(--tms-primary); color: var(--tms-primary-ink); }
+html body .tms-content, html body .tms-main { background: var(--tms-bg); }
+
+html body .panel, html body .stat-card, html body .card {
+  background: var(--tms-surface); border: 1px solid var(--tms-border); border-radius: var(--tms-radius); box-shadow: var(--tms-shadow);
+}
+html body .stat-card { transition: transform .2s var(--tms-ease), box-shadow .2s var(--tms-ease); }
+html body .stat-card:hover { transform: translateY(-2px); box-shadow: var(--tms-shadow-lg); }
+html body .table > thead > tr > th { background: var(--tms-surface-2); color: var(--tms-text); border-bottom: 2px solid var(--tms-border); }
+html body .table > tbody > tr:hover { background: color-mix(in srgb, var(--tms-sky) 22%, transparent); }
+html body .btn-v6:not(.ghost), html body .btn-primary { background: var(--tms-primary); border-color: var(--tms-primary); color: var(--tms-primary-ink); border-radius: 10px; }
+html body .btn-v6:not(.ghost):hover, html body .btn-primary:hover { background: var(--tms-primary-strong); }
+html body .form-control:focus, html body input:focus, html body select:focus, html body textarea:focus { border-color: var(--tms-primary); box-shadow: var(--tms-ring); outline: none; }
+
+/* ── Dark parity (replaces the old hard-coded greys in header.php) ── */
+html[data-theme="dark"]:root body { background: var(--tms-bg) !important; color: var(--tms-text) !important; }
+html[data-theme="dark"]:root .tms-topbar, html[data-theme="dark"]:root .panel, html[data-theme="dark"]:root .card,
+html[data-theme="dark"]:root .stat-card, html[data-theme="dark"]:root .modal-content { background: var(--tms-surface) !important; color: var(--tms-text) !important; border-color: var(--tms-border) !important; }
+html[data-theme="dark"]:root .form-control, html[data-theme="dark"]:root input, html[data-theme="dark"]:root select, html[data-theme="dark"]:root textarea {
+  background: var(--tms-surface-2) !important; color: var(--tms-text) !important; border-color: var(--tms-border) !important;
+}
+
+@media (prefers-reduced-motion: reduce) { .nav-caret, html body .stat-card { transition: none; } }

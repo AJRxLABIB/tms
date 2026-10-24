@@ -85,7 +85,7 @@ final class TravelNoticeService
             $dbh->prepare("INSERT INTO tbl_travel_notices (Kind, Country, Title, Body, SourceName, SourceUrl, VerifiedOn, ExpiresOn, CreatedBy) VALUES (?,?,?,?,?,?,?,?,?)")->execute($args);
             return ['ok' => true, 'errors' => [], 'id' => (int)$dbh->lastInsertId()];
         } catch (Throwable $ex) {
-            error_log('[TMS TravelNotices] save: ' . $ex->getMessage());
+            error_log('[TourBuddy TravelNotices] save: ' . $ex->getMessage());
             return ['ok' => false, 'errors' => ['form' => 'Could not save the notice.'], 'id' => null];
         }
     }
@@ -125,7 +125,7 @@ final class TravelNoticeService
             $st->execute($args);
             return self::decorate($st->fetchAll(PDO::FETCH_ASSOC));
         } catch (Throwable $e) {
-            error_log('[TMS TravelNotices] visible: ' . $e->getMessage());
+            error_log('[TourBuddy TravelNotices] visible: ' . $e->getMessage());
             return [];
         }
     }

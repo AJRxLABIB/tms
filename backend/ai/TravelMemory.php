@@ -134,7 +134,7 @@ final class TravelMemory
                 ->execute([$email, $category, $v['content'], $h, $source === 'chat' ? 'chat' : 'form', $exp]);
             return ['ok' => true, 'id' => (int)$dbh->lastInsertId(), 'error' => '', 'created' => true];
         } catch (Throwable $e) {
-            error_log('[TMS Memory] add: ' . $e->getMessage());
+            error_log('[TourBuddy Memory] add: ' . $e->getMessage());
             return $fail('unavailable');
         }
     }
@@ -229,7 +229,7 @@ final class TravelMemory
             if ($on) { $dbh->prepare('DELETE FROM tbl_ai_user_memory WHERE user_email=? AND Category=?')->execute([$email, self::SETTING]); return; }
             $dbh->prepare('INSERT IGNORE INTO tbl_ai_user_memory (user_email, Category, Content, ContentHash, Source) VALUES (?,?,?,?,?)')
                 ->execute([$email, self::SETTING, 'personalisation off', sha1('off'), 'form']);
-        } catch (Throwable $e) { error_log('[TMS Memory] setEnabled: ' . $e->getMessage()); }
+        } catch (Throwable $e) { error_log('[TourBuddy Memory] setEnabled: ' . $e->getMessage()); }
     }
 
     // ── Retrieval for a request ───────────────────────────────────────────────────

@@ -5,14 +5,14 @@ $msg = ''; $err = '';
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     tms_csrf_validate();
     $r = SupplierService::respondToBooking($dbh, $sid, (int)($_POST['booking_id'] ?? 0), (string)($_POST['decision'] ?? ''), (string)($_POST['note'] ?? ''));
-    if ($r['ok']) $msg = 'Response recorded. TMS staff will see it.'; else $err = $r['error'];
+    if ($r['ok']) $msg = 'Response recorded. TourBuddy staff will see it.'; else $err = $r['error'];
 }
 $rows = SupplierService::bookings($dbh, $sid, 200);
 $statusLabel = [0 => ['warn', 'Pending'], 1 => ['ok', 'Confirmed'], 2 => ['bad', 'Cancelled']];
 sup_head('Bookings', $sup, 'bookings.php');
 ?>
 <h1>Bookings</h1>
-<p class="sp-sub">Your response tells TMS whether you can deliver the service. TMS staff confirm or cancel the booking itself. Customer name and phone appear once TMS has confirmed a booking.</p>
+<p class="sp-sub">Your response tells TourBuddy whether you can deliver the service. TourBuddy staff confirm or cancel the booking itself. Customer name and phone appear once TourBuddy has confirmed a booking.</p>
 <?php if ($msg): ?><div class="sp-alert ok" role="status"><?php echo h($msg); ?></div><?php endif; ?>
 <?php if ($err): ?><div class="sp-alert bad" role="alert"><?php echo h($err); ?></div><?php endif; ?>
 <?php if (!$rows): ?><div class="sp-card sp-empty">No bookings for your packages yet.</div><?php else: ?>

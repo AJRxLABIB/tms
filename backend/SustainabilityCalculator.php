@@ -66,7 +66,7 @@ class SustainabilityCalculator {
             $meters = $this->explore->haversine((float)$o['lat'], (float)$o['lng'], (float)$d['lat'], (float)$d['lng']);
             return round($meters / 1000, 1);
         } catch (Exception $e) {
-            error_log('[TMS Sustainability] Distance lookup failed: ' . $e->getMessage());
+            error_log('[TourBuddy Sustainability] Distance lookup failed: ' . $e->getMessage());
             return null;
         }
     }

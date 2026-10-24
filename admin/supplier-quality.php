@@ -48,7 +48,7 @@ $disputes = SupplierQuality::disputes($dbh, null, false);
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>TMS | Supplier Quality</title>
+<title>TourBuddy | Supplier Quality</title>
 <link href="css/font-awesome.css" rel="stylesheet">
 <link href="css/bootstrap.min.css" rel="stylesheet">
 <link href="<?php echo tms_asset_ver('css/admin-v6.css'); ?>" rel="stylesheet">

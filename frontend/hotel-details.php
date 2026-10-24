@@ -108,7 +108,7 @@ if (isset($_POST['book_hotel'])) {
                 }
             } catch (Throwable $e) {
                 if ($dbh->inTransaction()) $dbh->rollBack();
-                error_log('[TMS Hotel booking] ' . $e->getMessage());
+                error_log('[TourBuddy Hotel booking] ' . $e->getMessage());
                 $newId = 0;
                 if ($invManaged) { $error = 'Something went wrong. Please try again.'; } else { throw $e; }
             }
@@ -121,7 +121,7 @@ if (isset($_POST['book_hotel'])) {
                 try {
                     $dbh->prepare("INSERT INTO tblloyalty_log(UserEmail,Points,Description) VALUES(:e,50,:d)")
                         ->execute([':e'=>$email, ':d'=>'Hotel booking #HB'.$newId.' confirmed']);
-                } catch (Exception $e) { error_log('[TMS Loyalty] Hotel booking log insert failed: '.$e->getMessage()); }
+                } catch (Exception $e) { error_log('[TourBuddy Loyalty] Hotel booking log insert failed: '.$e->getMessage()); }
 
                 $msg = 'Hotel booked successfully! Verification code: <strong>'.htmlspecialchars($verificationCode, ENT_QUOTES, 'UTF-8').'</strong>. '
                      . 'View it in <a href="my-marketplace-bookings.php">My Marketplace Bookings</a>. You earned <strong>50 loyalty points!</strong>';
@@ -140,9 +140,9 @@ if (isset($_POST['book_hotel'])) {
 <link rel="apple-touch-icon" href="images/icon-192.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="TMS">
+<meta name="apple-mobile-web-app-title" content="TourBuddy">
 <meta name="mobile-web-app-capable" content="yes">
-<title>TMS | <?php echo htmlspecialchars($hotel->HotelName, ENT_QUOTES, 'UTF-8'); ?></title>
+<title>TourBuddy | <?php echo htmlspecialchars($hotel->HotelName, ENT_QUOTES, 'UTF-8'); ?></title>
 <?php
 // SEO meta broadening (master prompt item 53), same pattern as
 // package-details.php/blog-post.php: ?id= is this page's resource
@@ -156,7 +156,7 @@ if (isset($_POST['book_hotel'])) {
 // property, which it is not. Plain title/description only.
 $hotelSeoDesc = trim((string)($hotel->Description ?? ''));
 if ($hotelSeoDesc === '') {
-    $hotelSeoDesc = 'Sample/demo hotel listing in ' . $hotel->City . ', ' . $hotel->Country . ' for the TMS hotel marketplace feature.';
+    $hotelSeoDesc = 'Sample/demo hotel listing in ' . $hotel->City . ', ' . $hotel->Country . ' for the TourBuddy hotel marketplace feature.';
 }
 $hdScheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
 $hdHost   = $_SERVER['HTTP_HOST'] ?? 'localhost';
@@ -200,6 +200,7 @@ tms_seo_meta([
 </head>
 <body>
 <?php include('backend/header.php'); ?>
+<link rel="stylesheet" href="<?php echo tms_asset_ver('css/tms-pages.css'); ?>">
 
 <div class="banner-3"><div class="container"><h1 class="wow zoomIn animated" data-wow-delay=".1s"><?php echo htmlspecialchars($hotel->HotelName, ENT_QUOTES, 'UTF-8'); ?></h1></div></div>
 
@@ -210,13 +211,13 @@ tms_seo_meta([
         ['label' => $hotel->HotelName],
     ]); ?>
     <div class="tms-sample-banner">
-        <i class="fa fa-info-circle"></i> This is a <strong>sample/demo hotel listing</strong> used to showcase the TMS hotel marketplace feature -- not a real, live-supplier property. A booking here creates a real record in your account for demonstration purposes.
+        <i class="fa fa-info-circle"></i> This is a <strong>sample/demo hotel listing</strong> used to showcase the TourBuddy hotel marketplace feature -- not a real, live-supplier property. A booking here creates a real record in your account for demonstration purposes.
     </div>
 
     <?php if ($error): ?><div class="alert-error"><i class="fa fa-exclamation-circle"></i> <?php echo htmlspecialchars($error, ENT_QUOTES, 'UTF-8'); ?></div><?php endif; ?>
     <?php if ($msg): ?><div class="alert-success"><i class="fa fa-check-circle"></i> <?php echo $msg; /* contains safe, hardcoded HTML + one escaped var */ ?></div><?php endif; ?>
 
-    <div class="row">
+    <div class="row tms-detail-grid">
         <div class="col-md-7">
             <div class="hd-wrap">
                 <img src="<?php echo htmlspecialchars($hotel->HotelImage ?: 'images/no-image-placeholder.jpg', ENT_QUOTES, 'UTF-8'); ?>" onerror="this.src='images/no-image-placeholder.jpg'" class="hd-img" alt="<?php echo htmlspecialchars($hotel->HotelName, ENT_QUOTES, 'UTF-8'); ?>">
@@ -238,7 +239,7 @@ tms_seo_meta([
                                     : 'No bookable nights in the next ' . (int)$invSum['days'] . ' days') . '</small>';
                             }
                         }
-                    } catch (Throwable $e) { error_log('[TMS] inventory badge: ' . $e->getMessage()); }
+                    } catch (Throwable $e) { error_log('[TourBuddy] inventory badge: ' . $e->getMessage()); }
                     ?>
                     <h1 style="margin-top:10px;"><?php echo htmlspecialchars($hotel->HotelName, ENT_QUOTES, 'UTF-8'); ?></h1>
                     <p><i class="fa fa-map-marker" style="color:#e74c3c"></i> <?php echo htmlspecialchars($hotel->City.', '.$hotel->Country, ENT_QUOTES, 'UTF-8'); ?></p>
@@ -270,7 +271,7 @@ tms_seo_meta([
             </div>
             <?php endif; ?>
         </div>
-        <div class="col-md-5">
+        <div class="col-md-5 tms-book-col" id="tmsBook">
             <div class="hd-wrap">
                 <div class="hd-body">
                     <h4 style="margin-bottom:14px;"><i class="fa fa-calendar-check-o"></i> Book This Hotel</h4>
@@ -327,6 +328,11 @@ tms_seo_meta([
         &nbsp;·&nbsp;
         <a href="reviews.php?hotel=<?php echo $hotelId; ?>"><i class="fa fa-star"></i> Write a Review</a>
     </p>
+</div>
+
+<div class="tms-actionbar" role="region" aria-label="Booking shortcut">
+    <span class="tms-actionbar-price"><?php echo tms_currency((float)$hotel->PricePerNight); ?> <small>/night</small></span>
+    <a class="tms-actionbar-btn" href="#tmsBook">Book now</a>
 </div>
 
 <?php include('backend/footer.php'); ?>

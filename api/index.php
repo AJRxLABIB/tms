@@ -1,6 +1,6 @@
 <?php
 /**
- * TMS REST API — v1
+ * TourBuddy REST API — v1
  *
  * Public endpoints (no auth):
  *   GET  /api/?action=packages           – list packages (?search=, ?type=, ?page=, ?limit=, ?sort=)
@@ -23,7 +23,7 @@
  *   POST /api/?action=revoke_session     – revoke one session { session_id }
  *   POST /api/?action=revoke_all_sessions – revoke every session { keep_current? }
  *
- * V2 domain read endpoints (Round 115 continuation, "TMS V2" prompt Phase
+ * V2 domain read endpoints (Round 115 continuation, "TourBuddy V2" prompt Phase
  * 29 -- see api/v1/index.php's own docblock and TMS_V2_PHASE1_AUDIT.md
  * Section E for why this is additive query-param actions on the existing
  * v1 surface rather than a path-based /api/v2/ resource-hierarchy rewrite):
@@ -181,7 +181,7 @@ function tms_api_rate_limit_check(PDO $dbh, string $bucket, string $identifier, 
             api_error(429, 'Rate limit exceeded for this endpoint. Please slow down and try again shortly.');
         }
     } catch (Exception $e) {
-        error_log('[TMS API] Rate limit check failed (failing open): ' . $e->getMessage());
+        error_log('[TourBuddy API] Rate limit check failed (failing open): ' . $e->getMessage());
     }
 }
 
@@ -780,7 +780,7 @@ function api_book(PDO $dbh): void {
     $dbh->commit();
     } catch (Throwable $e) {
         if ($dbh->inTransaction()) $dbh->rollBack();
-        error_log('[TMS API] booking failed: ' . $e->getMessage());
+        error_log('[TourBuddy API] booking failed: ' . $e->getMessage());
         api_error(500, 'Could not create booking.');
     }
 
@@ -828,7 +828,7 @@ function api_cancel_booking(PDO $dbh): void {
 }
 
 /**
- * V2 domain endpoint (Round 115 continuation, "TMS V2" prompt Phase 29).
+ * V2 domain endpoint (Round 115 continuation, "TourBuddy V2" prompt Phase 29).
  * TripReadinessScore was built this session (frontend/my-trip.php) but had
  * no API exposure at all -- a real, scoped gap for any client other than
  * the website itself. Ownership is checked the same way api_cancel_booking
@@ -853,7 +853,7 @@ function api_trip_readiness(PDO $dbh): void {
 }
 
 /**
- * V2 domain endpoint (Round 115 continuation, "TMS V2" prompt Phase 29).
+ * V2 domain endpoint (Round 115 continuation, "TourBuddy V2" prompt Phase 29).
  * Same gap as api_trip_readiness() above but for BudgetAutopilot /
  * ExpenseAnalyst::getBudgetComparison() -- also built this session, also
  * never exposed. Ownership is checked explicitly here (rather than relying

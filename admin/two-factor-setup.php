@@ -108,7 +108,7 @@ if (empty($me->TwoFAEnabled) && empty($_SESSION['pending_2fa_secret'])) {
 }
 
 $pendingSecret = $_SESSION['pending_2fa_secret'] ?? '';
-$otpUri = $pendingSecret ? tms_totp_provisioning_uri($pendingSecret, $uname, 'TMS Admin') : '';
+$otpUri = $pendingSecret ? tms_totp_provisioning_uri($pendingSecret, $uname, 'TourBuddy Admin') : '';
 $qrUrl  = $otpUri ? tms_totp_qr_url($otpUri) : '';
 ?>
 <!DOCTYPE html>
@@ -116,7 +116,7 @@ $qrUrl  = $otpUri ? tms_totp_qr_url($otpUri) : '';
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>TMS | Two-Factor Authentication</title>
+<title>TourBuddy | Two-Factor Authentication</title>
 <link href="css/font-awesome.css" rel="stylesheet">
 <link href="css/bootstrap.min.css" rel="stylesheet">
 <link href="<?php echo tms_asset_ver('css/admin-v6.css'); ?>" rel="stylesheet">

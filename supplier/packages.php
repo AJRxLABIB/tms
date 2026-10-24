@@ -43,7 +43,7 @@ $field = function (string $k, string $label, string $dbKey, string $type = 'text
 sup_head('Packages', $sup, 'packages.php');
 ?>
 <h1>Packages</h1>
-<p class="sp-sub">Packages you submit are reviewed by TMS before they appear to customers. Editing a live package takes it offline until it is approved again.</p>
+<p class="sp-sub">Packages you submit are reviewed by TourBuddy before they appear to customers. Editing a live package takes it offline until it is approved again.</p>
 <?php if (!empty($_GET['saved'])): ?><div class="sp-alert ok" role="status">Saved. Your package is now in review.</div><?php endif; ?>
 <?php if (!empty($errors['form'])): ?><div class="sp-alert bad" role="alert"><?php echo h($errors['form']); ?></div><?php endif; ?>
 <?php if ($sup['Status'] !== 'verified'): ?><div class="sp-alert warn">Your business must be verified before you can list packages.</div><?php endif; ?>

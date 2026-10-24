@@ -106,7 +106,7 @@ if (!function_exists('tms_totp_verify')) {
 
 if (!function_exists('tms_totp_provisioning_uri')) {
     /** Builds the otpauth:// URI that authenticator apps read via QR code. */
-    function tms_totp_provisioning_uri(string $secret, string $accountLabel, string $issuer = 'TMS Admin'): string {
+    function tms_totp_provisioning_uri(string $secret, string $accountLabel, string $issuer = 'TourBuddy Admin'): string {
         return 'otpauth://totp/' . rawurlencode($issuer) . ':' . rawurlencode($accountLabel)
             . '?secret=' . rawurlencode($secret)
             . '&issuer=' . rawurlencode($issuer)

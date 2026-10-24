@@ -155,14 +155,14 @@ $tickets = $ticketsStmt->fetchAll(PDO::FETCH_OBJ);
 $docIcons = ['passport'=>'book','visa'=>'id-card','insurance'=>'shield','id'=>'id-badge','vaccination'=>'medkit','other'=>'file'];
 ?>
 <!DOCTYPE HTML><html lang="<?php echo htmlspecialchars(tms_active_language(), ENT_QUOTES, 'UTF-8'); ?>"><head>
-<title>TMS | Travel Wallet</title>
+<title>TourBuddy | Travel Wallet</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#104B3A">
 <link rel="apple-touch-icon" href="images/icon-192.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="TMS">
+<meta name="apple-mobile-web-app-title" content="TourBuddy">
 <meta name="mobile-web-app-capable" content="yes">
 <link href="css/bootstrap.min2.css" rel='stylesheet'/>
 <link href="<?php echo tms_asset_ver('css/style.min.css'); ?>" rel='stylesheet'/>
@@ -186,6 +186,7 @@ $docIcons = ['passport'=>'book','visa'=>'id-card','insurance'=>'shield','id'=>'i
 .wallet-card .btn-primary{background:var(--secondary);border-color:var(--secondary);font-family:var(--font-body);font-weight:700;}
 .wallet-card .btn-primary:hover{background:var(--primary);border-color:var(--primary);}
 </style>
+<link rel="stylesheet" href="css/tms-account.css?v=1">
 </head><body>
 <?php include('backend/header.php'); ?>
 <div class="page-title">

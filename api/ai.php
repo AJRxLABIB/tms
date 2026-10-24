@@ -1,6 +1,6 @@
 <?php
 /**
- * api/ai.php — TMS AI REST API
+ * api/ai.php — TourBuddy AI REST API
  *
  * Centralized endpoint for all AI feature calls.
  * Frontend calls this via fetch() for async AI features.
@@ -135,7 +135,7 @@ try {
         default           => apiError(404, "Unknown action: $action"),
     };
 } catch (Throwable $e) {
-    error_log('[TMS AI API] ' . $e->getMessage());
+    error_log('[TourBuddy AI API] ' . $e->getMessage());
     apiError(500, 'AI service error. Please try again.');
 }
 
@@ -346,7 +346,7 @@ function handleTrackQuickReply(PDO $dbh): void {
     try {
         $dbh->prepare("INSERT INTO tbl_chatbot_clicks(Label) VALUES(:l)")->execute([':l' => $label]);
     } catch (Exception $e) {
-        error_log('[TMS AI API] track_quickreply insert failed: ' . $e->getMessage());
+        error_log('[TourBuddy AI API] track_quickreply insert failed: ' . $e->getMessage());
     }
     apiSuccess(['tracked' => true]);
 }
@@ -789,7 +789,7 @@ function handleFeedback(PDO $dbh, string $email): void {
             ':reason'  => $reason !== '' ? mb_substr($reason, 0, 255) : null,
         ]);
     } catch (Exception $e) {
-        error_log('[TMS AI Feedback] insert failed: ' . $e->getMessage());
+        error_log('[TourBuddy AI Feedback] insert failed: ' . $e->getMessage());
         apiError(500, 'Could not save feedback right now.');
     }
 

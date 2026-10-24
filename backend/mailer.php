@@ -40,7 +40,7 @@ function tms_send_email(string $toEmail, string $toName, string $subject, string
     global $dbh;
     $host = tms_env('SMTP_HOST', '');
     if (!$host) {
-        error_log("[TMS Mailer] SMTP not configured — skipped email to $toEmail: $subject");
+        error_log("[TourBuddy Mailer] SMTP not configured — skipped email to $toEmail: $subject");
         if ($dbh instanceof PDO) tms_log_system_event($dbh, 'email', 'not_configured', false, 'SMTP_HOST not set');
         return false;
     }
@@ -57,7 +57,7 @@ function tms_send_email(string $toEmail, string $toName, string $subject, string
         $mail->SMTPSecure = $encryption === 'ssl' ? PHPMailer::ENCRYPTION_SMTPS : PHPMailer::ENCRYPTION_STARTTLS;
         $mail->CharSet    = 'UTF-8';
 
-        $mail->setFrom(tms_env('SMTP_FROM_EMAIL', 'noreply@tms.local'), tms_env('SMTP_FROM_NAME', 'TMS Travel'));
+        $mail->setFrom(tms_env('SMTP_FROM_EMAIL', 'noreply@tms.local'), tms_env('SMTP_FROM_NAME', 'TourBuddy Travel'));
         $mail->addAddress($toEmail, $toName ?: $toEmail);
 
         $mail->isHTML(true);
@@ -69,30 +69,30 @@ function tms_send_email(string $toEmail, string $toName, string $subject, string
         if ($dbh instanceof PDO) tms_log_system_event($dbh, 'email', 'send', true);
         return true;
     } catch (PHPMailerException $e) {
-        error_log('[TMS Mailer] Send failed to ' . $toEmail . ': ' . $mail->ErrorInfo);
+        error_log('[TourBuddy Mailer] Send failed to ' . $toEmail . ': ' . $mail->ErrorInfo);
         if ($dbh instanceof PDO) tms_log_system_event($dbh, 'email', 'send', false, $mail->ErrorInfo);
         return false;
     } catch (Exception $e) {
-        error_log('[TMS Mailer] Unexpected error sending to ' . $toEmail . ': ' . $e->getMessage());
+        error_log('[TourBuddy Mailer] Unexpected error sending to ' . $toEmail . ': ' . $e->getMessage());
         if ($dbh instanceof PDO) tms_log_system_event($dbh, 'email', 'send', false, $e->getMessage());
         return false;
     }
 }
 
-/** Wraps a message in TMS's simple branded HTML email shell. */
+/** Wraps a message in TourBuddy's simple branded HTML email shell. */
 function tms_email_template(string $title, string $bodyHtml): string {
     return '
     <div style="font-family:Segoe UI,Arial,sans-serif;max-width:520px;margin:0 auto;background:#f4f6f9;padding:24px;">
       <div style="background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 4px 16px rgba(0,0,0,0.06);">
         <div style="background:linear-gradient(135deg,#3F84B1,#2c6089);color:#fff;padding:22px 28px;">
-          <div style="font-size:19px;font-weight:800;">✈ TMS Travel</div>
+          <div style="font-size:19px;font-weight:800;">✈ TourBuddy Travel</div>
         </div>
         <div style="padding:26px 28px;color:#1e293b;font-size:14px;line-height:1.6;">
           <h2 style="font-size:17px;margin:0 0 14px;">' . htmlspecialchars($title, ENT_QUOTES, 'UTF-8') . '</h2>
           ' . $bodyHtml . '
         </div>
         <div style="padding:16px 28px;font-size:11.5px;color:#94a3b8;border-top:1px solid #eef1f6;">
-          You are receiving this because of activity on your TMS account. If this wasn\'t you, please contact support.
+          You are receiving this because of activity on your TourBuddy account. If this wasn\'t you, please contact support.
         </div>
       </div>
     </div>';

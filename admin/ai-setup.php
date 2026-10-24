@@ -30,7 +30,7 @@ $sizeMb = fn($b) => $b > 0 ? number_format($b / 1048576, 0) . ' MB' : '';
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>TMS Admin | AI Setup</title>
+<title>TourBuddy Admin | AI Setup</title>
 <link href="css/font-awesome.min2.css" rel="stylesheet">
 <link href="css/bootstrap.min.css" rel="stylesheet">
 <link href="<?php echo tms_asset_ver('css/admin-v6.css'); ?>" rel="stylesheet">

@@ -70,7 +70,7 @@ foreach ($candidates as $bid) {
         echo "  expired BK{$bid}\n";
     } catch (Throwable $e) {
         if ($dbh->inTransaction()) $dbh->rollBack();
-        error_log('[TMS expire_pending_bookings] BK' . $bid . ': ' . $e->getMessage());
+        error_log('[TourBuddy expire_pending_bookings] BK' . $bid . ': ' . $e->getMessage());
         echo "  FAILED BK{$bid} (see error log)\n";
     }
 }

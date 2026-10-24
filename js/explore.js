@@ -1,5 +1,5 @@
 /**
- * explore.js — Client-side logic for TMS Explore Mode
+ * explore.js — Client-side logic for TourBuddy Explore Mode
  * Covers: destination search/autocomplete (explore.php) and the destination
  * hub page — overview, map & navigation, nearby places, weather, AI chat
  * (explore-view.php). Uses feature detection so one file can serve both pages.
@@ -23,8 +23,26 @@ function exploreGet(action, params, timeoutMs) {
     var qs = new URLSearchParams(Object.assign({ action: action }, params || {})).toString();
     var url = EXPLORE_API + '?' + qs;
     // Hard timeout: a hung request used to leave "Finding hotels nearby..." spinning forever.
-    if (window.TmsMap && window.TmsMap.fetchJson) return window.TmsMap.fetchJson(url, { timeout: timeoutMs || 14000 });
+    if (window.TmsMapPages && window.TmsMapPages.fetchJson) return window.TmsMapPages.fetchJson(url, { timeout: timeoutMs || 14000 });
     return fetch(url).then(function (r) { return r.json(); });
+}
+
+// Live places: OpenFreeMap vector tiles first (no key, browser-side, fast), then the server path (cache / Overpass / local
+// catalogue) only if the tiles are unreachable or empty. Same response shape as exploreGet('places').
+function exploreLivePlaces(params) {
+    var server = function () { return exploreGet('places', params); };
+    if (!window.TmsPoiTiles) return server();
+    var radius = Number(params.radius) || 4000;
+    return window.TmsPoiTiles.loadPlaces({ lat: Number(params.lat), lng: Number(params.lng), category: params.category || '', radiusM: radius, limit: 40 }).then(function (r) {
+        if (!r.places.length) return server().then(function (res) {
+            if (res && res.success && res.data && !(res.data.places || res.data.items || []).length) res.data.noneLive = true;
+            return res;
+        });
+        var places = r.places.map(function (p) {
+            return { name: p.name, lat: p.lat, lng: p.lng, distance_m: p.distance_m, category: p.category, type: String(p.subclass || p.cls || '').replace(/_/g, ' '), address: '', source: 'openstreetmap' };
+        });
+        return { success: true, origin: 'live', data: { places: places, origin: 'live', provider: 'openfreemap-tiles' } };
+    }, function () { return server(); });
 }
 
 // Shared text for failed/slow requests (timeout vs. server vs. offline).
@@ -40,6 +58,7 @@ function exploreErrorBox(msg, retryJs) {
 // One line telling the visitor where the list came from: live, saved earlier, or our own catalogue.
 function exploreSourceNote(res) {
     var origin = res.origin || (res.data && res.data.origin) || 'live';
+    if (origin === 'live' && res.data && res.data.provider === 'openfreemap-tiles') return '<p class="explore-source" role="status"><i class="fa fa-map-pin"></i> Live from OpenStreetMap (via OpenFreeMap).</p>';
     var notice = res.notice || (res.data && res.data.notice) || '';
     if (origin === 'live') return '';
     var txt = origin === 'cached' ? 'Saved results (refreshed periodically).'
@@ -175,8 +194,8 @@ function goToDestination(name, lat, lng, country) {
     window.exploreSwitchTab = function (tab) {
         document.querySelectorAll('.explore-tab-btn').forEach(function (b) { b.classList.toggle('active', b.dataset.tab === tab); });
         document.querySelectorAll('.explore-panel').forEach(function (p) { p.classList.toggle('active', p.id === 'panel-' + tab); });
-        if (tab === 'map' && !state.map) initMap();
-        if (tab === 'map' && state.map) setTimeout(function () { state.map.invalidateSize(); }, 100);
+        if (tab === 'map' && !state.mapStarting) initMap();
+        if (tab === 'map' && state.ctl) setTimeout(function () { state.ctl.resize(); }, 100);
         if (tab === 'places' && !state.placesLoaded) loadPlaces('hotel');
         if (tab === 'weather' && !state.weather) loadWeather();
     };
@@ -232,7 +251,7 @@ function goToDestination(name, lat, lng, country) {
         });
     }
 
-    // ── Local inventory: real packages/hotels/activities TMS actually
+    // ── Local inventory: real packages/hotels/activities TourBuddy actually
     //    sells for this destination's country (master prompt item 6) ──
     function renderLocalInventory(inventory) {
         var el = document.getElementById('localInventoryContent');
@@ -343,39 +362,105 @@ function goToDestination(name, lat, lng, country) {
             card('phone-alt', 'Emergency Contacts', emgHtml, offline && !emg);
     }
 
-    // ── Map & Navigation tab ─────────────────────────────────
-    function initMap() {
-        state.map = L.map('exploreMap').setView([DEST.lat, DEST.lng], 13);
-        if (window.TmsMap) { TmsMap.addTiles(state.map, { maxZoom: 19 }); TmsMap.fixSize(state.map); }
-        else L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '&copy; OpenStreetMap contributors', maxZoom: 19 }).addTo(state.map);
-
-        L.marker([DEST.lat, DEST.lng], { icon: destIcon() }).addTo(state.map)
-            .bindPopup('<strong>' + escapeHtml(DEST.name) + '</strong><br>Your destination').openPopup();
-
-        // Delegated from the map container, same pattern tour-map.php uses for
-        // its own popup buttons -- Leaflet creates/destroys popup DOM nodes on
-        // demand, so a listener bound once here (registered exactly once, since
-        // initMap() itself only ever runs once) catches every pin's "View
-        // Details" click regardless of when that pin's popup was built.
-        document.getElementById('exploreMap').addEventListener('click', function (e) {
-            var link = e.target.closest ? e.target.closest('.map-pin-details-link') : null;
-            if (!link) return;
-            e.preventDefault();
-            var p = state.mapPlaces[parseInt(link.getAttribute('data-idx'), 10)];
-            if (p) openPlaceDetails(p, state.mapCategory);
-        });
-
-        // Default view: nearby attractions, same as before this round.
-        exploreLoadMapCategory('attraction');
+    // ── Map & Navigation tab (MapLibre via js/tms-map-pages.js) ─────────────────
+    // The map library is loaded when the Map tab is first opened. Everything that needs the map goes through withMap(), which
+    // starts the map if necessary and runs the callback once it is ready (or never, if the map failed — the rest of the page works).
+    function withMap(fn) {
+        if (state.mapReady) { fn(); return; }
+        (state.mapQueue = state.mapQueue || []).push(fn);
+        if (!state.mapStarting) initMap();
     }
 
-    // NEW (AI-map round): the map used to ALWAYS show attraction pins only —
-    // switching to "Hotels" or "Restaurants" in the separate Nearby Places tab
-    // never put a single pin on the map, even though the same real, already-
-    // fetched place data (with real lat/lng) was sitting right there. This
-    // lets the map tab plot any category's real nearby places at once,
-    // reusing loadPlaces()'s cached result when it's the same category that's
-    // already loaded (state.currentPlaces) instead of fetching it twice.
+    function mapFailed(box, msg) {
+        box.innerHTML = '';
+        var d = document.createElement('div');
+        d.setAttribute('role', 'alert');
+        d.style.cssText = 'padding:28px;text-align:center;color:#94a3b8;font-size:13px;';
+        d.textContent = msg;
+        var b = document.createElement('button');
+        b.type = 'button'; b.className = 'explore-retry-btn'; b.textContent = 'Try again'; b.style.marginLeft = '8px';
+        b.addEventListener('click', function () { state.mapStarting = false; initMap(); });
+        d.appendChild(document.createTextNode(' ')); d.appendChild(b);
+        box.appendChild(d);
+    }
+
+    function initMap() {
+        if (state.mapStarting) return;
+        state.mapStarting = true;
+        var box = document.getElementById('exploreMap');
+        if (!window.TmsMapPages) { mapFailed(box, 'The map library could not be loaded.'); return; }
+        box.innerHTML = '';
+        TmsMapPages.mount(box, { base: '', lang: document.documentElement.lang || 'en', center: [DEST.lng, DEST.lat], zoom: 12 }).then(function (ctl) {
+            state.ctl = ctl; state.map = ctl.map;
+            state.destPins = TmsMapPages.pins(ctl, 'dest', { color: '#0F4C81', cluster: false, popup: true });
+            state.destPins.set([{ lat: DEST.lat, lng: DEST.lng, title: DEST.name, subtitle: 'Your destination' }]);
+            state.navPins = TmsMapPages.pins(ctl, 'nav', { color: '#00A8A8', cluster: false, popup: true });
+            state.userPins = TmsMapPages.pins(ctl, 'user', { color: '#e74c3c', cluster: false, popup: true });
+            state.catPins = TmsMapPages.pins(ctl, 'cat', { color: '#00A8A8', cluster: true, popup: false,
+                onClick: function (item) { if (item && item.data) openPinPopup(item.data, item.idx, item.cat); } });
+            ctl.onStyleReady(function (map) { drawRouteLayers(map); });
+            // The base map already draws every mapped shop, hotel, clinic and so on: make those labels clickable.
+            if (window.TmsPoiTiles && !state.baseClicks) {
+                state.baseClicks = true;
+                TmsPoiTiles.bindBaseMapClicks(state.map, function (poi) {
+                    poi.distance_m = Math.round(TmsPoiTiles.haversine(DEST.lat, DEST.lng, poi.lat, poi.lng));
+                    poi.type = String(poi.subclass || poi.cls || '').replace(/_/g, ' ');
+                    openPinPopup(poi, -1, poi.category || 'attraction');
+                });
+            }
+            state.mapReady = true;
+            var q = state.mapQueue || []; state.mapQueue = [];
+            q.forEach(function (fn) { try { fn(); } catch (e) { if (window.console) console.error(e); } });
+            // Default view: nearby attractions, same as before.
+            exploreLoadMapCategory('attraction');
+        }, function () { mapFailed(box, 'The map could not be loaded right now. Check your connection.'); });
+    }
+
+    // Popup for a category pin, built with DOM nodes (no HTML strings: names/addresses come from live map data).
+    function openPinPopup(p, idx, category) {
+        if (!state.map || !window.maplibregl) return;
+        if (state.pinPopup) state.pinPopup.remove();
+        var w = document.createElement('div');
+        w.className = 'tms-popup';
+        var t = document.createElement('strong'); t.className = 'tms-popup-title'; t.textContent = p.name || ''; w.appendChild(t);
+        var kind = p.type || p.subtype || ''; if (kind) { var kd = document.createElement('div'); kd.className = 'tms-popup-sub'; kd.textContent = kind; w.appendChild(kd); }
+        if (p.address) { var ad = document.createElement('div'); ad.className = 'tms-popup-sub'; ad.textContent = p.address; w.appendChild(ad); }
+        if (typeof p.distance_m === 'number') { var dm = document.createElement('div'); dm.className = 'tms-popup-sub'; dm.textContent = (p.distance_m >= 1000 ? (p.distance_m / 1000).toFixed(1) + ' km' : p.distance_m + ' m') + ' away'; w.appendChild(dm); }
+        var row = document.createElement('div'); row.className = 'tms-popup-actions';
+        var d = document.createElement('a'); d.href = '#'; d.textContent = 'View Details';
+        d.className = 'tms-popup-link';
+        d.addEventListener('click', function (e) { e.preventDefault(); openPlaceDetails(p, category); });
+        var g = document.createElement('a'); g.href = '#'; g.textContent = 'Get Directions';
+        g.className = 'tms-popup-link';
+        g.addEventListener('click', function (e) { e.preventDefault(); exploreNavigateToPlace(p.lat, p.lng, p.name || ''); });
+        row.appendChild(d); row.appendChild(g); w.appendChild(row);
+        state.pinPopup = new maplibregl.Popup({ maxWidth: '260px', offset: 12 }).setLngLat([p.lng, p.lat]).setDOMContent(w).addTo(state.map);
+    }
+
+    // Route line (solid) or straight-line fallback (dashed). Re-added after a base-style switch by onStyleReady.
+    var ROUTE_SRC = 'tms-route-src';
+    function drawRouteLayers(map) {
+        if (!map.getStyle()) return;
+        if (!map.getSource(ROUTE_SRC)) map.addSource(ROUTE_SRC, { type: 'geojson', data: state.routeData || { type: 'FeatureCollection', features: [] } });
+        if (!map.getLayer('tms-route-casing')) map.addLayer({ id: 'tms-route-casing', type: 'line', source: ROUTE_SRC, filter: ['==', ['get', 'dashed'], 0],
+            layout: { 'line-cap': 'round', 'line-join': 'round' }, paint: { 'line-color': '#ffffff', 'line-width': 9, 'line-opacity': 0.9 } });
+        if (!map.getLayer('tms-route-line')) map.addLayer({ id: 'tms-route-line', type: 'line', source: ROUTE_SRC, filter: ['==', ['get', 'dashed'], 0],
+            layout: { 'line-cap': 'round', 'line-join': 'round' }, paint: { 'line-color': '#0b7f86', 'line-width': 5, 'line-opacity': 0.95 } });
+        if (!map.getLayer('tms-route-dash')) map.addLayer({ id: 'tms-route-dash', type: 'line', source: ROUTE_SRC, filter: ['==', ['get', 'dashed'], 1],
+            paint: { 'line-color': '#64748b', 'line-width': 4, 'line-dasharray': [2, 2] } });
+    }
+    function setRoute(latLngPairs, dashed) {
+        var coords = [];
+        (latLngPairs || []).forEach(function (pt) { if (pt && TmsMapPages.utils.validCoord(pt[0], pt[1])) coords.push([Number(pt[1]), Number(pt[0])]); });
+        state.routeData = coords.length < 2 ? { type: 'FeatureCollection', features: [] }
+            : { type: 'FeatureCollection', features: [{ type: 'Feature', properties: { dashed: dashed ? 1 : 0 }, geometry: { type: 'LineString', coordinates: coords } }] };
+        drawRouteLayers(state.map);
+        var src = state.map.getSource(ROUTE_SRC); if (src) src.setData(state.routeData);
+        if (coords.length >= 2) state.ctl.fitToItems(coords.map(function (c) { return { lng: c[0], lat: c[1] }; }), { padding: 48, maxZoom: 16 });
+    }
+    function clearRoute() { state.routeData = null; if (state.map && state.map.getSource(ROUTE_SRC)) state.map.getSource(ROUTE_SRC).setData({ type: 'FeatureCollection', features: [] }); }
+
+    // The map used to ALWAYS show attraction pins only; any category's real nearby places can now be plotted (same data as the Nearby Places tab).
     var MAP_CATEGORY_ICONS = {
         hotel: ['#0F4C81', 'fa-bed'], restaurant: ['#e67e22', 'fa-utensils'],
         hospital: ['#c0392b', 'fa-hospital'], pharmacy: ['#8e44ad', 'fa-prescription-bottle-alt'],
@@ -383,43 +468,26 @@ function goToDestination(name, lat, lng, country) {
         gas_station: ['#d35400', 'fa-gas-pump'], shopping_mall: ['#16a085', 'fa-shopping-bag'],
         tourist_info: ['#2980b9', 'fa-info-circle'], attraction: ['#00A8A8', 'fa-camera']
     };
-    function mapCategoryIcon(category) {
-        var conf = MAP_CATEGORY_ICONS[category] || MAP_CATEGORY_ICONS.attraction;
-        return L.divIcon({ className: '', html: '<div style="background:' + conf[0] + ';width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(0,0,0,.3);"><i class="fa ' + conf[1] + '" style="color:#fff;font-size:10px;"></i></div>', iconSize:[24,24], iconAnchor:[12,12] });
-    }
-
     window.exploreLoadMapCategory = function (category) {
-        if (!state.map) return;
+        if (!state.mapReady) { withMap(function () { exploreLoadMapCategory(category); }); return; }
         state.mapCategory = category;
         document.querySelectorAll('.map-cat-btn').forEach(function (b) { b.classList.toggle('active', b.dataset.cat === category); b.setAttribute('aria-pressed', b.dataset.cat === category ? 'true' : 'false'); });
 
-        // Clear the previous category's pins only -- destination/user/route
-        // markers are never pushed into state.markers, so this can't remove them.
-        state.markers.forEach(function (m) { state.map.removeLayer(m); });
-        state.markers = [];
+        // Clear the previous category's pins only -- destination/user/route layers are separate.
+        state.catPins.clear();
+        if (state.pinPopup) { state.pinPopup.remove(); state.pinPopup = null; }
 
-        // FIX (Round 114, package/places/map upgrade -- finding #11): a pin's
-        // popup only ever offered "Get Directions" -- clicking a place's card
-        // on the Nearby Places tab shows a full details view (renderPlaceCard
-        // gives "View Details" + "Get Directions"), but clicking the exact
-        // same place's pin on the Map tab could never open that same modal.
-        // state.mapPlaces holds the currently-plotted list so the delegated
-        // click handler below (registered once, in initMap()) can look a pin
-        // back up by index -- the same data-idx delegation pattern
-        // loadPlaces()/renderPlaceCard() already use for cards, chosen here
-        // over embedding the place name/data directly in an onclick attribute
-        // (which breaks on quotes in a name, same class of bug tour-map.php's
-        // own tmEsc() helper exists to avoid).
+        // A pin's popup offers both "View Details" (same modal as the Nearby Places cards) and "Get Directions".
+        // state.mapPlaces holds the plotted list; each pin item carries its index and the place object.
         function plot(places) {
             state.mapPlaces = places || [];
+            var conf = MAP_CATEGORY_ICONS[category] || MAP_CATEGORY_ICONS.attraction;
+            var items = [];
             state.mapPlaces.slice(0, 20).forEach(function (p, idx) {
-                if (!p.lat || !p.lng) return;
-                var m = L.marker([p.lat, p.lng], { icon: mapCategoryIcon(category) }).addTo(state.map)
-                    .bindPopup('<strong>' + escapeHtml(p.name) + '</strong>' + (p.address ? '<br>' + escapeHtml(p.address) : '') +
-                        '<br><a href="#" class="map-pin-details-link" data-idx="' + idx + '"><i class="fa fa-circle-info"></i> View Details</a>' +
-                        ' &middot; <a href="#" onclick="exploreNavigateToPlace(' + p.lat + ',' + p.lng + ',\'' + escapeHtml(p.name).replace(/'/g, "\\'") + '\');return false;"><i class="fa fa-directions"></i> Get Directions</a>');
-                state.markers.push(m);
+                if (!TmsMapPages.utils.validCoord(p.lat, p.lng)) return;
+                items.push({ lat: Number(p.lat), lng: Number(p.lng), title: p.name || '', color: conf[0], data: p, idx: idx, cat: category });
             });
+            state.catPins.set(items);
         }
 
         // Reuse the Nearby Places tab's already-fetched list when it's the
@@ -431,7 +499,7 @@ function goToDestination(name, lat, lng, country) {
         var status = document.getElementById('mapStatus');
         var token = state.mapToken = (state.mapToken || 0) + 1;
         if (status) { status.className = 'explore-source'; status.innerHTML = '<i class="fa fa-spinner fa-spin"></i> Loading ' + escapeHtml((PLACE_LABELS[category] || [category])[0].toLowerCase()) + ' on the map...'; }
-        exploreGet('places', { lat: DEST.lat, lng: DEST.lng, category: category, radius: 5000 }).then(function (res) {
+        exploreLivePlaces({ lat: DEST.lat, lng: DEST.lng, category: category, radius: 5000 }).then(function (res) {
             if (token !== state.mapToken) return;   // the visitor already picked another category
             if (!res.success) {
                 if (status) { status.className = 'explore-source is-warn'; status.innerHTML = '<i class="fa fa-exclamation-triangle"></i> ' + escapeHtml(res.error || 'Places are unavailable right now.') +
@@ -453,15 +521,6 @@ function goToDestination(name, lat, lng, country) {
         });
     };
 
-    function destIcon() {
-        return L.divIcon({ className: '', html: '<div style="background:var(--primary,#0F4C81);width:34px;height:34px;border-radius:50% 50% 50% 0;transform:rotate(-45deg);display:flex;align-items:center;justify-content:center;box-shadow:0 3px 8px rgba(0,0,0,.3);"><i class="fa fa-flag" style="transform:rotate(45deg);color:#fff;font-size:14px;"></i></div>', iconSize:[34,34], iconAnchor:[17,34] });
-    }
-    function attractionIcon() {
-        return L.divIcon({ className: '', html: '<div style="background:#00A8A8;width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(0,0,0,.3);"><i class="fa fa-camera" style="color:#fff;font-size:10px;"></i></div>', iconSize:[24,24], iconAnchor:[12,12] });
-    }
-    function userIcon() {
-        return L.divIcon({ className: '', html: '<div style="background:#e74c3c;width:20px;height:20px;border-radius:50%;border:3px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,.4);"></div>', iconSize:[20,20], iconAnchor:[10,10] });
-    }
 
     // Prefer the site-wide toast (defined in includes/header.php) over alert(),
     // which blocks the page and looks broken on mobile.
@@ -473,13 +532,13 @@ function goToDestination(name, lat, lng, country) {
     window.exploreLocateMe = function () {
         var btn = document.getElementById('locateBtn');
         if (!navigator.geolocation) { exploreNotify('Your browser does not support location sharing. You can still browse the map manually.'); return; }
+        if (!state.mapReady) { withMap(function () { exploreLocateMe(); }); return; }
         btn.innerHTML = '<i class="fa fa-spinner fa-spin"></i> Locating...';
+        // The browser permission prompt appears only because the visitor pressed "Locate Me".
         navigator.geolocation.getCurrentPosition(function (pos) {
             state.userLoc = { lat: pos.coords.latitude, lng: pos.coords.longitude };
             btn.innerHTML = '<i class="fa fa-location-arrow"></i> Locate Me';
-            if (state.userMarker) state.map.removeLayer(state.userMarker);
-            state.userMarker = L.marker([state.userLoc.lat, state.userLoc.lng], { icon: userIcon() })
-                .addTo(state.map).bindPopup('You are here');
+            state.userPins.set([{ lat: state.userLoc.lat, lng: state.userLoc.lng, title: 'You are here' }]);
             document.getElementById('routeModeBar').style.display = 'flex';
             exploreDrawRoute('driving');
         }, function () {
@@ -488,24 +547,24 @@ function goToDestination(name, lat, lng, country) {
         }, { enableHighAccuracy: true, timeout: 10000 });
     };
 
-    // Clearing navTarget puts routing back on the destination itself. Without
-    // this, viewing directions to one nearby cafe meant every subsequent
-    // "Locate Me" or travel-mode switch kept routing to that cafe forever.
+    // Clearing navTarget puts routing back on the destination itself.
     window.exploreRouteToDestination = function () {
         state.navTarget = null;
-        if (state.navMarker) { state.map.removeLayer(state.navMarker); state.navMarker = null; }
-        if (state.map) state.map.setView([DEST.lat, DEST.lng], 12);
+        if (state.navPins) state.navPins.clear();
+        if (state.ctl) state.ctl.flyTo(DEST.lng, DEST.lat, 12);
         var activeBtn = document.querySelector('.map-mode-btn.active');
         exploreDrawRoute(activeBtn ? activeBtn.dataset.mode : 'driving');
     };
 
     window.exploreDrawRoute = function (mode) {
         if (!state.userLoc) { exploreLocateMe(); return; }
+        if (!state.mapReady) { withMap(function () { exploreDrawRoute(mode); }); return; }
         var target = state.navTarget || DEST;
         document.querySelectorAll('.map-mode-btn').forEach(function (b) { b.classList.toggle('active', b.dataset.mode === mode); });
         var summary = document.getElementById('routeSummary');
         summary.innerHTML = '<span class="item"><i class="fa fa-spinner fa-spin"></i> Calculating route...</span>';
 
+        // api/explore.php proxies the routing engine server-side (cached, rate-limited): the browser never calls a routing server itself.
         exploreGet('route', {
             from_lat: state.userLoc.lat, from_lng: state.userLoc.lng,
             to_lat: target.lat, to_lng: target.lng, mode: mode
@@ -524,12 +583,8 @@ function goToDestination(name, lat, lng, country) {
                     ? '<span class="item"><a href="#" onclick="exploreRouteToDestination();return false;">' +
                       '<i class="fa fa-undo"></i> Route back to ' + escapeHtml(DEST.name) + '</a></span>'
                     : '');
-
-            if (state.routeLayer) state.map.removeLayer(state.routeLayer);
-            if (route.geometry && route.geometry.length) {
-                state.routeLayer = L.polyline(route.geometry, { color: '#00A8A8', weight: 5, opacity: .85 }).addTo(state.map);
-                state.map.fitBounds(state.routeLayer.getBounds(), { padding: [40, 40] });
-            }
+            if (route.geometry && route.geometry.length) setRoute(route.geometry, false);   // geometry arrives as [lat,lng] pairs
+            else clearRoute();
         }).catch(function (err) {
             routeFallbackLine(target, summary, exploreErrText(err, 'the route'));
         });
@@ -537,49 +592,40 @@ function goToDestination(name, lat, lng, country) {
 
     // Routing server down or slow: still show a dashed straight line and the straight-line distance, clearly labelled.
     function routeFallbackLine(target, summary, msg) {
-        var from = state.userLoc, a = from.lat * Math.PI / 180, b = target.lat * Math.PI / 180;
-        var dLat = (target.lat - from.lat) * Math.PI / 180, dLng = (target.lng - from.lng) * Math.PI / 180;
-        var h = Math.sin(dLat / 2) * Math.sin(dLat / 2) + Math.cos(a) * Math.cos(b) * Math.sin(dLng / 2) * Math.sin(dLng / 2);
-        var km = 2 * 6371 * Math.asin(Math.sqrt(h));
-        if (state.routeLayer) state.map.removeLayer(state.routeLayer);
-        state.routeLayer = L.polyline([[from.lat, from.lng], [target.lat, target.lng]], { color: '#94a3b8', weight: 4, dashArray: '8 8' }).addTo(state.map);
-        state.map.fitBounds(state.routeLayer.getBounds(), { padding: [40, 40] });
+        var from = state.userLoc;
+        var km = TmsMapPages.utils.validCoord(from.lat, from.lng) ? haversineKm(from.lat, from.lng, target.lat, target.lng) : 0;
+        setRoute([[from.lat, from.lng], [target.lat, target.lng]], true);
         summary.innerHTML = '<span class="item" style="color:#b45309;"><i class="fa fa-exclamation-triangle"></i> ' + escapeHtml(msg || 'Routing is unavailable right now.') + '</span>' +
             '<span class="item"><i class="fa fa-ruler"></i> About ' + km.toFixed(1) + ' km in a straight line</span>' +
             '<span class="item"><a href="#" onclick="exploreDrawRoute(document.querySelector(\'.map-mode-btn.active\') ? document.querySelector(\'.map-mode-btn.active\').dataset.mode : \'driving\');return false;"><i class="fa fa-redo"></i> Try again</a></span>';
     }
+    function haversineKm(lat1, lng1, lat2, lng2) {
+        var r = Math.PI / 180, a = lat1 * r, b = lat2 * r, dLat = (lat2 - lat1) * r, dLng = (lng2 - lng1) * r;
+        var h = Math.sin(dLat / 2) * Math.sin(dLat / 2) + Math.cos(a) * Math.cos(b) * Math.sin(dLng / 2) * Math.sin(dLng / 2);
+        return 2 * 6371.0088 * Math.asin(Math.sqrt(h));
+    }
 
-    // ROOT-CAUSE FIX: "Get Directions" on a nearby-place card used to open
-    // https://www.openstreetmap.org/directions in a new tab, taking visitors
-    // off the site entirely. This keeps them on the page: it switches to the
-    // existing (already-built) embedded Map & Navigation tab, drops a pin on
-    // the chosen place, and draws the route with the same OSRM-backed
-    // in-app routing used for the main destination — auto-detecting the
-    // visitor's GPS location via navigator.geolocation exactly as before,
-    // just now reusable for any nearby place instead of only the destination.
+    // "Get Directions" on a nearby-place card keeps visitors on the page: switch to the Map & Navigation tab, drop a pin on the
+    // chosen place and draw the route from the visitor's location (asked only on their click).
     window.exploreNavigateToPlace = function (lat, lng, name) {
         lat = parseFloat(lat); lng = parseFloat(lng);
-        if (!lat || !lng) {
+        if (!TmsMapPages.utils.validCoord(lat, lng)) {
             exploreNotify('We don\'t have exact coordinates for this place, so directions aren\'t available for it.');
             return;
         }
         state.navTarget = { lat: lat, lng: lng, name: name || 'this place' };
-
         exploreSwitchTab('map');
-        if (!state.map) initMap();
-
-        if (state.navMarker) state.map.removeLayer(state.navMarker);
-        state.navMarker = L.marker([lat, lng], { icon: attractionIcon() }).addTo(state.map)
-            .bindPopup('<strong>' + escapeHtml(state.navTarget.name) + '</strong>').openPopup();
-        state.map.setView([lat, lng], 15);
-
-        document.getElementById('routeModeBar').style.display = 'flex';
-        if (state.userLoc) {
-            var activeBtn = document.querySelector('.map-mode-btn.active');
-            exploreDrawRoute(activeBtn ? activeBtn.dataset.mode : 'driving');
-        } else {
-            exploreLocateMe();
-        }
+        withMap(function () {
+            state.navPins.set([{ lat: lat, lng: lng, title: state.navTarget.name }]);
+            state.ctl.flyTo(lng, lat, 15);
+            document.getElementById('routeModeBar').style.display = 'flex';
+            if (state.userLoc) {
+                var activeBtn = document.querySelector('.map-mode-btn.active');
+                exploreDrawRoute(activeBtn ? activeBtn.dataset.mode : 'driving');
+            } else {
+                exploreLocateMe();
+            }
+        });
     };
 
     // ── Nearby places tab ─────────────────────────────────────
@@ -602,7 +648,7 @@ function goToDestination(name, lat, lng, country) {
         grid.innerHTML = '<p class="explore-loading" style="padding:8px 0 14px;" role="status"><i class="fa fa-spinner fa-spin"></i> Finding ' + label + ' nearby...</p>' + exploreSkeleton(6);
         var retry = "loadPlaces('" + category + "')";
 
-        exploreGet('places', { lat: DEST.lat, lng: DEST.lng, category: category }).then(function (res) {
+        exploreLivePlaces({ lat: DEST.lat, lng: DEST.lng, category: category }).then(function (res) {
             if (token !== state.placesToken) return;   // a newer category was chosen while this one was loading
             grid.removeAttribute('aria-busy');
             if (!res.success) {
@@ -671,7 +717,7 @@ function goToDestination(name, lat, lng, country) {
             (p.source === 'local' ? '<div class="meta"><i class="fa fa-database"></i> From our catalogue' + (p.is_sample ? ' (sample listing)' : '') + '</div>' : '') +
             '<div class="place-card-actions">' +
             (p.source === 'local' && p.local_url
-                ? '<a class="nav-link" href="' + escapeHtml(p.local_url) + '"><i class="fa fa-arrow-right"></i> View on TMS</a>'
+                ? '<a class="nav-link" href="' + escapeHtml(p.local_url) + '"><i class="fa fa-arrow-right"></i> View on TourBuddy</a>'
                 : '<a class="nav-link place-card-details-link" href="#" data-idx="' + idx + '"><i class="fa fa-circle-info"></i> View Details</a>') +
             (p.lat && p.lng ? '<a class="nav-link" href="#" data-idx="' + idx + '"><i class="fa fa-directions"></i> Get Directions</a>' : '') +
             '</div>' +
@@ -911,70 +957,4 @@ function goToDestination(name, lat, lng, country) {
     loadOverview();
 })();
 
-/* ══════════════════════════════════════════════════════════════
-   FLOATING AI EXPLORE CHATBOT (explore-chatbot.php)
-   ══════════════════════════════════════════════════════════════ */
-(function initExploreChatbot() {
-    var toggleBtn = document.getElementById('exploreChatToggle');
-    if (!toggleBtn) return;
-
-    var open = false;
-    var sessionId = 'exp_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8);
-
-    window.toggleExploreChat = function () {
-        open = !open;
-        document.getElementById('exploreChatPanel').classList.toggle('open', open);
-        if (open) {
-            var msgs = document.getElementById('exploreChatMessages');
-            if (!msgs.children.length) {
-                var destName = document.body.dataset.exploreDest || 'your destination';
-                addExploreMsg('bot', "Hi! I'm your AI travel assistant for " + destName + ". Ask me about attractions, food, transport, safety, weather-based activities, or anything else about your trip!");
-            }
-            document.getElementById('exploreChatInput').focus();
-        }
-    };
-
-    function addExploreMsg(type, text) {
-        var msgs = document.getElementById('exploreChatMessages');
-        var div = document.createElement('div');
-        div.className = 'exp-msg exp-msg-' + type;
-        var formatted = escapeHtml(text).replace(/\n/g, '<br>');
-        div.innerHTML = '<div class="exp-msg-bubble">' + formatted + '</div>';
-        msgs.appendChild(div);
-        msgs.scrollTop = msgs.scrollHeight;
-    }
-
-    function showExploreTyping() {
-        var msgs = document.getElementById('exploreChatMessages');
-        var div = document.createElement('div');
-        div.className = 'exp-msg exp-msg-bot exp-typing';
-        div.id = 'expTyping';
-        div.innerHTML = '<div class="exp-msg-bubble"><span class="exp-typing-dot"></span><span class="exp-typing-dot"></span><span class="exp-typing-dot"></span></div>';
-        msgs.appendChild(div);
-        msgs.scrollTop = msgs.scrollHeight;
-    }
-    function hideExploreTyping() { var el = document.getElementById('expTyping'); if (el) el.remove(); }
-
-    window.sendExploreChat = function () {
-        var input = document.getElementById('exploreChatInput');
-        var text = input.value.trim();
-        if (!text) return;
-        input.value = '';
-        addExploreMsg('user', text);
-        showExploreTyping();
-
-        var fd = new FormData();
-        fd.append('message', text);
-        fd.append('destination', document.body.dataset.exploreDest || '');
-        fd.append('session_id', sessionId);
-        fd.append('context', document.body.dataset.exploreContext || '');
-
-        explorePost('chat', fd).then(function (res) {
-            hideExploreTyping();
-            addExploreMsg('bot', res.success ? res.data.reply : ('Sorry, I ran into an issue: ' + (res.error || 'please try again.')));
-        }).catch(function () {
-            hideExploreTyping();
-            addExploreMsg('bot', "Sorry, I couldn't reach the AI assistant. Please check your connection and try again.");
-        });
-    };
-})();
+/* The Explore chat now lives in the single site-wide assistant (backend/chatbot.php; "Ask about this place"). */

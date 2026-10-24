@@ -17,7 +17,7 @@ sup_head('Dashboard', $sup, 'dashboard.php');
 <h1>Welcome, <?php echo h($sup['ContactName']); ?></h1>
 <p class="sp-sub"><?php echo h($sup['BusinessName']); ?> &middot; <?php echo sup_status_badge($sup['Status']); ?></p>
 <?php if ($sup['Status'] === 'pending'): ?><div class="sp-alert warn" role="status">Your business is waiting for verification. You can list packages as soon as an administrator verifies it.</div><?php endif; ?>
-<?php if ($sup['VerificationNotes'] && $sup['Status'] !== 'verified'): ?><div class="sp-alert info">Note from TMS: <?php echo h($sup['VerificationNotes']); ?></div><?php endif; ?>
+<?php if ($sup['VerificationNotes'] && $sup['Status'] !== 'verified'): ?><div class="sp-alert info">Note from TourBuddy: <?php echo h($sup['VerificationNotes']); ?></div><?php endif; ?>
 <div class="sp-grid">
   <div class="sp-stat"><b><?php echo $by['approved']; ?></b><span>Live packages</span></div>
   <div class="sp-stat"><b><?php echo $by['pending_review']; ?></b><span>Packages in review</span></div>
@@ -31,5 +31,5 @@ sup_head('Dashboard', $sup, 'dashboard.php');
   <a class="btn secondary" href="blackouts.php">Block dates</a>
   <a class="btn secondary" href="bookings.php">Review bookings</a>
 </div>
-<p class="sp-sub">Your commission rate is <?php echo h(number_format((float)$sup['CommissionPct'], 2)); ?>% of each completed, fully paid booking. Figures above come from TMS booking and settlement records.</p>
+<p class="sp-sub">Your commission rate is <?php echo h(number_format((float)$sup['CommissionPct'], 2)); ?>% of each completed, fully paid booking. Figures above come from TourBuddy booking and settlement records.</p>
 <?php sup_foot();

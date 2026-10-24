@@ -61,7 +61,7 @@ try {
     $q->execute([':bid' => $bookingId, ':email' => $email]);
     $trip = $q->fetch(PDO::FETCH_OBJ);
 } catch (PDOException $e) {
-    error_log('[TMS] my-trip.php: extra columns not available yet -- falling back: ' . $e->getMessage());
+    error_log('[TourBuddy] my-trip.php: extra columns not available yet -- falling back: ' . $e->getMessage());
     $q = $dbh->prepare($sqlBasic);
     $q->execute([':bid' => $bookingId, ':email' => $email]);
     $trip = $q->fetch(PDO::FETCH_OBJ);
@@ -98,7 +98,7 @@ if (!$trip) {
             $stmt->execute([':loc1' => $trip->PackageLocation, ':loc2' => $trip->PackageLocation]);
             $safetyAlerts = $stmt->fetchAll(PDO::FETCH_OBJ);
         } catch (Exception $e) {
-            error_log('[TMS] my-trip.php: safety alert lookup failed: ' . $e->getMessage());
+            error_log('[TourBuddy] my-trip.php: safety alert lookup failed: ' . $e->getMessage());
         }
     }
     $payStatus = $trip->PaymentStatus ?? 'unpaid';
@@ -154,7 +154,7 @@ if (!$trip) {
         exit;
     }
 
-    // TMS V2 -- Trip Readiness Score. Only meaningful before departure
+    // TourBuddy V2 -- Trip Readiness Score. Only meaningful before departure
     // (during/after/cancelled trips don't need a "get ready" checklist),
     // computed from real facts already available on this page -- no new
     // query for payment/confirmation status, since $trip already has them.
@@ -169,9 +169,9 @@ if (!$trip) {
 <link rel="apple-touch-icon" href="images/icon-192.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="TMS">
+<meta name="apple-mobile-web-app-title" content="TourBuddy">
 <meta name="mobile-web-app-capable" content="yes">
-<title>TMS | My Trip</title>
+<title>TourBuddy | My Trip</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
 <link href="css/bootstrap.min2.css" rel='stylesheet' type='text/css' />
@@ -459,7 +459,7 @@ html[data-theme="dark"] .mt-sched-item{color:var(--text-muted) !important;}
                 <h4><i class="fa fa-calendar-check-o"></i> <?php echo htmlspecialchars(tms_t('heading_day_by_day_itinerary','Day-by-Day Itinerary'), ENT_QUOTES, 'UTF-8'); ?></h4>
                 <?php if ($itinerary && !empty($itinerary['days'])): ?>
                     <div class="mt-ai-disclosure">
-                        <i class="fa fa-info-circle"></i> <?php echo htmlspecialchars(tms_t('msg_ai_itinerary_disclosure',"This is an AI-generated trip plan — a suggestion to help you plan, not a confirmed itinerary booked or verified by TMS staff. Hotel/restaurant names and prices here are AI suggestions, not part of your actual booking."), ENT_QUOTES, 'UTF-8'); ?>
+                        <i class="fa fa-info-circle"></i> <?php echo htmlspecialchars(tms_t('msg_ai_itinerary_disclosure',"This is an AI-generated trip plan — a suggestion to help you plan, not a confirmed itinerary booked or verified by TourBuddy staff. Hotel/restaurant names and prices here are AI suggestions, not part of your actual booking."), ENT_QUOTES, 'UTF-8'); ?>
                     </div>
                     <?php
                     require_once dirname(__DIR__) . '/backend/ai/ItineraryChecker.php';

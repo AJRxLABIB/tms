@@ -99,7 +99,7 @@ if (isset($TMS_TRANSLATIONS) && is_array($TMS_TRANSLATIONS)) {
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>TMS | Translation Management</title>
+<title>TourBuddy | Translation Management</title>
 <link href="css/font-awesome.css" rel="stylesheet">
 <link href="css/bootstrap.min.css" rel="stylesheet">
 <link href="<?php echo tms_asset_ver('css/admin-v6.css'); ?>" rel="stylesheet">

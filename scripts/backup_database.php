@@ -64,7 +64,7 @@ function tms_backup_log(PDO $dbh, string $status, string $filename, int $bytes, 
         ]);
     } catch (Throwable $e) {
         // Logging failure must never fail the backup itself.
-        error_log('[TMS Backup] Could not write tblbackuplog: ' . $e->getMessage());
+        error_log('[TourBuddy Backup] Could not write tblbackuplog: ' . $e->getMessage());
     }
 }
 
@@ -172,7 +172,7 @@ try {
 }
 
 if (!$success) {
-    fwrite(STDERR, "[TMS Backup] FAILED: {$errorOutput}\n");
+    fwrite(STDERR, "[TourBuddy Backup] FAILED: {$errorOutput}\n");
     tms_backup_log($dbh, 'failed', basename($dumpPath), 0, $errorOutput);
     exit(1);
 }
@@ -188,10 +188,10 @@ if (!empty($offsitePath)) {
         if (@copy($encPath, $dest)) {
             $GLOBALS['tms_backup_offsite_ok'] = 1;
         } else {
-            error_log("[TMS Backup] Offsite copy to {$dest} failed (local backup still succeeded).");
+            error_log("[TourBuddy Backup] Offsite copy to {$dest} failed (local backup still succeeded).");
         }
     } else {
-        error_log("[TMS Backup] BACKUP_OFFSITE_PATH '{$offsitePath}' is not a writable directory -- skipping offsite copy (local backup still succeeded).");
+        error_log("[TourBuddy Backup] BACKUP_OFFSITE_PATH '{$offsitePath}' is not a writable directory -- skipping offsite copy (local backup still succeeded).");
     }
 }
 

@@ -47,7 +47,7 @@ class FraudDetector {
                 ];
             }
         } catch (Exception $e) {
-            error_log('[TMS FraudDetector] Duplicate mobile check failed: ' . $e->getMessage());
+            error_log('[TourBuddy FraudDetector] Duplicate mobile check failed: ' . $e->getMessage());
         }
 
         // Signal 2: Gmail dot/plus-addressing trick — normalize and group
@@ -67,7 +67,7 @@ class FraudDetector {
                 }
             }
         } catch (Exception $e) {
-            error_log('[TMS FraudDetector] Gmail-trick check failed: ' . $e->getMessage());
+            error_log('[TourBuddy FraudDetector] Gmail-trick check failed: ' . $e->getMessage());
         }
 
         return $groups;
@@ -103,7 +103,7 @@ class FraudDetector {
                 ];
             }
         } catch (Exception $e) {
-            error_log('[TMS FraudDetector] Coupon cluster check failed: ' . $e->getMessage());
+            error_log('[TourBuddy FraudDetector] Coupon cluster check failed: ' . $e->getMessage());
         }
 
         // Signal 2: rapid-fire bookings — 5+ bookings from the same account
@@ -127,7 +127,7 @@ class FraudDetector {
                 ];
             }
         } catch (Exception $e) {
-            error_log('[TMS FraudDetector] Rapid-fire check failed: ' . $e->getMessage());
+            error_log('[TourBuddy FraudDetector] Rapid-fire check failed: ' . $e->getMessage());
         }
 
         // Signal 3: abnormal cancellation rate — accounts with several
@@ -154,7 +154,7 @@ class FraudDetector {
                 ];
             }
         } catch (Exception $e) {
-            error_log('[TMS FraudDetector] Cancellation-rate check failed: ' . $e->getMessage());
+            error_log('[TourBuddy FraudDetector] Cancellation-rate check failed: ' . $e->getMessage());
         }
 
         return $flagged;

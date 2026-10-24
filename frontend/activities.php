@@ -74,9 +74,9 @@ function activityPageUrl(int $p): string {
 <link rel="apple-touch-icon" href="images/icon-192.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="TMS">
+<meta name="apple-mobile-web-app-title" content="TourBuddy">
 <meta name="mobile-web-app-capable" content="yes">
-<title>TMS | Activities</title>
+<title>TourBuddy | Activities</title>
 <?php
 // SEO meta broadening (master prompt item 53): same treatment as
 // hotels.php -- plain title/description via the shared helper, no JSON-LD.
@@ -84,7 +84,7 @@ function activityPageUrl(int $p): string {
 // docblock), so no schema.org structured data is emitted for it either.
 tms_seo_meta([
     'title'       => 'Activities',
-    'description' => 'Browse activities and tours by city, category, and price. Sample/demo listings for the TMS activities marketplace feature.',
+    'description' => 'Browse activities and tours by city, category, and price. Sample/demo listings for the TourBuddy activities marketplace feature.',
     'breadcrumbs' => [
         ['label' => 'Home', 'url' => 'index.php'],
         ['label' => 'Activities'],
@@ -119,10 +119,11 @@ tms_seo_meta([
 </head>
 <body>
 <?php include('backend/header.php'); ?>
+<link rel="stylesheet" href="<?php echo tms_asset_ver('css/tms-pages.css'); ?>">
 
 <div class="banner-3">
     <div class="container">
-        <h1 class="wow zoomIn animated" data-wow-delay=".1s"><?php echo tms_t('heading_tms_activities','TMS – Activities'); ?></h1>
+        <h1 class="wow zoomIn animated" data-wow-delay=".1s"><?php echo tms_t('heading_tms_activities','TourBuddy – Activities'); ?></h1>
     </div>
 </div>
 
@@ -133,7 +134,7 @@ tms_seo_meta([
             ['label' => 'Activities'],
         ]); ?>
         <div class="tms-sample-banner wow fadeIn">
-            <i class="fa fa-info-circle"></i> <?php echo tms_t('dest_activities_sample_banner','These activity listings are <strong>sample/demo data</strong> for showcasing the TMS activities marketplace feature -- not a live, real-world booking inventory from an actual tour operator. Bookings you make are recorded for demonstration purposes.'); ?>
+            <i class="fa fa-info-circle"></i> <?php echo tms_t('dest_activities_sample_banner','These activity listings are <strong>sample/demo data</strong> for showcasing the TourBuddy activities marketplace feature -- not a live, real-world booking inventory from an actual tour operator. Bookings you make are recorded for demonstration purposes.'); ?>
         </div>
 
         <div class="pkg-toolbar wow fadeInDown" data-wow-delay=".1s">
@@ -153,7 +154,14 @@ tms_seo_meta([
                             <?php endforeach; ?>
                         </select>
                     </div>
-                    <div class="col-md-2" style="flex:0 0 170px;">
+                    <div style="display:flex;gap:8px;">
+                        <button type="submit" class="btn-search"><i class="fa fa-search"></i> <?php echo tms_t('btn_search','Search'); ?></button>
+                        <a href="activities.php" class="btn-reset"><?php echo tms_t('btn_reset','Reset'); ?></a>
+                    </div>
+                    <details class="tms-more-filters" style="flex:1 0 100%;">
+                    <summary>More filters</summary>
+                    <div class="tms-more-row">
+<div class="col-md-2" style="flex:0 0 170px;">
                         <label for="activitiesCategory" style="font-size:13px;font-weight:600;color:#555;margin-bottom:4px;"><i class="fa fa-tags"></i> <?php echo tms_t('label_category','Category'); ?></label>
                         <select name="category" id="activitiesCategory" class="form-control">
                             <option value=""><?php echo tms_t('dest_all_categories','All Categories'); ?></option>
@@ -171,10 +179,9 @@ tms_seo_meta([
                             <option value="rating" <?php echo $sortBy==='rating'?'selected':''; ?>><?php echo tms_t('sort_top_rated','Top Rated'); ?></option>
                         </select>
                     </div>
-                    <div style="display:flex;gap:8px;">
-                        <button type="submit" class="btn-search"><i class="fa fa-search"></i> <?php echo tms_t('btn_search','Search'); ?></button>
-                        <a href="activities.php" class="btn-reset"><?php echo tms_t('btn_reset','Reset'); ?></a>
+                    
                     </div>
+                    </details>
                 </div>
             </form>
         </div>
@@ -185,6 +192,7 @@ tms_seo_meta([
         </div>
 
         <?php if (count($results) > 0): ?>
+        <div class="tms-list-grid">
         <?php foreach ($results as $a): ?>
         <div class="rom-btm wow fadeInUp animated" data-wow-delay=".05s">
             <div class="col-md-3 room-left">
@@ -208,6 +216,7 @@ tms_seo_meta([
             <div class="clearfix"></div>
         </div>
         <?php endforeach; ?>
+        </div>
 
         <?php if ($totalPages > 1): ?>
         <div class="pagination-wrap">
@@ -223,7 +232,7 @@ tms_seo_meta([
 
         <?php else: ?>
         <div class="no-results">
-            <i class="fa fa-map-signs"></i>
+            <svg class="tms-empty-art" viewBox="0 0 120 90" width="120" height="90" aria-hidden="true"><circle cx="52" cy="40" r="22" fill="none" stroke="currentColor" stroke-width="5"/><path d="M69 57l22 22" stroke="currentColor" stroke-width="7" stroke-linecap="round"/><path d="M42 40h20" stroke="currentColor" stroke-width="4" stroke-linecap="round" opacity=".5"/></svg>
             <h3><?php echo tms_t('msg_no_activities_found','No activities found'); ?></h3>
             <p><?php echo tms_t('msg_try_different_search_hotels','Try a different search or'); ?> <a href="activities.php"><?php echo tms_t('link_view_all_activities','view all activities'); ?></a>.</p>
         </div>

@@ -68,7 +68,7 @@ class BookingRepository
             $q->bindParam(':uemail', $email, PDO::PARAM_STR);
             $q->execute();
         } catch (PDOException $e) {
-            error_log('[TMS] BookingRepository::findByUserEmail: PaymentStatus column not available yet (run database/migrate.php) -- falling back: ' . $e->getMessage());
+            error_log('[TourBuddy] BookingRepository::findByUserEmail: PaymentStatus column not available yet (run database/migrate.php) -- falling back: ' . $e->getMessage());
             $q = $this->dbh->prepare($sqlWithoutPayment);
             $q->bindParam(':uemail', $email, PDO::PARAM_STR);
             $q->execute();

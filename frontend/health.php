@@ -53,7 +53,7 @@ try {
     $status['checks']['database'] = ['status' => 'down'];
     $status['status'] = 'down';
     $httpCode = 503;
-    error_log('[TMS Health] Database check failed: ' . $e->getMessage());
+    error_log('[TourBuddy Health] Database check failed: ' . $e->getMessage());
 }
 
 // ── External services: report configured/not-configured only, never make

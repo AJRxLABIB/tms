@@ -41,7 +41,7 @@ final class AIRateLimit
                 return ['allowed' => $n <= $limit, 'count' => $n, 'limit' => $limit, 'retry_after' => $retry];
             } catch (Throwable $e) {
                 if ($attempt === 0 && str_contains($e->getMessage(), "doesn't exist")) { try { self::migrate($dbh); continue; } catch (Throwable $e2) { $e = $e2; } }
-                error_log('[TMS AI rate] failing open: ' . $e->getMessage());
+                error_log('[TourBuddy AI rate] failing open: ' . $e->getMessage());
                 break;
             }
         }

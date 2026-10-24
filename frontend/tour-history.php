@@ -143,9 +143,9 @@ $statusConfig = [
 <link rel="apple-touch-icon" href="images/icon-192.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="TMS">
+<meta name="apple-mobile-web-app-title" content="TourBuddy">
 <meta name="mobile-web-app-capable" content="yes">
-<title>TMS | My Tour History</title>
+<title>TourBuddy | My Tour History</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
 <link href="css/bootstrap.min2.css" rel='stylesheet' type='text/css' />
@@ -231,25 +231,39 @@ html[data-theme="dark"] .history-body .detail-row { color: var(--text-muted) !im
 .mod-modal h4{margin:0 0 14px;font-weight:700;}
 .mod-modal .form-group{margin-bottom:14px;}
 .mod-modal label{font-weight:600;font-size:13px;display:block;margin-bottom:5px;}
+
+/* ── Tropical Journey (D4) overrides: token colours, chips, filters ── */
+.history-card{background:var(--tms-surface);border:1px solid var(--tms-border);border-radius:var(--tms-radius);box-shadow:var(--tms-shadow);}
+.history-card.is-hidden{display:none}
+.history-header{background:var(--tms-surface-2) !important;border-bottom:1px solid var(--tms-border);}
+.history-header .booking-id{color:var(--tms-primary);}
+.history-body .detail-row{color:var(--tms-muted);}
+.history-body .detail-row i{color:var(--tms-primary);}
+.errorWrap{padding:13px 16px;margin:0 0 16px;border-radius:14px;background:var(--tms-bad-bg);color:var(--tms-bad);border:0;box-shadow:none;}
+.succWrap{padding:13px 16px;margin:0 0 16px;border-radius:14px;background:var(--tms-ok-bg);color:var(--tms-ok);border:0;box-shadow:none;}
+.cancel-btn,.ticket-btn,.modify-btn{min-height:44px;border-radius:12px;padding:0 18px;font-weight:700;display:inline-flex;align-items:center;gap:6px;}
+.cancel-btn{background:transparent;color:var(--tms-bad);border:2px solid var(--tms-bad);}
+.cancel-btn:hover:not(:disabled){background:var(--tms-bad);color:#fff;}
+.ticket-btn,.modify-btn{background:transparent;color:var(--tms-link);border:2px solid var(--tms-border);}
+.ticket-btn:hover,.modify-btn:hover{background:var(--tms-surface-2);color:var(--tms-link);border-color:var(--tms-primary);}
+.tb-primary{background:var(--tms-primary) !important;color:var(--tms-primary-ink) !important;border-color:var(--tms-primary) !important;}
+.bk-timeline .step.done{color:var(--tms-ok);} .bk-timeline .step.current{color:var(--tms-primary);} .bk-timeline .step.bad{color:var(--tms-bad);}
+.mod-modal{background:var(--tms-surface);color:var(--tms-text);border-radius:20px;}
+.mod-badge{background:var(--tms-info-bg);color:var(--tms-info);}
+.mod-modal .form-control{width:100%;height:50px;border:2px solid var(--tms-border);border-radius:12px;padding:0 12px;background:var(--tms-surface);color:var(--tms-text);}
 </style>
+<link rel="stylesheet" href="css/tms-account.css?v=1">
 </head>
 <body>
 <?php include('backend/header.php'); ?>
-<div class="tms-page-hero" style="min-height:<?php echo !empty($_SESSION['checkout_success']) ? '260px' : '180px'; ?>;">
-    <div style="text-align:center;">
-    <h1 class="wow zoomIn animated" data-wow-delay=".1s"><?php echo tms_t('heading_booking_history','My Tour History'); ?></h1>
-    <?php if (!empty($_SESSION['checkout_success'])): ?>
-    <div class="tms-steps" style="margin-top:22px;">
-      <div class="tms-step done"><div class="tms-step-circle"><i class="fa fa-check"></i></div><div class="tms-step-label"><?php echo tms_t('step_cart','Cart'); ?></div></div>
-      <div class="tms-step done"><div class="tms-step-circle"><i class="fa fa-check"></i></div><div class="tms-step-label"><?php echo tms_t('step_checkout','Checkout'); ?></div></div>
-      <div class="tms-step done active"><div class="tms-step-circle"><i class="fa fa-check"></i></div><div class="tms-step-label"><?php echo tms_t('step_confirmed','Confirmed'); ?></div></div>
-    </div>
-    <?php endif; ?>
-    </div>
-</div>
+<main class="tms-acct">
+<section class="tms-acct-hero reveal">
+    <h1><?php echo tms_t('heading_booking_history','My Tour History'); ?></h1>
+    <p>Everything you've booked, in one place.</p>
+</section>
 
-<div class="privacy">
-    <div class="container">
+<div>
+    <div>
         <?php if (!empty($_SESSION['checkout_success'])): ?>
             <div class="succWrap" style="display:flex;align-items:center;gap:14px;">
                 <i class="fa fa-check-circle" style="font-size:26px;color:#27ae60;"></i>
@@ -266,11 +280,16 @@ html[data-theme="dark"] .history-body .detail-row { color: var(--text-muted) !im
             <div class="succWrap"><strong><?php echo tms_t('label_success_colon','SUCCESS:'); ?></strong> <?php echo htmlspecialchars($msg, ENT_QUOTES,'UTF-8'); ?></div>
         <?php endif; ?>
 
-        <h3 class="wow fadeInDown animated" data-wow-delay=".1s" style="margin-bottom:24px;color:var(--text);">
-            <i class="fa fa-history" style="color:var(--secondary)"></i>
-            <?php echo tms_t('heading_your_bookings','Your Bookings'); ?>
-            <span style="font-size:14px;font-weight:400;color:var(--text-muted);margin-left:8px;">(<?php echo count($bookings); ?> <?php echo tms_t('label_total_word','total'); ?>)</span>
-        </h3>
+        <?php $nUp=$nPast=$nCan=0; $__t=new DateTime('today');
+foreach ($bookings as $__b) { if ($__b->status==2) $nCan++; elseif (new DateTime($__b->FromDate) >= $__t) $nUp++; else $nPast++; } ?>
+        <?php if (count($bookings) > 0): ?>
+        <div class="tms-filters" role="group" aria-label="Filter bookings" id="bkFilters">
+            <button type="button" data-f="all" aria-pressed="true">All (<?php echo count($bookings); ?>)</button>
+            <button type="button" data-f="upcoming" aria-pressed="false">Upcoming (<?php echo $nUp; ?>)</button>
+            <button type="button" data-f="past" aria-pressed="false">Past (<?php echo $nPast; ?>)</button>
+            <button type="button" data-f="cancelled" aria-pressed="false">Cancelled (<?php echo $nCan; ?>)</button>
+        </div>
+        <?php endif; ?>
 
         <?php if (count($bookings) > 0): ?>
             <?php foreach ($bookings as $b):
@@ -285,14 +304,15 @@ html[data-theme="dark"] .history-body .detail-row { color: var(--text-muted) !im
                 $canCancel = $canCancel && ($hoursUntil > 24);
                 $canModify = ($b->status != 2) && ($fromDate > $today) && ($b->ModificationStatus !== 'pending');
             ?>
-            <div class="history-card wow fadeInUp" data-wow-delay=".05s">
+            <div class="history-card" data-group="<?php echo $b->status == 2 ? 'cancelled' : ($fromDate >= new DateTime('today') ? 'upcoming' : 'past'); ?>">
                 <div class="history-header">
                     <span class="booking-id">
                         <i class="fa fa-ticket"></i> #BK<?php echo (int)$b->BookingId; ?>
                     </span>
                     <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
-                        <span class="label label-<?php echo $sc['class']; ?>" style="font-size:12px;padding:5px 10px;">
-                            <?php echo $sc['label'];
+                        <?php $stIcon = $b->status == 1 ? 'check-circle' : ($b->status == 2 ? 'times-circle' : 'clock-o'); $stCls = $b->status == 1 ? 'ok' : ($b->status == 2 ? 'bad' : 'warn'); ?>
+                        <span class="tms-chip <?php echo $stCls; ?>">
+                            <i class="fa fa-<?php echo $stIcon; ?>" aria-hidden="true"></i> <?php echo $sc['label'];
                                   if ($b->status == 2) {
                                       echo ' ' . ($b->CancelledBy === 'a' ? tms_t('label_by_admin_paren','(by Admin)') : tms_t('label_by_you_paren','(by You)'));
                                   } ?>
@@ -320,14 +340,14 @@ html[data-theme="dark"] .history-body .detail-row { color: var(--text-muted) !im
                         ];
                         $payLabel = $payLabels[$payStatus] ?? ucfirst(str_replace('_',' ', $payStatus));
                         ?>
-                        <span class="label label-<?php echo $payBadge; ?>" style="font-size:12px;padding:5px 10px;">
+                        <span class="tms-chip <?php echo $payStatus === 'paid' ? 'ok' : ($payStatus === 'failed' ? 'bad' : ($payStatus === 'unpaid' || $payStatus === 'pending' ? 'warn' : '')); ?>">
                             <i class="fa fa-credit-card"></i> <?php echo $payLabel; ?>
                         </span>
                         <?php if ($payStatus === 'unpaid' && $b->status != 2): ?>
                         <form method="POST" action="pay-now.php" style="display:inline;margin:0;">
                             <?php tms_csrf_field(); ?>
                             <input type="hidden" name="booking_id" value="<?php echo (int)$b->BookingId; ?>">
-                            <button type="submit" class="label label-primary" style="border:none;font-size:12px;padding:5px 10px;cursor:pointer;">
+                            <button type="submit" class="tms-chip" style="border:0;cursor:pointer;background:var(--tms-accent);color:var(--tms-accent-ink,#1d0c05);">
                                 <i class="fa fa-flask"></i> <?php echo tms_t('btn_pay_now','Pay Now'); ?> <?php echo tms_t('label_sandbox_suffix','(Sandbox)'); ?>
                             </button>
                         </form>
@@ -467,17 +487,19 @@ html[data-theme="dark"] .history-body .detail-row { color: var(--text-muted) !im
             </div>
             <?php endforeach; ?>
         <?php else: ?>
-            <div class="empty-state">
-                <i class="fa fa-plane"></i>
+            <div class="tms-card tms-empty">
+                <svg viewBox="0 0 120 96" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="22" y="26" width="76" height="52" rx="10"/><path d="M44 26v-6a6 6 0 0 1 6-6h20a6 6 0 0 1 6 6v6M22 50h76"/><circle cx="60" cy="50" r="5" fill="currentColor" opacity=".3"/></svg>
                 <h3><?php echo tms_t('heading_no_bookings_yet','No bookings yet'); ?></h3>
                 <p><?php echo tms_t('msg_no_bookings_subtitle', "You haven't booked any tour packages."); ?></p>
-                <a href="package-list.php" class="btn btn-primary" style="margin-top:10px;">
-                    <i class="fa fa-search"></i> <?php echo tms_t('btn_browse_packages','Browse Packages'); ?>
+                <a href="package-list.php" class="tms-btn-primary" style="width:auto;display:inline-flex;padding:0 26px;">
+                    <i class="fa fa-search" aria-hidden="true"></i> <?php echo tms_t('btn_browse_packages','Browse Packages'); ?>
                 </a>
             </div>
         <?php endif; ?>
+        <p class="tms-empty" id="bkNone" hidden style="padding:24px">Nothing in this view yet.</p>
     </div>
 </div>
+</main>
 
 <!-- Date-change request modal (shared across all cards; openModModal() fills in the booking id) -->
 <div class="mod-modal-overlay" id="modModalOverlay">
@@ -511,6 +533,20 @@ function openModModal(bkid) {
     document.getElementById('modBkId').value = bkid;
     document.getElementById('modModalOverlay').classList.add('open');
 }
+(function () {
+    var bar = document.getElementById('bkFilters');
+    if (!bar) return;
+    bar.addEventListener('click', function (e) {
+        var b = e.target.closest('button[data-f]'); if (!b) return;
+        var f = b.getAttribute('data-f'), shown = 0;
+        [].forEach.call(bar.querySelectorAll('button'), function (x) { x.setAttribute('aria-pressed', x === b ? 'true' : 'false'); });
+        [].forEach.call(document.querySelectorAll('.history-card'), function (c) {
+            var ok = f === 'all' || c.getAttribute('data-group') === f;
+            c.classList.toggle('is-hidden', !ok); if (ok) shown++;
+        });
+        document.getElementById('bkNone').hidden = shown !== 0;
+    });
+})();
 function closeModModal() {
     document.getElementById('modModalOverlay').classList.remove('open');
 }

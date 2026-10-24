@@ -262,7 +262,7 @@ final class OfflineAssistant
                 if ($c['tool'] === 'search_packages') $browse = !empty($registry->lastSearchMeta['browse']);
             }
         } catch (Throwable $e) {
-            error_log('[TMS OfflineAssistant] ' . $e->getMessage());
+            error_log('[TourBuddy OfflineAssistant] ' . $e->getMessage());
         }
 
         if (!$results) { $out['reply'] = $t['hello']; $out['suggestions'] = self::chips([], $lang === 'bn'); }

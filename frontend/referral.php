@@ -34,9 +34,9 @@ $pointsFromReferrals = count($referred) * 50;
 <link rel="apple-touch-icon" href="images/icon-192.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="TMS">
+<meta name="apple-mobile-web-app-title" content="TourBuddy">
 <meta name="mobile-web-app-capable" content="yes">
-<title>TMS | Refer Friends</title>
+<title>TourBuddy | Refer Friends</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <link href="css/bootstrap.min2.css" rel='stylesheet'/>
 <link href="<?php echo tms_asset_ver('css/style.min.css'); ?>" rel='stylesheet'/>
@@ -81,8 +81,8 @@ $pointsFromReferrals = count($referred) * 50;
     </div>
     <p style="margin-top:10px;font-size:12.5px;color:var(--text-muted);">Your referral code: <strong><?= htmlspecialchars($myCode, ENT_QUOTES, 'UTF-8') ?></strong></p>
     <div class="share-btns">
-      <a href="https://wa.me/?text=<?= urlencode("Plan your next trip with TMS Travel! Sign up with my link and we both get bonus points: $referralLink") ?>" target="_blank" style="background:#075E54;"><i class="fa fa-whatsapp"></i> WhatsApp</a>
-      <a href="mailto:?subject=<?= urlencode('Join me on TMS Travel') ?>&body=<?= urlencode("Hey! I've been using TMS Travel to plan trips. Sign up with my referral link and we both get 50 bonus points: $referralLink") ?>" style="background:#475569;"><i class="fa fa-envelope"></i> Email</a>
+      <a href="https://wa.me/?text=<?= urlencode("Plan your next trip with TourBuddy Travel! Sign up with my link and we both get bonus points: $referralLink") ?>" target="_blank" style="background:#075E54;"><i class="fa fa-whatsapp"></i> WhatsApp</a>
+      <a href="mailto:?subject=<?= urlencode('Join me on TourBuddy Travel') ?>&body=<?= urlencode("Hey! I've been using TourBuddy Travel to plan trips. Sign up with my referral link and we both get 50 bonus points: $referralLink") ?>" style="background:#475569;"><i class="fa fa-envelope"></i> Email</a>
     </div>
   </div>
 

@@ -1,5 +1,5 @@
 /*
- * tms-maplibre.js — shared, page-agnostic MapLibre GL helpers for every TMS map page.
+ * tms-maplibre.js — shared, page-agnostic MapLibre GL helpers for every TourBuddy map page.
  *
  * Requires (load first):  js/vendor/maplibre/maplibre-gl-csp.js  +  js/vendor/maplibre/maplibre-gl.css
  * (the CSP build: its web worker is a real file, so the site's Content-Security-Policy needs no blob: workers).
@@ -135,7 +135,9 @@
         if (typeof fee === 'number') return isFinite(fee) ? fee === 0 : null;
         if (typeof fee === 'string') {
             var t = fee.trim().toLowerCase();
-            if (/^(free|no fee|no charge|0|0\.0+|৳\s*0|bdt\s*0|বিনামূল্যে|ফ্রি)\b/.test(t)) return true;
+            // The WHOLE text must say it is free ("0.50", "0 for locals, 500 for foreigners" or "free for children" are not free).
+            t = t.replace(/[\s.!,;]+$/, '');
+            if (/^(free|free entry|free admission|no fee|no charge|0|0\.0+|(৳|bdt|tk|taka)\s*0(\.0+)?|0\s*(৳|bdt|tk|taka)|বিনামূল্যে|ফ্রি|০)$/i.test(t)) return true;
             return null;                                    // free text we cannot interpret => unknown
         }
         if (typeof fee === 'object') {
@@ -440,6 +442,7 @@
             attributionControl: false,
             cooperativeGestures: !!opts.cooperativeGestures,
             maxPitch: 60,
+            maxZoom: 19,
             renderWorldCopies: true,
             fadeDuration: reducedMotion() ? 0 : 150
         });
@@ -462,6 +465,8 @@
 
         function runReady() {
             utils.applyLabelLang(map, lang);
+            // Flat 2D building footprints (the 3D extrusions hide labels and cost frame time on phones)
+            try { if (map.getLayer('building-3d')) map.setLayoutProperty('building-3d', 'visibility', 'none'); } catch (e) { /* style without it */ }
             readyCbs.slice().forEach(function (fn) { try { fn(map); } catch (e) { if (root.console) console.error('[TmsMapGL] onStyleReady callback failed', e); } });
         }
 

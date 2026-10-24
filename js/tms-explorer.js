@@ -584,7 +584,7 @@
             clear(elGeoList);
             elGeoList.appendChild(h('h3', { class: 'tms-h3', text: T('geo_title', 'Results from the wider web map') }));
             if (!items.length) { elGeoList.appendChild(h('p', { class: 'tms-note', text: fmt(T('geo_none', 'Nothing found for “%1”. Check the spelling or try a nearby town.'), q) })); return; }
-            elGeoList.appendChild(h('p', { class: 'tms-hint', text: T('geo_note', 'These are general map results, not verified TMS destinations.') }));
+            elGeoList.appendChild(h('p', { class: 'tms-hint', text: T('geo_note', 'These are general map results, not verified TourBuddy destinations.') }));
             var ul = h('ul', { class: 'tms-geo-ul', role: 'list' });
             items.slice(0, 8).forEach(function (g, i) {
                 var b = h('button', { type: 'button', class: 'tms-geo-item' }, [h('strong', { text: g.name || g.display }), h('span', { text: g.display || '' })]);
@@ -706,8 +706,8 @@
         var loc = [p.locality, p.district, p.region].filter(Boolean).join(', ');
         if (loc) elDetail.appendChild(h('p', { class: 'tms-detail-loc' }, [h('span', { class: 'fa fa-map-marker', 'aria-hidden': 'true' }), ' ' + loc]));
         if (p.is_demo) elDetail.appendChild(h('p', { class: 'tms-note', text: T('demo_note', 'Sample listing — information may be placeholder content and is not live availability.') }));
-        else if (p.verified !== true && !p._pseudo) elDetail.appendChild(h('p', { class: 'tms-note', text: T('unverified_note', 'This record has not been verified by TMS staff yet.') }));
-        if (p._pseudo) elDetail.appendChild(h('p', { class: 'tms-note', text: T('pseudo_note', 'General map result — not a verified TMS destination.') }));
+        else if (p.verified !== true && !p._pseudo) elDetail.appendChild(h('p', { class: 'tms-note', text: T('unverified_note', 'This record has not been verified by TourBuddy staff yet.') }));
+        if (p._pseudo) elDetail.appendChild(h('p', { class: 'tms-note', text: T('pseudo_note', 'General map result — not a verified TourBuddy destination.') }));
         var summary = (full && full.description) || p.summary;
         if (summary) elDetail.appendChild(h('p', { class: 'tms-detail-sum', text: summary }));
 
@@ -1166,6 +1166,7 @@
         if (hasGlyphs) map.addLayer({ id: 'tms-endpoint-text', type: 'symbol', source: 'tms-endpoints', layout: { 'text-field': ['get', 'label'], 'text-font': ['Noto Sans Bold'], 'text-size': 12, 'text-allow-overlap': true }, paint: { 'text-color': '#ffffff' } });
         map.addLayer({ id: 'tms-geo-dot', type: 'circle', source: 'tms-geo', paint: { 'circle-radius': 9, 'circle-color': '#DC2626', 'circle-stroke-width': 3, 'circle-stroke-color': '#ffffff' } });
         state.layersReady = true;
+        allApply();
         updateSource(); drawRoute(); updateTripLayers(); updateEndpoints(); updateGeoLayer(); updateSelectedLayer();
     }
     function setData(id, data) { var m = state.map; if (m && state.layersReady && m.getSource(id)) m.getSource(id).setData(data); }
@@ -1229,6 +1230,55 @@
 
     /* ------------------------------------------------------------------------------------------------ toolbar + sheet */
     var elBar, elStyleBtns = {};
+    /* ---- "All mapped places": every named OpenStreetMap POI near the view, straight from OpenFreeMap tiles (zoom >= 13) ---- */
+    var ALL_MIN_ZOOM = 13;
+    state.all = { on: false, seq: 0, timer: null, data: { type: 'FeatureCollection', features: [] }, byId: {}, note: null };
+    function allApply() {
+        var m = state.map; if (!m || !state.layersReady) return;
+        if (!m.getSource('tms-osm')) m.addSource('tms-osm', { type: 'geojson', data: state.all.data });
+        var vis = state.all.on ? 'visible' : 'none';
+        if (!m.getLayer('tms-osm-dots')) m.addLayer({ id: 'tms-osm-dots', type: 'circle', source: 'tms-osm', layout: { visibility: vis }, minzoom: ALL_MIN_ZOOM - 0.5,
+            paint: { 'circle-radius': 6, 'circle-color': ['coalesce', ['get', 'color'], '#64748B'], 'circle-stroke-width': 2, 'circle-stroke-color': '#ffffff' } }, 'tms-trip-line');
+        else m.setLayoutProperty('tms-osm-dots', 'visibility', vis);
+        if (!state.all.bound) {
+            state.all.bound = true;
+            m.on('click', 'tms-osm-dots', function (e) {
+                var f = e.features && e.features[0]; if (!f) return;
+                var q = state.all.byId[f.properties.k]; if (!q) return;
+                selectPlace({ id: 'osm:' + f.properties.k, name: q.name, name_bn: null, category: '', category_label: q.label, summary: T('osm_note', 'Mapped on OpenStreetMap. Not a verified TourBuddy listing.'),
+                    lat: q.lat, lng: q.lng, verified: false, source: 'openstreetmap', is_demo: false, _pseudo: true, image: null, facilities: [] });
+            });
+            m.on('mouseenter', 'tms-osm-dots', function () { m.getCanvas().style.cursor = 'pointer'; });
+            m.on('mouseleave', 'tms-osm-dots', function () { m.getCanvas().style.cursor = ''; });
+            m.on('moveend', function () { if (!state.all.on) return; clearTimeout(state.all.timer); state.all.timer = setTimeout(allRefresh, 450); });
+        }
+    }
+    function allRefresh() {
+        var m = state.map, A = state.all; if (!A.on || !m || !window.TmsPoiTiles) return;
+        if (m.getZoom() < ALL_MIN_ZOOM) { announce(T('zoom_for_all', 'Zoom in to see all mapped places')); return; }
+        var c = m.getCenter(), b = m.getBounds(), r = Math.min(3000, Math.max(500, TmsPoiTiles.haversine(c.lat, c.lng, b.getNorth(), b.getEast())));
+        var seq = ++A.seq;
+        TmsPoiTiles.loadPlaces({ lat: c.lat, lng: c.lng, category: '', radiusM: r, limit: 150, lang: LANG === 'bn' ? 'bn' : 'en' }).then(function (res) {
+            if (seq !== A.seq || !A.on) return;
+            var colors = {}; ((state.cfg && state.cfg.categories) || []).forEach(function (x) { colors[x.id] = x.color; });
+            A.byId = {}; var feats = [];
+            res.places.forEach(function (p, i) {
+                var k = i + ':' + p.lat.toFixed(5) + ',' + p.lng.toFixed(5);
+                A.byId[k] = { name: p.name, lat: p.lat, lng: p.lng, label: String(p.subclass || p.cls || '').replace(/_/g, ' ') };
+                feats.push({ type: 'Feature', geometry: { type: 'Point', coordinates: [p.lng, p.lat] }, properties: { k: k, color: colors[p.category] || '#64748B' } });
+            });
+            A.data = { type: 'FeatureCollection', features: feats }; setData('tms-osm', A.data);
+            announce(fmt(T('all_loaded', '%1 mapped places in view'), feats.length));
+        }, function () { announce(T('all_failed', 'Could not load mapped places right now')); });
+    }
+    function allToggle(btnEl) {
+        var A = state.all; A.on = !A.on;
+        if (btnEl) btnEl.setAttribute('aria-pressed', A.on ? 'true' : 'false');
+        allApply();
+        if (A.on) { if (state.map.getZoom() < ALL_MIN_ZOOM) { ctl().flyTo(state.map.getCenter().lng, state.map.getCenter().lat, ALL_MIN_ZOOM); } else allRefresh(); }
+        else { A.data = { type: 'FeatureCollection', features: [] }; setData('tms-osm', A.data); }
+    }
+
     function buildBar() {
         elBar = h('div', { class: 'tms-bar', role: 'toolbar', 'aria-label': T('map_tools', 'Map tools') });
         function btn(icon, label, fn) {
@@ -1239,6 +1289,7 @@
         btn('fa-expand', T('fit_results', 'Fit results'), function () { var l = state.scope === 'view' ? state.shown.filter(inView) : state.shown; if (!ctl().fitToItems(l)) announce(T('nothing_to_fit', 'No results to fit')); });
         btn('fa-times-circle', T('clear_sel', 'Clear selection'), function () { clearSelection(); clearGeo(); });
         btn('fa-road', T('fit_route', 'Fit route'), fitRoute);
+        if (window.TmsPoiTiles) { var allBtn = btn('fa-map-pin', T('all_places', 'All mapped places'), function () { allToggle(allBtn); }); allBtn.setAttribute('aria-pressed', 'false'); }
         btn('fa-list', T('toggle_list', 'Show or hide list'), function () { root.classList.toggle('list-hidden'); setTimeout(function () { ctl().resize(); }, 260); announce(root.classList.contains('list-hidden') ? T('list_hidden', 'List hidden') : T('list_shown', 'List shown')); });
         var sw = h('div', { class: 'tms-styles', role: 'group', 'aria-label': T('map_style', 'Map style') });
         ((state.cfg && state.cfg.styles) || []).forEach(function (s) {
@@ -1348,7 +1399,7 @@
                 applyingHash = false;
                 if (hs.q) { elQ.value = hs.q; elQClear.hidden = false; runListSearch(hs.q, { silent: true }); } else loadView();
                 if (hs.place) {
-                    apiCall('place', { id: hs.place, lang: LANG }).then(function (j) { var p = j.place || j.item || j; if (p && U.validCoord(p.lat, p.lng)) selectPlace(p, { fly: !hs.center }); }).catch(function () { /* stale link: ignore */ });
+                    apiCall('place', Object.assign({ lang: LANG }, /^\d+$/.test(String(hs.place)) ? { id: hs.place } : { slug: hs.place })).then(function (j) { var p = j.place || j.item || j; if (p && U.validCoord(p.lat, p.lng)) selectPlace(p, { fly: !hs.center }); }).catch(function () { /* stale link: ignore */ });
                 } else applyLegacyFocus();
                 loadSavedTrips(); updateTripLayers();
             });

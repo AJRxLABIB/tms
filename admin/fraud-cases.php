@@ -53,7 +53,7 @@ if ($installed) {
                 $a = $dbh->prepare('SELECT * FROM tbl_fraud_appeals WHERE case_id = ? ORDER BY id DESC'); $a->execute([$viewId]); $appeals = $a->fetchAll(PDO::FETCH_ASSOC);
             }
         }
-    } catch (Throwable $e) { error_log('[TMS fraud-cases] ' . $e->getMessage()); $flashErr = $flashErr ?: 'Could not load cases.'; }
+    } catch (Throwable $e) { error_log('[TourBuddy fraud-cases] ' . $e->getMessage()); $flashErr = $flashErr ?: 'Could not load cases.'; }
 }
 $sevClass = ['high' => '#B3302B', 'medium' => '#B7791F', 'low' => '#2F6F5E'];
 ?>
@@ -62,7 +62,7 @@ $sevClass = ['high' => '#B3302B', 'medium' => '#B7791F', 'low' => '#2F6F5E'];
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>TMS | Admin | Fraud Review</title>
+<title>TourBuddy | Admin | Fraud Review</title>
 <link href="css/font-awesome.min2.css" rel="stylesheet">
 <link href="css/bootstrap.min.css" rel="stylesheet">
 <link href="<?php echo tms_asset_ver('css/admin-v6.css'); ?>" rel="stylesheet">

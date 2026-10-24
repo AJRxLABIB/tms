@@ -51,7 +51,7 @@ class ItineraryPlanner {
                     'rating' => (float)$r['AvgRating'], 'sample' => (int)$r['IsSampleData'] === 1];
             }
         } catch (Throwable $e) {
-            error_log('[TMS planner catalogue] ' . $e->getMessage());
+            error_log('[TourBuddy planner catalogue] ' . $e->getMessage());
         }
         return $rows;
     }
@@ -74,7 +74,7 @@ class ItineraryPlanner {
             $trip = $tripData + ['duration' => 3];
             $plan = PlanValidator::buildFallback($trip, $this->loadCatalogue((string)($trip['destination'] ?? '')), ['weather' => self::weatherMap($weatherContext)]);
             if ($plan !== null) return $plan;
-        } catch (Throwable $e) { error_log('[TMS planner fallback] ' . $e->getMessage()); }
+        } catch (Throwable $e) { error_log('[TourBuddy planner fallback] ' . $e->getMessage()); }
         $plan = $this->fallbackItinerary($tripData);
         $plan['validation'] = ['status' => 'infeasible', 'mode' => PlanValidator::normalizeMode($tripData), 'issues' => [], 'adjustments' => [],
             'reasons' => [['code' => 'no_catalogue_data', 'message' => 'The AI planner is unavailable and we have no published places for this destination to build a draft from. Nothing was invented.']]];
@@ -135,7 +135,7 @@ class ItineraryPlanner {
         $nearbyContext  = $this->buildNearbyPlacesContext($weatherContext['lat'] ?? null, $weatherContext['lng'] ?? null, $dest);
 
         $system = <<<SYSTEM
-You are an expert travel planner at TMS with deep knowledge of Bangladesh, South Asia, and international destinations.
+You are an expert travel planner at TourBuddy with deep knowledge of Bangladesh, South Asia, and international destinations.
 
 You create hyper-detailed, realistic, time-optimized travel itineraries that feel hand-crafted by a local expert.
 
@@ -336,14 +336,14 @@ MSG;
         try {
             $itinerary = PlanValidator::finalize($itinerary, $tripData, $this->loadCatalogue($dest),
                 ['weather' => self::weatherMap($weatherContext), 'geocoder' => ItineraryChecker::cachedGeocoder($this->db)]);
-        } catch (Throwable $e) { error_log('[TMS planner validate] ' . $e->getMessage()); }
+        } catch (Throwable $e) { error_log('[TourBuddy planner validate] ' . $e->getMessage()); }
 
         // Deterministic self-consistency check (times, overlaps, dates, cost totals, budget, known distances). Never changes the plan;
         // reported next to it. See ItineraryChecker for exactly what is and is not checked.
         try {
             require_once __DIR__ . '/ItineraryChecker.php';
             $itinerary['plan_check'] = ItineraryChecker::check($modelPlan, $tripData, ItineraryChecker::cachedGeocoder($this->db));
-        } catch (Throwable $e) { error_log('[TMS planner check] ' . $e->getMessage()); }
+        } catch (Throwable $e) { error_log('[TourBuddy planner check] ' . $e->getMessage()); }
 
         // Save to database for future reference -- unless this is a
         // preview-only call (Round 115, weather replanning), which must not
@@ -393,7 +393,7 @@ MSG;
             $this->saveItinerary($itinerary, $tripData, $email, $bookingId);
             return true;
         } catch (Exception $e) {
-            error_log('[TMS AI] saveApprovedItinerary failed: ' . $e->getMessage());
+            error_log('[TourBuddy AI] saveApprovedItinerary failed: ' . $e->getMessage());
             return false;
         }
     }
@@ -565,7 +565,7 @@ MSG;
                 'lng'           => $lng,
             ];
         } catch (Exception $e) {
-            error_log('[TMS AI] Weather context build failed (non-fatal): ' . $e->getMessage());
+            error_log('[TourBuddy AI] Weather context build failed (non-fatal): ' . $e->getMessage());
             return $empty;
         }
     }
@@ -630,7 +630,7 @@ MSG;
                 'real_restaurant_names'  => $restaurantNames,
             ];
         } catch (Exception $e) {
-            error_log('[TMS AI] Nearby-places context build failed (non-fatal): ' . $e->getMessage());
+            error_log('[TourBuddy AI] Nearby-places context build failed (non-fatal): ' . $e->getMessage());
             return $empty;
         }
     }
@@ -748,7 +748,7 @@ MSG;
             // Fallback now matches AIClient.php:82's own fallback literal.
             $stmt->execute([$bookingId, $email, json_encode($itinerary), defined('GEMINI_MODEL') ? GEMINI_MODEL : 'gemini-2.5-flash']);
         } catch (Exception $e) {
-            error_log('[TMS AI] Failed to save itinerary: ' . $e->getMessage());
+            error_log('[TourBuddy AI] Failed to save itinerary: ' . $e->getMessage());
         }
     }
 

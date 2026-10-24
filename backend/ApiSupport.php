@@ -216,7 +216,7 @@ final class ApiSupport
             $stored = json_decode((string)$row['ResponseBody'], true);
             $respond((int)$row['ResponseStatus'], is_array($stored) ? $stored : ['success' => true]);
         } catch (Throwable $e) {
-            error_log('[TMS API] idempotency unavailable (processing normally): ' . $e->getMessage());
+            error_log('[TourBuddy API] idempotency unavailable (processing normally): ' . $e->getMessage());
             self::$idem = null;                                 // table missing / DB hiccup: never block the request
         }
     }
@@ -242,7 +242,7 @@ final class ApiSupport
                     ->execute([':u' => $c['user'], ':k' => $c['key'], ':e' => $c['endpoint']]);
             }
         } catch (Throwable $e) {
-            error_log('[TMS API] idempotency finish failed: ' . $e->getMessage());
+            error_log('[TourBuddy API] idempotency finish failed: ' . $e->getMessage());
         }
     }
 

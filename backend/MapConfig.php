@@ -118,7 +118,7 @@ class MapConfig
     public static function userAgent(): string
     {
         $contact = self::env('MAP_CONTACT_EMAIL', self::env('SMTP_FROM', ''));
-        $ua = 'TMS-TourismManagement/1.0';
+        $ua = 'TourBuddy-TourismManagement/1.0';
         return $contact !== '' ? $ua . ' (' . $contact . ')' : $ua;
     }
 

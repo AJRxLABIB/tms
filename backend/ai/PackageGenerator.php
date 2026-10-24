@@ -32,7 +32,7 @@ class PackageGenerator {
      */
     public function generate(array $prefs, string $email = 'guest'): array {
         $system = <<<SYSTEM
-You are a senior travel package designer at TMS, a premium travel platform.
+You are a senior travel package designer at TourBuddy, a premium travel platform.
 
 You create hyper-personalized travel packages that feel custom-crafted for each traveler.
 Every package should feel UNIQUE — not generic.
@@ -209,7 +209,7 @@ MSG;
             ]);
             return (int)$this->db->lastInsertId();
         } catch (Exception $e) {
-            error_log('[TMS PackageGen] Save error: ' . $e->getMessage());
+            error_log('[TourBuddy PackageGen] Save error: ' . $e->getMessage());
             return 0;
         }
     }

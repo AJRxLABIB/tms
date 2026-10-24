@@ -36,9 +36,9 @@ if (!empty($post->RelatedPackageId)) {
 <link rel="apple-touch-icon" href="images/icon-192.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="TMS">
+<meta name="apple-mobile-web-app-title" content="TourBuddy">
 <meta name="mobile-web-app-capable" content="yes">
-<title>TMS | <?= htmlspecialchars($post->Title) ?></title>
+<title>TourBuddy | <?= htmlspecialchars($post->Title) ?></title>
 <?php
 // NEW (Round 20, spec item 53 — SEO): real data only — description is the
 // post's own content (truncated to a plain-text excerpt, not invented),
@@ -73,7 +73,7 @@ tms_seo_meta([
         // dateModified that just duplicates datePublished for every
         // never-edited post.
         'dateModified'  => !empty($post->UpdatedAt) ? date('c', strtotime($post->UpdatedAt)) : null,
-        'author'        => ['@type' => 'Person', 'name' => $post->AuthorName ?? 'TMS'],
+        'author'        => ['@type' => 'Person', 'name' => $post->AuthorName ?? 'TourBuddy'],
     ]),
     'breadcrumbs' => [
         ['label' => 'Home', 'url' => 'index.php'],
@@ -104,6 +104,7 @@ html[data-theme="dark"] .post-chip{background:#1F3A2D;color:#B8E4C9;}
 </style>
 </head><body>
 <?php include('backend/header.php'); ?>
+<link rel="stylesheet" href="<?php echo tms_asset_ver('css/tms-pages.css'); ?>">
 <div class="container" style="padding:40px 15px 60px;">
   <?php tms_render_breadcrumb_nav([
       ['label' => 'Home', 'url' => 'index.php'],

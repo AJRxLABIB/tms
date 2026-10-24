@@ -1,0 +1,11 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Theme preview</title>
+<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/css/bootstrap.min.css">
+<link rel="stylesheet" href="../../css/tms-theme.css"><script src="../../js/tms-motion.js" defer></script></head>
+<body><div class="tms-topbar" style="padding:6px 15px">Topbar sample</div>
+<section class="tms-hero" style="min-height:420px;padding:80px 0"><div class="container tms-hero-content"><h1>Find your next journey</h1><p class="lead">Hero with animated scene</p><a class="btn btn-cta">Explore</a> <a class="btn btn-ghost" style="color:#fff;border-color:#fff">Plans</a></div></section>
+<section class="tms-section-bg"><div class="container"><button class="btn btn-default" onclick="var r=document.documentElement;r.setAttribute('data-theme',r.getAttribute('data-theme')==='dark'?'light':'dark')">Toggle theme</button>
+ <select onchange="document.documentElement.setAttribute('data-tms-daypart',this.value)"><option>dawn</option><option selected>day</option><option>dusk</option><option>night</option></select>
+<div class="row" style="margin-top:20px"><div class="col-md-4 tms-reveal"><div class="tms-pkg-card" style="padding:16px"><h3>Package</h3><p class="text-muted">Muted text</p><span class="price">৳12,000</span> <span class="label label-success">Open</span> <button class="btn btn-primary">Book</button></div></div>
+<div class="col-md-4 tms-reveal" data-delay="150"><div class="alert alert-info">Info</div><div class="alert alert-danger">Error</div><input class="form-control" placeholder="Input"></div>
+<div class="col-md-4 tms-reveal" data-delay="300"><h2><span class="tms-count" data-to="1200" data-suffix="+">0</span> travellers</h2></div></div></div></section>
+<footer style="padding:30px">Footer <a href="#">link</a></footer></body></html>

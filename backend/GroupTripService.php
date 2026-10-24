@@ -28,7 +28,7 @@ function tms_create_group_trip(PDO $dbh, string $name, string $creatorEmail, ?in
         return $groupId;
     } catch (Exception $e) {
         $dbh->rollBack();
-        error_log('[TMS GroupTrip] create failed: ' . $e->getMessage());
+        error_log('[TourBuddy GroupTrip] create failed: ' . $e->getMessage());
         return 0;
     }
 }
@@ -39,7 +39,7 @@ function tms_add_group_member(PDO $dbh, int $groupId, string $email): array
     $userCheck = $dbh->prepare("SELECT 1 FROM tblusers WHERE EmailId = :e");
     $userCheck->execute([':e' => $email]);
     if (!$userCheck->fetchColumn()) {
-        return ['ok' => false, 'message' => "No TMS account found for {$email} -- they need to register first."];
+        return ['ok' => false, 'message' => "No TourBuddy account found for {$email} -- they need to register first."];
     }
     try {
         $dbh->prepare("INSERT INTO tblgroup_members(GroupId, UserEmail, Role) VALUES(:g, :e, 'member')")
@@ -60,7 +60,7 @@ function tms_add_group_expense(PDO $dbh, int $groupId, string $paidByEmail, stri
         )->execute([':g' => $groupId, ':p' => $paidByEmail, ':d' => $description, ':a' => $amountMinor]);
         return true;
     } catch (Exception $e) {
-        error_log('[TMS GroupTrip] add_expense failed: ' . $e->getMessage());
+        error_log('[TourBuddy GroupTrip] add_expense failed: ' . $e->getMessage());
         return false;
     }
 }
@@ -82,7 +82,7 @@ function tms_add_group_comment(PDO $dbh, int $groupId, string $email, string $co
         )->execute([':g' => $groupId, ':e' => $email, ':c' => $comment]);
         return true;
     } catch (Exception $e) {
-        error_log('[TMS GroupTrip] add_comment failed: ' . $e->getMessage());
+        error_log('[TourBuddy GroupTrip] add_comment failed: ' . $e->getMessage());
         return false;
     }
 }
@@ -133,7 +133,7 @@ function tms_create_group_poll(PDO $dbh, int $groupId, string $question, array $
         return $pollId;
     } catch (Exception $e) {
         $dbh->rollBack();
-        error_log('[TMS GroupTrip] create_poll failed: ' . $e->getMessage());
+        error_log('[TourBuddy GroupTrip] create_poll failed: ' . $e->getMessage());
         return 0;
     }
 }
@@ -164,7 +164,7 @@ function tms_cast_group_vote(PDO $dbh, int $groupId, int $pollId, int $optionId,
         )->execute([':p' => $pollId, ':o' => $optionId, ':e' => $email]);
         return true;
     } catch (Exception $e) {
-        error_log('[TMS GroupTrip] cast_vote failed: ' . $e->getMessage());
+        error_log('[TourBuddy GroupTrip] cast_vote failed: ' . $e->getMessage());
         return false;
     }
 }
@@ -244,7 +244,7 @@ function tms_add_itinerary_item(PDO $dbh, int $groupId, string $email, string $d
         ]);
         return true;
     } catch (Exception $e) {
-        error_log('[TMS GroupTrip] add_itinerary_item failed: ' . $e->getMessage());
+        error_log('[TourBuddy GroupTrip] add_itinerary_item failed: ' . $e->getMessage());
         return false;
     }
 }

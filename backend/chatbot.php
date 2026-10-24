@@ -1,4 +1,4 @@
-<!-- TMS AI Chatbot Widget -->
+<!-- TourBuddy AI Chatbot Widget -->
 <!-- Include this file on any page: include('backend/chatbot.php'); -->
 <style>
 /* ═══════════════ AI ROBOT ASSISTANT (replaces the old chat-bubble icon) ═══════════════ */
@@ -58,11 +58,14 @@
 @media (max-width: 480px) {
     #tmsChatToggle { width: 56px; height: 56px; bottom: 16px; right: 16px; }
     #tmsChatPanel { width: calc(100vw - 24px); right: 12px; left: 12px; bottom: 84px; height: 70vh; max-height: 520px; }
+    #tmsChatToggle.tms-chat-lift { bottom: 84px; }
+    #tmsChatPanel.tms-chat-lift { bottom: 148px; height: 62vh; }
+    .chat-mode { flex-direction:column; }
 }
 </style>
 
 <!-- Chatbot Button — animated AI robot assistant -->
-<button id="tmsChatToggle" onclick="TmsChatWidget.toggleChat()" title="<?php echo htmlspecialchars(tms_t('chatbot_widget_title', 'Chat with TMS AI Assistant'), ENT_QUOTES, 'UTF-8'); ?>" aria-label="<?php echo htmlspecialchars(tms_t('chatbot_widget_aria', 'Open AI travel assistant'), ENT_QUOTES, 'UTF-8'); ?>">
+<button id="tmsChatToggle" type="button" aria-haspopup="dialog" aria-expanded="false" aria-controls="tmsChatPanel" onclick="TmsChatWidget.toggleChat()" title="<?php echo htmlspecialchars(tms_t('chatbot_widget_title', 'Chat with TourBuddy AI Assistant'), ENT_QUOTES, 'UTF-8'); ?>" aria-label="<?php echo htmlspecialchars(tms_t('chatbot_widget_aria', 'Open AI travel assistant'), ENT_QUOTES, 'UTF-8'); ?>">
     <div class="tms-robot-glow" style="background: radial-gradient(circle, rgba(23,107,80,0.35), transparent 70%);"></div>
     <div class="tms-robot-body">
         <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
@@ -103,6 +106,18 @@
 <style>
 #tmsChatPanel { position:fixed; bottom:100px; right:25px; width:360px; height:500px; background:#fff; border-radius:16px; box-shadow:0 10px 40px rgba(0,0,0,0.2); z-index:9998; display:none; flex-direction:column; overflow:hidden; }
 #tmsChatPanel.open { display:flex; }
+#tmsChatPanel [hidden] { display:none !important; }
+/* On pages with a map the launcher sits above the map's bottom-right attribution/controls. */
+#tmsChatToggle.tms-chat-lift { bottom:92px; }
+#tmsChatPanel.tms-chat-lift { bottom:168px; }
+/* Explore context bar: fixed light colours because the panel itself is always white (both site themes). Ratios: #0F3D2E on #E7F3EE = 11.2, #FFFFFF on #176B50 = 6.4 */
+.chat-context { padding:8px 12px; background:#E7F3EE; border-bottom:1px solid #C9E2D7; display:flex; flex-direction:column; gap:8px; }
+.chat-context-chip { font-size:12px; color:#0F3D2E; line-height:1.3; }
+.chat-context-chip strong { color:#0F3D2E; }
+.chat-mode { display:flex; gap:6px; }
+.chat-mode-btn { flex:1; min-height:36px; padding:6px 8px; font-size:12px; font-weight:600; color:#0F3D2E; background:#fff; border:1.5px solid #176B50; border-radius:18px; cursor:pointer; }
+.chat-mode-btn[aria-pressed="true"] { background:#176B50; color:#fff; }
+.chat-mode-btn:focus-visible, .chat-close:focus-visible, #tmsChatToggle:focus-visible { outline:3px solid #F5B400; outline-offset:2px; }
 
 .chat-header { background:linear-gradient(135deg,#176B50,#104B3A); padding:15px 18px; color:#fff; display:flex; align-items:center; gap:12px; }
 .chat-avatar { width:40px; height:40px; background:rgba(255,255,255,0.2); border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:18px; flex-shrink:0; }
@@ -161,22 +176,52 @@
 @keyframes typingDot { 0%,60%,100%{transform:translateY(0)} 30%{transform:translateY(-6px)} }
 </style>
 
+<?php
+// ONE assistant for the whole site. Explore destination pages (frontend/explore-view.php, via backend/explore-chatbot.php)
+// set $GLOBALS['tms_chat_place_context']; this same panel then also offers "Ask about this place" (api/explore.php chat)
+// next to the normal "Ask about TourBuddy tours" (api/ai.php chatbot). No second launcher exists any more.
+$tmsPlaceCtx = !empty($GLOBALS['tms_chat_place_context']);
+$tmsPlaceBadge = 'Live · local AI';
+if ($tmsPlaceCtx) {
+    try {
+        if (isset($dbh) && $dbh instanceof PDO) {
+            require_once __DIR__ . '/ai/AIClient.php';
+            $tmsPlaceRes = AIClient::resolution($dbh);
+            if ($tmsPlaceRes['provider'] === 'gemini')      $tmsPlaceBadge = 'Live · powered by Gemini';
+            elseif ($tmsPlaceRes['provider'] === 'openai')  $tmsPlaceBadge = 'Live · powered by OpenAI';
+            elseif ($tmsPlaceRes['provider'] === 'none')    $tmsPlaceBadge = 'Catalogue answers only · AI is offline';
+        }
+    } catch (Throwable $e) { error_log('[TourBuddy] chat widget badge: ' . $e->getMessage()); }
+}
+?>
 <!-- Chat Window -->
-<div id="tmsChatPanel">
+<div id="tmsChatPanel" role="dialog" aria-modal="false" aria-labelledby="tmsChatTitle">
 
     <div class="chat-header">
         <div class="chat-avatar">🤖</div>
         <div class="chat-header-info">
-            <h5><?php echo htmlspecialchars(tms_t('chatbot_title', 'TMS Travel Assistant'), ENT_QUOTES, 'UTF-8'); ?></h5>
-            <p>🟢 <?php echo htmlspecialchars(tms_t('chatbot_subtitle', 'Online — here to help'), ENT_QUOTES, 'UTF-8'); ?></p>
+            <h5 id="tmsChatTitle"><?php echo htmlspecialchars(tms_t('chatbot_title', 'TourBuddy Travel Assistant'), ENT_QUOTES, 'UTF-8'); ?></h5>
+            <p id="tmsChatSubtitle" data-site="<?php echo htmlspecialchars(tms_t('chatbot_subtitle', 'Online — here to help'), ENT_QUOTES, 'UTF-8'); ?>" data-place="<?php echo htmlspecialchars($tmsPlaceBadge, ENT_QUOTES, 'UTF-8'); ?>">🟢 <span><?php echo htmlspecialchars(tms_t('chatbot_subtitle', 'Online — here to help'), ENT_QUOTES, 'UTF-8'); ?></span></p>
         </div>
         <button class="chat-voice-toggle" id="chatVoiceToggle" style="display:none;" title="<?php echo htmlspecialchars(tms_t('chatbot_voice_toggle_title', 'Toggle spoken replies'), ENT_QUOTES, 'UTF-8'); ?>" aria-label="<?php echo htmlspecialchars(tms_t('chatbot_voice_toggle_title', 'Toggle spoken replies'), ENT_QUOTES, 'UTF-8'); ?>"><i class="fa fa-volume-off"></i></button>
-        <button class="chat-close" onclick="TmsChatWidget.toggleChat()"><i class="fa fa-times"></i></button>
+        <button type="button" class="chat-close" aria-label="Close assistant" onclick="TmsChatWidget.toggleChat()"><i class="fa fa-times" aria-hidden="true"></i></button>
     </div>
 
+<?php if ($tmsPlaceCtx): ?>
+    <div class="chat-context" id="tmsChatContext">
+        <div class="chat-context-chip"><i class="fa fa-map-marker" aria-hidden="true"></i> <span>Asking about:</span> <strong id="tmsChatContextName"></strong></div>
+        <div class="chat-mode" role="group" aria-label="Chat topic">
+            <button type="button" class="chat-mode-btn" id="tmsModePlace" aria-pressed="true">Ask about this place</button>
+            <button type="button" class="chat-mode-btn" id="tmsModeSite" aria-pressed="false">Ask about TourBuddy tours</button>
+        </div>
+    </div>
+<?php endif; ?>
     <div class="chat-messages" id="tmsWidgetChatMessages" role="log" aria-live="polite" aria-atomic="false">
         <!-- Initial message added by JS -->
     </div>
+<?php if ($tmsPlaceCtx): ?>
+    <div class="chat-messages" id="tmsPlaceChatMessages" role="log" aria-live="polite" aria-atomic="false" hidden></div>
+<?php endif; ?>
 
     <div class="chat-input-area">
         <input type="text" class="chat-input" id="tmsWidgetChatInput" placeholder="<?php echo htmlspecialchars(tms_t('chatbot_placeholder', 'Ask me anything about tours...'), ENT_QUOTES, 'UTF-8'); ?>"
@@ -219,8 +264,8 @@ var CHAT_PAGE_CONTEXT = document.title || '';
 // higher-risk, needs-native-review translation effort flagged in
 // CHANGELOG.md's Round 117 entry; this covers only short display labels.
 $tmsChatI18nCanonical = [
-    "Hello! 👋 Welcome back to TMS!\n\nHow can I help you plan your next adventure?",
-    "Hello! 👋 Welcome to TMS Travel Assistant!\n\nI can help you with:\n• Finding the perfect tour package\n• Booking guidance\n• Weather & safety info\n• Budget planning",
+    "Hello! 👋 Welcome back to TourBuddy!\n\nHow can I help you plan your next adventure?",
+    "Hello! 👋 Welcome to TourBuddy Travel Assistant!\n\nI can help you with:\n• Finding the perfect tour package\n• Booking guidance\n• Weather & safety info\n• Budget planning",
     'Show Packages','AI Recommender','AI Recommend','Budget Help','Safety Info','Budget Planner',
     'Best Destinations','Best Packages','Book a Tour','Book Now','Browse Packages','Build Custom Trip',
     'Change Language','Cheap Packages','Check Weather','Contact Support','Contact Us','Couple Tours',
@@ -234,7 +279,7 @@ if (function_exists('tms_active_language') && tms_active_language() !== 'en' && 
         $keyed = array_combine($tmsChatI18nCanonical, $tmsChatI18nCanonical);
         $tmsChatI18n = tms_translate_batch($keyed, tms_active_language(), $dbh);
     } catch (Throwable $e) {
-        error_log('[TMS] chatbot widget-label translation failed: ' . $e->getMessage());
+        error_log('[TourBuddy] chatbot widget-label translation failed: ' . $e->getMessage());
         $tmsChatI18n = [];
     }
 }
@@ -279,7 +324,7 @@ try {
          GROUP BY Country ORDER BY n DESC LIMIT 8"
     )->fetchAll(PDO::FETCH_COLUMN);
 } catch (Exception $e) {
-    error_log('[TMS] chatbot kb catalogue facts failed: ' . $e->getMessage());
+    error_log('[TourBuddy] chatbot kb catalogue facts failed: ' . $e->getMessage());
 }
 $tmsChatPackagesReply = $tmsChatTopTypes
     ? ("🌍 We have {$tmsChatCatalogTotal}+ tour packages across categories like "
@@ -292,7 +337,7 @@ $tmsChatMapReply = $tmsChatTopCountries
 ?>
 // Knowledge base
 var kb = [
-    { patterns: ['hello','hi','hey','good morning','good evening','greetings'], response: "Hello! 👋 Welcome to TMS Travel Assistant. I'm here to help you plan your dream trip! What can I help you with today?\n\nYou can ask me about:\n• Tour packages\n• Booking process\n• Weather & best travel times\n• Budget planning\n• Safety tips", quick: ['Show Packages','Budget Help','Best Destinations','Book a Tour'] },
+    { patterns: ['hello','hi','hey','good morning','good evening','greetings'], response: "Hello! 👋 Welcome to TourBuddy Travel Assistant. I'm here to help you plan your dream trip! What can I help you with today?\n\nYou can ask me about:\n• Tour packages\n• Booking process\n• Weather & best travel times\n• Budget planning\n• Safety tips", quick: ['Show Packages','Budget Help','Best Destinations','Book a Tour'] },
     { patterns: ['package','packages','tour','tours','available','what tours'], response: <?php echo json_encode($tmsChatPackagesReply, JSON_UNESCAPED_UNICODE); ?>, quick: ['Show Packages','AI Recommend','Budget Planner'] },
     { patterns: ['book','booking','reserve','how to book'], response: "📋 Booking a tour is easy!\n\n1. Browse <a href='package-list.php' style='color:#176B50'>Tour Packages</a>\n2. Click on a package you like\n3. Select your travel dates\n4. Sign in or create an account\n5. Submit your booking\n\nOur team confirms within 24 hours. You can also <a href='custom-trip.php' style='color:#176B50'>design a custom trip</a>!", quick: ['Browse Packages','Custom Trip','Sign Up','Contact Us'] },
     { patterns: ['price','cost','budget','cheap','expensive','how much'], response: "💰 Our tour packages start from:\n\nPrices vary by destination and season — the live figures are on each package page.\n\nPrices are per person. Use our <a href='budget-planner.php' style='color:#176B50'>Budget Planner</a> to estimate total costs for your group!\n\nWant our AI to find packages within your budget?", quick: ['Budget Planner','AI Recommender','Family Packages','Cheap Packages'] },
@@ -302,12 +347,12 @@ var kb = [
     { patterns: ['review','reviews','rating','feedback','testimonial','experience'], response: "⭐ Read real traveler reviews on our <a href='reviews.php' style='color:#176B50'>Review Page</a>!\n\nYou can:\n• Read reviews by package\n• Rate your own trip (1-5 stars)\n• Upload travel photos\n• See overall ratings\n\nWe have verified reviews from real customers!", quick: ['Read Reviews','Write Review','Top Rated','Best Packages'] },
     { patterns: ['custom','customize','personalise','build my own','special request'], response: "🎨 Yes! We offer fully customized trips!\n\nWith our <a href='custom-trip.php' style='color:#176B50'>Custom Trip Planner</a> you can choose:\n\n• Specific destinations\n• Travel dates & duration\n• Accommodation type\n• Transport preference\n• Activities & meal plans\n• Special requests\n\nSubmit your requirements and we'll create a tailor-made quote!", quick: ['Build Custom Trip','Standard Packages','Budget Planner','Contact Us'] },
     { patterns: ['recommend','suggest','which','best for me','advice','help me choose'], response: "🤖 Try our <a href='ai-recommend.php' style='color:#176B50'>AI Tour Recommender</a>!\n\nIt analyzes your:\n• Budget\n• Travel style (family, couple, group)\n• Climate preference\n• Trip duration\n\nAnd suggests the best matching packages. Give it a try!", quick: ['AI Recommender','Family Tours','Couple Tours','Solo Travel'] },
-    { patterns: ['language','translate','bengali','hindi','french','arabic','spanish'], response: "🌐 TMS supports multiple languages!\n\nVisit our <a href='language.php' style='color:#176B50'>Language Settings</a> to switch to:\n\n🇧🇩 Bengali | 🇮🇳 Hindi | 🇫🇷 French\n🇸🇦 Arabic | 🇨🇳 Chinese | 🇪🇸 Spanish | 🇩🇪 German\n\nSelect your preferred language for a better experience!", quick: ['Change Language','Bengali','Hindi','English'] },
+    { patterns: ['language','translate','bengali','hindi','french','arabic','spanish'], response: "🌐 TourBuddy supports multiple languages!\n\nVisit our <a href='language.php' style='color:#176B50'>Language Settings</a> to switch to:\n\n🇧🇩 Bengali | 🇮🇳 Hindi | 🇫🇷 French\n🇸🇦 Arabic | 🇨🇳 Chinese | 🇪🇸 Spanish | 🇩🇪 German\n\nSelect your preferred language for a better experience!", quick: ['Change Language','Bengali','Hindi','English'] },
     { patterns: ['cancel','cancellation','refund','policy'], response: "📋 Our Cancellation Policy:\n\n• 30+ days before: Full refund\n• 15–30 days: 50% refund\n• 7–15 days: 25% refund\n• Under 7 days: No refund\n\nFor special circumstances, please <a href='page.php?type=contact' style='color:#176B50'>contact us</a> directly. We try to be flexible!", quick: ['Contact Support','My Bookings','Book Now','Custom Trip'] },
     { patterns: ['contact','call','email','phone','support','help','talk to','human'], response: "📞 Need to speak with us?\n\n• 💬 <a href='enquiry.php' style='color:#176B50'>Send us an enquiry</a> and we'll reply by email\n• 🎫 For an existing booking, open a ticket from your account\n• 🕒 We answer enquiries Mon–Sat\n• 💬 You can also <a href='enquiry.php' style='color:#176B50'>send an enquiry</a>\n\nOr use the Issue Tracker in your account for booking-related issues.", quick: ['Send Enquiry','Book Now','Emergency','FAQ'] },
     { patterns: ['visa','passport','document','requirement'], response: "📄 For visa requirements:\n\n• Requirements vary by nationality and destination\n• We recommend checking official embassy websites\n• We can provide invitation/booking letters\n• Allow 2–4 weeks for visa processing\n\nOur team can guide you through the process — just <a href='enquiry.php' style='color:#176B50'>send an enquiry</a>!", quick: ['Send Enquiry','Emergency Contacts','Contact Us','Book Now'] },
     { patterns: ['thank','thanks','thank you','great','awesome','good','helpful'], response: "😊 You're welcome! I'm glad I could help!\n\nIs there anything else you'd like to know about our tours or services? I'm here 24/7!", quick: ['Browse Packages','Plan My Trip','AI Recommender','Goodbye'] },
-    { patterns: ['bye','goodbye','exit','see you','ciao','done'], response: "👋 Safe travels and happy adventures!\n\nCome back anytime you need help planning your trip. TMS is always here for you! 🌍✈️", quick: [] },
+    { patterns: ['bye','goodbye','exit','see you','ciao','done'], response: "👋 Safe travels and happy adventures!\n\nCome back anytime you need help planning your trip. TourBuddy is always here for you! 🌍✈️", quick: [] },
 ];
 
 var quickLinks = {
@@ -329,18 +374,155 @@ var quickLinks = {
     'Plan My Trip': 'ai-recommend.php',
 };
 
+// ── One widget, two topics (Explore pages only) ───────────────────────────────────────────────
+// PLACE_CTX is true when an Explore destination page asked for it (see backend/explore-chatbot.php). The same panel then
+// offers "Ask about this place" (api/explore.php?action=chat) and "Ask about TourBuddy tours" (api/ai.php?action=chatbot).
+// Each topic keeps its own message list and its own server-side history/session.
+var PLACE_CTX = <?php echo $tmsPlaceCtx ? 'true' : 'false'; ?>;
+var chatMode = 'site';                 // 'site' | 'place'
+var modeReady = false;
+var placeSession = 'exp_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8);
+var sitePlaceholder = '';
+function placeName() { return (document.body && document.body.dataset && document.body.dataset.exploreDest || '').trim(); }
+
+function addPlaceMsg(type, text) {
+    var msgs = document.getElementById('tmsPlaceChatMessages');
+    if (!msgs) return;
+    var div = document.createElement('div');
+    div.className = 'msg msg-' + type;
+    var time = new Date().toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'});
+    div.innerHTML = (type === 'bot' ? '<div class="bot-name">🧭 Destination guide</div>' : '') +
+        '<div class="msg-bubble">' + chatEscape(text).replace(/\n/g, '<br>') + '</div><div class="msg-time">' + time + '</div>';
+    msgs.appendChild(div);
+    msgs.scrollTop = msgs.scrollHeight;
+}
+function showPlaceTyping() {
+    var msgs = document.getElementById('tmsPlaceChatMessages');
+    if (!msgs) return;
+    var div = document.createElement('div');
+    div.className = 'typing-indicator msg msg-bot';
+    div.id = 'placeTypingIndicator';
+    div.style.display = 'flex';
+    div.innerHTML = '<div class="msg-bubble"><span class="typing-dot"></span><span class="typing-dot"></span><span class="typing-dot"></span></div>';
+    msgs.appendChild(div);
+    msgs.scrollTop = msgs.scrollHeight;
+}
+function hidePlaceTyping() { var el = document.getElementById('placeTypingIndicator'); if (el) el.remove(); }
+
+function setMode(mode) {
+    if (!PLACE_CTX) mode = 'site';
+    chatMode = mode;
+    var siteBox = document.getElementById('tmsWidgetChatMessages');
+    var placeBox = document.getElementById('tmsPlaceChatMessages');
+    var input = document.getElementById('tmsWidgetChatInput');
+    var sub = document.getElementById('tmsChatSubtitle');
+    if (siteBox) siteBox.hidden = (mode === 'place');
+    if (placeBox) placeBox.hidden = (mode !== 'place');
+    var bp = document.getElementById('tmsModePlace'), bs = document.getElementById('tmsModeSite');
+    if (bp) bp.setAttribute('aria-pressed', mode === 'place' ? 'true' : 'false');
+    if (bs) bs.setAttribute('aria-pressed', mode === 'site' ? 'true' : 'false');
+    var nameEl = document.getElementById('tmsChatContextName');
+    if (nameEl) nameEl.textContent = placeName() || '—';
+    if (input) {
+        if (!sitePlaceholder) sitePlaceholder = input.placeholder;
+        input.placeholder = mode === 'place' ? ('Ask about ' + (placeName() || 'this destination') + '...') : sitePlaceholder;
+    }
+    if (sub) {
+        var span = sub.querySelector('span');
+        if (span) span.textContent = (mode === 'place') ? (sub.getAttribute('data-place') || '') : (sub.getAttribute('data-site') || '');
+    }
+    if (mode === 'place' && placeBox && !placeBox.children.length) {
+        addPlaceMsg('bot', "Hi! I'm your travel guide for " + (placeName() || 'this destination') + ". Ask about attractions, food, transport, safety or weather-based plans. For tour packages and bookings, switch to \"Ask about TourBuddy tours\".");
+    }
+    if (mode === 'site' && siteBox && !siteBox.children.length) initChat();
+    if (input && chatOpen) input.focus();
+}
+
+function respondPlace(text) {
+    setChatBusy(true);
+    showPlaceTyping();
+    var fd = new FormData();
+    fd.append('action', 'chat');
+    fd.append('message', text);
+    fd.append('destination', placeName());
+    fd.append('session_id', placeSession);
+    fd.append('context', (document.body.dataset && document.body.dataset.exploreContext) || '');
+    fd.append('csrf_token', CHAT_CSRF);
+    fetch('api/explore.php', { method: 'POST', body: fd }).then(function (r) { return r.json(); }).then(function (res) {
+        hidePlaceTyping(); setChatBusy(false);
+        if (res && res.success && res.data && res.data.reply) {
+            addPlaceMsg('bot', res.data.reply);
+            speakChatReply(res.data.reply);
+        } else {
+            addPlaceMsg('bot', 'Sorry, I could not answer that (' + ((res && res.error) || 'please try again') + '). You can also try "Ask about TourBuddy tours".');
+        }
+    }).catch(function () {
+        hidePlaceTyping(); setChatBusy(false);
+        addPlaceMsg('bot', "Sorry, I couldn't reach the assistant. Please check your connection and try again.");
+    });
+}
+
+function chatFocusables() {
+    var panel = document.getElementById('tmsChatPanel');
+    return Array.prototype.filter.call(panel.querySelectorAll('button, a[href], input, [tabindex]:not([tabindex="-1"])'), function (el) {
+        return !el.disabled && !el.hidden && el.offsetParent !== null;
+    });
+}
+
 function toggleChat() {
     chatOpen = !chatOpen;
-    document.getElementById('tmsChatPanel').classList.toggle('open', chatOpen);
+    var panel = document.getElementById('tmsChatPanel');
+    var tgl = document.getElementById('tmsChatToggle');
+    panel.classList.toggle('open', chatOpen);
+    if (tgl) tgl.setAttribute('aria-expanded', chatOpen ? 'true' : 'false');
     if(chatOpen) {
-        document.querySelector('#tmsChatToggle .notif').style.display = 'none';
-        if(document.getElementById('tmsWidgetChatMessages').children.length === 0) initChat();
+        var dot = document.querySelector('#tmsChatToggle .notif');
+        if (dot) dot.style.display = 'none';
+        if (!modeReady) {
+            modeReady = true;
+            setMode(PLACE_CTX && placeName() ? 'place' : 'site');
+        }
+        if (chatMode === 'site' && document.getElementById('tmsWidgetChatMessages').children.length === 0) initChat();
         document.getElementById('tmsWidgetChatInput').focus();
+    } else if (tgl) {
+        tgl.focus();
     }
 }
 
+// Escape closes the panel and Tab stays inside it while it is open (it is a non-modal dialog, but keyboard users should not
+// wander off behind it without noticing).
+document.addEventListener('keydown', function (e) {
+    if (!chatOpen) return;
+    if (e.key === 'Escape') { e.preventDefault(); toggleChat(); return; }
+    if (e.key !== 'Tab') return;
+    var f = chatFocusables();
+    if (!f.length) return;
+    var first = f[0], last = f[f.length - 1], active = document.activeElement;
+    var panel = document.getElementById('tmsChatPanel');
+    if (!panel.contains(active)) return;           // focus is on the page: let it be
+    if (e.shiftKey && active === first) { e.preventDefault(); last.focus(); }
+    else if (!e.shiftKey && active === last) { e.preventDefault(); first.focus(); }
+});
+
+document.addEventListener('click', function (e) {
+    var t = e.target.closest ? e.target.closest('#tmsModePlace, #tmsModeSite') : null;
+    if (!t || chatBusy) return;
+    setMode(t.id === 'tmsModePlace' ? 'place' : 'site');
+});
+
+// Pages with a map: keep the launcher above the map's bottom-right controls and attribution.
+function tmsChatLiftForMaps() {
+    var onMapPage = PLACE_CTX || /(tour-map|heatmap|explore-view|package-details|package-list|flight-status)\.php/.test(location.pathname) ||
+        !!document.querySelector('.tms-explorer, .tms-map-page, .maplibregl-map');
+    var tgl = document.getElementById('tmsChatToggle'), panel = document.getElementById('tmsChatPanel');
+    if (tgl) tgl.classList.toggle('tms-chat-lift', onMapPage);
+    if (panel) panel.classList.toggle('tms-chat-lift', onMapPage);
+}
+if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', tmsChatLiftForMaps); else tmsChatLiftForMaps();
+window.addEventListener('load', tmsChatLiftForMaps);
+
 function initChat() {
-    var greetCanonical = userName ? "Hello! 👋 Welcome back to TMS!\n\nHow can I help you plan your next adventure?" : "Hello! 👋 Welcome to TMS Travel Assistant!\n\nI can help you with:\n• Finding the perfect tour package\n• Booking guidance\n• Weather & safety info\n• Budget planning";
+    var greetCanonical = userName ? "Hello! 👋 Welcome back to TourBuddy!\n\nHow can I help you plan your next adventure?" : "Hello! 👋 Welcome to TourBuddy Travel Assistant!\n\nI can help you with:\n• Finding the perfect tour package\n• Booking guidance\n• Weather & safety info\n• Budget planning";
     addMessage('bot', tmsChatLabel(greetCanonical), ['Show Packages','AI Recommender','Budget Help','Safety Info']);
 }
 
@@ -385,7 +567,7 @@ function addMessage(type, text, quickReplies, sources, actions) {
 
     var time = new Date().toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'});
 
-    var html = (type === 'bot' ? '<div class="bot-name">🤖 TMS Assistant</div>' : '') +
+    var html = (type === 'bot' ? '<div class="bot-name">🤖 TourBuddy Assistant</div>' : '') +
         '<div class="msg-bubble">' + chatFormat(text) + '</div>' +
         '<div class="msg-time">' + time + '</div>';
 
@@ -480,7 +662,7 @@ function getResponse(input) {
 
 /* ══════════════════════ Gemini-powered replies, with a safety net ══════════════════════
    The robot now talks to the same Gemini AI backend already used elsewhere in
-   TMS (includes/ai/AIClient.php via api/ai.php?action=chatbot) instead of only
+   TourBuddy (includes/ai/AIClient.php via api/ai.php?action=chatbot) instead of only
    matching fixed keyword patterns. If the API key isn't configured, the quota
    is hit, or the request simply fails (offline, slow network, etc.), we fall
    straight back to the original local kb matching below — the widget never
@@ -597,6 +779,11 @@ function sendMessage() {
     var text = input.value.trim();
     if(!text) return;
     input.value = '';
+    if (chatMode === 'place') {
+        addPlaceMsg('user', text);
+        respondPlace(text);
+        return;
+    }
     lastUserMessage = text;
     addMessage('user', text, []);
     respondTo(text, true);

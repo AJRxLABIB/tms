@@ -1,6 +1,6 @@
 <?php
 /**
- * AIClient.php — vendor-agnostic AI orchestrator for TMS AI Travel Copilot
+ * AIClient.php — vendor-agnostic AI orchestrator for TourBuddy AI Travel Copilot
  *
  * Round 34 (item 21, "AI Provider Abstraction + telemetry"): this class used
  * to hardcode Google Gemini's request/response shape directly inside its own
@@ -97,7 +97,7 @@ class AIClient {
         foreach (array_filter(array_map(fn($x) => strtolower(trim($x)), explode(',', $raw))) as $name) {
             if ($name === $primary->name() || isset($out[$name])) continue;
             if ($name !== 'ollama' && !$allowExternal) {
-                error_log("[TMS AI] fallback provider '{$name}' ignored: sending data to a second cloud vendor needs AI_FALLBACK_ALLOW_EXTERNAL=1.");
+                error_log("[TourBuddy AI] fallback provider '{$name}' ignored: sending data to a second cloud vendor needs AI_FALLBACK_ALLOW_EXTERNAL=1.");
                 continue;
             }
             $p = match ($name) {
@@ -106,8 +106,8 @@ class AIClient {
                 'gemini' => new GeminiProvider(defined('GEMINI_API_KEY') ? GEMINI_API_KEY : '', defined('GEMINI_MODEL') ? GEMINI_MODEL : 'gemini-2.5-flash'),
                 default  => null,
             };
-            if ($p === null) { error_log("[TMS AI] unknown fallback provider '{$name}' ignored."); continue; }
-            if (!$p->isConfigured()) { error_log("[TMS AI] fallback provider '{$name}' is not configured; skipped."); continue; }
+            if ($p === null) { error_log("[TourBuddy AI] unknown fallback provider '{$name}' ignored."); continue; }
+            if (!$p->isConfigured()) { error_log("[TourBuddy AI] fallback provider '{$name}' is not configured; skipped."); continue; }
             $out[$name] = $p;
         }
         return array_values($out);
@@ -132,7 +132,7 @@ class AIClient {
 
     /**
      * Picks the provider named by AI_PROVIDER (default 'gemini' -- the only
-     * provider TMS had before this round, so an unset/blank AI_PROVIDER
+     * provider TourBuddy had before this round, so an unset/blank AI_PROVIDER
      * changes nothing for an existing deployment). An unrecognized value
      * logs a warning and falls back to Gemini rather than fataling.
      */
@@ -166,7 +166,7 @@ class AIClient {
         if (!in_array($wanted, ['openai', 'ollama', 'gemini'], true)) {
             $r = self::resolution($db);
             if ($wanted !== '' && $wanted !== 'auto' && !in_array($wanted, ['none', 'off', 'disabled'], true)) {
-                error_log("[TMS AI] AI_PROVIDER='{$wanted}' is not recognized (expected auto, ollama, gemini, openai or none) -- treating as auto.");
+                error_log("[TourBuddy AI] AI_PROVIDER='{$wanted}' is not recognized (expected auto, ollama, gemini, openai or none) -- treating as auto.");
             }
             if ($r['provider'] === 'ollama') {
                 return new OllamaProvider($r['model'], defined('OLLAMA_BASE_URL') ? OLLAMA_BASE_URL : 'http://127.0.0.1:11434');
@@ -261,7 +261,7 @@ class AIClient {
         // docblock always claimed this method did.
         $chain = AIConfig::failoverEnabled($this->db) ? array_merge([$this->provider], $this->fallbacks) : [$this->provider];
         if (!array_filter($chain, fn($p) => $p->isConfigured())) {
-            if ($this->provider->name() !== 'none') { error_log('[TMS AI] Provider "' . $this->provider->name() . '" is not configured -- set its API key in .env (see .env.example).'); }  // 'none' is a normal auto-mode state: no log flood
+            if ($this->provider->name() !== 'none') { error_log('[TourBuddy AI] Provider "' . $this->provider->name() . '" is not configured -- set its API key in .env (see .env.example).'); }  // 'none' is a normal auto-mode state: no log flood
             return $this->fallback('The AI assistant is not switched on for this site yet.');
         }
 
@@ -332,7 +332,7 @@ class AIClient {
                 $used = $prov;
                 break;
             }
-            error_log('[TMS AI ' . $prov->name() . '] call failed (' . $kind . '): ' . ($result['error'] ?? 'unknown error'));
+            error_log('[TourBuddy AI ' . $prov->name() . '] call failed (' . $kind . '): ' . ($result['error'] ?? 'unknown error'));
             $this->recordTelemetry($feature, $userEmail, false, false, $latencyMs, null, null, null, ($result['error'] ?? 'unknown error') . ' [' . $kind . ']', $prov);
             ProviderHealth::recordFailure($this->db, $prov->name(), $kind);
             if (!ProviderHealth::shouldFailover($kind)) break; // content/safety refusals: another model must not be shopped for
@@ -394,7 +394,7 @@ class AIClient {
         // self::GEMINI_BASE meant this always silently fell back, never
         // actually reaching the real API).
         if (!$this->provider->isConfigured()) {
-            if ($this->provider->name() !== 'none') { error_log('[TMS AI] Provider "' . $this->provider->name() . '" is not configured -- set its API key in .env (see .env.example).'); }  // 'none' is a normal auto-mode state: no log flood
+            if ($this->provider->name() !== 'none') { error_log('[TourBuddy AI] Provider "' . $this->provider->name() . '" is not configured -- set its API key in .env (see .env.example).'); }  // 'none' is a normal auto-mode state: no log flood
             return $this->fallback('The AI assistant is not switched on for this site yet.');
         }
         if ($this->isRateLimited($userEmail)) {
@@ -419,7 +419,7 @@ class AIClient {
         $latencyMs = (int)round((microtime(true) - $startedAt) * 1000);
 
         if (!$result['success']) {
-            error_log('[TMS AI Vision ' . $this->provider->name() . '] call failed: ' . ($result['error'] ?? 'unknown error'));
+            error_log('[TourBuddy AI Vision ' . $this->provider->name() . '] call failed: ' . ($result['error'] ?? 'unknown error'));
             $this->recordTelemetry($feature, $userEmail, false, false, $latencyMs, null, null, null, $result['error'] ?? 'unknown error');
             return $this->fallback($result['error'] ?? 'The AI assistant had a problem answering that. Please try again.');
         }
@@ -571,7 +571,7 @@ class AIClient {
         }
 
         if (!$lastResult['success']) {
-            error_log('[TMS AI ' . $prov->name() . '] call failed after ' . $maxAttempts . ' attempt(s): ' . ($lastResult['error'] ?? 'unknown error'));
+            error_log('[TourBuddy AI ' . $prov->name() . '] call failed after ' . $maxAttempts . ' attempt(s): ' . ($lastResult['error'] ?? 'unknown error'));
         }
 
         return $lastResult;
@@ -600,7 +600,7 @@ class AIClient {
             // Fail closed: if the limiter cannot count, refuse AI calls rather than allow unlimited use.
             // Exception: the usage table not existing yet (42S02, migration not run) must not take AI down.
             $missingTable = $e instanceof PDOException && (string)$e->getCode() === '42S02';
-            error_log('[TMS AI] rate-limit check failed (' . ($missingTable ? 'table missing, allowing' : 'blocking') . '): ' . $e->getMessage());
+            error_log('[TourBuddy AI] rate-limit check failed (' . ($missingTable ? 'table missing, allowing' : 'blocking') . '): ' . $e->getMessage());
             return !$missingTable;
         }
     }
@@ -613,7 +613,7 @@ class AIClient {
         $router = $this->modelRouter();
         $route = $router->route($capability);
         if ($route['model'] === null) {
-            error_log('[TMS AI] no usable local model for "' . $capability . '" (' . $route['reason'] . '); caller falls back to its non-AI path.');
+            error_log('[TourBuddy AI] no usable local model for "' . $capability . '" (' . $route['reason'] . '); caller falls back to its non-AI path.');
             return ['error' => 'The AI assistant is not available right now.', 'kind' => 'unavailable', 'reason' => $route['reason']];
         }
         $limit = $router->contextLimit($capability);

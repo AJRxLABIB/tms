@@ -28,6 +28,8 @@ $adminName = htmlentities($_SESSION['alogin']);
 $initials = strtoupper(substr($adminName,0,2));
 ?>
 <link rel="stylesheet" href="../css/tms-a11y.css">
+<link rel="stylesheet" href="../css/tms-theme.css?v=1"><script src="../js/tms-motion.js?v=1" defer></script>
+<link rel="stylesheet" href="css/tms-admin-theme.css?v=1">
 <a href="#tmsMain" class="tms-skip-link">Skip to main content</a>
 <!-- TOP BAR -->
 <header class="tms-topbar">

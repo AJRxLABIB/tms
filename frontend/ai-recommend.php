@@ -75,7 +75,7 @@ if(isset($_POST['recommend'])) {
             $q2->bindParam(':tt',$traveltype); $q2->bindParam(':d',$duration);
             $q2->bindParam(':c',$climate); $q2->execute();
         } catch (Exception $e) {
-            error_log('[TMS Recommend] Preference save failed (recommendations still shown): ' . $e->getMessage());
+            error_log('[TourBuddy Recommend] Preference save failed (recommendations still shown): ' . $e->getMessage());
         }
     }
 }
@@ -108,9 +108,9 @@ if (!isset($_POST['recommend']) && !empty($_SESSION['login'])) {
 <link rel="apple-touch-icon" href="images/icon-192.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="TMS">
+<meta name="apple-mobile-web-app-title" content="TourBuddy">
 <meta name="mobile-web-app-capable" content="yes">
-<title>TMS | AI Smart Tour Recommendation</title>
+<title>TourBuddy | AI Smart Tour Recommendation</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
 <link href="css/bootstrap.min2.css" rel='stylesheet' type='text/css' />

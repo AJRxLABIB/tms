@@ -98,9 +98,9 @@ if (isset($_POST['submit_request'])) {
                 $base         = tms_public_base_url(); // never built from a raw Host header (reset-link poisoning)
                 $resetLink    = "$base/forgot-password.php?token=" . urlencode($rawToken);
 
-                tms_send_email($user->EmailId, $user->FullName, 'Reset your TMS password',
+                tms_send_email($user->EmailId, $user->FullName, 'Reset your TourBuddy password',
                     tms_email_template('Reset your password', '
-                        <p>We received a request to reset your TMS account password. This link is valid for '
+                        <p>We received a request to reset your TourBuddy account password. This link is valid for '
                         . TMS_PWRESET_TOKEN_TTL_MINUTES . ' minutes and can only be used once:</p>
                         <p><a href="' . htmlspecialchars($resetLink, ENT_QUOTES, 'UTF-8') . '"
                               style="display:inline-block;background:#3F84B1;color:#fff;padding:10px 22px;border-radius:6px;text-decoration:none;font-weight:700;">Reset Password</a></p>
@@ -162,8 +162,8 @@ if (isset($_POST['submit_reset'])) {
         tms_clear_login_attempts($dbh, $row->UserEmail, $ip);
         tms_clear_login_attempts($dbh, 'pwreset:' . strtolower($row->UserEmail), $ip);
 
-        tms_send_email($row->UserEmail, '', 'Your TMS password was changed',
-            tms_email_template('Password changed', '<p>This confirms that your TMS account password was just reset. If you did not do this, please contact support immediately.</p>')
+        tms_send_email($row->UserEmail, '', 'Your TourBuddy password was changed',
+            tms_email_template('Password changed', '<p>This confirms that your TourBuddy account password was just reset. If you did not do this, please contact support immediately.</p>')
         );
         tms_log_system_event($dbh, 'auth', 'password_reset_completed', true, $row->UserEmail);
 
@@ -180,119 +180,101 @@ if (isset($_POST['submit_reset'])) {
 <link rel="apple-touch-icon" href="images/icon-192.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="TMS">
+<meta name="apple-mobile-web-app-title" content="TourBuddy">
 <meta name="mobile-web-app-capable" content="yes">
-<title>TMS | Recover Password</title>
+<title>TourBuddy | Recover Password</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-<link href="css/bootstrap.min2.css" rel='stylesheet' type='text/css' />
-<link href="<?php echo tms_asset_ver('css/style.min.css'); ?>" rel='stylesheet' type='text/css' />
 <link href="css/font-awesome.min2.css" rel="stylesheet">
-<script src="js/jquery-1.12.0.min.js" defer></script>
-<script src="js/bootstrap.min.js" defer></script>
-<link href="css/animate.css" rel="stylesheet" type="text/css" media="all">
-<link href="<?php echo tms_asset_ver('css/modern-theme.css'); ?>" rel="stylesheet">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<script src="js/wow.min.js" defer></script>
-<script>window.addEventListener("load",function(){if(typeof WOW!=="undefined")new WOW().init()});</script>
-<style>
-.errorWrap{padding:10px;margin:0 0 20px;background:var(--white);border-left:4px solid #dd3d36;box-shadow:0 1px 1px rgba(0,0,0,.1);}
-.succWrap {padding:10px;margin:0 0 20px;background:var(--white);border-left:4px solid #5cb85c;box-shadow:0 1px 1px rgba(0,0,0,.1);}
-.recover-box{max-width:440px;background:var(--white);border-radius:12px;box-shadow:0 4px 20px rgba(0,0,0,.09);padding:32px;margin:0 auto;}
-.recover-box h4{font-size:1.05em;font-weight:700;color:var(--text);margin-bottom:20px;}
-.recover-box .form-group{margin-bottom:16px;}
-.recover-box label{font-weight:600;color:var(--text-muted);font-size:13px;margin-bottom:4px;display:block;}
-.recover-box .form-control{border:2px solid #e0e0e0;border-radius:7px;height:42px;font-size:14px;}
-.recover-box .form-control:focus{border-color:var(--secondary);box-shadow:none;outline:none;}
-.btn-recover{background:var(--secondary);color:#fff;border:none;border-radius:7px;padding:11px 30px;font-weight:700;font-size:14px;cursor:pointer;transition:.2s;}
-.btn-recover:hover{background:var(--primary-dark);}
-.tms-page-hero{position:relative;min-height:220px;display:flex;align-items:center;justify-content:center;overflow:hidden;
-  background:radial-gradient(ellipse 80% 60% at 30% 0%, rgba(23,107,80,0.35), transparent 60%),
-  linear-gradient(160deg, var(--primary-dark) 0%, var(--primary) 55%, #0C3A4A 100%);}
-.tms-page-hero h1{position:relative;z-index:2;color:#fff;font-family:var(--font-display);font-size:clamp(28px,4vw,42px);font-weight:600;margin:0;}
-.recover-box{background:rgba(255,255,255,0.7);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);
-  border:1px solid rgba(255,255,255,0.6);box-shadow:var(--shadow-md);margin-top:-60px;position:relative;z-index:3;}
-</style>
+<script>try{document.documentElement.setAttribute('data-theme',localStorage.getItem('tms-theme')||'light');}catch(e){}</script>
+<link rel="stylesheet" href="css/tms-theme.css?v=1">
+<link rel="stylesheet" href="css/tms-account.css?v=1">
+<script src="js/tms-motion.js?v=1" defer></script>
 </head>
-<body>
-<?php include('backend/header.php'); ?>
-<div class="tms-page-hero">
-    <h1 class="wow zoomIn animated" data-wow-delay=".1s">Recover Your Password</h1>
-</div>
+<body class="tms-auth-page">
+<main class="tms-auth">
+  <aside class="tms-auth-art" style="--auth-img:url('images/h2.jpg')">
+    <a class="brand" href="index.php"><?php require_once __DIR__ . '/../backend/brand.php'; echo tms_brand_mark_html('40'); ?></a>
+    <h2>Locked out? It happens to every traveller.</h2>
+    <p>We'll email you a secure link, and you'll be back on your way in a minute.</p>
+    <div class="tms-scene" aria-hidden="true"><i class="s-cloud"></i><i class="s-far"></i><i class="s-near"></i><i class="s-palm"></i><i class="s-wave"></i><i class="s-wave w2"></i><i class="s-plane"></i></div>
+  </aside>
 
-<div class="privacy">
-    <div class="container">
-        <div class="recover-box wow fadeInUp" data-wow-delay=".1s">
+  <section class="tms-auth-main">
+    <div class="tms-auth-card">
+      <?php $errAttr = $error ? ' aria-invalid="true" aria-describedby="authErr"' : ''; ?>
 
-            <?php if ($resetRow && !$msg): ?>
-                <h4><i class="fa fa-lock" style="color:var(--secondary)"></i> Choose a New Password</h4>
-                <p style="font-size:13px;color:var(--text-muted);margin-bottom:20px;">
-                    Resetting the password for <strong><?php echo htmlspecialchars($resetRow->UserEmail, ENT_QUOTES, 'UTF-8'); ?></strong>.
-                </p>
+      <?php if ($resetRow && !$msg): ?>
+        <h1>Choose a new password</h1>
+        <p class="lead">For <strong><?php echo htmlspecialchars($resetRow->UserEmail, ENT_QUOTES, 'UTF-8'); ?></strong></p>
 
-                <?php if ($error): ?>
-                    <div class="errorWrap"><strong>ERROR:</strong> <?php echo htmlspecialchars($error, ENT_QUOTES,'UTF-8'); ?></div>
-                <?php endif; ?>
+        <?php if ($error): ?>
+          <div class="tms-alert bad" id="authErr" role="alert"><i class="fa fa-exclamation-circle" aria-hidden="true"></i> <span><?php echo htmlspecialchars($error, ENT_QUOTES,'UTF-8'); ?></span></div>
+        <?php endif; ?>
 
-                <form method="post">
-                    <?php tms_csrf_field(); ?>
-                    <input type="hidden" name="token" value="<?php echo htmlspecialchars($token, ENT_QUOTES, 'UTF-8'); ?>">
-                    <div class="form-group">
-                        <label for="fld_newpassword">New Password * <small class="text-muted">(min 8 characters)</small></label>
-                        <input type="password" name="newpassword" class="form-control"
-                               placeholder="New Password" required minlength="8" autocomplete="new-password" id="fld_newpassword">
-                    </div>
-                    <div class="form-group">
-                        <label for="fld_confirmpassword">Confirm New Password *</label>
-                        <input type="password" name="confirmpassword" class="form-control"
-                               placeholder="Repeat new password" required autocomplete="new-password" id="fld_confirmpassword">
-                    </div>
-                    <button type="submit" name="submit_reset" class="btn-recover">
-                        <i class="fa fa-key"></i> Set New Password
-                    </button>
-                </form>
+        <form method="post">
+          <?php tms_csrf_field(); ?>
+          <input type="hidden" name="token" value="<?php echo htmlspecialchars($token, ENT_QUOTES, 'UTF-8'); ?>">
+          <div class="tms-field">
+            <label for="fld_newpassword">New password</label>
+            <div class="tms-input has-eye">
+              <i class="fa fa-lock fi" aria-hidden="true"></i>
+              <input type="password" name="newpassword" placeholder="At least 8 characters" required minlength="8" autocomplete="new-password" id="fld_newpassword"<?php echo $errAttr; ?>>
+              <button type="button" class="eye-btn" onclick="togglePass('fld_newpassword',this)" aria-label="Show password"><i class="fa fa-eye" aria-hidden="true"></i></button>
+            </div>
+          </div>
+          <div class="tms-field">
+            <label for="fld_confirmpassword">Confirm new password</label>
+            <div class="tms-input has-eye">
+              <i class="fa fa-lock fi" aria-hidden="true"></i>
+              <input type="password" name="confirmpassword" placeholder="Repeat new password" required autocomplete="new-password" id="fld_confirmpassword"<?php echo $errAttr; ?>>
+              <button type="button" class="eye-btn" onclick="togglePass('fld_confirmpassword',this)" aria-label="Show password"><i class="fa fa-eye" aria-hidden="true"></i></button>
+            </div>
+          </div>
+          <button type="submit" name="submit_reset" class="tms-btn-primary">
+            <i class="fa fa-key" aria-hidden="true"></i> Set new password
+          </button>
+        </form>
 
-            <?php else: ?>
-                <h4><i class="fa fa-lock" style="color:var(--secondary)"></i> Reset Password</h4>
-                <p style="font-size:13px;color:var(--text-muted);margin-bottom:20px;">
-                    Enter your registered email and we'll send you a link to reset your password.
-                </p>
+      <?php else: ?>
+        <h1>Reset password</h1>
+        <p class="lead">Enter your email and we'll send you a reset link.</p>
 
-                <?php if ($error): ?>
-                    <div class="errorWrap"><strong>ERROR:</strong> <?php echo htmlspecialchars($error, ENT_QUOTES,'UTF-8'); ?></div>
-                <?php elseif ($msg): ?>
-                    <div class="succWrap"><strong>SUCCESS:</strong> <?php echo htmlspecialchars($msg, ENT_QUOTES,'UTF-8'); ?>
-                        <br><a href="index.php" style="color:#27ae60;font-weight:600;">← Back to Home &amp; Sign In</a>
-                    </div>
-                <?php endif; ?>
+        <?php if ($error): ?>
+          <div class="tms-alert bad" id="authErr" role="alert"><i class="fa fa-exclamation-circle" aria-hidden="true"></i> <span><?php echo htmlspecialchars($error, ENT_QUOTES,'UTF-8'); ?></span></div>
+        <?php elseif ($msg): ?>
+          <div class="tms-alert ok" role="status"><i class="fa fa-check-circle" aria-hidden="true"></i> <span><?php echo htmlspecialchars($msg, ENT_QUOTES,'UTF-8'); ?> <a href="login.php">Sign in</a></span></div>
+        <?php endif; ?>
 
-                <?php if (!$msg): ?>
-                <form method="post">
-                    <?php tms_csrf_field(); ?>
-                    <div class="form-group">
-                        <label for="fld_email">Registered Email *</label>
-                        <input id="fld_email" type="email" name="email" class="form-control"
-                               placeholder="your@email.com" required autocomplete="email"
-                               value="<?php echo htmlspecialchars($_POST['email'] ?? '', ENT_QUOTES,'UTF-8'); ?>">
-                    </div>
-                    <button type="submit" name="submit_request" class="btn-recover">
-                        <i class="fa fa-paper-plane"></i> Send Reset Link
-                    </button>
-                </form>
-                <?php endif; ?>
-            <?php endif; ?>
+        <?php if (!$msg): ?>
+        <form method="post">
+          <?php tms_csrf_field(); ?>
+          <div class="tms-field">
+            <label for="fld_email">Email</label>
+            <div class="tms-input">
+              <i class="fa fa-envelope fi" aria-hidden="true"></i>
+              <input id="fld_email" type="email" name="email" placeholder="you@example.com" required autocomplete="email"
+                     value="<?php echo htmlspecialchars($_POST['email'] ?? '', ENT_QUOTES,'UTF-8'); ?>"<?php echo $errAttr; ?>>
+            </div>
+          </div>
+          <button type="submit" name="submit_request" class="tms-btn-primary">
+            <i class="fa fa-paper-plane" aria-hidden="true"></i> Send reset link
+          </button>
+        </form>
+        <?php endif; ?>
+      <?php endif; ?>
 
-            <p style="margin-top:18px;font-size:13px;color:var(--text-muted);">
-                Remember your password?
-                <a href="#" data-toggle="modal" data-target="#myModal4" style="color:var(--secondary);font-weight:600;">Sign In</a>
-            </p>
-        </div>
+      <p class="alt">Remembered it? <a href="login.php">Sign in</a></p>
     </div>
-</div>
-
-<?php include('backend/footer.php'); ?>
-<?php include('backend/signin.php'); ?>
-<?php include('backend/write-us.php'); ?>
+  </section>
+</main>
+<script>
+function togglePass(id, btn) {
+  var f = document.getElementById(id), i = btn.querySelector('i');
+  f.type = f.type === 'password' ? 'text' : 'password';
+  i.className = f.type === 'password' ? 'fa fa-eye' : 'fa fa-eye-slash';
+  btn.setAttribute('aria-label', f.type === 'password' ? 'Show password' : 'Hide password');
+}
+</script>
 </body>
 </html>

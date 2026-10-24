@@ -86,7 +86,7 @@ try {
         ];
     }
 } catch (Exception $e) {
-    error_log('[TMS] package type chips failed: ' . $e->getMessage());
+    error_log('[TourBuddy] package type chips failed: ' . $e->getMessage());
 }
 
 // ─── Build query ──────────────────────────────────────────────────────────────
@@ -224,9 +224,9 @@ function pageUrl(int $p): string {
 <link rel="apple-touch-icon" href="images/icon-192.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="TMS">
+<meta name="apple-mobile-web-app-title" content="TourBuddy">
 <meta name="mobile-web-app-capable" content="yes">
-<title>TMS | Package List</title>
+<title>TourBuddy | Package List</title>
 <?php
 // NEW (Round 118, master prompt item 53 -- SEO): this page is explicitly
 // public/indexable (see the "LIVE BUG FIX" comment at the top of this
@@ -303,15 +303,18 @@ tms_seo_meta([
 </head>
 <body>
 <?php include('backend/header.php'); ?>
+<link rel="stylesheet" href="<?php echo tms_asset_ver('css/tms-pages.css'); ?>">
 
 <div class="banner-3">
     <div class="container">
-        <h1 class="wow zoomIn animated" data-wow-delay=".1s"><?php echo tms_t('heading_tms_package_list','TMS – Package List'); ?></h1>
+        <h1 class="wow zoomIn animated" data-wow-delay=".1s"><?php echo tms_t('heading_tms_package_list','TourBuddy – Package List'); ?></h1>
     </div>
 </div>
 
 <div class="rooms">
     <div class="container">
+        <details class="tms-more tms-more-smart"<?php echo $quick!=='' ? ' open' : ''; ?>>
+        <summary><i class="fa fa-magic" aria-hidden="true"></i> Describe your trip or use quick filters</summary>
         <!-- ── Smart Search quick filters ── -->
         <div class="wow fadeInDown" data-wow-delay=".05s" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px;">
             <a href="package-list.php<?php echo ($search!=='' || $filterType!=='') ? '?search='.urlencode($search).'&type='.urlencode($filterType) : ''; ?>"
@@ -393,6 +396,7 @@ html[data-theme="dark"] .no-results { color: var(--text-light) !important; }
             if (e.key === 'Enter') { e.preventDefault(); tmsNlSearch(); }
         });
         </script>
+        </details>
 
         <?php if ($nlNote !== ''): ?>
         <div class="wow fadeIn" style="background:#fff8e1;border:1px solid #ffe082;color:#8d6e00;border-radius:8px;padding:10px 16px;margin-bottom:16px;font-size:13px;">
@@ -426,7 +430,16 @@ html[data-theme="dark"] .no-results { color: var(--text-light) !important; }
                             <?php endforeach; ?>
                         </select>
                     </div>
-                    <div class="col-md-3" style="flex:0 0 170px;">
+                    <div style="display:flex;gap:8px;align-items:flex-end;padding-bottom:0;">
+                        <button type="submit" class="btn-search">
+                            <i class="fa fa-search"></i> <?php echo tms_t('btn_search','Search'); ?>
+                        </button>
+                        <a href="package-list.php" class="btn-reset"><?php echo tms_t('btn_reset','Reset'); ?></a>
+                    </div>
+                    <details class="tms-more-filters" style="flex:1 0 100%;"<?php echo ($durationMin !== null || $sortBy !== 'default') ? ' open' : ''; ?>>
+                    <summary>More filters</summary>
+                    <div class="tms-more-row">
+<div class="col-md-3" style="flex:0 0 170px;">
                         <label for="pkgListDuration" style="font-size:13px;font-weight:600;color:#555;margin-bottom:4px;">
                             <i class="fa fa-clock-o"></i> <?php echo tms_t('label_duration','Duration'); ?>
                         </label>
@@ -464,12 +477,9 @@ html[data-theme="dark"] .no-results { color: var(--text-light) !important; }
                             <option value="name"       <?php echo $sortBy==='name'       ?'selected':''; ?>><?php echo tms_t('sort_name_az','Name A–Z'); ?></option>
                         </select>
                     </div>
-                    <div style="display:flex;gap:8px;align-items:flex-end;padding-bottom:0;">
-                        <button type="submit" class="btn-search">
-                            <i class="fa fa-search"></i> <?php echo tms_t('btn_search','Search'); ?>
-                        </button>
-                        <a href="package-list.php" class="btn-reset"><?php echo tms_t('btn_reset','Reset'); ?></a>
+                    
                     </div>
+                    </details>
                 </div>
             </form>
         </div>
@@ -583,7 +593,7 @@ html[data-theme="dark"] .no-results { color: var(--text-light) !important; }
                                 <?php tms_csrf_field(); ?>
                                 <input type="hidden" name="pkgid" value="<?php echo (int)$result->PackageId; ?>">
                                 <button name="toggle_wish" class="tms-btn-save<?php echo $inWish?' is-saved':''; ?>" aria-pressed="<?php echo $inWish?'true':'false'; ?>">
-                                    <i class="fa fa-heart<?php echo $inWish?'':'-o'; ?>"></i> <?php echo $inWish?'Saved':'Save'; ?>
+                                    <i class="fa fa-heart<?php echo $inWish?'':'-o'; ?>" aria-hidden="true"></i><span class="tms-lbl"> <?php echo $inWish?'Saved':'Save'; ?></span>
                                 </button>
                             </form>
                             <?php endif; ?>
@@ -597,7 +607,7 @@ html[data-theme="dark"] .no-results { color: var(--text-light) !important; }
                                 <?php tms_csrf_field(); ?>
                                 <input type="hidden" name="pkgid" value="<?php echo (int)$result->PackageId; ?>">
                                 <button name="add_compare" class="tms-btn-compare">
-                                    <i class="fa fa-columns"></i> Compare
+                                    <i class="fa fa-columns" aria-hidden="true"></i><span class="tms-lbl"> Compare</span>
                                 </button>
                             </form>
                             <?php elseif($inCompare): ?>
@@ -640,7 +650,7 @@ html[data-theme="dark"] .no-results { color: var(--text-light) !important; }
 
             <?php else: ?>
                 <div class="no-results">
-                    <i class="fa fa-search"></i>
+                    <svg class="tms-empty-art" viewBox="0 0 120 90" width="120" height="90" aria-hidden="true"><circle cx="52" cy="40" r="22" fill="none" stroke="currentColor" stroke-width="5"/><path d="M69 57l22 22" stroke="currentColor" stroke-width="7" stroke-linecap="round"/><path d="M42 40h20" stroke="currentColor" stroke-width="4" stroke-linecap="round" opacity=".5"/></svg>
                     <h3><?php echo tms_t('msg_no_packages_found','No packages found'); ?></h3>
                     <p><?php echo tms_t('msg_try_different_search','Try a different search term or'); ?> <a href="package-list.php"><?php echo tms_t('link_view_all_packages','view all packages'); ?></a>.</p>
                 </div>
@@ -650,11 +660,20 @@ html[data-theme="dark"] .no-results { color: var(--text-light) !important; }
 </div>
 
 <?php if (count($results) > 0): ?>
-<script src="js/tms-leaflet-loader.js"></script>
-<script src="js/tms-map.js"></script>
+<script src="<?php echo tms_asset_ver('js/tms-map-pages.js'); ?>"></script>
 <script>
-var TMS_MAP_POINTS = <?php echo json_encode($mapPoints, JSON_UNESCAPED_SLASHES); ?>;
-var tmsPkgMap = null;
+var TMS_MAP_POINTS = <?php echo json_encode($mapPoints, JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT); ?>;
+var tmsPkgMap = null, tmsPkgPins = null;
+function tmsPkgMapMsg(mapEl, text, spinner) {
+    mapEl.innerHTML = '';
+    var d = document.createElement('div');
+    d.setAttribute('role', spinner ? 'status' : 'alert');
+    d.style.cssText = 'display:flex;align-items:center;justify-content:center;height:100%;color:var(--text-muted);font-size:13px;text-align:center;padding:20px;';
+    if (spinner) { var i = document.createElement('i'); i.className = 'fa fa-spinner fa-spin'; i.style.marginRight = '8px'; d.appendChild(i); }
+    d.appendChild(document.createTextNode(text));
+    mapEl.appendChild(d);
+    return d;
+}
 function tmsSwitchView(view) {
     var listEl = document.getElementById('pkgListView');
     var mapEl = document.getElementById('pkgMapView');
@@ -667,44 +686,29 @@ function tmsSwitchView(view) {
         mapBtn.classList.add('active');
         if (!tmsPkgMap) {
             if (!TMS_MAP_POINTS.length) {
-                mapEl.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:var(--text-muted);font-size:13px;">None of the packages on this page have map coordinates set yet.</div>';
+                tmsPkgMapMsg(mapEl, 'None of the packages on this page have map coordinates set yet.', false);
                 return;
             }
-            // Master prompt item 62 (error/empty/loading states): this box
-            // used to just sit there as a flat grey rectangle (its own
-            // background color) with no feedback while Leaflet's JS/CSS
-            // (loaded from unpkg.com, see the <script>/<link> tags above)
-            // and the OpenStreetMap tiles were still loading -- and if that
-            // CDN request failed/was blocked, `L` was undefined and the
-            // click on "Map view" threw a silent console-only error, leaving
-            // the same blank grey box with zero explanation. Show a brief
-            // spinner immediately, and a clear message instead of a crash
-            // if Leaflet itself never loaded.
-            mapEl.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:var(--text-muted);font-size:13px;"><i class="fa fa-spinner fa-spin" style="margin-right:8px;"></i> Loading map…</div>';
-            // Leaflet is loaded on demand (js/tms-leaflet-loader.js) so the CDN never blocks first paint.
             if (window.tmsPkgMapBuilding) { return; }
             window.tmsPkgMapBuilding = true;
-            tmsLoadLeaflet(function (err) {
+            var tmsLoadMsg = tmsPkgMapMsg(mapEl, ' Loading map\u2026', true);
+            // MapLibre is loaded only now (first click on "Map view"), so it never slows the first paint of the list.
+            TmsMapPages.mount(mapEl, { base: '', lang: document.documentElement.lang || 'en', center: [90.4, 23.8], zoom: 6 }).then(function (ctl) {
                 window.tmsPkgMapBuilding = false;
-                if (err || typeof L === 'undefined') {
-                    mapEl.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:var(--text-muted);font-size:13px;text-align:center;padding:20px;"><i class="fa fa-exclamation-triangle" style="display:block;font-size:24px;margin-bottom:8px;"></i>Map couldn\'t load (offline or blocked script). Use List view to browse these packages instead.</div>';
-                    return;
-                }
-                mapEl.innerHTML = '';
-                tmsPkgMap = L.map('pkgMapView');
-                if (window.TmsMap) { TmsMap.addTiles(tmsPkgMap, { maxZoom: 18 }); TmsMap.fixSize(tmsPkgMap); }
-                else L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '&copy; OpenStreetMap contributors', maxZoom: 18 }).addTo(tmsPkgMap);
-                var bounds = [];
-                TMS_MAP_POINTS.forEach(function(p) {
-                    var m = L.marker([p.lat, p.lng]).addTo(tmsPkgMap)
-                        .bindPopup('<strong>' + p.name.replace(/</g,'&lt;') + '</strong><br>' + p.price +
-                            '<br><a href="package-details.php?pkgid=' + p.id + '">View package</a>');
-                    bounds.push([p.lat, p.lng]);
-                });
-                tmsPkgMap.fitBounds(bounds, { padding: [40, 40], maxZoom: 12 });
+                if (tmsLoadMsg && tmsLoadMsg.parentNode) tmsLoadMsg.parentNode.removeChild(tmsLoadMsg);
+                tmsPkgMap = ctl;
+                // Only packages with real coordinates on this page are plotted (the server already filtered them).
+                tmsPkgPins = TmsMapPages.pins(ctl, 'pkg', { color: '#176B50', cluster: true, linkLabel: 'View package' });
+                tmsPkgPins.set(TMS_MAP_POINTS.map(function (p) {
+                    return { lat: p.lat, lng: p.lng, title: p.name, subtitle: p.price, url: 'package-details.php?pkgid=' + encodeURIComponent(p.id) };
+                }));
+                tmsPkgPins.fit();
+            }, function () {
+                window.tmsPkgMapBuilding = false;
+                tmsPkgMapMsg(mapEl, 'The map could not be loaded right now. The list view still works.', false);
             });
         } else {
-            setTimeout(function(){ tmsPkgMap.invalidateSize(); }, 50);
+            setTimeout(function () { tmsPkgMap.resize(); }, 50);
         }
     } else {
         if (listEl) listEl.style.display = 'block';

@@ -12,7 +12,7 @@ tms_admin_require_role($dbh, ['content_manager', 'manager']); // Round 20 RBAC (
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>TMS | Blog Posts</title>
+<title>TourBuddy | Blog Posts</title>
 <link href="css/font-awesome.css" rel="stylesheet">
 <link href="css/bootstrap.min.css" rel="stylesheet">
 <link href="<?php echo tms_asset_ver('css/admin-v6.css'); ?>" rel="stylesheet">

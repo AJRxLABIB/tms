@@ -9,7 +9,7 @@ if (!GoogleAuth::enabled()) $fail('Google sign-in is not available on this site.
 
 $r = GoogleAuth::complete($dbh, $_GET);
 if (!$r['ok']) {
-    error_log('[TMS Google] sign-in refused: ' . ($r['error'] ?? 'unknown'));
+    error_log('[TourBuddy Google] sign-in refused: ' . ($r['error'] ?? 'unknown'));
     $fail($r['error'] === 'denied' ? 'Google sign-in was cancelled.' : 'Google sign-in could not be completed. Please try again.');
 }
 try { GoogleAuth::migrate($dbh); } catch (Throwable $e) {}

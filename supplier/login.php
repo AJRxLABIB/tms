@@ -17,7 +17,7 @@ sup_head('Sign in');
 ?>
 <div class="sp-auth">
   <h1>Supplier sign in</h1>
-  <p class="sp-sub">Manage your packages, availability and bookings with TMS.</p>
+  <p class="sp-sub">Manage your packages, availability and bookings with TourBuddy.</p>
   <?php if (!empty($_GET['registered'])): ?><div class="sp-alert ok" role="status">Account created. An administrator will verify your business before you can list packages. You can sign in to follow the status.</div><?php endif; ?>
   <?php if ($error): ?><div class="sp-alert bad" role="alert"><?php echo h($error); ?></div><?php endif; ?>
   <form method="post" class="sp-card" autocomplete="on">

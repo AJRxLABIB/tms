@@ -61,7 +61,7 @@ final class BookingReadiness
             $unit = $price; $label = 'list price';
             if ($dateState === 'ok' && function_exists('tms_dynamic_price')) {
                 try { $dp = tms_dynamic_price($dbh, $id, (float)$price, $from->format('Y-m-d')); $unit = (int)$dp['final']; $label = 'price for the departure date' . (!empty($dp['label']) ? ' (' . $dp['label'] . ')' : ''); }
-                catch (Throwable $e) { error_log('[TMS AI booking] price: ' . $e->getMessage()); }
+                catch (Throwable $e) { error_log('[TourBuddy AI booking] price: ' . $e->getMessage()); }
             }
             $out['price'] = ['per_person_bdt' => $unit, 'basis' => $label, 'list_price_per_person_bdt' => $price, 'estimated_total_bdt' => $unit * $travelers,
                 'excludes' => 'coupons, add-ons and any fees shown at checkout; the final price is confirmed on the booking page'];

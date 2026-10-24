@@ -81,7 +81,7 @@ class RulesEngine
             $params = json_decode((string)$rule['params'], true);
             $params = is_array($params) ? $params : [];
             try { $subjects = self::subjectsFor($dbh, (string)$rule['trigger_type'], $params, (int)$rule['window_minutes']); }
-            catch (Throwable $e) { error_log('[TMS Rules] trigger query failed for rule ' . $rule['id'] . ': ' . $e->getMessage()); $sum['failed']++; continue; }
+            catch (Throwable $e) { error_log('[TourBuddy Rules] trigger query failed for rule ' . $rule['id'] . ': ' . $e->getMessage()); $sum['failed']++; continue; }
             $windowKey = (string)intdiv(time(), max(60, (int)$rule['window_minutes'] * 60));
             foreach ($subjects as [$subjectKey, $ctx]) {
                 $sum['matched']++;

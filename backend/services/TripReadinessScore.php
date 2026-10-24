@@ -1,6 +1,6 @@
 <?php
 /**
- * TripReadinessScore.php — "TMS V2" prompt, Trip Readiness Score.
+ * TripReadinessScore.php — "TourBuddy V2" prompt, Trip Readiness Score.
  *
  * Confirmed absent anywhere in this codebase before this (checked
  * frontend/my-trip.php, admin/ai-dashboard.php, and a project-wide grep
@@ -77,7 +77,7 @@ class TripReadinessScore
             $q->execute([':email' => $email]);
             $hasDocument = (bool) $q->fetchColumn();
         } catch (Exception $e) {
-            error_log('[TMS] TripReadinessScore::forBooking document check failed: ' . $e->getMessage());
+            error_log('[TourBuddy] TripReadinessScore::forBooking document check failed: ' . $e->getMessage());
         }
 
         $hasItinerary = false;
@@ -86,7 +86,7 @@ class TripReadinessScore
             $q->execute([':bid' => $booking->BookingId ?? 0]);
             $hasItinerary = (bool) $q->fetchColumn();
         } catch (Exception $e) {
-            error_log('[TMS] TripReadinessScore::forBooking itinerary check failed: ' . $e->getMessage());
+            error_log('[TourBuddy] TripReadinessScore::forBooking itinerary check failed: ' . $e->getMessage());
         }
 
         return self::computeScore([

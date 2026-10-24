@@ -37,7 +37,7 @@ if ($from !== '') {
 
 $pricing = tms_dynamic_price($dbh, $pid, (float)$rawPrice, $fromDateNormalized);
 
-// TMS V2 Phase 8 (Dynamic Pricing Engine transparency): tms_dynamic_price()
+// TourBuddy V2 Phase 8 (Dynamic Pricing Engine transparency): tms_dynamic_price()
 // has always computed these per-component percentages internally (see
 // backend/PricingEngine.php) but this endpoint only ever exposed the
 // collapsed $pricing['label'] string -- so the customer could see THAT

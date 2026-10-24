@@ -217,7 +217,7 @@ final class ToolRegistry
     {
         $this->lastRetrieval = 'bm25';
         $hits = null;
-        try { $hits = $this->hybridHits((string)$a['query'], $limit ?: 5, $f); } catch (Throwable $e) { error_log('[TMS AI hybrid] ' . $e->getMessage()); }
+        try { $hits = $this->hybridHits((string)$a['query'], $limit ?: 5, $f); } catch (Throwable $e) { error_log('[TourBuddy AI hybrid] ' . $e->getMessage()); }
         if ($hits !== null) { $this->lastRetrieval = 'hybrid'; }
         elseif ($this->reranker) {
             // Optional semantic re-rank of a wider BM25 candidate pool; falls back to BM25 order on any failure.
@@ -266,7 +266,7 @@ final class ToolRegistry
     private function travelNotices(array $a): array
     {
         $none = ['notices' => [], 'status' => 'no_verified_notice',
-            'note' => 'TMS has no staff-verified notice for this. You MUST say you cannot confirm current entry rules, disruptions or advisories, and tell the traveler to check the official government or embassy source. Do not guess.'];
+            'note' => 'TourBuddy has no staff-verified notice for this. You MUST say you cannot confirm current entry rules, disruptions or advisories, and tell the traveler to check the official government or embassy source. Do not guess.'];
         if (!$this->db) return $none;
         require_once dirname(__DIR__) . '/services/TravelNoticeService.php';
         $country = trim((string)($a['country'] ?? ''));
@@ -312,7 +312,7 @@ final class ToolRegistry
         $need = array_values(array_filter($ids, fn($i) => !array_key_exists($i, $this->liveCache)));
         if ($need) {
             try { $got = KnowledgeIndex::liveCheck($this->db, $need); }
-            catch (Throwable $e) { error_log('[TMS AI live check] ' . $e->getMessage()); return null; }   // cannot verify: keep the indexed value rather than hide the catalogue
+            catch (Throwable $e) { error_log('[TourBuddy AI live check] ' . $e->getMessage()); return null; }   // cannot verify: keep the indexed value rather than hide the catalogue
             foreach ($need as $i) $this->liveCache[$i] = $got[$i] ?? null;
         }
         $out = []; foreach ($ids as $i) if (($this->liveCache[$i] ?? null) !== null) $out[$i] = $this->liveCache[$i];
@@ -393,7 +393,7 @@ final class ToolRegistry
     {
         if ($this->entities === null) {
             try { $this->entities = $this->db ? EntityIndex::fromDb($this->db) : EntityIndex::fromRows([]); }
-            catch (Throwable $e) { error_log('[TMS AI entities] ' . $e->getMessage()); $this->entities = EntityIndex::fromRows([]); }
+            catch (Throwable $e) { error_log('[TourBuddy AI entities] ' . $e->getMessage()); $this->entities = EntityIndex::fromRows([]); }
         }
         return $this->entities;
     }
@@ -464,7 +464,7 @@ final class ToolRegistry
                   WHERE b.BookingId = :id AND b.UserEmail = :e LIMIT 1");
             $st->execute([':id' => $bookingId, ':e' => $email]);
             $r = $st->fetch(PDO::FETCH_ASSOC);
-        } catch (Throwable $e) { error_log('[TMS AI get_my_booking] ' . $e->getMessage()); return ['not_found' => true]; }
+        } catch (Throwable $e) { error_log('[TourBuddy AI get_my_booking] ' . $e->getMessage()); return ['not_found' => true]; }
         if (!$r) return ['not_found' => true];
         $label = [0 => 'awaiting confirmation', 1 => 'confirmed', 2 => 'cancelled'];
         return ['booking_id' => (int)$r['BookingId'], 'package' => $r['PackageName'], 'from' => $r['FromDate'], 'to' => $r['ToDate'],

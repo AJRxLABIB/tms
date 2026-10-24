@@ -1,6 +1,6 @@
 <?php
 /**
- * scripts/check_budget_overspend.php — AI Budget Autopilot ("TMS V2" prompt).
+ * scripts/check_budget_overspend.php — AI Budget Autopilot ("TourBuddy V2" prompt).
  * CLI/cron only, same reasoning as scripts/check_wallet_expiry.php: a plain
  * periodic script is the right amount of infrastructure for this project's
  * size (Rule 73), no queue broker needed.

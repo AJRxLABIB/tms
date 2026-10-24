@@ -77,7 +77,7 @@ final class TwoFactorRecovery
             return $codes;
         } catch (Throwable $e) {
             if ($own && $dbh->inTransaction()) $dbh->rollBack();
-            error_log('[TMS 2FA recovery] regenerate failed: ' . $e->getMessage());
+            error_log('[TourBuddy 2FA recovery] regenerate failed: ' . $e->getMessage());
             return [];
         }
     }
@@ -123,7 +123,7 @@ final class TwoFactorRecovery
             return $ok;
         } catch (Throwable $e) {
             if ($own && $dbh->inTransaction()) $dbh->rollBack();
-            error_log('[TMS 2FA recovery] consume failed: ' . $e->getMessage());
+            error_log('[TourBuddy 2FA recovery] consume failed: ' . $e->getMessage());
             return false;
         }
     }

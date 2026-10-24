@@ -11,11 +11,11 @@ tms_admin_require_role($dbh, ['superadmin', 'package_manager']);
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>TMS | Popular Destinations</title>
+<title>TourBuddy | Popular Destinations</title>
 <link href="css/font-awesome.css" rel="stylesheet">
 <link href="css/bootstrap.min.css" rel="stylesheet">
 <link href="<?php echo tms_asset_ver('css/admin-v6.css'); ?>" rel="stylesheet">
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<link rel="stylesheet" href="../js/vendor/maplibre/maplibre-gl.css">
 <style>
 .page-title-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;flex-wrap:wrap;gap:12px;}
 .page-title-row h2{font-family:'Inter',sans-serif;font-size:22px;font-weight:800;color:var(--text-primary);margin:0;}
@@ -134,7 +134,7 @@ $mapBookedPlaces = array_values(array_filter($mostBookedPlaces, fn($r) => !empty
   <div style="font-size:11.5px;color:var(--text-muted);margin-bottom:14px;">Bubble size = confirmed bookings at that destination. Only destinations with a package that has map coordinates set are shown — no estimated pins.</div>
   <div id="destHeatMap" style="height:380px;border-radius:10px;background:#eef2f5;"></div>
 </div>
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="../js/tms-map-pages.js"></script>
 <script>
 (function(){
     var places = <?php echo json_encode(array_map(fn($r) => [
@@ -142,26 +142,43 @@ $mapBookedPlaces = array_values(array_filter($mostBookedPlaces, fn($r) => !empty
         'count' => (int)$r->cnt,
         'lat' => (float)$r->lat,
         'lng' => (float)$r->lng,
-    ], $mapBookedPlaces), JSON_UNESCAPED_SLASHES); ?>;
-    if (!places.length) return;
-    var map = L.map('destHeatMap');
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '&copy; OpenStreetMap contributors', maxZoom: 18
-    }).addTo(map);
-    var maxCount = Math.max.apply(null, places.map(function(p){ return p.count; }));
-    var bounds = [];
-    places.forEach(function(p){
-        var radius = 10 + (p.count / maxCount) * 30; // 10–40px, scaled to the busiest destination
-        L.circleMarker([p.lat, p.lng], {
-            radius: radius,
-            fillColor: '#e11d48',
-            fillOpacity: 0.35 + (p.count / maxCount) * 0.4,
-            color: '#e11d48',
-            weight: 1.5,
-        }).addTo(map).bindPopup('<strong>' + p.name.replace(/</g,'&lt;') + '</strong><br>' + p.count + ' confirmed booking' + (p.count===1?'':'s'));
-        bounds.push([p.lat, p.lng]);
+    ], $mapBookedPlaces), JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT); ?>;
+    var el = document.getElementById('destHeatMap');
+    if (!places.length || !el || !window.TmsMapPages) return;
+    var U = TmsMapPages.utils;
+    var pts = places.filter(function (p) { return U.validCoord(p.lat, p.lng); });
+    if (!pts.length) return;
+    TmsMapPages.mount(el, { base: '../', lang: document.documentElement.lang || 'en', center: [pts[0].lng, pts[0].lat], zoom: 4 }).then(function (ctl) {
+        var maxCount = Math.max.apply(null, pts.map(function (p) { return p.count; })) || 1;
+        var fc = { type: 'FeatureCollection', features: pts.map(function (p) {
+            return { type: 'Feature', properties: { name: p.name, count: p.count, r: 10 + (p.count / maxCount) * 30, a: 0.35 + (p.count / maxCount) * 0.4 },
+                     geometry: { type: 'Point', coordinates: [p.lng, p.lat] } };
+        }) };
+        var popup = null;
+        ctl.onStyleReady(function (map) {
+            // bubble size = confirmed bookings at that destination (scaled to the busiest one), same meaning as before
+            if (!map.getSource('tms-bubbles-src')) map.addSource('tms-bubbles-src', { type: 'geojson', data: fc });
+            if (!map.getLayer('tms-bubbles')) {
+                map.addLayer({ id: 'tms-bubbles', type: 'circle', source: 'tms-bubbles-src', paint: {
+                    'circle-radius': ['get', 'r'], 'circle-color': '#e11d48', 'circle-opacity': ['get', 'a'], 'circle-stroke-color': '#e11d48', 'circle-stroke-width': 1.5 } });
+                map.on('click', 'tms-bubbles', function (e) {
+                    var f = e.features && e.features[0]; if (!f) return;
+                    var w = document.createElement('div'); w.style.cssText = 'font:13px/1.4 system-ui,sans-serif;color:#1b2a22';
+                    var t = document.createElement('strong'); t.textContent = f.properties.name; w.appendChild(t);
+                    var n = Number(f.properties.count);
+                    var c = document.createElement('div'); c.textContent = n + ' confirmed booking' + (n === 1 ? '' : 's'); w.appendChild(c);
+                    if (popup) popup.remove();
+                    popup = new maplibregl.Popup({ offset: 12 }).setLngLat(f.geometry.coordinates.slice()).setDOMContent(w).addTo(map);
+                });
+                map.on('mouseenter', 'tms-bubbles', function () { map.getCanvas().style.cursor = 'pointer'; });
+                map.on('mouseleave', 'tms-bubbles', function () { map.getCanvas().style.cursor = ''; });
+            }
+        });
+        ctl.fitToItems(pts, { padding: 40, maxZoom: 6 });
+    }, function () {
+        el.textContent = 'The map could not be loaded right now.';
+        el.style.cssText += ';display:flex;align-items:center;justify-content:center;color:#94a3b8;font-size:13px';
     });
-    map.fitBounds(bounds, { padding: [30,30], maxZoom: 6 });
 })();
 </script>
 <?php endif; ?>

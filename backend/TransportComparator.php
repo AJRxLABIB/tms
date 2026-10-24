@@ -211,7 +211,7 @@ class TransportComparator {
             $r = $res['results'][0];
             return ['lat' => (float)$r['lat'], 'lng' => (float)$r['lng'], 'label' => $r['name'] ?? $place];
         } catch (Exception $e) {
-            error_log('[TMS Transport] Geocode failed for "' . $place . '": ' . $e->getMessage());
+            error_log('[TourBuddy Transport] Geocode failed for "' . $place . '": ' . $e->getMessage());
             return null;
         }
     }
@@ -231,7 +231,7 @@ class TransportComparator {
                 if ($impliedKmh >= $minKmh && $impliedKmh <= $maxKmh) {
                     return $this->finishRow($mode, $distanceKm, $durationMin, 'real_route', $realistic, $route['data']['source'] ?? 'osrm');
                 }
-                error_log("[TMS Transport] Discarded implausible '$mode' route: {$distanceKm}km in {$durationMin}min "
+                error_log("[TourBuddy Transport] Discarded implausible '$mode' route: {$distanceKm}km in {$durationMin}min "
                     . "(implied " . round($impliedKmh, 1) . " km/h, outside [$minKmh, $maxKmh]) -- falling back to a distance-based estimate instead.");
             }
             // Routing API unreachable, or returned an implausible result --

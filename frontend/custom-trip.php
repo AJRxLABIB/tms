@@ -58,7 +58,7 @@ if(isset($_POST['submittrip'])) {
                     ->execute([':e' => $userEmail, ':d' => 'Custom trip request']);
             }
         } catch (Exception $e) {
-            error_log('[TMS Loyalty] custom-trip points failed (request still saved): ' . $e->getMessage());
+            error_log('[TourBuddy Loyalty] custom-trip points failed (request still saved): ' . $e->getMessage());
         }
 
         $success = 'Your custom trip request has been submitted! Our team will contact you within 24 hours.';
@@ -83,9 +83,9 @@ if(!empty($_SESSION['login'])) {
 <link rel="apple-touch-icon" href="images/icon-192.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="TMS">
+<meta name="apple-mobile-web-app-title" content="TourBuddy">
 <meta name="mobile-web-app-capable" content="yes">
-<title>TMS | Custom Trip Planner</title>
+<title>TourBuddy | Custom Trip Planner</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <link href="css/bootstrap.min2.css" rel='stylesheet' type='text/css' />
 <link href="<?php echo tms_asset_ver('css/style.min.css'); ?>" rel='stylesheet' type='text/css' />
@@ -157,6 +157,7 @@ html[data-theme="dark"] .activity-item span,
 html[data-theme="dark"] .prog-step span,
 html[data-theme="dark"] .ai-tip-list { color: var(--text-muted) !important; }
 </style>
+<link rel="stylesheet" href="css/tms-account.css?v=1">
 </head>
 <body>
 <?php include('backend/header.php'); ?>

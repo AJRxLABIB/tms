@@ -21,7 +21,7 @@ try {
     $stmt = $dbh->query("SELECT slug, name, known_for, best_time, how_to_get_there, practical_note, sources, researched_at FROM tbl_bd_destination_guides ORDER BY name ASC");
     $guides = $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
 } catch (Exception $e) {
-    error_log('[TMS] bd-guide.php: tbl_bd_destination_guides not available yet: ' . $e->getMessage());
+    error_log('[TourBuddy] bd-guide.php: tbl_bd_destination_guides not available yet: ' . $e->getMessage());
     $loadError = true;
 }
 $researchedAt = $guides ? ($guides[0]['researched_at'] ?? null) : null;
@@ -32,7 +32,7 @@ $researchedAt = $guides ? ($guides[0]['researched_at'] ?? null) : null;
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#006A4E">
 <link rel="apple-touch-icon" href="images/icon-192.png">
-<title>TMS | Bangladesh Travel Guide</title>
+<title>TourBuddy | Bangladesh Travel Guide</title>
 <?php
 // NEW (Round 118, master prompt item 53 -- SEO): explicitly public content
 // (see the "Public content page" comment at the top of this file) with a

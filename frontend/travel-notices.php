@@ -15,7 +15,7 @@ $icons = ['disruption' => 'fa-exclamation-triangle', 'entry' => 'fa-id-card-o', 
 <head>
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#104B3A">
-<title>TMS | Travel Notices</title>
+<title>TourBuddy | Travel Notices</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <link href="css/bootstrap.min2.css" rel='stylesheet' type='text/css' />
 <link href="<?php echo tms_asset_ver('css/style.min.css'); ?>" rel='stylesheet' type='text/css' />

@@ -100,7 +100,7 @@ final class ActionProposals
             $id = (int)$db->lastInsertId();
             return ['ok' => true, 'proposal' => ['id' => $id, 'type' => $type, 'summary' => $summary, 'expires_in_min' => self::TTL_MINUTES, 'status' => 'proposed']];
         } catch (Throwable $e) {
-            error_log('[TMS AI action propose] ' . $e->getMessage());
+            error_log('[TourBuddy AI action propose] ' . $e->getMessage());
             return ['ok' => false, 'reason' => 'unavailable'];
         }
     }
@@ -155,7 +155,7 @@ final class ActionProposals
             return ['ok' => true, 'status' => $executed ? 'executed' : 'confirmed', 'message' => $message, 'next_url' => $next, 'executed' => $executed];
         } catch (Throwable $e) {
             if ($db->inTransaction()) $db->rollBack();
-            error_log('[TMS AI action confirm] ' . $e->getMessage());
+            error_log('[TourBuddy AI action confirm] ' . $e->getMessage());
             return ['ok' => false, 'status' => 'error', 'message' => 'This could not be processed right now.'];
         }
     }

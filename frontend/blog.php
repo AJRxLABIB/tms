@@ -41,9 +41,9 @@ $posts = $q->fetchAll(PDO::FETCH_OBJ);
 <link rel="apple-touch-icon" href="images/icon-192.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="TMS">
+<meta name="apple-mobile-web-app-title" content="TourBuddy">
 <meta name="mobile-web-app-capable" content="yes">
-<title>TMS | Travel Blog</title>
+<title>TourBuddy | Travel Blog</title>
 <?php
 // SEO meta broadening (master prompt item 53, extending Round 20's work on
 // destinations.php/blog-post.php/package-details.php to this listing page):
@@ -86,7 +86,8 @@ html[data-theme="dark"] .blog-body p { color: var(--text-muted) !important; }
 </style>
 </head><body>
 <?php include('backend/header.php'); ?>
-<div class="page-title">
+<link rel="stylesheet" href="<?php echo tms_asset_ver('css/tms-pages.css'); ?>">
+<div class="page-title tms-band">
   <div class="container">
     <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;">
       <h2 style="margin:0;"><i class="fa fa-pencil"></i> <?php echo tms_t('heading_travel_blog','Travel Blog &amp; Tips'); ?></h2>
@@ -104,14 +105,14 @@ html[data-theme="dark"] .blog-body p { color: var(--text-muted) !important; }
 ]); ?>
 <?php if (count($posts) === 0): ?>
   <div style="text-align:center;padding:60px 0;color:var(--text-muted);">
-    <i class="fa fa-pencil-square-o" style="font-size:56px;"></i>
+    <svg class="tms-empty-art" viewBox="0 0 120 90" width="120" height="90" aria-hidden="true"><rect x="22" y="14" width="76" height="62" rx="8" fill="none" stroke="currentColor" stroke-width="5"/><path d="M36 34h48M36 48h48M36 62h28" stroke="currentColor" stroke-width="4" stroke-linecap="round" opacity=".55"/></svg>
     <h3 style="margin-top:16px;"><?php echo tms_t('msg_no_articles_yet','No articles yet'); ?></h3>
     <p><?php echo tms_t('dest_no_articles_subtitle','Check back soon for travel tips and destination guides.'); ?></p>
   </div>
 <?php else: ?>
-<div class="row">
+<div class="tms-list-grid tms-blog-grid">
 <?php foreach ($posts as $p): ?>
-<div class="col-md-4 col-sm-6">
+<div class="tms-blog-cell">
   <div class="blog-card">
     <?php $blogPh = tms_placeholder_image((string)($p->Tag ?? ''), (string)$p->id); ?>
     <?php if ($p->CoverImage): ?>

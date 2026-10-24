@@ -42,7 +42,7 @@ foreach ($st->fetchAll(PDO::FETCH_ASSOC) as $b) {
         $r = TripAutopilot::checkBooking($dbh, $b, $planner, true);
         $counts[$r['status']] = ($counts[$r['status']] ?? 0) + 1;
     } catch (Throwable $e) {
-        error_log('[TMS Autopilot] booking ' . $b['BookingId'] . ': ' . $e->getMessage());
+        error_log('[TourBuddy Autopilot] booking ' . $b['BookingId'] . ': ' . $e->getMessage());
         fwrite(STDERR, "booking {$b['BookingId']} failed: " . $e->getMessage() . "\n");
     }
 }

@@ -70,7 +70,7 @@ final class AIConfig
         try {
             $db->prepare('INSERT INTO tbl_app_meta (k, v) VALUES (?, ?) ON DUPLICATE KEY UPDATE v = VALUES(v)')->execute(['ai_cfg_' . $name, (string)$v]);
             if ($old !== $v) $db->prepare('INSERT INTO tbl_ai_config_log (setting, old_value, new_value, changed_by) VALUES (?,?,?,?)')->execute([$name, (string)$old, (string)$v, mb_substr($admin, 0, 100)]);
-        } catch (Throwable $e) { self::$cache = []; error_log('[TMS AI config] ' . $e->getMessage()); return ['ok' => false, 'error' => 'storage']; }
+        } catch (Throwable $e) { self::$cache = []; error_log('[TourBuddy AI config] ' . $e->getMessage()); return ['ok' => false, 'error' => 'storage']; }
         return ['ok' => true, 'old' => $old, 'new' => $v];
     }
 

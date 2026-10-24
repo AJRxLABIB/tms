@@ -110,7 +110,7 @@ if (empty($me->TwoFAEnabled) && empty($_SESSION['pending_u2fa_secret'])) {
 }
 
 $pendingSecret = $_SESSION['pending_u2fa_secret'] ?? '';
-$otpUri = $pendingSecret ? tms_totp_provisioning_uri($pendingSecret, $email, 'TMS') : '';
+$otpUri = $pendingSecret ? tms_totp_provisioning_uri($pendingSecret, $email, 'TourBuddy') : '';
 $qrUrl  = $otpUri ? tms_totp_qr_url($otpUri) : '';
 ?>
 <!DOCTYPE html>
@@ -121,11 +121,11 @@ $qrUrl  = $otpUri ? tms_totp_qr_url($otpUri) : '';
 <link rel="apple-touch-icon" href="images/icon-192.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="TMS">
+<meta name="apple-mobile-web-app-title" content="TourBuddy">
 <meta name="mobile-web-app-capable" content="yes">
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>TMS | Two-Factor Authentication</title>
+<title>TourBuddy | Two-Factor Authentication</title>
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
 <link href="css/bootstrap.min2.css" rel='stylesheet' type='text/css' />
 <link href="<?php echo tms_asset_ver('css/style.min.css'); ?>" rel='stylesheet' type='text/css' />

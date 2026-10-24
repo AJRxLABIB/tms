@@ -62,11 +62,11 @@ if ($booking) {
 <link rel="apple-touch-icon" href="images/icon-192.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="TMS">
+<meta name="apple-mobile-web-app-title" content="TourBuddy">
 <meta name="mobile-web-app-capable" content="yes">
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>TMS | E-Ticket<?php echo $booking ? ' #BK'.str_pad($booking->BookingId,3,'0',STR_PAD_LEFT) : ''; ?></title>
+<title>TourBuddy | E-Ticket<?php echo $booking ? ' #BK'.str_pad($booking->BookingId,3,'0',STR_PAD_LEFT) : ''; ?></title>
 <link href="css/font-awesome.min2.css" rel="stylesheet">
 <link href="<?php echo tms_asset_ver('css/modern-theme.css'); ?>" rel="stylesheet">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -111,6 +111,7 @@ if ($booking) {
     .ticket { box-shadow:none; border-radius:0; }
   }
 </style>
+<link rel="stylesheet" href="css/tms-account.css?v=1">
 </head>
 <body>
 <div class="ticket-wrap">
@@ -141,7 +142,7 @@ if ($booking) {
     <div class="ticket">
       <div class="ticket-head">
         <div>
-          <h1><i class="fa fa-plane"></i> <?php echo tms_t('heading_tms_eticket','TMS E-Ticket'); ?></h1>
+          <h1><i class="fa fa-plane"></i> <?php echo tms_t('heading_tms_eticket','TourBuddy E-Ticket'); ?></h1>
           <div class="brand">Tourism Management System</div>
           <div class="status-pill"><i class="fa fa-check-circle"></i> <?php echo tms_t('step_confirmed','Confirmed'); ?></div>
         </div>
@@ -252,7 +253,7 @@ if ($booking) {
       </div>
       <div class="footer-note">
         <?php echo tms_t('label_booked_on_prefix','Booked on'); ?> <?php echo htmlspecialchars($booking->RegDate, ENT_QUOTES, 'UTF-8'); ?>.
-        <?php echo tms_t('dest_ticket_footer_note', 'Please carry a valid photo ID matching the passenger name above. For cancellations, refunds, or changes, visit <strong>My Bookings</strong> or contact TMS support at +880 1759-443004.'); ?>
+        <?php echo tms_t('dest_ticket_footer_note', 'Please carry a valid photo ID matching the passenger name above. For cancellations, refunds, or changes, visit <strong>My Bookings</strong> or contact TourBuddy support at +880 1759-443004.'); ?>
       </div>
       <?php if (!empty($booking->VerificationCode)): ?>
       <div class="boarding-stub">

@@ -8,26 +8,26 @@ try { $dbh->query('SELECT 1 FROM tbl_supplier_disputes LIMIT 1'); $ready = true;
 if ($ready && $_SERVER['REQUEST_METHOD'] === 'POST') {
     tms_csrf_validate();
     $r = SupplierQuality::fileDispute($dbh, $sid, (string)($_POST['subject'] ?? ''), (string)($_POST['body'] ?? ''));
-    if ($r['ok']) $msg = 'Your dispute was sent to the TMS team. A person will review it and reply here.'; else $err = (string)$r['error'];
+    if ($r['ok']) $msg = 'Your dispute was sent to the TourBuddy team. A person will review it and reply here.'; else $err = (string)$r['error'];
 }
 sup_head('Quality', $sup, 'quality.php');
 ?>
 <h1>Quality &amp; disputes</h1>
 <?php if (!$ready): ?>
-<div class="sp-alert warn" role="status">This section is not available yet. Ask the TMS administrator to finish the latest database update.</div>
+<div class="sp-alert warn" role="status">This section is not available yet. Ask the TourBuddy administrator to finish the latest database update.</div>
 <?php else:
   $res = SupplierQuality::score(SupplierQuality::metrics($dbh, $sid));
   $disputes = SupplierQuality::disputes($dbh, $sid);
   $review = SupplierQuality::reviewHistory($dbh, $sid, 5);
 ?>
-<p class="sp-sub">This is exactly how TMS measures your account. It is a guide for people at TMS, never an automatic penalty: only an administrator can change your status, and you can dispute anything below.</p>
+<p class="sp-sub">This is exactly how TourBuddy measures your account. It is a guide for people at TourBuddy, never an automatic penalty: only an administrator can change your status, and you can dispute anything below.</p>
 <?php if ($msg): ?><div class="sp-alert ok" role="status"><?php echo h($msg); ?></div><?php endif; ?>
 <?php if ($err): ?><div class="sp-alert bad" role="alert"><?php echo h($err); ?></div><?php endif; ?>
 
 <div class="sp-card">
   <h2 style="margin-top:0">Your score: <?php echo $res['score'] === null ? 'not enough data yet' : h($res['score']) . ' / 100'; ?></h2>
   <p><?php echo h($res['note']); ?></p>
-  <?php if ($res['needs_review']): ?><div class="sp-alert warn">A TMS team member may review your account for: <?php echo h(implode(' ', $res['review_reasons'])); ?></div><?php endif; ?>
+  <?php if ($res['needs_review']): ?><div class="sp-alert warn">A TourBuddy team member may review your account for: <?php echo h(implode(' ', $res['review_reasons'])); ?></div><?php endif; ?>
   <div class="sp-table-wrap"><table class="sp-table"><caption class="sr-only">Score criteria</caption>
     <thead><tr><th scope="col">Criterion</th><th scope="col">Weight</th><th scope="col">Result</th><th scope="col">How it was measured</th></tr></thead><tbody>
     <?php foreach ($res['criteria'] as $c): ?>
@@ -36,7 +36,7 @@ sup_head('Quality', $sup, 'quality.php');
     <?php endforeach; ?></tbody></table></div>
 </div>
 
-<?php if ($review): ?><div class="sp-card"><h2 style="margin-top:0">Recent decisions by TMS staff</h2><ul>
+<?php if ($review): ?><div class="sp-card"><h2 style="margin-top:0">Recent decisions by TourBuddy staff</h2><ul>
 <?php foreach ($review as $rv): ?><li><?php echo h($rv['CreatedAt']); ?> &mdash; <b><?php echo h(str_replace('_', ' ', $rv['Decision'])); ?></b>: <?php echo h($rv['Note']); ?></li><?php endforeach; ?></ul></div><?php endif; ?>
 
 <div class="sp-card">
@@ -53,7 +53,7 @@ sup_head('Quality', $sup, 'quality.php');
 <?php foreach ($disputes as $d): ?>
   <div style="margin-bottom:14px"><b><?php echo h($d['Subject']); ?></b> &middot; <span class="badge <?php echo $d['Status'] === 'resolved' ? 'ok' : 'warn'; ?>"><?php echo h(str_replace('_', ' ', $d['Status'])); ?></span>
   <div style="font-size:13px"><?php echo nl2br(h($d['Body'])); ?></div>
-  <?php if ($d['Resolution']): ?><div class="sp-alert info" style="margin-top:6px"><b>TMS response:</b> <?php echo h($d['Resolution']); ?></div><?php endif; ?></div>
+  <?php if ($d['Resolution']): ?><div class="sp-alert info" style="margin-top:6px"><b>TourBuddy response:</b> <?php echo h($d['Resolution']); ?></div><?php endif; ?></div>
 <?php endforeach; ?></div><?php endif; ?>
 <?php endif; ?>
 <?php sup_foot();

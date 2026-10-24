@@ -50,7 +50,7 @@ if (isset($_POST['submit1'])) {
         $query->bindParam(':mobile',      $mobile,      PDO::PARAM_STR);
         $query->bindParam(':subject',     $subject,     PDO::PARAM_STR);
         $query->bindParam(':description', $description, PDO::PARAM_STR);
-        try { $query->execute(); } catch (PDOException $e) { error_log('[TMS enquiry] ' . $e->getMessage()); }
+        try { $query->execute(); } catch (PDOException $e) { error_log('[TourBuddy enquiry] ' . $e->getMessage()); }
 
         if ($dbh->lastInsertId()) {
             $msg = 'Your enquiry has been submitted successfully. We will get back to you soon!';
@@ -68,9 +68,9 @@ if (isset($_POST['submit1'])) {
 <link rel="apple-touch-icon" href="images/icon-192.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="TMS">
+<meta name="apple-mobile-web-app-title" content="TourBuddy">
 <meta name="mobile-web-app-capable" content="yes">
-<title>TMS | Enquiry</title>
+<title>TourBuddy | Enquiry</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
 <link href="css/bootstrap.min2.css" rel='stylesheet' type='text/css' />

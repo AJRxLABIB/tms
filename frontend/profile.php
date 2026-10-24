@@ -132,9 +132,9 @@ foreach ($bkQ->fetchAll(PDO::FETCH_OBJ) as $bk) {
 <link rel="apple-touch-icon" href="images/icon-192.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="TMS">
+<meta name="apple-mobile-web-app-title" content="TourBuddy">
 <meta name="mobile-web-app-capable" content="yes">
-<title>TMS | My Profile</title>
+<title>TourBuddy | My Profile</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
 <link href="css/bootstrap.min2.css" rel='stylesheet' type='text/css' />
@@ -148,99 +148,69 @@ foreach ($bkQ->fetchAll(PDO::FETCH_OBJ) as $bk) {
 <link href="css/animate.css" rel="stylesheet" type="text/css" media="all">
 <script src="js/wow.min.js" defer></script>
 <script>window.addEventListener("load",function(){if(typeof WOW!=="undefined")new WOW().init()});</script>
+<link rel="stylesheet" href="css/tms-account.css?v=1">
 <style>
-.errorWrap{padding:10px;margin:0 0 16px;background:var(--white);border-left:4px solid #dd3d36;box-shadow:0 1px 1px rgba(0,0,0,.1);}
-.succWrap {padding:10px;margin:0 0 16px;background:var(--white);border-left:4px solid #5cb85c;box-shadow:0 1px 1px rgba(0,0,0,.1);}
-.profile-wrap{display:flex;gap:24px;flex-wrap:wrap;max-width:900px;margin:0 auto;}
-.profile-sidebar{flex:0 0 220px;}
-.profile-avatar{width:80px;height:80px;border-radius:50%;background:linear-gradient(135deg,var(--secondary),#27ae60);
-    display:flex;align-items:center;justify-content:center;color:#fff;font-size:32px;font-weight:700;
-    margin:0 auto 14px;}
-.stat-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:16px;}
-.stat-cell{background:var(--white);border-radius:10px;padding:14px 10px;text-align:center;box-shadow:0 2px 10px rgba(0,0,0,.07);}
-.stat-cell .num{font-size:1.6em;font-weight:700;color:var(--secondary);}
-.stat-cell .lbl{font-size:11px;color:var(--text-muted);margin-top:2px;}
-.profile-main{flex:1;min-width:0;}
-.profile-card{background:var(--white);border-radius:12px;box-shadow:0 3px 16px rgba(0,0,0,.08);padding:28px;}
-.profile-card label{font-weight:600;color:#555;font-size:13px;display:block;margin-bottom:4px;}
-.profile-card .form-control{border:2px solid #e0e0e0;border-radius:7px;height:42px;font-size:14px;}
-.profile-card .form-control:focus{border-color:var(--secondary);box-shadow:none;outline:none;}
-.profile-card .form-control[readonly]{background:#f8f9fa;cursor:default;}
-.btn-save{background:var(--secondary);color:#fff;border:none;border-radius:7px;padding:11px 32px;font-weight:700;font-size:14px;cursor:pointer;transition:.2s;}
-.btn-save:hover{background:#2d6a97;}
-.quick-links{background:var(--white);border-radius:12px;box-shadow:0 3px 16px rgba(0,0,0,.08);padding:20px;margin-top:20px;}
-.quick-links a{display:flex;align-items:center;gap:10px;padding:10px 0;color:#555;font-size:14px;border-bottom:1px solid #f0f0f0;text-decoration:none;transition:.2s;}
-html[data-theme="dark"] .stat-cell .lbl { color: var(--text-light) !important; }
-html[data-theme="dark"] .profile-card label,
-html[data-theme="dark"] .quick-links a { color: var(--text-muted) !important; }
-.quick-links a:last-child{border-bottom:none;}
-.quick-links a:hover{color:var(--secondary);}
-.quick-links i{width:20px;color:var(--secondary);}
+.errorWrap{padding:13px 16px;margin:0 0 16px;border-radius:14px;background:var(--tms-bad-bg);color:var(--tms-bad);font-weight:600;}
+.succWrap{padding:13px 16px;margin:0 0 16px;border-radius:14px;background:var(--tms-ok-bg);color:var(--tms-ok);font-weight:600;}
+.profile-wrap{display:grid;grid-template-columns:300px minmax(0,1fr);gap:24px;align-items:start}
+@media(max-width:860px){.profile-wrap{grid-template-columns:1fr}}
+.profile-avatar{width:84px;height:84px;border-radius:50%;background:linear-gradient(135deg,var(--tms-accent),var(--tms-primary));display:flex;align-items:center;justify-content:center;color:#fff;font-size:34px;font-weight:800;margin:0 auto 12px}
+.profile-card label{font-weight:700;color:var(--tms-text);font-size:14px;display:block;margin-bottom:6px}
+.profile-card .form-control{width:100%;border:2px solid var(--tms-border);border-radius:14px;height:50px;font-size:16px;padding:0 14px;background:var(--tms-surface);color:var(--tms-text)}
+.profile-card .form-control:focus{border-color:var(--tms-primary);box-shadow:var(--tms-ring);outline:none}
+.profile-card .form-control[readonly]{background:var(--tms-surface-2);cursor:default}
+.profile-card .form-group{margin-bottom:16px}
+.btn-save{display:inline-flex;gap:8px;align-items:center;min-height:50px;padding:0 28px;border:0;border-radius:14px;cursor:pointer;font-weight:800;font-size:15px;color:var(--tms-accent-ink,#1d0c05);background:var(--tms-accent);box-shadow:0 8px 20px color-mix(in srgb,var(--tms-accent) 35%,transparent)}
+.btn-save:hover{transform:translateY(-1px)}
+.tms-mini{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:16px}
+.tms-mini div{background:var(--tms-surface-2);border-radius:12px;padding:10px 4px;text-align:center}.tms-mini b{display:block;font-size:20px}.tms-mini span{font-size:11px;color:var(--tms-muted)}
 </style>
 </head>
 <body>
 <?php include('backend/header.php'); ?>
-<div class="banner-1">
-    <div class="container">
-        <h1 class="wow zoomIn animated" data-wow-delay=".1s">My Profile</h1>
-    </div>
-</div>
+<main class="tms-acct">
+<section class="tms-acct-hero reveal"><h1>My Profile</h1><p>Keep your details and travel taste up to date.</p></section>
 
-<div class="privacy">
-    <div class="container">
+<div>
+    <div>
         <div class="profile-wrap">
 
             <!-- Sidebar -->
-            <div class="profile-sidebar wow fadeInLeft" data-wow-delay=".1s">
-                <div style="background:var(--white);border-radius:12px;box-shadow:0 3px 16px rgba(0,0,0,.08);padding:24px;text-align:center;">
-                    <div class="profile-avatar">
-                        <?php echo strtoupper(substr($user->FullName ?? 'U', 0, 1)); ?>
-                    </div>
-                    <h5 style="font-weight:700;color:#333;margin:0 0 4px;"><?php echo htmlspecialchars($user->FullName ?? '', ENT_QUOTES,'UTF-8'); ?></h5>
-                    <p style="font-size:12px;color:var(--text-muted);margin:0;"><?php echo htmlspecialchars($user->EmailId ?? '', ENT_QUOTES,'UTF-8'); ?></p>
-                    <p style="font-size:11px;color:var(--text-muted);margin-top:6px;">
-                        Member since <?php echo date('M Y', strtotime($user->RegDate ?? 'now')); ?>
-                    </p>
-                </div>
-                <div class="stat-grid">
-                    <div class="stat-cell">
-                        <div class="num"><?php echo $bkStats['total']; ?></div>
-                        <div class="lbl">Bookings</div>
-                    </div>
-                    <div class="stat-cell">
-                        <div class="num" style="color:#27ae60;"><?php echo $bkStats['confirmed']; ?></div>
-                        <div class="lbl">Confirmed</div>
-                    </div>
-                    <div class="stat-cell">
-                        <div class="num" style="color:#f0ad4e;"><?php echo $bkStats['pending']; ?></div>
-                        <div class="lbl">Pending</div>
-                    </div>
-                    <div class="stat-cell">
-                        <div class="num" style="color:#e74c3c;"><?php echo $bkStats['cancelled']; ?></div>
-                        <div class="lbl">Cancelled</div>
+            <div class="profile-sidebar">
+                <div class="tms-card" style="text-align:center">
+                    <div class="profile-avatar"><?php echo strtoupper(substr($user->FullName ?? 'U', 0, 1)); ?></div>
+                    <h2 style="margin:0 0 4px;font-size:19px"><?php echo htmlspecialchars($user->FullName ?? '', ENT_QUOTES,'UTF-8'); ?></h2>
+                    <p style="font-size:13px;color:var(--tms-muted);margin:0;"><?php echo htmlspecialchars($user->EmailId ?? '', ENT_QUOTES,'UTF-8'); ?></p>
+                    <p style="font-size:12px;color:var(--tms-muted);margin:6px 0 0;">Member since <?php echo date('M Y', strtotime($user->RegDate ?? 'now')); ?></p>
+                    <div class="tms-mini">
+                        <div><b><?php echo $bkStats['total']; ?></b><span>Bookings</span></div>
+                        <div><b><?php echo $bkStats['confirmed']; ?></b><span>Confirmed</span></div>
+                        <div><b><?php echo $bkStats['pending']; ?></b><span>Pending</span></div>
+                        <div><b><?php echo $bkStats['cancelled']; ?></b><span>Cancelled</span></div>
                     </div>
                 </div>
-                <div class="quick-links" style="margin-top:16px;">
-                    <a href="tour-history.php"><i class="fa fa-history"></i> My Bookings</a>
-                    <a href="change-password.php"><i class="fa fa-lock"></i> Change Password</a>
-                    <!-- FEATURE (Round 115 continuation, master prompt item 8 --
-                         Auth & Security Center): customer-facing 2FA's natural
-                         home is this existing account hub, next to Change
-                         Password, rather than a separate "Security Center"
-                         page duplicating what profile.php already is. -->
-                    <a href="two-factor-setup.php"><i class="fa fa-shield"></i> Two-Factor Authentication</a>
-                    <a href="appeal.php"><i class="fa fa-balance-scale"></i> Account review &amp; appeals</a>
-                    <a href="ai-recommend.php"><i class="fa fa-magic"></i> Get Recommendations</a>
-                    <a href="package-list.php"><i class="fa fa-search"></i> Browse Packages</a>
+                <div class="tms-card">
+                    <h2>Account &amp; privacy</h2>
+                    <!-- Customer 2FA lives here next to Change Password (Auth & Security Center). -->
+                    <ul class="tms-list">
+                        <li><a href="tour-history.php"><i class="fa fa-history l" aria-hidden="true"></i><span>My bookings</span><i class="fa fa-chevron-right r" aria-hidden="true"></i></a></li>
+                        <li><a href="change-password.php"><i class="fa fa-lock l" aria-hidden="true"></i><span>Change password</span><i class="fa fa-chevron-right r" aria-hidden="true"></i></a></li>
+                        <li><a href="two-factor-setup.php"><i class="fa fa-shield l" aria-hidden="true"></i><span>Two-factor authentication</span><i class="fa fa-chevron-right r" aria-hidden="true"></i></a></li>
+                        <li><a href="privacy.php"><i class="fa fa-eye-slash l" aria-hidden="true"></i><span>Privacy settings</span><i class="fa fa-chevron-right r" aria-hidden="true"></i></a></li>
+                        <li><a href="wallet.php"><i class="fa fa-briefcase l" aria-hidden="true"></i><span>Travel wallet</span><i class="fa fa-chevron-right r" aria-hidden="true"></i></a></li>
+                        <li><a href="ai-memory.php"><i class="fa fa-magic l" aria-hidden="true"></i><span>AI memory</span><i class="fa fa-chevron-right r" aria-hidden="true"></i></a></li>
+                        <li><a href="referral.php"><i class="fa fa-gift l" aria-hidden="true"></i><span>Refer a friend</span><i class="fa fa-chevron-right r" aria-hidden="true"></i></a></li>
+                        <li><a href="appeal.php"><i class="fa fa-balance-scale l" aria-hidden="true"></i><span>Account review &amp; appeals</span><i class="fa fa-chevron-right r" aria-hidden="true"></i></a></li>
+                    </ul>
                 </div>
             </div>
 
             <!-- Main form -->
-            <div class="profile-main wow fadeInRight" data-wow-delay=".1s">
-                <div class="profile-card">
-                    <h4 style="font-size:1.05em;font-weight:700;color:#333;border-bottom:2px solid #f0f0f0;padding-bottom:12px;margin-bottom:22px;">
+            <div class="profile-main">
+                <div class="profile-card tms-card">
+                    <h2>
                         <i class="fa fa-user-circle" style="color:var(--secondary)"></i> Edit Profile
-                    </h4>
+                    </h2>
 
                     <?php if ($error): ?>
                         <div class="errorWrap"><strong>ERROR:</strong> <?php echo htmlspecialchars($error, ENT_QUOTES,'UTF-8'); ?></div>
@@ -277,10 +247,10 @@ html[data-theme="dark"] .quick-links a { color: var(--text-muted) !important; }
                     </form>
                 </div>
 
-                <div class="profile-card" style="margin-top:20px;">
-                    <h4 style="font-size:1.05em;font-weight:700;color:#333;border-bottom:2px solid #f0f0f0;padding-bottom:12px;margin-bottom:22px;">
+                <div class="profile-card tms-card">
+                    <h2>
                         <i class="fa fa-compass" style="color:var(--secondary)"></i> Travel Preferences
-                    </h4>
+                    </h2>
                     <p style="font-size:12.5px;color:var(--text-muted);margin-top:-14px;margin-bottom:18px;">
                         Used to personalize your <a href="ai-recommend.php">AI recommendations</a> — entirely optional, and only used if you have personalization enabled in
                         <a href="privacy.php">Privacy settings</a>.
@@ -357,6 +327,7 @@ html[data-theme="dark"] .quick-links a { color: var(--text-muted) !important; }
     </div>
 </div>
 
+</main>
 <?php include('backend/footer.php'); ?>
 <?php include('backend/write-us.php'); ?>
 </body>

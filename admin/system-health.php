@@ -144,7 +144,7 @@ $pageTitle = 'System Health';
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>TMS Admin | System Health</title>
+<title>TourBuddy Admin | System Health</title>
 <link href="css/font-awesome.min2.css" rel="stylesheet">
 <link href="css/bootstrap.min.css" rel="stylesheet">
 <link href="<?php echo tms_asset_ver('css/admin-v6.css'); ?>" rel="stylesheet">
@@ -279,7 +279,7 @@ $pageTitle = 'System Health';
         <?php endforeach; ?>
       </tbody>
     </table>
-    <p style="color:var(--text-muted);font-size:12px;">Maps (Leaflet/OpenStreetMap tiles) needs no API key and has no
+    <p style="color:var(--text-muted);font-size:12px;">Maps (MapLibre with OpenFreeMap/OpenStreetMap data) needs no API key and has no
         configured/not-configured state to check — it's always available. Per-call error-rate tracking for Weather
         and Maps/Explore now exists too (Round 72, master prompt item 56) — see the two new stat cards above, sourced
         from the same <code>tbl_system_events</code> log as the Email/Booking cards, and the recent-events feed below.</p>

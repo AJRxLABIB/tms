@@ -1,6 +1,6 @@
 <?php
 /**
- * api/explore.php — TMS Explore Mode REST API
+ * api/explore.php — TourBuddy Explore Mode REST API
  *
  * Centralized endpoint for all Explore Mode AJAX calls (destination search,
  * AI destination info, live weather, nearby places, routing, AI chatbot).
@@ -36,7 +36,7 @@ try {
     $userEmail = $_SESSION['login'] ?? 'guest';
     $service   = new ExploreService($dbh);
 } catch (Throwable $e) {
-    error_log('[TMS Explore API] init: ' . $e->getMessage());
+    error_log('[TourBuddy Explore API] init: ' . $e->getMessage());
     apiError(400, 'Malformed request.');
 }
 
@@ -85,7 +85,7 @@ try {
         default   => apiError(404, "Unknown action: $action"),
     };
 } catch (Throwable $e) {
-    error_log('[TMS Explore API] ' . $e->getMessage());
+    error_log('[TourBuddy Explore API] ' . $e->getMessage());
     apiError(500, 'Explore service error. Please try again.');
 }
 
@@ -271,7 +271,7 @@ function handleChat(PDO $dbh, string $email): void {
     // $system.) The system prompt is now fixed text; everything the client sends
     // enters as a clearly-delimited user turn that the prompt tells the model to
     // treat as data.
-    $system = "You are a friendly, knowledgeable local travel guide assistant inside the TMS Explore feature. "
+    $system = "You are a friendly, knowledgeable local travel guide assistant inside the TourBuddy Explore feature. "
             . "Answer travel questions naturally like an experienced local guide would: recommend nearby attractions, "
             . "restaurants and hotels, give transportation guidance, explain local culture and customs, suggest "
             . "itineraries and activities (factor in weather if mentioned), and help with real-time trip questions. "
@@ -304,7 +304,7 @@ function handleChat(PDO $dbh, string $email): void {
             ];
         }
     } catch (Throwable $e) {
-        error_log('[TMS Explore API] chat history read failed: ' . $e->getMessage());
+        error_log('[TourBuddy Explore API] chat history read failed: ' . $e->getMessage());
     }
 
     $messages[] = ['role' => 'user', 'content' => $message];
@@ -327,7 +327,7 @@ function handleChat(PDO $dbh, string $email): void {
         $dbh->prepare("INSERT INTO tbl_explore_chat (session_id, user_email, destination, role, message) VALUES (?,?,?,?,?)")
             ->execute([$sessionId, $email, $destination, 'assistant', $res['content']]);
     } catch (Exception $e) {
-        error_log('[TMS Explore API] chat log write failed: ' . $e->getMessage());
+        error_log('[TourBuddy Explore API] chat log write failed: ' . $e->getMessage());
     }
 
     if (function_exists('tms_prune_ai_logs')) { tms_prune_ai_logs($dbh); }

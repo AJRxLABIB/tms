@@ -267,7 +267,7 @@ class SupplierQuality
             return ['ok' => true, 'error' => null];
         } catch (Throwable $e) {
             if ($dbh->inTransaction()) $dbh->rollBack();
-            error_log('[TMS SupplierQuality] dispute update failed: ' . $e->getMessage());
+            error_log('[TourBuddy SupplierQuality] dispute update failed: ' . $e->getMessage());
             return ['ok' => false, 'error' => 'Could not update the dispute.'];
         }
     }

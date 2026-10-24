@@ -161,7 +161,7 @@ class TripCopilot {
             $stmt->execute([$email, $bookingId]);
             return array_reverse($stmt->fetchAll(PDO::FETCH_OBJ));
         } catch (Exception $e) {
-            error_log('[TMS] ' . __METHOD__ . ' failed: ' . $e->getMessage());
+            error_log('[TourBuddy] ' . __METHOD__ . ' failed: ' . $e->getMessage());
             return [];
         }
     }
@@ -184,7 +184,7 @@ class TripCopilot {
             $stmt->execute([$email]);
             return $stmt->fetch(PDO::FETCH_OBJ) ?: null;
         } catch (Exception $e) {
-            error_log('[TMS] ' . __METHOD__ . ' failed: ' . $e->getMessage());
+            error_log('[TourBuddy] ' . __METHOD__ . ' failed: ' . $e->getMessage());
             return null;
         }
     }
@@ -208,7 +208,7 @@ class TripCopilot {
         $tripInfo = $booking ? $this->buildTripBriefing($booking) : 'No active booking found for this user.';
 
         return <<<SYSTEM
-You are the TMS Trip Copilot — a world-class personal travel companion, guide, and assistant.
+You are the TourBuddy Trip Copilot — a world-class personal travel companion, guide, and assistant.
 
 Current datetime: {$now}
 
@@ -352,7 +352,7 @@ SYSTEM;
             }
             return $line;
         } catch (Exception $e) {
-            error_log('[TMS] TripCopilot live weather fetch failed (non-fatal): ' . $e->getMessage());
+            error_log('[TourBuddy] TripCopilot live weather fetch failed (non-fatal): ' . $e->getMessage());
             return '';
         }
     }
@@ -379,7 +379,7 @@ SYSTEM;
 
             return $row;
         } catch (Exception $e) {
-            error_log('[TMS] ' . __METHOD__ . ' failed: ' . $e->getMessage());
+            error_log('[TourBuddy] ' . __METHOD__ . ' failed: ' . $e->getMessage());
             return null;
         }
     }

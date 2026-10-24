@@ -3,7 +3,7 @@
  * AIEvaluator.php — Round 35 (item 22: "AI Evaluation suite")
  *
  * An on-demand (admin-triggered, never automatic) harness that exercises a
- * representative slice of TMS's real AI features end-to-end against
+ * representative slice of TourBuddy's real AI features end-to-end against
  * whichever provider AI_PROVIDER currently selects (Round 34), and reports
  * whether each one produced a genuine successful AI-backed answer -- not
  * just "did some response-shaped array come back", because several of
@@ -548,7 +548,7 @@ class AIEvaluator {
                 $_SESSION['alogin'] ?? 'unknown',
             ]);
         } catch (Exception $e) {
-            error_log('[TMS AI Eval] Failed to save eval run: ' . $e->getMessage());
+            error_log('[TourBuddy AI Eval] Failed to save eval run: ' . $e->getMessage());
         }
     }
 

@@ -64,7 +64,7 @@ do {
         }
     } catch (Throwable $e) {
         // Most likely the tables are not migrated yet (php database/migrate.php). Never crash-loop silently.
-        error_log('[TMS run_jobs] cycle failed: ' . $e->getMessage());
+        error_log('[TourBuddy run_jobs] cycle failed: ' . $e->getMessage());
         echo '[run_jobs] cycle failed: ' . $e->getMessage() . "\n";
         $handled = 0;
         if ($once) exit(1);

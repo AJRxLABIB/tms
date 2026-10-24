@@ -118,7 +118,7 @@ class GeminiProvider implements AIProviderInterface {
 
         if ($httpCode !== 200) {
             $detail = $data['error']['message'] ?? ('HTTP ' . $httpCode . ' — ' . substr($rawBody, 0, 200));
-            error_log('[TMS AI Gemini] API error: HTTP ' . $httpCode . ': ' . $detail);
+            error_log('[TourBuddy AI Gemini] API error: HTTP ' . $httpCode . ': ' . $detail);
 
             if ($httpCode === 401 || $httpCode === 403) {
                 return ['success' => false, 'error' => 'The AI assistant is not configured correctly on this site.', 'kind' => 'config', 'retriable' => false];
@@ -181,7 +181,7 @@ class GeminiProvider implements AIProviderInterface {
             if ($finishReason === 'MAX_TOKENS') {
                 return ['success' => false, 'error' => 'That answer was too long to finish. Try asking something more specific.', 'kind' => 'content', 'retriable' => false];
             }
-            error_log('[TMS AI Gemini] empty response (finishReason=' . $finishReason . ')');
+            error_log('[TourBuddy AI Gemini] empty response (finishReason=' . $finishReason . ')');
             return ['success' => false, 'error' => 'The AI assistant returned an empty answer. Please try again.', 'kind' => 'content', 'retriable' => false];
         }
 

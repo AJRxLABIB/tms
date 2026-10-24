@@ -1,6 +1,6 @@
 {
-  "name": "TMS – Tourism Management System",
-  "short_name": "TMS",
+  "name": "TourBuddy – Tourism Management System",
+  "short_name": "TourBuddy",
   "description": "Book and manage your tours easily",
   "start_url": "/tms/index.php",
   "scope": "/tms/",

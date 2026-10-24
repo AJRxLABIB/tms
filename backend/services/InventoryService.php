@@ -199,7 +199,7 @@ class InventoryService
             return ['status' => 'held', 'hold_id' => $holdId, 'expires_at' => (string)$exp->fetchColumn(), 'qty' => $qty];
         } catch (Throwable $e) {
             if ($own && $dbh->inTransaction()) $dbh->rollBack();
-            error_log('[TMS Inventory] hold failed: ' . $e->getMessage());
+            error_log('[TourBuddy Inventory] hold failed: ' . $e->getMessage());
             return ['status' => 'error', 'reason' => 'exception'];
         }
     }
@@ -242,7 +242,7 @@ class InventoryService
             return 'converted';
         } catch (Throwable $e) {
             if ($own && $dbh->inTransaction()) $dbh->rollBack();
-            error_log('[TMS Inventory] convert failed: ' . $e->getMessage());
+            error_log('[TourBuddy Inventory] convert failed: ' . $e->getMessage());
             return 'error';
         }
     }
@@ -263,7 +263,7 @@ class InventoryService
             return $newStatus;
         } catch (Throwable $e) {
             if ($own && $dbh->inTransaction()) $dbh->rollBack();
-            error_log('[TMS Inventory] close hold failed: ' . $e->getMessage());
+            error_log('[TourBuddy Inventory] close hold failed: ' . $e->getMessage());
             return 'error';
         }
     }
@@ -291,7 +291,7 @@ class InventoryService
                 $res['expired']++;
             } catch (Throwable $e) {
                 if ($dbh->inTransaction()) $dbh->rollBack();
-                error_log('[TMS Inventory] sweep hold ' . $id . ': ' . $e->getMessage());
+                error_log('[TourBuddy Inventory] sweep hold ' . $id . ': ' . $e->getMessage());
             }
         }
         return $res;
@@ -393,7 +393,7 @@ class InventoryService
             if ($own) $dbh->commit();
         } catch (Throwable $e) {
             if ($own && $dbh->inTransaction()) $dbh->rollBack();
-            error_log('[TMS Inventory] releaseBooking ' . $ref . ' failed: ' . $e->getMessage());
+            error_log('[TourBuddy Inventory] releaseBooking ' . $ref . ' failed: ' . $e->getMessage());
             return 0;   // table missing / DB error: legacy behaviour (nothing to release) and the cancel itself still goes ahead
         }
         return $n;

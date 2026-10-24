@@ -256,7 +256,7 @@ if (isset($_POST['submit2']) || isset($_POST['addcart'])) {
                         $left = (int)substr($bookEx->getMessage(), 6);
                         $error = "Sorry, only {$left} seat" . ($left === 1 ? '' : 's') . " left for this package, but you requested {$persons}. Please reduce the number of travelers.";
                     } else {
-                        error_log('[TMS Booking] Book Now rolled back: ' . $bookEx->getMessage());
+                        error_log('[TourBuddy Booking] Book Now rolled back: ' . $bookEx->getMessage());
                         $error = 'Something went wrong. Nothing was reserved or charged. Please try again.';
                     }
                 }
@@ -429,9 +429,9 @@ if (!empty($pkg) && $totalReviewCount >= 3) {
 <link rel="apple-touch-icon" href="images/icon-192.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="TMS">
+<meta name="apple-mobile-web-app-title" content="TourBuddy">
 <meta name="mobile-web-app-capable" content="yes">
-<title>TMS | <?php echo $pkg ? htmlspecialchars($pkgNameT ?? $pkg->PackageName,ENT_QUOTES,'UTF-8') : 'Package Details'; ?></title>
+<title>TourBuddy | <?php echo $pkg ? htmlspecialchars($pkgNameT ?? $pkg->PackageName,ENT_QUOTES,'UTF-8') : 'Package Details'; ?></title>
 <?php
 // NEW (Round 20, spec item 53 — SEO): only emitted when a real package was
 // found. Rating is only included when real reviews exist ($totalReviewCount
@@ -535,6 +535,7 @@ if ($pkg) {
 </head>
 <body>
 <?php include('backend/header.php'); ?>
+<link rel="stylesheet" href="<?php echo tms_asset_ver('css/tms-pages.css'); ?>">
 
 <div class="banner-3">
     <div class="container">
@@ -605,6 +606,9 @@ if ($pkg) {
                         <i class="fa fa-info-circle"></i> Some photos are representative stock images of this destination, not exclusive property photos.
                     </div>
                     <?php endif; ?>
+                    <nav class="tms-subnav" aria-label="On this page">
+                        <a href="#pkgSecOverview">Overview</a><a href="#pkgSecIncluded">Included</a><a href="#pkgSecReviews">Reviews</a><a href="#pkgSecMap">Map</a><a href="#tmsBook">Book</a>
+                    </nav>
                     <div class="pkg-body">
                         <p style="font-size:12px;color:var(--text-muted);margin:0;">#PKG-<?php echo (int)$pkg->PackageId; ?></p>
                         <h2><?php echo htmlspecialchars($pkgNameT ?? $pkg->PackageName,ENT_QUOTES,'UTF-8'); ?></h2>
@@ -647,7 +651,7 @@ if ($pkg) {
                             <?php endif; ?>
                         </div>
                         <p><strong>Features:</strong> <?php echo htmlspecialchars($pkg->PackageFetures ?? '',ENT_QUOTES,'UTF-8'); ?></p>
-                        <h4 style="margin-top:20px;">Package Details</h4>
+                        <h4 id="pkgSecOverview" style="margin-top:20px;">Package Details</h4>
                         <p style="color:#555;line-height:1.7;"><?php echo nl2br(htmlspecialchars($pkgDescT ?? ($pkg->PackageDetails ?? ''),ENT_QUOTES,'UTF-8')); ?></p>
 
                         <?php
@@ -666,7 +670,7 @@ if ($pkg) {
                         <div class="row" style="margin-top:20px;">
                             <?php if (!empty($inclusionLines)): ?>
                             <div class="col-sm-6">
-                                <h4><i class="fa fa-check-circle" style="color:#2e9e5b;"></i> What's Included</h4>
+                                <h4 id="pkgSecIncluded"><i class="fa fa-check-circle" style="color:#2e9e5b;"></i> What's Included</h4>
                                 <ul style="list-style:none;padding:0;font-size:13.5px;color:#555;line-height:2;">
                                     <?php foreach ($inclusionLines as $line): ?>
                                     <li><i class="fa fa-check" style="color:#2e9e5b;margin-right:6px;"></i><?php echo htmlspecialchars($line, ENT_QUOTES, 'UTF-8'); ?></li>
@@ -734,11 +738,13 @@ if ($pkg) {
 
                         <!-- Live crowd insights (Phase 2e): loads async, grounded in real
                              booking history when enough exists — see CrowdPredictor.php -->
-                        <div id="crowdInsightsBox" style="display:none;margin-top:6px;margin-bottom:12px;padding:14px 16px;background:var(--white);border:1px solid var(--border);border-radius:10px;font-size:13.5px;color:var(--text);"></div>
+                        <details class="tms-more tms-more-trip"><summary><i class="fa fa-leaf" aria-hidden="true"></i> More about this trip</summary>
+<div id="crowdInsightsBox" style="display:none;margin-top:6px;margin-bottom:12px;padding:14px 16px;background:var(--white);border:1px solid var(--border);border-radius:10px;font-size:13.5px;color:var(--text);"></div>
 
                         <!-- Carbon footprint / sustainability (Phase 2i): loads async,
                              real distance-based estimate — see SustainabilityCalculator.php -->
                         <div id="sustainabilityBox" style="display:none;margin-top:6px;margin-bottom:18px;padding:14px 16px;background:var(--white);border:1px solid var(--border);border-left:4px solid var(--primary);border-radius:10px;font-size:13.5px;color:var(--text);"></div>
+                        </details>
 
                         <?php
                         $suitLabels = ['adventure_level'=>'Adventure Level','family_suitability'=>'Family','couple_suitability'=>'Couple','solo_suitability'=>'Solo Traveler'];
@@ -889,7 +895,7 @@ if ($pkg) {
                 <!-- Recent Reviews -->
                 <?php if (count($reviews) > 0): ?>
                 <div class="pkg-card wow fadeInUp" style="padding:24px;">
-                    <h4 style="font-weight:700;margin-bottom:16px;"><i class="fa fa-star" style="color:var(--brass)"></i> <?php echo tms_t('heading_reviews','Recent Reviews'); ?></h4>
+                    <h4 id="pkgSecReviews" style="font-weight:700;margin-bottom:16px;"><i class="fa fa-star" style="color:var(--brass)"></i> <?php echo tms_t('heading_reviews','Recent Reviews'); ?></h4>
                     <?php foreach ($reviews as $rev): ?>
                     <div class="review-mini">
                         <div style="display:flex;justify-content:space-between;align-items:center;">
@@ -964,7 +970,7 @@ if ($pkg) {
                                 if (isset($tmsCache)) $tmsCache->set($tmsSvCacheKey, $tmsStreetViewOk, 3600);
                             }
                         } catch (Throwable $e) {
-                            error_log('[TMS] Street View health check failed: ' . $e->getMessage());
+                            error_log('[TourBuddy] Street View health check failed: ' . $e->getMessage());
                             $tmsStreetViewOk = true; // fail open
                         }
                     }
@@ -991,7 +997,7 @@ if ($pkg) {
                      coordinates set — no fake pins for packages without them. -->
                 <?php if(!empty($pkg->MapLat) && !empty($pkg->MapLng)): ?>
                 <div class="pkg-card wow fadeInUp" style="padding:24px;">
-                    <h4 style="font-weight:700;margin-bottom:4px;"><i class="fa fa-map-marker" style="color:var(--primary)"></i> Nearby Essentials</h4>
+                    <h4 id="pkgSecMap" style="font-weight:700;margin-bottom:4px;"><i class="fa fa-map-marker" style="color:var(--primary)"></i> Nearby Essentials</h4>
                     <p style="font-size:12.5px;color:var(--text-muted);margin-bottom:14px;">Live data around this destination — hotels, food, and emergency services.</p>
                     <div id="nearbyMap" style="height:280px;border-radius:var(--radius-sm);margin-bottom:14px;background:#eef2f5;"></div>
                     <div id="nearbyTabs" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px;">
@@ -1080,31 +1086,40 @@ html[data-theme="dark"] .meta-row { color: var(--text-muted) !important; }
                         <div class="pd-body" id="pdBody"></div>
                     </div>
                 </div>
-                <script src="js/tms-leaflet-loader.js"></script>
-                <script src="js/tms-map.js"></script>
+                <script src="<?php echo tms_asset_ver('js/tms-map-pages.js'); ?>"></script>
+                <script src="<?php echo tms_asset_ver('js/tms-poi-tiles.js'); ?>"></script>
                 <script>
-                tmsLoadLeaflet(function (leafletErr) {
-                if (leafletErr || typeof L === "undefined") { var nm = document.getElementById("nearbyMap"); if (nm) nm.innerHTML = '<div style="padding:24px;text-align:center;color:#94a3b8;font-size:13px;">The map could not be loaded right now. Check your connection and reload.</div>'; return; }
                 (function(){
                     var lat = <?php echo (float)$pkg->MapLat; ?>, lng = <?php echo (float)$pkg->MapLng; ?>;
-                    var map = L.map('nearbyMap').setView([lat, lng], 13);
-                    // Tile fallback chain (OSM -> Carto -> OSM France) and redraw when the container is resized/revealed.
-                    if (window.TmsMap) { TmsMap.addTiles(map, { maxZoom: 18 }); TmsMap.fixSize(map); }
-                    else L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '&copy; OpenStreetMap contributors', maxZoom: 18 }).addTo(map);
-                    var destIcon = L.divIcon({className:'', html:'<div style="width:16px;height:16px;background:var(--accent);border:3px solid #fff;border-radius:50%;box-shadow:0 2px 6px rgba(0,0,0,.3);"></div>', iconSize:[16,16]});
-                    // FIX (Round 114, package/places/map upgrade): this used to be
-                    // htmlspecialchars(addslashes(...)) -- HTML-entity-encoding a
-                    // string that's embedded in a <script> block, not HTML. A
-                    // package name containing an apostrophe or an ampersand (e.g.
-                    // "O'Reilly Tour", "Bed & Breakfast Retreat") rendered literally
-                    // as "O&#039;Reilly Tour" in the Leaflet popup, because the
-                    // browser only decodes HTML entities when parsing markup, never
-                    // inside a JS string literal. json_encode() produces a properly
-                    // escaped JS string literal instead -- the same tool this file's
-                    // own `packages` array (tour-map.php) already relies on.
-                    L.marker([lat, lng], {icon: destIcon}).addTo(map).bindPopup(<?php echo json_encode((string)$pkg->PackageName, JSON_UNESCAPED_UNICODE); ?>);
-                    var markers = [];
-                    function clearMarkers(){ markers.forEach(function(m){ map.removeLayer(m); }); markers = []; }
+                    var PKG_NAME = <?php echo json_encode((string)$pkg->PackageName, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT); ?>;
+                    var nearbyMapEl = document.getElementById('nearbyMap');
+                    var placePins = null, mapCtl = null, pendingItems = [];
+
+                    // MapLibre is loaded only when the map is about to scroll into view (the page works without it: the list below does not need the map).
+                    TmsMapPages.lazyMount(nearbyMapEl, { base: '', lang: document.documentElement.lang || 'en', center: [lng, lat], zoom: 12, cooperativeGestures: true },
+                        function (ctl) {
+                            mapCtl = ctl;
+                            var dest = TmsMapPages.pins(ctl, 'dest', { color: '#d97706', cluster: false, popup: true, linkLabel: '' });
+                            dest.set([{ lat: lat, lng: lng, title: PKG_NAME, subtitle: 'Package destination' }]);
+                            placePins = TmsMapPages.pins(ctl, 'places', { color: '#176B50', cluster: true, popup: false,
+                                onClick: function (item) { if (item && item.data) openPlaceDetails(item.data, item.cat); } });
+                            placePins.set(pendingItems);
+                        },
+                        function () {
+                            nearbyMapEl.innerHTML = '';
+                            var d = document.createElement('div'); d.setAttribute('role', 'status');
+                            d.style.cssText = 'padding:24px;text-align:center;color:#94a3b8;font-size:13px;';
+                            d.textContent = 'The map could not be loaded right now. The nearby list below still works.';
+                            nearbyMapEl.appendChild(d);
+                        });
+
+                    function clearMarkers(){ pendingItems = []; if (placePins) placePins.clear(); }
+                    function addPlacePin(p, cat){
+                        if (p && typeof p.lat === 'number' && typeof p.lng === 'number' && TmsMapPages.utils.validCoord(p.lat, p.lng)) {
+                            pendingItems.push({ lat: p.lat, lng: p.lng, title: p.name || '', data: p, cat: cat });
+                        }
+                    }
+                    function flushPins(){ if (placePins) placePins.set(pendingItems); }
                     function escHtml(s){ var d = document.createElement('div'); d.textContent = s || ''; return d.innerHTML; }
 
                     function pdField(iconClass, label, value) {
@@ -1246,13 +1261,56 @@ html[data-theme="dark"] .meta-row { color: var(--text-muted) !important; }
                         var b = e.target.closest ? e.target.closest('.nearby-retry') : null;
                         if (b) loadCategory(b.getAttribute('data-cat'), b.getAttribute('data-label'));
                     });
+                    function renderLocalNearby(items, cat, label, token){
+                        var listEl = document.getElementById('nearbyList');
+                        listEl.innerHTML = '';
+                        var note = document.createElement('div');
+                        note.setAttribute('role', 'status');
+                        note.style.cssText = 'font-size:12px;padding:8px 10px;margin-bottom:8px;border-radius:8px;background:#eef7f2;color:#0f5a43;border:1px solid #bfe0d0;';
+                        note.textContent = 'From our own places catalogue (TourBuddy records and OpenStreetMap contributors). Places marked "unverified" have not been checked by our team.';
+                        listEl.appendChild(note);
+                        items.slice(0, 8).forEach(function(p){
+                            var url = (p.links && p.links.details) ? p.links.details : '';
+                            var row = document.createElement('div');
+                            row.className = 'nearby-item';
+                            var left = document.createElement('div');
+                            var nm = document.createElement('div'); nm.className = 'name'; nm.textContent = p.name || ''; left.appendChild(nm);
+                            var sub = [p.locality, p.verified ? 'Verified' : 'Unverified', p.is_demo ? 'Demo data' : ''].filter(Boolean).join(' \u00b7 ');
+                            if (sub) { var ad = document.createElement('div'); ad.className = 'addr'; ad.textContent = sub; left.appendChild(ad); }
+                            var dist = document.createElement('div'); dist.className = 'dist';
+                            dist.textContent = (p.distance_m || p.distance_m === 0) ? (p.distance_m / 1000).toFixed(1) + ' km' : 'Distance unknown';
+                            row.appendChild(left); row.appendChild(dist);
+                            row.addEventListener('click', function(){
+                                if (url && /^[a-z0-9_\-./?=&%#]+$/i.test(url)) { window.location.href = url; return; }
+                                if (mapCtl && TmsMapPages.utils.validCoord(p.lat, p.lng)) mapCtl.flyTo(p.lng, p.lat, 15);
+                            });
+                            listEl.appendChild(row);
+                            if (TmsMapPages.utils.validCoord(p.lat, p.lng)) pendingItems.push({ lat: p.lat, lng: p.lng, title: p.name || '', subtitle: p.locality || '', url: url, data: null, cat: cat });
+                        });
+                        flushPins();
+                    }
+                    // Local catalogue first (verified records and imported OSM places, instant); live map data only when the catalogue has nothing here.
                     function loadCategory(cat, label){
                         var token = ++nearbyToken;   // ignore answers for a category the visitor has already left
                         document.getElementById('nearbyList').innerHTML = '<div style="text-align:center;padding:16px;color:var(--text-muted);" role="status"><i class="fa fa-spinner fa-spin"></i> Loading ' + label + ' nearby…</div>';
                         clearMarkers();
+                        TmsMapPages.nearbyLocal('', 'api/map.php', lat, lng, cat, 5000).then(function(local){
+                            if (token !== nearbyToken) return;
+                            if (local.length) renderLocalNearby(local, cat, label, token); else loadLive(cat, label, token);
+                        });
+                    }
+                    function loadLive(cat, label, token){
+
                         var placesUrl = 'api/explore.php?action=places&lat=' + lat + '&lng=' + lng + '&category=' + cat;
-                        // Hard 14 s timeout (TmsMap.fetchJson): this used to wait forever when the map-data server stalled.
-                        (window.TmsMap ? TmsMap.fetchJson(placesUrl, { timeout: 14000 }) : fetch(placesUrl).then(function(r){ return r.json(); }))
+                        // Hard 14 s timeout (TmsMapPages.fetchJson): this used to wait forever when the map-data server stalled.
+                        var server = function(){ return TmsMapPages.fetchJson(placesUrl, { timeout: 14000 }); };
+                        // Live OpenStreetMap places from OpenFreeMap tiles first (no key); the server path is the fallback.
+                        var viaTiles = window.TmsPoiTiles ? TmsPoiTiles.loadPlaces({ lat: lat, lng: lng, category: cat, radiusM: 4000, limit: 12 }).then(function(r){
+                            if (!r.places.length) return server();
+                            return { success: true, origin: 'live', data: { origin: 'live', places: r.places.map(function(p){
+                                return { name: p.name, lat: p.lat, lng: p.lng, distance_m: p.distance_m, address: '', category: p.category, source: 'openstreetmap' }; }) } };
+                        }, server) : server();
+                        viaTiles
                             .then(function(res){
                                 if (token !== nearbyToken) return;
                                 // api/explore.php wraps its response as
@@ -1316,16 +1374,9 @@ html[data-theme="dark"] .meta-row { color: var(--text-muted) !important; }
                                         openPlaceDetails(p, cat);
                                     });
                                     listEl.appendChild(row);
-                                    // Round 14: L.marker() with a null lat/lng throws
-                                    // "Invalid LatLng object", which aborted the rest of
-                                    // the list render. Google Places results can legitimately
-                                    // arrive without coordinates.
-                                    if (typeof p.lat === 'number' && typeof p.lng === 'number') {
-                                        var m = L.marker([p.lat, p.lng]).addTo(map).bindPopup(escHtml(p.name));
-                                        m.on('click', function(){ openPlaceDetails(p, cat); });
-                                        markers.push(m);
-                                    }
+                                    addPlacePin(p, cat);
                                 });
+                                flushPins();
                             })
                             .catch(function(err){
                                 if (token !== nearbyToken) return;
@@ -1342,12 +1393,11 @@ html[data-theme="dark"] .meta-row { color: var(--text-muted) !important; }
                     });
                     loadCategory('hotel', 'hotels');
                 })();
-                });
                 </script>
                 <?php endif; ?>
             </div>
 
-            <div class="col-md-4">
+            <div class="col-md-4 tms-book-col" id="tmsBook">
                 <div class="wow fadeInRight" style="position:sticky;top:20px;">
                     <div class="price-box">
                         <?php $seatsLeft = $pkgPricing['remaining_seats'] ?? null; ?>
@@ -1605,6 +1655,12 @@ if (!empty($_SESSION['login']) && $pkg) {
 }
 ?>
 
+<?php if ($pkg): ?>
+<div class="tms-actionbar" role="region" aria-label="Booking shortcut">
+    <span class="tms-actionbar-price"><?php echo tms_currency((float)$pkg->PackagePrice); ?> <small>per person</small></span>
+    <a class="tms-actionbar-btn" href="#tmsBook">Book now</a>
+</div>
+<?php endif; ?>
 <?php include('backend/footer.php'); ?>
 <?php include('backend/write-us.php'); ?>
 <?php include('backend/signin.php'); ?>
@@ -1655,7 +1711,7 @@ function checkCoupon() {
                     priceEl.textContent = res.formatted_unit;
                     priceEl.dataset.bdt = res.unit_price;
                     if (badgeEl) {
-                        // TMS V2 Phase 8 (pricing transparency): the badge
+                        // TourBuddy V2 Phase 8 (pricing transparency): the badge
                         // itself still just shows the collapsed label,
                         // exactly as before -- this only adds a `title`
                         // tooltip with the itemized breakdown when the

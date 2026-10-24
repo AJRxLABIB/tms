@@ -1,6 +1,6 @@
 <?php
 /**
- * register.php — TMS AI Travel Copilot
+ * register.php — TourBuddy AI Travel Copilot
  *
  * ROOT-CAUSE FIX (audit finding): the topbar "Sign Up" modal used by nearly
  * every page (backend/header.php) posts here, but used to send different
@@ -87,15 +87,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $dbh->prepare("INSERT INTO tblloyalty_log(UserEmail,Points,Description) VALUES(:e,50,:d)")
                         ->execute([':e'=>$referrerEmail, ':d'=>'Referred a new traveler ('.$email.')']);
                 } catch (Exception $e) {
-                    error_log('[TMS Loyalty] Log insert failed (registration still succeeded): ' . $e->getMessage());
+                    error_log('[TourBuddy Loyalty] Log insert failed (registration still succeeded): ' . $e->getMessage());
                 }
-                try { tms_notify($dbh, $referrerEmail, "🎉 Someone joined TMS using your referral link — you both earned 50 loyalty points!", 'referral.php'); } catch (Exception $e) {}
+                try { tms_notify($dbh, $referrerEmail, "🎉 Someone joined TourBuddy using your referral link — you both earned 50 loyalty points!", 'referral.php'); } catch (Exception $e) {}
                 setcookie('tms_ref', '', time() - 3600, '/'); // consumed — clear it
             }
 
-            tms_send_email($email, $fullName, 'Welcome to TMS Travel!', tms_email_template(
+            tms_send_email($email, $fullName, 'Welcome to TourBuddy Travel!', tms_email_template(
                 'Welcome aboard, ' . $fullName . '!',
-                '<p>Your TMS account is ready. Start exploring tour packages, save your favorites to your wishlist, and earn loyalty points with every booking and review.</p>
+                '<p>Your TourBuddy account is ready. Start exploring tour packages, save your favorites to your wishlist, and earn loyalty points with every booking and review.</p>
                  <p>Your personal referral code is <strong>' . htmlspecialchars($myReferralCode, ENT_QUOTES, 'UTF-8') . '</strong> — share it with friends and you\'ll both earn 50 points when they sign up. Find your referral link anytime on the <strong>Refer Friends</strong> page.</p>'
             ));
 
@@ -112,73 +112,38 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <link rel="apple-touch-icon" href="images/icon-192.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="TMS">
+<meta name="apple-mobile-web-app-title" content="TourBuddy">
 <meta name="mobile-web-app-capable" content="yes">
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Register — TMS AI Travel Copilot</title>
-  <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+  <title>Register — TourBuddy AI Travel Copilot</title>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
-  <?php if(file_exists('css/modern-theme.css')): ?>
-  <link rel="stylesheet" href="<?php echo tms_asset_ver('css/modern-theme.css'); ?>">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <?php endif; ?>
-  <style>
-    body{background:linear-gradient(135deg,#0E3B2D,#104B3A 55%,#176B50);min-height:100vh;display:flex;align-items:center;justify-content:center;font-family:var(--font-body,'Inter',sans-serif);padding:20px 0;}
-    .register-wrap{width:100%;max-width:480px;padding:16px;}
-    .register-card{background:#fff;border-radius:16px;box-shadow:0 24px 60px rgba(0,0,0,.4);overflow:hidden;}
-    .register-header{background:linear-gradient(135deg,#176B50,#104B3A);padding:28px 32px 22px;text-align:center;color:#fff;}
-    .register-header .logo{font-size:26px;font-weight:800;letter-spacing:-1px;}
-    .register-header .logo span{opacity:.7;font-size:12px;font-weight:400;display:block;margin-top:2px;}
-    .register-header h2{font-size:17px;font-weight:600;margin:10px 0 0;opacity:.9;}
-    .register-body{padding:26px 32px 30px;}
-    .form-group{margin-bottom:15px;}
-    .form-group label{font-size:11px;font-weight:700;color:#4a5568;text-transform:uppercase;letter-spacing:.5px;margin-bottom:5px;display:block;}
-    .input-icon{position:relative;}
-    .input-icon .fi{position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--text-muted);font-size:13px;pointer-events:none;}
-    .input-icon input{padding-left:34px;}
-    /* ACCESSIBILITY FIX (Round 69, WCAG 2.5.8 target size): padding:0 and
-       no explicit box left this button's clickable area at roughly the
-       13px icon glyph itself on both axes -- well under the 24px minimum.
-       An explicit 24x24 flex-centered box fixes this without moving the
-       icon's visible position (right nudged from 10px to 4px to
-       compensate for the wider box). */
-    .input-icon .eye-btn{position:absolute;right:4px;top:50%;transform:translateY(-50%);background:none;border:none;color:var(--text-muted);cursor:pointer;padding:0;font-size:13px;width:24px;height:24px;display:flex;align-items:center;justify-content:center;}
-    .form-control{width:100%;border:2px solid #e2e8f0;border-radius:8px;height:44px;font-size:14px;transition:.2s;}
-    .form-control:focus{border-color:#176B50;box-shadow:0 0 0 3px rgba(23,107,80,.15);outline:none;}
-    .btn-register{background:linear-gradient(135deg,#176B50,#104B3A);color:#fff;border:none;border-radius:8px;height:46px;font-size:15px;font-weight:700;width:100%;transition:.2s;cursor:pointer;}
-    .btn-register:hover{transform:translateY(-1px);box-shadow:0 6px 20px rgba(23,107,80,.4);}
-    .btn-register:disabled{opacity:.7;transform:none;}
-    .alert{border-radius:8px;font-size:13px;padding:11px 14px;border:none;margin-bottom:16px;}
-    .alert-danger{background:#fff5f5;color:#c53030;}
-    .alert-success{background:#f0fff4;color:#276749;}
-    .signin-link{text-align:center;margin-top:18px;font-size:13px;color:var(--text-muted);}
-    .signin-link a{color:#176B50;font-weight:700;text-decoration:none;}
-    .strength-bar{height:4px;border-radius:2px;margin-top:5px;background:#e2e8f0;overflow:hidden;}
-    .strength-fill{height:100%;border-radius:2px;transition:.3s;width:0;}
-  </style>
+  <script>try{document.documentElement.setAttribute('data-theme',localStorage.getItem('tms-theme')||'light');}catch(e){}</script>
+  <link rel="stylesheet" href="css/tms-theme.css?v=1">
+  <link rel="stylesheet" href="css/tms-account.css?v=1">
+  <script src="js/tms-motion.js?v=1" defer></script>
 </head>
-<body>
+<body class="tms-auth-page">
+<main class="tms-auth">
+  <aside class="tms-auth-art" style="--auth-img:url('images/h3.jpg')">
+    <a class="brand" href="index.php"><?php require_once __DIR__ . '/../backend/brand.php'; echo tms_brand_mark_html('40'); ?></a>
+    <h2>Your next adventure starts with one small step.</h2>
+    <p>Create a free account to plan trips, save places and keep every ticket in one spot.</p>
+    <div class="tms-scene" aria-hidden="true"><i class="s-cloud"></i><i class="s-far"></i><i class="s-near"></i><i class="s-palm"></i><i class="s-wave"></i><i class="s-wave w2"></i><i class="s-plane"></i></div>
+  </aside>
 
-<div class="register-wrap">
-  <div class="register-card">
+  <section class="tms-auth-main">
+    <div class="tms-auth-card">
+      <h1>Create account</h1>
+      <p class="lead">It takes less than a minute.</p>
 
-    <div class="register-header">
-      <div class="logo"><i class="fa fa-globe"></i> TMS <span>AI Travel Copilot</span></div>
-      <h2><i class="fa fa-user-plus"></i> Create Your Account</h2>
-    </div>
-
-    <div class="register-body">
-
-      <?php if ($error): ?>
-        <div class="alert alert-danger"><i class="fa fa-exclamation-circle"></i> <?= htmlspecialchars($error) ?></div>
-      <?php endif; ?>
+      <div class="tms-alert bad" id="authErr" role="alert"<?= $error ? '' : ' hidden' ?>><i class="fa fa-exclamation-circle" aria-hidden="true"></i> <span id="authErrText"><?= htmlspecialchars((string)$error) ?></span></div>
+      <?php $errAttr = $error ? ' aria-invalid="true"' : ''; ?>
 
       <?php if ($success): ?>
-        <div class="alert alert-success">
-          <i class="fa fa-check-circle"></i> <?= htmlspecialchars($success) ?>
-          <div class="mt-2"><a href="index.php" style="font-weight:700;">← Go to Homepage to Sign In</a></div>
+        <div class="tms-alert ok" role="status">
+          <i class="fa fa-check-circle" aria-hidden="true"></i>
+          <span><?= htmlspecialchars($success) ?> <a href="index.php">Go to the homepage to sign in</a></span>
         </div>
       <?php else: ?>
 
@@ -186,83 +151,67 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         <?php tms_csrf_field(); ?>
         <input type="hidden" name="ref" value="<?= htmlspecialchars($_COOKIE['tms_ref'] ?? '', ENT_QUOTES) ?>">
 
-        <div class="form-group">
-          <label for="regFullNameField">Full Name</label>
-          <div class="input-icon">
-            <i class="fa fa-user fi"></i>
-            <input type="text" name="FullName" id="regFullNameField" class="form-control"
-                   placeholder="Enter your full name"
+        <div class="tms-field">
+          <label for="regFullNameField">Full name</label>
+          <div class="tms-input">
+            <i class="fa fa-user fi" aria-hidden="true"></i>
+            <input type="text" name="FullName" id="regFullNameField" placeholder="Your full name" autocomplete="name"
                    value="<?= htmlspecialchars($_POST['FullName'] ?? '', ENT_QUOTES) ?>"
-                   required minlength="3" maxlength="100">
+                   required minlength="3" maxlength="100"<?= $errAttr ?>>
           </div>
         </div>
-
-        <div class="form-group">
-          <label for="regMobileField">Mobile Number</label>
-          <div class="input-icon">
-            <i class="fa fa-phone fi"></i>
-            <input type="tel" name="MobileNumber" id="regMobileField" class="form-control"
-                   placeholder="01XXXXXXXXX"
+        <div class="tms-field">
+          <label for="regMobileField">Mobile number</label>
+          <div class="tms-input">
+            <i class="fa fa-phone fi" aria-hidden="true"></i>
+            <input type="tel" name="MobileNumber" id="regMobileField" placeholder="01XXXXXXXXX" autocomplete="tel"
                    value="<?= htmlspecialchars($_POST['MobileNumber'] ?? '', ENT_QUOTES) ?>"
-                   required maxlength="15">
+                   required maxlength="15"<?= $errAttr ?>>
           </div>
         </div>
-
-        <div class="form-group">
-          <label for="regEmailFieldStandalone">Email Address</label>
-          <div class="input-icon">
-            <i class="fa fa-envelope fi"></i>
-            <input type="email" name="EmailId" id="regEmailFieldStandalone" class="form-control"
-                   placeholder="you@example.com"
+        <div class="tms-field">
+          <label for="regEmailFieldStandalone">Email</label>
+          <div class="tms-input">
+            <i class="fa fa-envelope fi" aria-hidden="true"></i>
+            <input type="email" name="EmailId" id="regEmailFieldStandalone" placeholder="you@example.com" autocomplete="email"
                    value="<?= htmlspecialchars($_POST['EmailId'] ?? '', ENT_QUOTES) ?>"
-                   required maxlength="100">
+                   required maxlength="100"<?= $errAttr ?>>
           </div>
         </div>
-
-        <div class="form-group">
+        <div class="tms-field">
           <label for="passField">Password</label>
-          <div class="input-icon">
-            <i class="fa fa-lock fi"></i>
-            <input type="password" name="Password" id="passField" class="form-control"
-                   placeholder="Min. 6 characters"
-                   required minlength="8" maxlength="100"
-                   oninput="checkStrength(this.value)"
-                   aria-describedby="strengthFill">
-            <button type="button" class="eye-btn" onclick="togglePass('passField',this)" aria-label="Show password">
-              <i class="fa fa-eye" aria-hidden="true"></i>
-            </button>
+          <div class="tms-input has-eye">
+            <i class="fa fa-lock fi" aria-hidden="true"></i>
+            <input type="password" name="Password" id="passField" placeholder="At least 8 characters" autocomplete="new-password"
+                   required minlength="8" maxlength="100" oninput="checkStrength(this.value)" aria-describedby="strengthHint">
+            <button type="button" class="eye-btn" onclick="togglePass('passField',this)" aria-label="Show password"><i class="fa fa-eye" aria-hidden="true"></i></button>
           </div>
-          <div class="strength-bar"><div class="strength-fill" id="strengthFill"></div></div>
+          <div class="tms-strength"><div id="strengthFill"></div></div>
+          <p class="tms-hint" id="strengthHint">Use 8+ characters. Mix letters, numbers and symbols for a stronger one.</p>
         </div>
-
-        <div class="form-group">
-          <label for="cpassField">Confirm Password</label>
-          <div class="input-icon">
-            <i class="fa fa-lock fi"></i>
-            <input type="password" name="CPassword" id="cpassField" class="form-control"
-                   placeholder="Repeat your password"
-                   required minlength="8" maxlength="100">
-            <button type="button" class="eye-btn" onclick="togglePass('cpassField',this)" aria-label="Show password">
-              <i class="fa fa-eye" aria-hidden="true"></i>
-            </button>
+        <div class="tms-field">
+          <label for="cpassField">Confirm password</label>
+          <div class="tms-input has-eye">
+            <i class="fa fa-lock fi" aria-hidden="true"></i>
+            <input type="password" name="CPassword" id="cpassField" placeholder="Repeat your password" autocomplete="new-password"
+                   required minlength="8" maxlength="100"<?= $errAttr ?>>
+            <button type="button" class="eye-btn" onclick="togglePass('cpassField',this)" aria-label="Show password"><i class="fa fa-eye" aria-hidden="true"></i></button>
           </div>
         </div>
 
-        <button type="submit" class="btn-register mt-1" id="regBtn">
-          <i class="fa fa-user-plus"></i> Create Account
+        <button type="submit" class="tms-btn-primary" id="regBtn">
+          <i class="fa fa-user-plus" aria-hidden="true"></i> Create account
         </button>
       </form>
 
       <?php endif; ?>
 
+      <div class="or">or</div>
       <?php echo GoogleAuth::button('', 'Sign up with Google'); ?>
-      <div class="signin-link">
-        Already have an account? <a href="index.php">Sign In</a>
-      </div>
-
+      <p class="alt">Already have an account? <a href="login.php">Sign in</a></p>
     </div>
-  </div>
-</div>
+  </section>
+</main>
 
 <script>
 function togglePass(id, btn) {
@@ -270,9 +219,6 @@ function togglePass(id, btn) {
   var i = btn.querySelector('i');
   f.type = f.type === 'password' ? 'text' : 'password';
   i.className = f.type === 'password' ? 'fa fa-eye' : 'fa fa-eye-slash';
-  // ACCESSIBILITY FIX (Round 55, master prompt item 32): icon-only button
-  // had no accessible name (an <i> font-icon conveys nothing to a screen
-  // reader) -- aria-label now reflects what the button does next.
   btn.setAttribute('aria-label', f.type === 'password' ? 'Show password' : 'Hide password');
 }
 
@@ -290,12 +236,17 @@ function checkStrength(val) {
   fill.style.background = s ? c[s-1] : 'transparent';
 }
 
-document.getElementById('regForm').addEventListener('submit', function(e) {
-  var p  = document.getElementById('passField').value;
-  var cp = document.getElementById('cpassField').value;
-  if (p !== cp) {
+var regForm = document.getElementById('regForm');
+if (regForm) regForm.addEventListener('submit', function(e) {
+  var cp = document.getElementById('cpassField');
+  if (document.getElementById('passField').value !== cp.value) {
     e.preventDefault();
-    tmsToast('Passwords do not match. Please check and try again.');
+    var box = document.getElementById('authErr');
+    document.getElementById('authErrText').textContent = 'Passwords do not match. Please check and try again.';
+    box.hidden = false;
+    cp.setAttribute('aria-invalid', 'true');
+    cp.setAttribute('aria-describedby', 'authErr');
+    cp.focus();
     return;
   }
   var btn = document.getElementById('regBtn');

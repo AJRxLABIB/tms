@@ -1,6 +1,6 @@
 <?php
 /**
- * PricingEngine.php — Dynamic / surge pricing for TMS.
+ * PricingEngine.php — Dynamic / surge pricing for TourBuddy.
  *
  * ONE function computes the adjusted price everywhere it's needed
  * (package card display, booking form, cart, checkout). Every caller uses
@@ -88,7 +88,7 @@ function tms_remaining_seats(PDO $dbh, int $packageId): ?int {
 
         return max(0, (int)$capacity - $booked);
     } catch (Exception $e) {
-        error_log('[TMS Pricing] Seat count lookup failed: ' . $e->getMessage());
+        error_log('[TourBuddy Pricing] Seat count lookup failed: ' . $e->getMessage());
         return null;
     }
 }
@@ -144,7 +144,7 @@ function tms_dynamic_price(PDO $dbh, int $packageId, float $basePrice, ?string $
         $dq->execute([':pid' => $packageId]);
         $recentBookings = (int) $dq->fetchColumn();
     } catch (Exception $e) {
-        error_log('[TMS Pricing] Demand lookup failed: ' . $e->getMessage());
+        error_log('[TourBuddy Pricing] Demand lookup failed: ' . $e->getMessage());
         $recentBookings = 0;
     }
 
@@ -178,12 +178,12 @@ function tms_dynamic_price_batch(PDO $dbh, array $rows, ?string $fromDate = null
             $q = $dbh->prepare("SELECT PackageId, COUNT(*) FROM tblbooking WHERE PackageId IN ($in) AND status IN (0,1) AND RegDate >= (NOW() - INTERVAL 30 DAY) GROUP BY PackageId");
             $q->execute($ids);
             foreach ($q->fetchAll(PDO::FETCH_NUM) as [$pid, $n]) $recent[(int)$pid] = (int)$n;
-        } catch (Exception $e) { error_log('[TMS Pricing] Batch demand lookup failed: ' . $e->getMessage()); $recent = []; }
+        } catch (Exception $e) { error_log('[TourBuddy Pricing] Batch demand lookup failed: ' . $e->getMessage()); $recent = []; }
         try {
             $q = $dbh->prepare("SELECT PackageId, COALESCE(SUM(NoOfPersons),0) FROM tblbooking WHERE PackageId IN ($in) AND status IN (0,1) GROUP BY PackageId");
             $q->execute($ids);
             foreach ($q->fetchAll(PDO::FETCH_NUM) as [$pid, $n]) $booked[(int)$pid] = (int)$n;
-        } catch (Exception $e) { error_log('[TMS Pricing] Batch seat lookup failed: ' . $e->getMessage()); $booked = null; }
+        } catch (Exception $e) { error_log('[TourBuddy Pricing] Batch seat lookup failed: ' . $e->getMessage()); $booked = null; }
     }
     $out = [];
     foreach ($rows as $r) {
@@ -302,7 +302,7 @@ function tms_record_price_snapshot(PDO $dbh, int $packageId, int $price): void
              ON DUPLICATE KEY UPDATE Price = VALUES(Price), RecordedAt = CURRENT_TIMESTAMP"
         )->execute([':pid' => $packageId, ':price' => $price, ':today' => date('Y-m-d')]);
     } catch (Exception $e) {
-        error_log('[TMS Pricing] price_history snapshot failed: ' . $e->getMessage());
+        error_log('[TourBuddy Pricing] price_history snapshot failed: ' . $e->getMessage());
     }
 }
 
@@ -330,7 +330,7 @@ function tms_snapshot_all_package_prices(PDO $dbh): int
             $count++;
         }
     } catch (Exception $e) {
-        error_log('[TMS Pricing] snapshot_all_package_prices failed: ' . $e->getMessage());
+        error_log('[TourBuddy Pricing] snapshot_all_package_prices failed: ' . $e->getMessage());
     }
     return $count;
 }
@@ -357,7 +357,7 @@ function tms_get_price_history(PDO $dbh, int $packageId, int $days = 90): array
         $rows = $q->fetchAll(PDO::FETCH_ASSOC);
         return array_map(fn($r) => ['date' => (string)$r['RecordedDate'], 'price' => (int)$r['Price']], $rows);
     } catch (Exception $e) {
-        error_log('[TMS Pricing] get_price_history failed: ' . $e->getMessage());
+        error_log('[TourBuddy Pricing] get_price_history failed: ' . $e->getMessage());
         return [];
     }
 }
@@ -380,7 +380,7 @@ function tms_loyalty_award_booking(PDO $dbh, string $email, int $bookingId, int 
         $dbh->prepare('INSERT INTO tblloyalty_log(UserEmail,Points,Description) VALUES(?,?,?)')->execute([$email, $points, $desc]);
         return true;
     } catch (Throwable $e) {
-        error_log('[TMS Loyalty] award failed (booking unaffected): ' . $e->getMessage());
+        error_log('[TourBuddy Loyalty] award failed (booking unaffected): ' . $e->getMessage());
         return false;
     }
 }
@@ -411,7 +411,7 @@ function tms_loyalty_reverse_booking(PDO $dbh, int $bookingId): int
         return $awarded;
     } catch (Throwable $e) {
         if ($own && $dbh->inTransaction()) $dbh->rollBack();
-        error_log('[TMS Loyalty] reversal failed: ' . $e->getMessage());
+        error_log('[TourBuddy Loyalty] reversal failed: ' . $e->getMessage());
         return 0;
     }
 }

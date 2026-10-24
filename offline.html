@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><title>TMS – Offline</title>
+<!DOCTYPE html><html lang="en"><head><title>TourBuddy – Offline</title>
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <style>body{font-family:Arial,sans-serif;text-align:center;padding:60px 20px;background:#f5f8ff;}
 h1{color:#3F84B1;font-size:36px;}p{color:#666;font-size:18px;}
@@ -8,7 +8,7 @@ h1{color:#3F84B1;font-size:36px;}p{color:#666;font-size:18px;}
 #tmsOfflineKit a:hover{border-color:#3F84B1;}
 #tmsOfflineKit p.empty{font-size:13px;color:#999;text-align:center;}</style>
 </head><body>
-<h1>✈️ TMS</h1>
+<h1>✈️ TourBuddy</h1>
 <h2>You're offline</h2>
 <p>Please check your internet connection and try again.</p>
 <button onclick="window.location.reload()" style="background:#3F84B1;color:#fff;border:none;padding:12px 28px;border-radius:8px;font-size:16px;cursor:pointer;">Try Again</button>
@@ -55,7 +55,7 @@ h1{color:#3F84B1;font-size:36px;}p{color:#666;font-size:18px;}
         return cache.match(req).then(function (res) {
           return res.text().then(function (html) {
             var m = html.match(/<title>([^<]*)<\/title>/i);
-            var title = m ? m[1].replace(/^TMS \| /, '') : req.url;
+            var title = m ? m[1].replace(/^TourBuddy \| /, '') : req.url;
             var a = document.createElement('a');
             a.href = req.url;
             a.textContent = title;

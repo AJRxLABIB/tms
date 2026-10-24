@@ -108,7 +108,7 @@ class AchievementEngine {
                     $newlyUnlocked[] = $code;
                 }
             } catch (Exception $e) {
-                error_log("[TMS Achievements] Check failed for '$code': " . $e->getMessage());
+                error_log("[TourBuddy Achievements] Check failed for '$code': " . $e->getMessage());
             }
         }
 
@@ -144,7 +144,7 @@ class AchievementEngine {
             $stmt->execute();
             return $stmt->fetchAll(PDO::FETCH_OBJ);
         } catch (Exception $e) {
-            error_log('[TMS] ' . __METHOD__ . ' failed: ' . $e->getMessage());
+            error_log('[TourBuddy] ' . __METHOD__ . ' failed: ' . $e->getMessage());
             return [];
         }
     }
@@ -216,7 +216,7 @@ class AchievementEngine {
             $stmt->execute([$email]);
             return (int)$stmt->fetchColumn() >= 1;
         } catch (Exception $e) {
-            error_log('[TMS] ' . __METHOD__ . ' failed: ' . $e->getMessage());
+            error_log('[TourBuddy] ' . __METHOD__ . ' failed: ' . $e->getMessage());
             return false;
         }
     }

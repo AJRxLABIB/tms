@@ -102,7 +102,7 @@ class OpenWeatherMapProvider implements WeatherProviderInterface {
         } catch (Throwable $e) {
             // Even an unexpected error falls back to the orchestrator's next
             // provider rather than surfacing a fatal error to the visitor.
-            error_log('[TMS Weather] OpenWeatherMap path failed: ' . $e->getMessage());
+            error_log('[TourBuddy Weather] OpenWeatherMap path failed: ' . $e->getMessage());
             return ['ok' => false, 'error' => $e->getMessage()];
         }
     }

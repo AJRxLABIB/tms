@@ -64,7 +64,7 @@ class PersonalizedHomepage
                 $q->execute([':e' => $email]);
                 $found = $q->fetchAll(PDO::FETCH_COLUMN);
             } catch (Exception $e) {
-                error_log("[TMS] PersonalizedHomepage::forUser $tierName lookup failed: " . $e->getMessage());
+                error_log("[TourBuddy] PersonalizedHomepage::forUser $tierName lookup failed: " . $e->getMessage());
                 $found = [];
             }
             if ($found) {
@@ -96,7 +96,7 @@ class PersonalizedHomepage
             $q->execute($params);
             $packages = $q->fetchAll(PDO::FETCH_OBJ);
         } catch (Exception $e) {
-            error_log('[TMS] PersonalizedHomepage::forUser package query failed: ' . $e->getMessage());
+            error_log('[TourBuddy] PersonalizedHomepage::forUser package query failed: ' . $e->getMessage());
             return ['packages' => [], 'reason' => 'none'];
         }
 

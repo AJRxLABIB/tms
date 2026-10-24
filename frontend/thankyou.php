@@ -12,79 +12,43 @@ tms_require_user(); // Batch 1 (landing/auth gating): whole app now requires log
 <link rel="apple-touch-icon" href="images/icon-192.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="TMS">
+<meta name="apple-mobile-web-app-title" content="TourBuddy">
 <meta name="mobile-web-app-capable" content="yes">
-<title>TMS | Confirmation </title>
+<title>TourBuddy | Confirmation </title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
 <link href="css/bootstrap.min2.css" rel='stylesheet' type='text/css' />
 <link href="<?php echo tms_asset_ver('css/style.min.css'); ?>" rel='stylesheet' type='text/css' />
 <link href="css/font-awesome.min2.css" rel="stylesheet">
 <link href="<?php echo tms_asset_ver('css/modern-theme.css'); ?>" rel="stylesheet">
-<style>.contact h3{color:var(--text);}</style>
-<!-- Custom Theme files -->
 <script src="js/jquery-1.12.0.min.js" defer></script>
 <script src="js/bootstrap.min.js" defer></script>
-<!--animate-->
-<link href="css/animate.css" rel="stylesheet" type="text/css" media="all">
-<script src="js/wow.min.js" defer></script>
-	<script>window.addEventListener("load",function(){if(typeof WOW!=="undefined")new WOW().init()});</script>
-<!-- ACCESSIBILITY FIX (Round 67, master prompt item 32): every other page
-     that uses WOW.js/animate.css also loads css/modern-theme.css, whose
-     global @media (prefers-reduced-motion: reduce) rule throttles these
-     scroll-triggered animations for users who've asked their OS/browser to
-     minimize motion (WCAG 2.3.3/2.2.2) -- this is the one page in the app
-     that uses WOW.js but never links modern-theme.css, so it was the one
-     page where those animations ran unthrottled regardless of that
-     preference. Rather than add the whole stylesheet (this page doesn't
-     use any of its other styling and pulling it in wholesale risks
-     unrelated visual changes -- Rule 73), just the one rule this page
-     actually needs is repeated here, identical to modern-theme.css's own. -->
-<style>
-@media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after {
-    animation-duration: 0.001ms !important;
-    animation-iteration-count: 1 !important;
-    transition-duration: 0.001ms !important;
-    scroll-behavior: auto !important;
-  }
-}
-</style>
-<!--//end-animate-->
+<link rel="stylesheet" href="css/tms-account.css?v=1">
 </head>
 <body>
 <?php include('backend/header.php');?>
-<div class="banner-1 ">
-	<div class="container">
-		<h1 class="wow zoomIn animated animated" data-wow-delay=".1s" style="visibility: visible; animation-delay: 0.5s; animation-name: zoomIn;"> TMS- Tourism Management System</h1>
-	</div>
-</div>
-<!--- /banner-1 ---->
-<!--- contact ---->
-<div class="contact">
-	<div class="container">
-	<h3> Confirmation</h3>
-		<div class="col-md-10 contact-left">
-			<div class="con-top animated wow fadeInUp animated" data-wow-duration="400ms" data-wow-delay=".1s" style="visibility: visible; animation-duration: 1200ms; animation-delay: 500ms; animation-name: fadeInUp;">
-	
+<?php $tyMsg = (string)($_SESSION['msg'] ?? "Thanks — we've received your message and will get back to you shortly."); unset($_SESSION['msg']); ?>
+<div class="tms-confetti" aria-hidden="true"><?php for ($i = 0; $i < 30; $i++) echo '<i></i>'; ?></div>
+<main class="tms-acct" style="max-width:640px;text-align:center;">
+  <section class="tms-card" style="padding:40px 28px;">
+    <div class="tms-done-icon"><i class="fa fa-check" aria-hidden="true"></i></div>
+    <h1 style="font-size:28px;font-weight:800;margin:0 0 8px;">All done!</h1>
+    <p role="status" style="font-size:17px;color:var(--tms-muted);margin:0 0 24px;"><?php echo htmlentities($tyMsg); ?></p>
+    <h2 style="font-size:16px;text-align:left;">What happens next</h2>
+    <ul class="tms-next" style="text-align:left;">
+      <li><i class="fa fa-envelope-o" aria-hidden="true"></i> We reply to the email on your account.</li>
+      <li><i class="fa fa-suitcase" aria-hidden="true"></i> Your bookings stay in <a href="tour-history.php">My Tour History</a>.</li>
+      <li><i class="fa fa-compass" aria-hidden="true"></i> Keep exploring while you wait.</li>
+    </ul>
+    <div class="tms-actions" style="justify-content:center;margin:24px 0 0;">
+      <a class="tms-btn-ghost" href="package-list.php"><i class="fa fa-search" aria-hidden="true"></i> Browse packages</a>
+      <a class="tms-btn-ghost" href="dashboard.php"><i class="fa fa-home" aria-hidden="true"></i> My dashboard</a>
+    </div>
+  </section>
+</main>
 
-              <h4><?php
-                  // Round 14: $_SESSION['msg'] is only ever set by
-                  // backend/write-us.php, so a direct visit (or a refresh after
-                  // it was consumed) raised "Undefined array key" plus an
-                  // htmlentities(null) deprecation and printed an empty heading.
-                  echo htmlentities($_SESSION['msg'] ?? "Thanks — we've received your message and will get back to you shortly.");
-                  unset($_SESSION['msg']);
-              ?></h4>
-            
-			</div>
-		
-			<div class="clearfix"></div>
-	</div>
-</div>
-<!--- /contact ---->
 <?php include('backend/footer.php');?>
-<!-- sign -->
+
 <!-- write us -->
 <?php include('backend/write-us.php');?>	
 <!-- //write us -->

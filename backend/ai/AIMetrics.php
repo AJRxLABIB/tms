@@ -153,7 +153,7 @@ final class EvalRunLog
                 PromptRedactor::forLog($note, 250),
             ]);
             return true;
-        } catch (Throwable $e) { error_log('[TMS AI evalrun] ' . $e->getMessage()); return false; }
+        } catch (Throwable $e) { error_log('[TourBuddy AI evalrun] ' . $e->getMessage()); return false; }
     }
 
     /** @return array<int,array<string,mixed>> newest first; [] when the table is missing */

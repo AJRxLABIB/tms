@@ -67,7 +67,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'], $_POST['id'
                 "Your $label booking #$code has been cancelled by our team. Please contact support if you have questions.",
                 "Your $label booking #$code has been cancelled",
                 "<p>Your $label booking <strong>#$code</strong> has been cancelled by our team.</p>
-                 <p>If you weren't expecting this or have questions, please reach out to TMS support.</p>"
+                 <p>If you weren't expecting this or have questions, please reach out to TourBuddy support.</p>"
             );
             $msg = "$label booking #$code cancelled."; $msgType = 'success';
             tms_log_activity($dbh, $_SESSION['alogin'], "Marketplace $label Booking Cancelled", "BookingId=$bid");
@@ -106,7 +106,7 @@ function tms_notify_marketplace_booking_owner(PDO $dbh, string $type, int $booki
             }
         }
     } catch (Exception $e) {
-        error_log('[TMS] Could not notify marketplace booking owner: ' . $e->getMessage());
+        error_log('[TourBuddy] Could not notify marketplace booking owner: ' . $e->getMessage());
     }
 }
 
@@ -180,7 +180,7 @@ $statusIcon  = [0 => 'fa-clock-o', 1 => 'fa-check-circle', 2 => 'fa-times-circle
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>TMS | Manage Marketplace Bookings</title>
+<title>TourBuddy | Manage Marketplace Bookings</title>
 <link href="css/font-awesome.css" rel="stylesheet">
 <link href="css/bootstrap.min.css" rel="stylesheet">
 <link href="<?php echo tms_asset_ver('css/admin-v6.css'); ?>" rel="stylesheet">

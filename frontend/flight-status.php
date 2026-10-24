@@ -5,14 +5,14 @@ include('backend/config.php');
 tms_require_user(); // Batch 1 (landing/auth gating): whole app now requires login
 ?>
 <!DOCTYPE HTML><html lang="<?php echo htmlspecialchars(tms_active_language(), ENT_QUOTES, 'UTF-8'); ?>"><head>
-<title>TMS | Flight Tracker</title>
+<title>TourBuddy | Flight Tracker</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#104B3A">
 <link rel="apple-touch-icon" href="images/icon-192.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="TMS">
+<meta name="apple-mobile-web-app-title" content="TourBuddy">
 <meta name="mobile-web-app-capable" content="yes">
 <link href="css/bootstrap.min2.css" rel='stylesheet'/>
 <link href="<?php echo tms_asset_ver('css/style.min.css'); ?>" rel='stylesheet'/>
@@ -20,7 +20,8 @@ tms_require_user(); // Batch 1 (landing/auth gating): whole app now requires log
 <link href="<?php echo tms_asset_ver('css/modern-theme.css'); ?>" rel="stylesheet">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="js/vendor/leaflet/leaflet.css" />
+<link rel="stylesheet" href="js/vendor/maplibre/maplibre-gl.css">
+<link rel="stylesheet" href="<?php echo tms_asset_ver('css/tms-map-ui.css'); ?>">
 <script src="js/jquery-1.12.0.min.js" defer></script>
 <script src="js/bootstrap.min.js" defer></script>
 <style>
@@ -66,10 +67,10 @@ tms_require_user(); // Batch 1 (landing/auth gating): whole app now requires log
 
 </div>
 <?php include('backend/footer.php'); ?>
-<script src="js/vendor/leaflet/leaflet.js"></script>
+<script src="<?php echo tms_asset_ver('js/tms-map-pages.js'); ?>"></script>
 <script>
 function esc(v) { return String(v == null ? "" : v).replace(/[&<>"']/g, function (c) { return {"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c]; }); }
-let flightMap = null, flightMarker = null;
+let flightCtl = null, flightPins = null;
 
 async function trackFlight(e) {
   e.preventDefault();
@@ -131,18 +132,23 @@ async function trackFlight(e) {
     }
     resultBox.innerHTML = statusHtml;
 
-    if (f.latitude && f.longitude) {
+    if (window.TmsMapPages && TmsMapPages.utils.validCoord(f.latitude, f.longitude)) {
       const mapEl = document.getElementById('flightMap');
       mapEl.style.display = 'block';
-      if (!flightMap) {
-        flightMap = L.map('flightMap');
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '&copy; OpenStreetMap' }).addTo(flightMap);
+      try {
+        if (!flightCtl) {
+          // MapLibre loads only now, after a successful lookup: the page stays light until a position is actually shown.
+          flightCtl = await TmsMapPages.mount(mapEl, { base: '', lang: document.documentElement.lang || 'en', center: [Number(f.longitude), Number(f.latitude)], zoom: 7 });
+          flightPins = TmsMapPages.pins(flightCtl, 'flight', { color: '#1d4ed8', cluster: false, popup: true });
+        }
+        flightPins.set([{ lat: Number(f.latitude), lng: Number(f.longitude), title: String(f.callsign || ''),
+                          subtitle: (f.altitude_ft || '\u2014') + ' ft \u00b7 ' + (f.speed_kmh || '\u2014') + ' km/h' }]);
+        flightCtl.resize();
+        flightCtl.flyTo(Number(f.longitude), Number(f.latitude), 7);
+      } catch (mapErr) {
+        mapEl.textContent = 'The map could not be loaded right now. The flight details above are still current.';
+        mapEl.style.cssText += ';display:flex;align-items:center;justify-content:center;color:#94a3b8;font-size:13px;text-align:center;padding:12px';
       }
-      flightMap.setView([f.latitude, f.longitude], 7);
-      if (flightMarker) flightMap.removeLayer(flightMarker);
-      flightMarker = L.marker([f.latitude, f.longitude]).addTo(flightMap)
-        .bindPopup('<strong>' + f.callsign + '</strong><br>' + (f.altitude_ft || '—') + ' ft &middot; ' + (f.speed_kmh || '—') + ' km/h').openPopup();
-      setTimeout(() => flightMap.invalidateSize(), 100);
     }
   } catch (err) {
     btn.disabled = false;

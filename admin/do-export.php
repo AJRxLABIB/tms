@@ -11,7 +11,7 @@ tms_admin_require_role($dbh, ['superadmin', 'finance']);
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>TMS | Do Export</title>
+<title>TourBuddy | Do Export</title>
 <link href="css/font-awesome.min2.css" rel="stylesheet">
 <link href="css/bootstrap.min.css" rel="stylesheet">
 <link href="<?php echo tms_asset_ver('css/admin-v6.css'); ?>" rel="stylesheet">
@@ -68,7 +68,7 @@ if ($format === 'csv') {
 ?>
 
 <button class="print-btn" onclick="window.print()"><i class="fa fa-print"></i> Print / Save as PDF</button>
-<h3>TMS – <?= ucfirst($type) ?> Report &nbsp;<small style="color:var(--text-muted);font-size:14px;"><?= date('d M Y') ?></small></h3>
+<h3>TourBuddy – <?= ucfirst($type) ?> Report &nbsp;<small style="color:var(--text-muted);font-size:14px;"><?= date('d M Y') ?></small></h3>
 <p style="color:var(--text-muted);"><?= count($data) ?> record(s)</p>
 <table>
   <thead><tr><?php foreach ($headers as $h): ?><th><?= htmlspecialchars($h) ?></th><?php endforeach; ?></tr></thead>

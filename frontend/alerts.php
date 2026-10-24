@@ -66,9 +66,9 @@ $availAlerts = $availAlerts->fetchAll(PDO::FETCH_OBJ);
 <link rel="apple-touch-icon" href="images/icon-192.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="TMS">
+<meta name="apple-mobile-web-app-title" content="TourBuddy">
 <meta name="mobile-web-app-capable" content="yes">
-<title>TMS | Price &amp; Availability Alerts</title>
+<title>TourBuddy | Price &amp; Availability Alerts</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <link href="css/bootstrap.min2.css" rel='stylesheet'/>
 <link href="<?php echo tms_asset_ver('css/style.min.css'); ?>" rel='stylesheet'/>
@@ -82,6 +82,7 @@ $availAlerts = $availAlerts->fetchAll(PDO::FETCH_OBJ);
 .alert-row:last-child{border-bottom:none;}
 .form-inline-alert select,.form-inline-alert input{margin-bottom:10px;}
 </style>
+<link rel="stylesheet" href="css/tms-account.css?v=1">
 </head><body>
 <?php include('backend/header.php'); ?>
 <div class="page-title"><div class="container"><h2 style="margin:0;"><i class="fa fa-bell"></i> Price &amp; Availability Alerts</h2></div></div>

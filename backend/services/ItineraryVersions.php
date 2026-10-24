@@ -217,7 +217,7 @@ final class ItineraryVersions
     private static function audit(PDO $dbh, int $bookingId, ?int $versionId, string $actor, string $action, string $detail = ''): void
     {
         try { $dbh->prepare('INSERT INTO tbl_itinerary_audit (BookingId, VersionId, Actor, Action, Detail) VALUES (?,?,?,?,?)')->execute([$bookingId, $versionId, mb_substr($actor, 0, 100), $action, mb_substr($detail, 0, 500)]); }
-        catch (Throwable $e) { error_log('[TMS ItineraryVersions] audit: ' . $e->getMessage()); }
+        catch (Throwable $e) { error_log('[TourBuddy ItineraryVersions] audit: ' . $e->getMessage()); }
     }
 
     /** Booking ids (string keys) that are referenced by plan items, belong to $email and are CONFIRMED (status 1). */
@@ -312,7 +312,7 @@ final class ItineraryVersions
             return ['ok' => true, 'code' => 'proposed', 'message' => 'Proposal saved. Nothing has changed until you accept it.', 'version_id' => $vid];
         } catch (Throwable $e) {
             if (self::notReady($e)) return ['ok' => false, 'code' => 'not_ready', 'message' => 'Plan versions need the database update (run php database/migrate.php).', 'version_id' => null];
-            error_log('[TMS ItineraryVersions] propose: ' . $e->getMessage());
+            error_log('[TourBuddy ItineraryVersions] propose: ' . $e->getMessage());
             return ['ok' => false, 'code' => 'error', 'message' => 'Could not save the proposal right now.', 'version_id' => null];
         }
     }
@@ -377,7 +377,7 @@ final class ItineraryVersions
         } catch (Throwable $e) {
             if ($dbh->inTransaction()) $dbh->rollBack();
             if (self::notReady($e)) return ['ok' => false, 'code' => 'not_ready', 'message' => 'Plan versions need the database update (run php database/migrate.php).'];
-            error_log('[TMS ItineraryVersions] accept: ' . $e->getMessage());
+            error_log('[TourBuddy ItineraryVersions] accept: ' . $e->getMessage());
             return ['ok' => false, 'code' => 'error', 'message' => 'Could not apply the change right now.'];
         }
     }
@@ -401,12 +401,12 @@ final class ItineraryVersions
     {
         try {
             if (!self::owns($dbh, $bookingId, $email)) return ['ready' => true, 'versions' => [], 'audit' => []];
-            try { self::ensureCurrent($dbh, $bookingId, $email); } catch (Throwable $e) { if (self::notReady($e)) throw $e; error_log('[TMS ItineraryVersions] ensureCurrent: ' . $e->getMessage()); }
+            try { self::ensureCurrent($dbh, $bookingId, $email); } catch (Throwable $e) { if (self::notReady($e)) throw $e; error_log('[TourBuddy ItineraryVersions] ensureCurrent: ' . $e->getMessage()); }
             $v = $dbh->prepare('SELECT * FROM tbl_itinerary_versions WHERE BookingId=? AND UserEmail=? ORDER BY VersionNo DESC LIMIT 15'); $v->execute([$bookingId, $email]);
             $a = $dbh->prepare('SELECT Actor, Action, Detail, CreatedAt, VersionId FROM tbl_itinerary_audit WHERE BookingId=? ORDER BY AuditId DESC LIMIT 15'); $a->execute([$bookingId]);
             return ['ready' => true, 'versions' => array_map([self::class, 'decode'], $v->fetchAll(PDO::FETCH_ASSOC)), 'audit' => $a->fetchAll(PDO::FETCH_ASSOC)];
         } catch (Throwable $e) {
-            if (!self::notReady($e)) error_log('[TMS ItineraryVersions] overview: ' . $e->getMessage());
+            if (!self::notReady($e)) error_log('[TourBuddy ItineraryVersions] overview: ' . $e->getMessage());
             return ['ready' => false, 'versions' => [], 'audit' => []];
         }
     }

@@ -48,9 +48,9 @@ $wishes = $q->fetchAll(PDO::FETCH_OBJ);
 <link rel="apple-touch-icon" href="images/icon-192.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="TMS">
+<meta name="apple-mobile-web-app-title" content="TourBuddy">
 <meta name="mobile-web-app-capable" content="yes">
-<title>TMS | My Wishlist</title>
+<title>TourBuddy | My Wishlist</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <link href="css/bootstrap.min2.css" rel='stylesheet'/>
 <link href="<?php echo tms_asset_ver('css/style.min.css'); ?>" rel='stylesheet'/>
@@ -76,6 +76,7 @@ html[data-theme="dark"] .wish-card-body .loc { color: var(--text-muted) !importa
 .empty-state i{font-size:64px;color:#ddd;margin-bottom:16px;}
 .page-title{background:linear-gradient(135deg,var(--primary-dark),var(--primary));color:#fff;padding:40px 0;margin-bottom:30px;}
 </style>
+<link rel="stylesheet" href="css/tms-account.css?v=1">
 </head><body>
 <?php include('backend/header.php'); ?>
 <div class="page-title">
@@ -87,7 +88,7 @@ html[data-theme="dark"] .wish-card-body .loc { color: var(--text-muted) !importa
 
 <?php if (count($wishes) === 0): ?>
 <div class="empty-state">
-  <i class="fa fa-heart-o"></i>
+  <svg viewBox="0 0 120 96" width="120" height="96" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="color:var(--tms-primary);margin-bottom:12px"><path d="M60 80S24 58 24 34a18 18 0 0 1 36-4 18 18 0 0 1 36 4c0 24-36 46-36 46z" fill="currentColor" opacity=".15"/></svg>
   <h3>Your wishlist is empty</h3>
   <p style="color:var(--text-muted);">Browse tour packages and click the heart icon to save them here.</p>
   <a href="package-list.php" class="btn btn-primary btn-lg" style="margin-top:10px;">Browse Packages</a>

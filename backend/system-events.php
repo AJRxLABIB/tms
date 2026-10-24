@@ -36,6 +36,6 @@ function tms_log_system_event(PDO $dbh, string $category, string $eventType, boo
     } catch (Exception $e) {
         // Never let monitoring itself become a new failure mode -- same
         // silently-fail-closed principle as tms_log_activity().
-        error_log('[TMS SystemEvents] Failed to log event: ' . $e->getMessage());
+        error_log('[TourBuddy SystemEvents] Failed to log event: ' . $e->getMessage());
     }
 }

@@ -35,7 +35,7 @@ function tms_create_price_alert(PDO $dbh, string $email, int $packageId, float $
         )->execute([':e' => $email, ':p' => $packageId, ':t' => $targetPrice]);
         return true;
     } catch (Exception $e) {
-        error_log('[TMS Alerts] create_price_alert failed: ' . $e->getMessage());
+        error_log('[TourBuddy Alerts] create_price_alert failed: ' . $e->getMessage());
         return false;
     }
 }
@@ -48,7 +48,7 @@ function tms_create_availability_alert(PDO $dbh, string $email, int $packageId):
         )->execute([':e' => $email, ':p' => $packageId]);
         return true;
     } catch (Exception $e) {
-        error_log('[TMS Alerts] create_availability_alert failed: ' . $e->getMessage());
+        error_log('[TourBuddy Alerts] create_availability_alert failed: ' . $e->getMessage());
         return false;
     }
 }
