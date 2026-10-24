@@ -277,7 +277,7 @@ if (isset($_POST['confirm_checkout'])) {
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <script src="js/jquery-1.12.0.min.js" defer></script>
-<link rel="stylesheet" href="css/tms-account.css?v=1">
+<link rel="stylesheet" href="css/tms-account.css?v=2">
 <style>
 .checkout-item{display:flex;justify-content:space-between;gap:14px;padding:14px 0;border-bottom:1px dashed var(--tms-border);font-size:15px;}
 .checkout-item:last-child{border-bottom:none;}

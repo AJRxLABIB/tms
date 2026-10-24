@@ -82,7 +82,7 @@ $availAlerts = $availAlerts->fetchAll(PDO::FETCH_OBJ);
 .alert-row:last-child{border-bottom:none;}
 .form-inline-alert select,.form-inline-alert input{margin-bottom:10px;}
 </style>
-<link rel="stylesheet" href="css/tms-account.css?v=1">
+<link rel="stylesheet" href="css/tms-account.css?v=2">
 </head><body>
 <?php include('backend/header.php'); ?>
 <div class="page-title"><div class="container"><h2 style="margin:0;"><i class="fa fa-bell"></i> Price &amp; Availability Alerts</h2></div></div>

@@ -133,9 +133,9 @@ class ExploreService {
         $weatherUrl = 'https://api.open-meteo.com/v1/forecast?' . http_build_query([
             'latitude'        => $lat,
             'longitude'       => $lng,
-            'current'         => 'temperature_2m,relative_humidity_2m,apparent_temperature,weather_code,wind_speed_10m,wind_direction_10m,is_day',
-            'hourly'          => 'temperature_2m,weather_code,precipitation_probability',
-            'daily'           => 'weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max,sunrise,sunset,wind_speed_10m_max',
+            'current'         => 'temperature_2m,relative_humidity_2m,apparent_temperature,weather_code,wind_speed_10m,wind_direction_10m,is_day,precipitation',
+            'hourly'          => 'temperature_2m,weather_code,precipitation_probability,precipitation',
+            'daily'           => 'weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max,precipitation_sum,uv_index_max,sunrise,sunset,wind_speed_10m_max',
             'forecast_days'   => 7,
             'timezone'        => 'auto',
         ]);
@@ -194,6 +194,7 @@ class ExploreService {
                     'temp' => $w['hourly']['temperature_2m'][$i] ?? null,
                     'code' => $w['hourly']['weather_code'][$i] ?? null,
                     'pop'  => $w['hourly']['precipitation_probability'][$i] ?? null,
+                    'precip_mm' => $w['hourly']['precipitation'][$i] ?? null,
                 ];
             }
         }
@@ -207,6 +208,8 @@ class ExploreService {
                     'tmax'    => $w['daily']['temperature_2m_max'][$i] ?? null,
                     'tmin'    => $w['daily']['temperature_2m_min'][$i] ?? null,
                     'pop'     => $w['daily']['precipitation_probability_max'][$i] ?? null,
+                    'precip_mm' => $w['daily']['precipitation_sum'][$i] ?? null,
+                    'uv_max'  => $w['daily']['uv_index_max'][$i] ?? null,
                     'sunrise' => $w['daily']['sunrise'][$i] ?? null,
                     'sunset'  => $w['daily']['sunset'][$i] ?? null,
                     'wind'    => $w['daily']['wind_speed_10m_max'][$i] ?? null,
@@ -224,6 +227,8 @@ class ExploreService {
                 'humidity'    => $current['relative_humidity_2m'] ?? null,
                 'wind_speed'  => $current['wind_speed_10m'] ?? null,
                 'wind_dir'    => $current['wind_direction_10m'] ?? null,
+                'precip_mm'   => $current['precipitation'] ?? null,
+                'observed_at' => $current['time'] ?? null,   // provider timestamp, destination local time
                 'is_day'      => $current['is_day'] ?? 1,
                 'code'        => $code,
                 'description' => $this->weatherCodeToText($code),

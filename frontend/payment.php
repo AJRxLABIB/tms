@@ -114,7 +114,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !$sandboxOk) {
 <link href="css/font-awesome.min2.css" rel="stylesheet">
 <link href="<?php echo tms_asset_ver('css/modern-theme.css'); ?>" rel="stylesheet">
 <script src="js/jquery-1.12.0.min.js" defer></script>
-<link rel="stylesheet" href="css/tms-account.css?v=1">
+<link rel="stylesheet" href="css/tms-account.css?v=2">
 <style>.pay-row{display:flex;justify-content:space-between;gap:12px;padding:10px 0;border-bottom:1px dashed var(--tms-border);font-size:15px}</style>
 </head><body>
 <?php include('backend/header.php'); ?>

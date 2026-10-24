@@ -148,7 +148,7 @@ foreach ($bkQ->fetchAll(PDO::FETCH_OBJ) as $bk) {
 <link href="css/animate.css" rel="stylesheet" type="text/css" media="all">
 <script src="js/wow.min.js" defer></script>
 <script>window.addEventListener("load",function(){if(typeof WOW!=="undefined")new WOW().init()});</script>
-<link rel="stylesheet" href="css/tms-account.css?v=1">
+<link rel="stylesheet" href="css/tms-account.css?v=2">
 <style>
 .errorWrap{padding:13px 16px;margin:0 0 16px;border-radius:14px;background:var(--tms-bad-bg);color:var(--tms-bad);font-weight:600;}
 .succWrap{padding:13px 16px;margin:0 0 16px;border-radius:14px;background:var(--tms-ok-bg);color:var(--tms-ok);font-weight:600;}

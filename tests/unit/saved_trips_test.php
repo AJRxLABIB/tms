@@ -110,5 +110,22 @@ $new = MapItinerary::mergeLegacy([['name' => 'A', 'lat' => 1.0, 'lng' => 1.0, 'n
 t('legacy merge: matching stop keeps day, time, cost and note', $new[0]['day_index'] === 2 && $new[0]['arrive_time'] === '09:00' && $new[0]['est_cost'] === 5.0 && $new[0]['note'] === 'keep');
 t('legacy merge: new stop gets nothing invented', !isset($new[1]['day_index']) && !isset($new[1]['est_cost']));
 
+// ---- trip budget (migration 046) ----
+t('budget: empty means no budget', MapItinerary::parseBudget('') === null && MapItinerary::parseBudget(null) === null);
+t('budget: zero is a valid budget', MapItinerary::parseBudget('0') === 0.0);
+t('budget: rounds to 2 decimals', MapItinerary::parseBudget('1234.567') === 1234.57);
+t('budget: negative refused', MapItinerary::parseBudget(-1) === false && MapItinerary::parseBudget('-0.01') === false);
+t('budget: text, bool, INF refused', MapItinerary::parseBudget('abc') === false && MapItinerary::parseBudget(true) === false && MapItinerary::parseBudget('1e999') === false && MapItinerary::parseBudget(NAN) === false);
+t('budget: column maximum accepted, one cent over refused', MapItinerary::parseBudget('9999999999.99') === 9999999999.99 && MapItinerary::parseBudget('10000000000') === false);
+$bm = MapItinerary::validateMeta(['budget_total' => '2500.5', 'budget_currency' => ' usd ']);
+t('meta: budget and currency normalised (currency upper case)', $bm['ok'] && $bm['meta']['budget_total'] === 2500.5 && $bm['meta']['budget_currency'] === 'USD');
+t('meta: empty budget clears it', MapItinerary::validateMeta(['budget_total' => ''])['meta']['budget_total'] === null);
+t('meta: invalid budget refused with its own code', code(MapItinerary::validateMeta(['budget_total' => 'lots'])) === 'invalid_budget');
+t('meta: currency must be 3 letters', code(MapItinerary::validateMeta(['budget_currency' => 'US'])) === 'invalid_currency' && code(MapItinerary::validateMeta(['budget_currency' => 'US1'])) === 'invalid_currency' && code(MapItinerary::validateMeta(['budget_currency' => ['USD']])) === 'invalid_currency');
+t('meta: no budget keys sent means no budget keys returned (old clients unchanged)', !array_key_exists('budget_total', MapItinerary::validateMeta(['notes' => 'x'])['meta']) && !array_key_exists('budget_currency', MapItinerary::validateMeta(['notes' => 'x'])['meta']));
+$bv = MapItinerary::validate(['title' => 'T', 'planner' => true, 'stops' => [], 'budget_total' => 100, 'budget_currency' => 'bdt']);
+t('validate: budget travels through validate in meta', $bv['ok'] && $bv['data']['meta']['budget_total'] === 100.0 && $bv['data']['meta']['budget_currency'] === 'BDT');
+t('validate: invalid budget stops the whole save', code(MapItinerary::validate(['title' => 'T', 'planner' => true, 'stops' => [], 'budget_total' => -5])) === 'invalid_budget');
+
 echo "\n$pass passed, $fail failed\n";
 exit($fail ? 1 : 0);

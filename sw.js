@@ -132,7 +132,7 @@ self.addEventListener('fetch', e => {
   if (isStatic) {
     // stale-while-revalidate: instant from cache, refreshed in the background.
     e.respondWith(caches.open(CACHE).then(cache => cache.match(e.request).then(hit => {
-      const refresh = fetch(e.request).then(res => { if (res && res.status === 200) cache.put(e.request, res.clone()); return res; }).catch(() => hit);
+      const refresh = fetch(e.request).then(res => { if (res && res.status === 200) cache.put(e.request, res.clone()); return res; }).catch(() => hit || caches.match(e.request, { cacheName: TRIPKIT_CACHE }));   // offline: a saved trip's own styles and scripts live in the kit
       return hit || refresh;
     })));
     return;

@@ -8,7 +8,7 @@
   else root.TmsWeatherTips = api;
 })(typeof self !== 'undefined' ? self : this, function () {
   'use strict';
-  var T = { rainPop: 60, heatC: 35, windKmh: 45, windDailyKmh: 50 };
+  var T = { rainPop: 60, heatC: 35, windKmh: 45, windDailyKmh: 50, heavyRainMm: 20, uvHigh: 8 };
   // Categories the places provider really supports that are normally indoors.
   var INDOOR = ['shopping_mall', 'restaurant', 'tourist_info', 'hotel'];
 
@@ -42,6 +42,17 @@
     if ((curW !== null && curW >= T.windKmh) || windy.length) {
       var wv = curW !== null && curW >= T.windKmh ? curW : num(windy[0].wind);
       out.push({ level: 'warn', text: 'Wind up to ' + Math.round(wv) + ' km/h in the forecast. Conditions may affect outdoor activities, boats and viewpoints.', action: null });
+    }
+
+    // Real precipitation totals (mm) and UV index, when the forecast response carries them (Open-Meteo precipitation_sum, uv_index_max).
+    var heavy = daily.filter(function (d) { var m = num(d && d.precip_mm); return m !== null && m >= T.heavyRainMm; });
+    if (heavy.length) {
+      var hv = heavy.reduce(function (x, y) { return num(y.precip_mm) > num(x.precip_mm) ? y : x; });
+      out.push({ level: 'warn', text: 'About ' + Math.round(num(hv.precip_mm)) + ' mm of rain is forecast on ' + label(hv) + '. Roads and boat trips may be delayed, so allow extra time.', action: null });
+    }
+    var uv = daily.filter(function (d) { var u = num(d && d.uv_max); return u !== null && u >= T.uvHigh; });
+    if (uv.length) {
+      out.push({ level: 'info', text: 'UV index reaches ' + Math.round(num(uv[0].uv_max)) + ' on ' + label(uv[0]) + '. General sun advice: sunscreen, a hat, water, and shade around midday.', action: null });
     }
 
     // Provider-supplied alerts only (the response's own alerts array, shown as given).

@@ -214,3 +214,8 @@ html body .form-control:focus { border-color: var(--tms-primary); box-shadow: va
 html body .custom-hero { position: relative; overflow: hidden; margin: 0 0 24px; padding: 44px 0 38px; color: #fff; text-align: center;
   background: linear-gradient(120deg, var(--tms-primary-strong), var(--tms-primary) 60%, color-mix(in srgb, var(--tms-accent) 55%, var(--tms-primary))); }
 html body .custom-hero h1 { color: #fff; font-weight: 800; letter-spacing: -.02em; }
+
+/* Found in a real 360 px test: inputs overflowed the card (padding added to width:100%) and the art heading inherited the dark heading colour. */
+html body .tms-input input, html body .tms-input select, html body .tms-input textarea, html body input.tms-control { box-sizing: border-box; width: 100%; max-width: 100%; min-width: 0; }
+html body .tms-auth-art h2, html body .tms-auth-art p { color: #fff; }
+html body .tms-auth-card, html body .tms-auth-main { min-width: 0; }

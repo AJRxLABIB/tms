@@ -120,7 +120,7 @@ $statusMeta = [
 <script src="js/jquery-1.12.0.min.js" defer></script>
 <script src="js/bootstrap.min.js" defer></script>
 <script src="js/qrcode.js"></script>
-<link rel="stylesheet" href="css/tms-account.css?v=1">
+<link rel="stylesheet" href="css/tms-account.css?v=2">
 <style>
 .tms-trip{position:relative;display:grid;grid-template-columns:1fr auto;gap:16px;align-items:center;padding:26px 28px;border-radius:24px;color:#fff;overflow:hidden;margin-bottom:24px;
   background:linear-gradient(110deg,rgba(5,52,60,.88),rgba(14,124,134,.55)),var(--trip-img,none) center/cover,var(--tms-primary-strong);box-shadow:var(--tms-shadow-lg);}

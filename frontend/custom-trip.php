@@ -158,7 +158,7 @@ html[data-theme="dark"] .activity-item span,
 html[data-theme="dark"] .prog-step span,
 html[data-theme="dark"] .ai-tip-list { color: var(--text-muted) !important; }
 </style>
-<link rel="stylesheet" href="css/tms-account.css?v=1">
+<link rel="stylesheet" href="css/tms-account.css?v=2">
 </head>
 <body>
 <?php include('backend/header.php'); ?>

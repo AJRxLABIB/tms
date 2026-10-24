@@ -77,6 +77,35 @@ $r = MapRouting::route([[90.0, 23.0], [90.1, 23.1]], 'cycling');
 t('route: NoRoute from the engine is reported', ($r['error']['code'] ?? '') === 'no_route');
 MapRouting::_setTestHooks(null, null);
 
+// ---- MapRouting: steps (guidance) ----
+$stepBody = json_encode(['code' => 'Ok', 'routes' => [[
+    'distance' => 1000.0, 'duration' => 120.0,
+    'geometry' => ['type' => 'LineString', 'coordinates' => [[91.0, 21.0], [91.0, 21.01], [91.01, 21.01]]],
+    'legs' => [['distance' => 1000.0, 'duration' => 120.0, 'steps' => [
+        ['distance' => 600.4, 'duration' => 70.0, 'name' => 'Marine Drive', 'maneuver' => ['type' => 'depart', 'location' => [91.0, 21.0]]],
+        ['distance' => 399.6, 'duration' => 50.0, 'name' => "O'Neil <b>Rd</b>", 'maneuver' => ['type' => 'turn', 'modifier' => 'right', 'location' => [91.0, 21.01]]],
+        ['distance' => 0.0, 'duration' => 0.0, 'name' => '', 'maneuver' => ['type' => 'arrive', 'location' => [91.01, 21.01]]],
+        ['distance' => 5, 'duration' => 1, 'name' => 'bad', 'maneuver' => ['type' => 'turn', 'location' => ['x', 1]]],
+    ]]],
+]]]);
+$ps = MapRouting::parse(200, $stepBody, 'driving', 'https://x');
+t('steps: not returned unless asked (old answer unchanged)', $ps['ok'] && !isset($ps['legs'][0]['steps']));
+$ps = MapRouting::parse(200, $stepBody, 'driving', 'https://x', true);
+$st = $ps['legs'][0]['steps'] ?? [];
+t('steps: valid steps kept in order, step with a bad location dropped', count($st) === 3 && $st[0]['type'] === 'depart' && $st[2]['type'] === 'arrive');
+t('steps: distance rounded, location is [lng,lat]', $st[0]['distance_m'] === 600 && $st[1]['location'] === [91.0, 21.01] && $st[1]['modifier'] === 'right');
+t('steps: street name is stripped of markup characters', $st[1]['name'] === "O'Neil bRd/b");
+$lg = MapRouting::parse(200, json_encode(['code' => 'Ok', 'routes' => [['distance' => 1, 'duration' => 1, 'geometry' => ['type' => 'LineString', 'coordinates' => [[1, 1], [2, 2]]], 'legs' => [['distance' => 1, 'duration' => 1]]]]]), 'driving', 'https://x', true);
+t('steps: engine without steps gives an empty list, nothing invented', $lg['ok'] && $lg['legs'][0]['steps'] === []);
+$bud = 2; $cap = MapRouting::parseSteps(json_decode($stepBody, true)['routes'][0]['legs'][0]['steps'], $bud);
+t('steps: total step budget is enforced', count($cap) === 2 && $bud === 0);
+t('steps: cache key differs when steps are requested', MapRouting::cacheKey('driving', [[1, 2], [3, 4]]) !== MapRouting::cacheKey('driving', [[1, 2], [3, 4]], true));
+$su = []; MapRouting::_setTestHooks(function (string $url) use (&$su, $stepBody) { $su[] = $url; return ['status' => 200, 'body' => $stepBody]; }, new FakeCache());
+MapRouting::route([[91.0, 21.0], [91.01, 21.01]], 'driving');
+MapRouting::route([[91.0, 21.0], [91.01, 21.01]], 'driving', true);
+t('steps: URL asks the engine for steps only when requested', str_contains($su[0], 'steps=false') && str_contains($su[1], 'steps=true') && count($su) === 2);
+MapRouting::_setTestHooks(null, null);
+
 // ---- MapGeocoder ----
 t('normalise collapses whitespace and control chars', MapGeocoder::normalise("  Cox's \n  Bazar\t ") === "Cox's Bazar");
 t('normalise keeps Bangla text', MapGeocoder::normalise(' কক্সবাজার  সমুদ্র ') === 'কক্সবাজার সমুদ্র');
@@ -107,7 +136,7 @@ MapGeocoder::_setTestHooks(function (string $u, array $o) use (&$gUrls, $nom) { 
     $gc, function () use (&$now) { return $now; }, function (float $s) use (&$slept, &$now) { $slept[] = $s; $now += $s; }, 'test-client', $lock);
 $r = MapGeocoder::search("Cox's Bazar", ['lang' => 'bn', 'lng' => 91.98, 'lat' => 21.42], 5);
 t('search: ok with items', $r['ok'] && count($r['items']) === 2 && $r['source'] === 'nominatim');
-t('search: request carries accept-language, countrycodes, jsonv2 and a User-Agent', str_contains($gUrls[0][0], 'accept-language=bn%2Cen') && str_contains($gUrls[0][0], 'countrycodes=bd') && str_contains($gUrls[0][0], 'format=jsonv2') && str_contains($gUrls[0][1]['user_agent'], 'TMS-TourismManagement'));
+t('search: request carries accept-language, countrycodes, jsonv2 and a User-Agent', str_contains($gUrls[0][0], 'accept-language=bn%2Cen') && str_contains($gUrls[0][0], 'countrycodes=bd') && str_contains($gUrls[0][0], 'format=jsonv2') && str_contains($gUrls[0][1]['user_agent'], 'TourBuddy-TourismManagement'));
 t('search: viewbox built from the bias', str_contains($gUrls[0][0], 'viewbox='));
 $r = MapGeocoder::search("Cox's Bazar", ['lang' => 'bn', 'lng' => 91.98, 'lat' => 21.42], 5);
 t('search: repeat query is served from cache (no second request)', count($gUrls) === 1);

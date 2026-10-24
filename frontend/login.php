@@ -199,7 +199,7 @@ $showingTwoFactorPrompt = !empty($_SESSION['u2fa_pending']);
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
   <script>try{document.documentElement.setAttribute('data-theme',localStorage.getItem('tms-theme')||'light');}catch(e){}</script>
   <link rel="stylesheet" href="css/tms-theme.css?v=1">
-  <link rel="stylesheet" href="css/tms-account.css?v=1">
+  <link rel="stylesheet" href="css/tms-account.css?v=2">
   <script src="js/tms-motion.js?v=1" defer></script>
 </head>
 <body class="tms-auth-page">

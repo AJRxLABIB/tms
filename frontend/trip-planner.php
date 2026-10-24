@@ -26,7 +26,7 @@ elseif ($problem !== '') http_response_code($problem === 'not_ready' ? 503 : 500
 
 $tmsJson = JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_UNESCAPED_UNICODE;
 tms_trips_head($trip ? $trip['title'] . ' | Trip planner' : 'Trip planner', (bool)$trip,
-    $trip ? ['js/tms-trips.js', 'js/tms-trip-logic.js', 'js/tms-trip-planner.js'] : []);
+    $trip ? ['js/tms-trips.js', 'js/tms-trip-logic.js', 'js/tms-trip-optimize.js', 'js/tms-guidance.js', 'js/tms-trip-planner.js'] : []);
 ?>
 <body>
 <?php include('backend/header.php'); ?>
@@ -61,6 +61,9 @@ tms_trips_head($trip ? $trip['title'] . ' | Trip planner' : 'Trip planner', (boo
         <form id="detailsForm" class="tms-tr-form" style="margin-top:10px;" novalidate></form>
       </details>
 
+      <div id="offlineBox"></div>
+      <div id="budgetBox" style="margin-bottom:14px;"></div>
+
       <div id="warnings" aria-live="polite"></div>
 
       <div class="tms-tr-split">
@@ -88,6 +91,7 @@ tms_trips_head($trip ? $trip['title'] . ' | Trip planner' : 'Trip planner', (boo
           <div class="tms-tr-mapbox"><div id="tripMap" role="region" aria-label="Map of the selected day. The numbered list on the left has the same stops and travel details."></div></div>
           <p class="tms-tr-muted" id="mapNote">Loading the map...</p>
           <div id="routeText" aria-live="polite"></div>
+          <div id="guidance" style="margin-top:12px;"></div>
           <p class="tms-tr-muted">Map data &copy; OpenStreetMap contributors. Base map by OpenFreeMap. Routes by OSRM / FOSSGIS.</p>
         </section>
       </div>

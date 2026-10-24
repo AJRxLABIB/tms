@@ -16,8 +16,9 @@ final class MapItinerary
 
     private static ?PDO $db = null;
     private static ?bool $planner = null;
+    private static ?bool $budget = null;
 
-    public static function useDb(?PDO $db): void { self::$db = $db; self::$planner = null; }
+    public static function useDb(?PDO $db): void { self::$db = $db; self::$planner = null; self::$budget = null; }
 
     /** True once migration 045 (personal trip columns) is applied. Older databases keep working with the legacy columns only. */
     public static function plannerReady(): bool
@@ -29,6 +30,18 @@ final class MapItinerary
             self::$planner = true;
         } catch (Throwable $e) { self::$planner = false; }
         return self::$planner;
+    }
+
+    /** True once migration 046 (budget columns) is applied. Without it every budget field is simply left out, nothing else changes. */
+    public static function budgetReady(): bool
+    {
+        if (self::$budget !== null) return self::$budget;
+        if (!self::plannerReady()) return self::$budget = false;
+        try {
+            self::db()->query('SELECT budget_total, budget_currency FROM tbl_map_itineraries LIMIT 0');
+            self::$budget = true;
+        } catch (Throwable $e) { self::$budget = false; }
+        return self::$budget;
     }
 
     private static function db(): PDO
@@ -77,7 +90,8 @@ final class MapItinerary
         $db = self::db();
         $pl = self::plannerReady();
         $st = $db->prepare('SELECT id, title, mode, total_distance_m, total_duration_s, updated_at'
-            . ($pl ? ', destination_name, start_date, end_date, day_count, notes, status' : '') . ' FROM tbl_map_itineraries WHERE id = ? AND user_email = ?');
+            . ($pl ? ', destination_name, start_date, end_date, day_count, notes, status' : '') . (self::budgetReady() ? ', budget_total, budget_currency' : '')
+            . ' FROM tbl_map_itineraries WHERE id = ? AND user_email = ?');
         $st->execute([$id, self::email($email)]);
         $r = $st->fetch(PDO::FETCH_ASSOC);
         if (!$r) return null;
@@ -95,6 +109,11 @@ final class MapItinerary
             $out['status'] = (string)$r['status'];
             $out['days'] = self::daysFor($out['start_date'], $out['end_date'], $r['day_count'] === null ? null : (int)$r['day_count'], $maxDay);
             $out['planner_ready'] = true;
+            if (self::budgetReady()) {
+                $out['budget_total'] = $r['budget_total'] === null ? null : round((float)$r['budget_total'], 2);
+                $out['budget_currency'] = (string)($r['budget_currency'] ?? 'BDT');
+                $out['budget_ready'] = true;
+            }
         }
         return $out;
     }
@@ -144,7 +163,9 @@ final class MapItinerary
     private static function metaSet(array $meta): array
     {
         $out = [];
-        foreach (['destination_name', 'start_date', 'end_date', 'day_count', 'notes', 'status'] as $k) if (array_key_exists($k, $meta)) $out[$k] = $meta[$k];
+        $keys = ['destination_name', 'start_date', 'end_date', 'day_count', 'notes', 'status'];
+        if (self::budgetReady()) { $keys[] = 'budget_total'; $keys[] = 'budget_currency'; }   // before migration 046 these are dropped, never written
+        foreach ($keys as $k) if (array_key_exists($k, $meta)) $out[$k] = $meta[$k];
         return $out;
     }
 
@@ -236,6 +257,7 @@ final class MapItinerary
             'title' => $t, 'mode' => $src['mode'], 'planner' => true, 'stops' => $stops,
             'destination_name' => $src['destination_name'] ?? null, 'start_date' => $src['start_date'] ?? null, 'end_date' => $src['end_date'] ?? null,
             'day_count' => ($src['start_date'] ?? null) ? null : ($src['days'] ?? null), 'notes' => $src['notes'] ?? null, 'status' => 'planned',
+            'budget_total' => $src['budget_total'] ?? null, 'budget_currency' => $src['budget_currency'] ?? 'BDT',
             'total_distance_m' => $src['total_distance_m'], 'total_duration_s' => $src['total_duration_s'],
         ]);
     }
@@ -310,6 +332,14 @@ final class MapItinerary
         return round((float)$v, 2);
     }
 
+    /** @return float|null|false null = no budget, false = invalid. DECIMAL(12,2) holds up to 9999999999.99. */
+    public static function parseBudget($v)
+    {
+        if ($v === null || $v === '') return null;
+        if (is_bool($v) || !is_numeric($v) || !is_finite((float)$v) || (float)$v < 0 || round((float)$v, 2) > 9999999999.99) return false;
+        return round((float)$v, 2);
+    }
+
     /** Whole days from start to end inclusive, or null when a date is missing. */
     public static function daySpan(?string $start, ?string $end): ?int
     {
@@ -345,6 +375,16 @@ final class MapItinerary
             $st = is_string($in['status']) ? strtolower(trim($in['status'])) : '';
             if (!in_array($st, ['planned', 'completed'], true)) return self::err('invalid_status', 'Status must be planned or completed.');
             $meta['status'] = $st;
+        }
+        if (array_key_exists('budget_total', $in)) {
+            $b = self::parseBudget($in['budget_total']);
+            if ($b === false) return self::err('invalid_budget', 'The budget must be a number from 0 to 9999999999.99, or empty for no budget.');
+            $meta['budget_total'] = $b;
+        }
+        if (array_key_exists('budget_currency', $in)) {
+            $c = is_string($in['budget_currency']) ? strtoupper(trim($in['budget_currency'])) : '';
+            if (!preg_match('/^[A-Z]{3}$/', $c)) return self::err('invalid_currency', 'The currency must be a 3 letter code such as BDT or USD.');
+            $meta['budget_currency'] = $c;
         }
         $touch = array_key_exists('start_date', $in) || array_key_exists('end_date', $in) || array_key_exists('day_count', $in);
         if ($touch) {

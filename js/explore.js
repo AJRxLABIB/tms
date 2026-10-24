@@ -1013,6 +1013,7 @@ function goToDestination(name, lat, lng, country) {
             '<div class="explore-card"><h4><i class="fa fa-calendar-week"></i> 7-Day Forecast</h4>' + daily + '</div>' +
             '<p class="tmsd-note" id="weatherMeta">' + escapeHtml('Forecast for ' + DEST.name + ' (destination coordinates)') +
                 (w.timezone ? escapeHtml(' · Time zone: ' + w.timezone) : '') +
+                ((w.current && w.current.observed_at) ? escapeHtml(' · Provider reading at ' + String(w.current.observed_at).replace('T', ' ') + ' (destination local time)') : '') +
                 escapeHtml(' · Loaded at ' + new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) + ' (your device time)') + '</p>';
         if (window.TmsDest && TmsDest.onWeather) TmsDest.onWeather(w);
     }

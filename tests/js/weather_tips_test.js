@@ -28,5 +28,13 @@ t('provider alerts shown only when present', has(r, /Provider says X/) && r.find
 r = tips({ daily: [{ date: 'd', pop: 90 }] });
 t('never invents alerts', !r.some(x => x.fromProvider));
 t('last item is always the disclaimer', /not guarantees/.test(r[r.length - 1].text));
+r = tips({ daily: [{ date: 'd1', precip_mm: 34.2 }] });
+t('heavy rain tip uses the real mm total', has(r, /34 mm of rain/));
+r = tips({ daily: [{ date: 'd1', precip_mm: 5 }] });
+t('light rain total gives no heavy-rain tip', !has(r, /mm of rain/));
+r = tips({ daily: [{ date: 'd1', uv_max: 10.4 }] });
+t('high UV tip uses the real index', has(r, /UV index reaches 10/));
+r = tips({ daily: [{ date: 'd1', uv_max: 3 }] });
+t('low UV gives no UV tip', !has(r, /UV index/));
 console.log('\n' + pass + ' passed, ' + fail + ' failed');
 process.exit(fail ? 1 : 0);

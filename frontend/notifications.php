@@ -93,7 +93,7 @@ try {
 .notif-pager span.current{background:var(--secondary);color:#fff;}
 .notif-pager a.disabled{pointer-events:none;opacity:0.4;}
 </style>
-<link rel="stylesheet" href="css/tms-account.css?v=1">
+<link rel="stylesheet" href="css/tms-account.css?v=2">
 </head><body>
 <?php include('backend/header.php'); ?>
 <div class="page-title"><div class="container"><h2 style="margin:0;"><i class="fa fa-bell"></i> Notifications</h2></div></div>

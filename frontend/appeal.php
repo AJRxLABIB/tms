@@ -54,7 +54,7 @@ $cases = FraudCases::customerView($dbh, $email);
 .appeal-card h4{font-size:15px;font-weight:700;margin:0 0 8px;color:var(--primary);}
 .appeal-note{background:#f0fdf4;border:1px solid #bbf7d0;color:#166534;font-size:13px;padding:10px 14px;border-radius:8px;margin-bottom:18px;}
 </style>
-<link rel="stylesheet" href="css/tms-account.css?v=1">
+<link rel="stylesheet" href="css/tms-account.css?v=2">
 </head><body>
 <?php include('backend/header.php'); ?>
 <div class="page-title"><div class="container"><h2 style="margin:0;"><i class="fa fa-balance-scale"></i> Appeal a Review</h2>

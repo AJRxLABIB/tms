@@ -8,7 +8,7 @@
  *   GET  ?action=search&q=[&lat=&lng=&limit=]            autocomplete over OUR OWN verified database only
  *   GET  ?action=nearby&id=|lat=&lng=[&radius_m=&categories=&limit=]
  *   GET  ?action=geocode&q=                              wider-web search (server-side Nominatim, explicit submit only)
- *   GET  ?action=route&mode=driving|walking|cycling&coords=lng,lat;lng,lat
+ *   GET  ?action=route&mode=driving|walking|cycling&coords=lng,lat;lng,lat[&steps=1]
  *   GET  ?action=itinerary_list | itinerary_get&id=      signed-in users, their own itineraries (never cached)
  *   POST ?action=itinerary_save | itinerary_delete       signed-in users, CSRF required
  *   POST ?action=itinerary_create | itinerary_duplicate_trip | itinerary_duplicate_day | itinerary_move_stop   personal trips (plans, never bookings)
@@ -208,7 +208,8 @@ try {
             if (!in_array($mode, MapRouting::modes(), true)) mapFail(400, 'mode_unsupported', 'This travel mode is not available.');
             $pairs = MapRouting::parseCoordsParam(mapStr($_GET['coords'] ?? '', 1200));
             if (!$pairs) mapFail(400, 'invalid_coords', 'coords must look like lng,lat;lng,lat (longitude first).');
-            $res = MapRouting::route($pairs, $mode);
+            $wantSteps = (string)($_GET['steps'] ?? '') === '1';   // optional: turn-by-turn steps for the beta guidance panel
+            $res = MapRouting::route($pairs, $mode, $wantSteps);
             if (empty($res['ok'])) {
                 $code = (string)($res['error']['code'] ?? 'route_unavailable');
                 $st = match ($code) {

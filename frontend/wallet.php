@@ -186,7 +186,7 @@ $docIcons = ['passport'=>'book','visa'=>'id-card','insurance'=>'shield','id'=>'i
 .wallet-card .btn-primary{background:var(--secondary);border-color:var(--secondary);font-family:var(--font-body);font-weight:700;}
 .wallet-card .btn-primary:hover{background:var(--primary);border-color:var(--primary);}
 </style>
-<link rel="stylesheet" href="css/tms-account.css?v=1">
+<link rel="stylesheet" href="css/tms-account.css?v=2">
 </head><body>
 <?php include('backend/header.php'); ?>
 <div class="page-title">

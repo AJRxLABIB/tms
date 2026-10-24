@@ -34,7 +34,7 @@ $TMS_TRANSLATIONS = [
         'map_title'=>'Tourism Map','map_intro'=>'Find attractions, stays and places to eat, see what is nearby, get directions and plan a multi-stop trip.','map_search_ph'=>'Search places, areas, hotels… (English / বাংলা)','map_search_label'=>'Search places','map_filters'=>'Filters','map_tab_explore'=>'Explore','map_tab_route'=>'Directions','map_tab_trip'=>'My trip','map_attrib'=>'Map data © OpenStreetMap contributors. Base map by OpenFreeMap. Routes by OSRM / FOSSGIS.','map_noscript'=>'The interactive map needs JavaScript. Please enable it, or browse the destinations from the Tour Packages page.','map_sheet_handle'=>'Resize the results panel','map_empty_admin'=>'No map places have been imported yet. Run scripts/map_sync_places.php --apply (and optionally scripts/map_import_osm.php) from the command line.','map_empty_public'=>'Map places are being prepared. Please check back soon.','map_unmapped_title'=>'Packages without a map location','map_unmapped_hint'=>'These packages have no verified coordinates yet, so they cannot be pinned.',
         'nav_home'=>'Home','nav_profile'=>'My Profile','nav_bookings'=>'My Bookings','nav_wishlist'=>'Wishlist',
         'nav_hotels'=>'Hotels','nav_activities'=>'Activities','nav_plan'=>'Plan a trip','nav_dashboard'=>'Dashboard','nav_menu'=>'Menu','nav_close'=>'Close','nav_notifications'=>'Notifications','nav_notif_empty'=>"You're all caught up.",'nav_view_all'=>'View all','nav_theme'=>'Appearance','theme_light'=>'Light','theme_dark'=>'Dark','theme_auto'=>'Auto','nav_install'=>'Install app','nav_currency'=>'Currency','footer_discover'=>'Discover','footer_plan'=>'Plan','footer_help'=>'Help','footer_blurb'=>'Plan, compare and book trips with AI help, live weather and prices in your currency.','plan_title'=>'Plan your trip','plan_sub'=>'Everything for planning, in one place. Pick a tool to start.','plan_ai'=>'Ask the AI trip planner','plan_ai_d'=>'Tell us where, when and your budget — get a day-by-day plan.','plan_sec_plan'=>'Plan','plan_sec_prepare'=>'Prepare','plan_sec_account'=>'Your account','plan_more'=>'More tools','nav_support'=>'Support','nav_signin'=>'Sign In','nav_signup'=>'Sign Up','nav_logout'=>'Logout',
-        'nav_welcome'=>'Welcome','nav_packages'=>'Tour Packages','nav_destinations'=>'Destinations','nav_explore'=>'Explore',
+        'nav_welcome'=>'Welcome', 'nav_map'=>'Map', 'nav_my_trips'=>'My Trips', 'nav_saved_places'=>'Saved Places', 'nav_packages_short'=>'Packages', 'nav_tab_profile'=>'Profile', 'nav_main'=>'Main', 'label_privacy_policy'=>'Privacy Policy', 'label_terms'=>'Terms of Service', 'footer_write_us'=>'Write to us','nav_packages'=>'Tour Packages','nav_destinations'=>'Destinations','nav_explore'=>'Explore',
         'nav_about'=>'About','nav_contact'=>'Contact','nav_blog'=>'Blog','nav_compare'=>'Compare','nav_features'=>'Features',
         'search_placeholder'=>'Search destinations, packages...',
         'footer_quick_links'=>'Quick Links','footer_support'=>'Support','footer_features'=>'Features','footer_rights'=>'All rights reserved.',
@@ -204,7 +204,7 @@ $TMS_TRANSLATIONS = [
         'map_title'=>'ভ্রমণ মানচিত্র','map_intro'=>'দর্শনীয় স্থান, থাকার জায়গা ও খাবারের জায়গা খুঁজুন, আশেপাশের স্থান দেখুন, দিকনির্দেশনা নিন এবং একাধিক গন্তব্যের ট্রিপ সাজান।','map_search_ph'=>'স্থান, এলাকা, হোটেল খুঁজুন… (English / বাংলা)','map_search_label'=>'স্থান খুঁজুন','map_filters'=>'ফিল্টার','map_tab_explore'=>'অন্বেষণ','map_tab_route'=>'দিকনির্দেশনা','map_tab_trip'=>'আমার ট্রিপ','map_attrib'=>'মানচিত্রের তথ্য © OpenStreetMap অবদানকারীগণ। বেস ম্যাপ: OpenFreeMap। রুট: OSRM / FOSSGIS।','map_noscript'=>'ইন্টারেক্টিভ মানচিত্র চালাতে জাভাস্ক্রিপ্ট প্রয়োজন। অনুগ্রহ করে এটি চালু করুন অথবা ট্যুর প্যাকেজ পাতা থেকে গন্তব্য দেখুন।','map_sheet_handle'=>'ফলাফল প্যানেলের আকার পরিবর্তন করুন','map_empty_admin'=>'এখনও কোনো মানচিত্র স্থান আমদানি করা হয়নি। কমান্ড লাইন থেকে scripts/map_sync_places.php --apply চালান।','map_empty_public'=>'মানচিত্রের স্থানগুলো প্রস্তুত করা হচ্ছে। একটু পরে আবার দেখুন।','map_unmapped_title'=>'মানচিত্রে অবস্থান নেই এমন প্যাকেজ','map_unmapped_hint'=>'এই প্যাকেজগুলোর যাচাইকৃত স্থানাঙ্ক এখনও নেই, তাই মানচিত্রে দেখানো যাচ্ছে না।',
         'nav_home'=>'হোম','nav_profile'=>'আমার প্রোফাইল','nav_bookings'=>'আমার বুকিং','nav_wishlist'=>'পছন্দের তালিকা',
         'nav_hotels'=>'হোটেল','nav_activities'=>'অ্যাক্টিভিটি','nav_plan'=>'ট্রিপ পরিকল্পনা','nav_dashboard'=>'ড্যাশবোর্ড','nav_menu'=>'মেনু','nav_close'=>'বন্ধ করুন','nav_notifications'=>'বিজ্ঞপ্তি','nav_notif_empty'=>'নতুন কোনো বিজ্ঞপ্তি নেই।','nav_view_all'=>'সব দেখুন','nav_theme'=>'থিম','theme_light'=>'হালকা','theme_dark'=>'গাঢ়','theme_auto'=>'অটো','nav_install'=>'অ্যাপ ইনস্টল করুন','nav_currency'=>'মুদ্রা','footer_discover'=>'ঘুরে দেখুন','footer_plan'=>'পরিকল্পনা','footer_help'=>'সহায়তা','footer_blurb'=>'এআই সহায়তা, লাইভ আবহাওয়া ও আপনার মুদ্রায় দামসহ ট্রিপ পরিকল্পনা, তুলনা ও বুকিং করুন।','plan_title'=>'আপনার ট্রিপ সাজান','plan_sub'=>'পরিকল্পনার সব টুল এক জায়গায়। শুরু করতে একটি বেছে নিন।','plan_ai'=>'এআই ট্রিপ প্ল্যানারকে জিজ্ঞাসা করুন','plan_ai_d'=>'কোথায়, কবে ও বাজেট কত — জানান, পাবেন দিনভিত্তিক পরিকল্পনা।','plan_sec_plan'=>'পরিকল্পনা','plan_sec_prepare'=>'প্রস্তুতি','plan_sec_account'=>'আপনার অ্যাকাউন্ট','plan_more'=>'আরও টুল','nav_support'=>'সহায়তা','nav_signin'=>'সাইন ইন','nav_signup'=>'সাইন আপ','nav_logout'=>'লগআউট',
-        'nav_welcome'=>'স্বাগতম','nav_packages'=>'ট্যুর প্যাকেজ','nav_destinations'=>'গন্তব্যসমূহ','nav_explore'=>'এক্সপ্লোর',
+        'nav_welcome'=>'স্বাগতম', 'nav_map'=>'মানচিত্র', 'nav_my_trips'=>'আমার ট্রিপ', 'nav_saved_places'=>'সংরক্ষিত স্থান', 'nav_packages_short'=>'প্যাকেজ', 'nav_tab_profile'=>'প্রোফাইল', 'nav_main'=>'প্রধান', 'label_privacy_policy'=>'গোপনীয়তা নীতি', 'label_terms'=>'পরিষেবার শর্তাবলি', 'footer_write_us'=>'আমাদের লিখুন','nav_packages'=>'ট্যুর প্যাকেজ','nav_destinations'=>'গন্তব্যসমূহ','nav_explore'=>'এক্সপ্লোর',
         'nav_about'=>'আমাদের সম্পর্কে','nav_contact'=>'যোগাযোগ','nav_blog'=>'ব্লগ','nav_compare'=>'তুলনা করুন','nav_features'=>'সুবিধাসমূহ',
         'search_placeholder'=>'গন্তব্য, প্যাকেজ খুঁজুন...',
         'footer_quick_links'=>'দ্রুত লিংক','footer_support'=>'সহায়তা','footer_features'=>'সুবিধাসমূহ','footer_rights'=>'সর্বস্বত্ব সংরক্ষিত।',
@@ -373,7 +373,7 @@ $TMS_TRANSLATIONS = [
     'hi' => [
         'nav_home'=>'होम','nav_profile'=>'मेरी प्रोफ़ाइल','nav_bookings'=>'मेरी बुकिंग','nav_wishlist'=>'विशलिस्ट',
         'nav_support'=>'सहायता','nav_signin'=>'साइन इन','nav_signup'=>'साइन अप','nav_logout'=>'लॉगआउट',
-        'nav_welcome'=>'स्वागत है','nav_packages'=>'टूर पैकेज','nav_destinations'=>'गंतव्य','nav_explore'=>'एक्सप्लोर',
+        'nav_welcome'=>'स्वागत है', 'nav_map'=>'मानचित्र', 'nav_my_trips'=>'मेरी यात्राएँ', 'nav_saved_places'=>'सहेजे गए स्थान', 'nav_packages_short'=>'पैकेज', 'nav_tab_profile'=>'प्रोफ़ाइल', 'nav_main'=>'मुख्य', 'label_privacy_policy'=>'गोपनीयता नीति', 'label_terms'=>'सेवा की शर्तें', 'footer_write_us'=>'हमें लिखें','nav_packages'=>'टूर पैकेज','nav_destinations'=>'गंतव्य','nav_explore'=>'एक्सप्लोर',
         'nav_about'=>'हमारे बारे में','nav_contact'=>'संपर्क करें','nav_blog'=>'ब्लॉग','nav_compare'=>'तुलना करें','nav_features'=>'सुविधाएं',
         'search_placeholder'=>'गंतव्य, पैकेज खोजें...',
         'footer_quick_links'=>'त्वरित लिंक','footer_support'=>'सहायता','footer_features'=>'सुविधाएं','footer_rights'=>'सर्वाधिकार सुरक्षित।',
@@ -542,7 +542,7 @@ $TMS_TRANSLATIONS = [
     'ar' => [
         'nav_home'=>'الرئيسية','nav_profile'=>'ملفي الشخصي','nav_bookings'=>'حجوزاتي','nav_wishlist'=>'المفضلة',
         'nav_support'=>'الدعم','nav_signin'=>'تسجيل الدخول','nav_signup'=>'إنشاء حساب','nav_logout'=>'تسجيل الخروج',
-        'nav_welcome'=>'مرحباً','nav_packages'=>'باقات السفر','nav_destinations'=>'الوجهات','nav_explore'=>'استكشف',
+        'nav_welcome'=>'مرحباً', 'nav_map'=>'الخريطة', 'nav_my_trips'=>'رحلاتي', 'nav_saved_places'=>'الأماكن المحفوظة', 'nav_packages_short'=>'الباقات', 'nav_tab_profile'=>'الملف الشخصي', 'nav_main'=>'الرئيسية', 'label_privacy_policy'=>'سياسة الخصوصية', 'label_terms'=>'شروط الخدمة', 'footer_write_us'=>'اكتب لنا','nav_packages'=>'باقات السفر','nav_destinations'=>'الوجهات','nav_explore'=>'استكشف',
         'nav_about'=>'من نحن','nav_contact'=>'اتصل بنا','nav_blog'=>'المدونة','nav_compare'=>'مقارنة','nav_features'=>'الميزات',
         'search_placeholder'=>'ابحث عن وجهات، باقات...',
         'footer_quick_links'=>'روابط سريعة','footer_support'=>'الدعم','footer_features'=>'الميزات','footer_rights'=>'جميع الحقوق محفوظة.',
@@ -711,7 +711,7 @@ $TMS_TRANSLATIONS = [
     'fr' => [
         'nav_home'=>'Accueil','nav_profile'=>'Mon Profil','nav_bookings'=>'Mes Réservations','nav_wishlist'=>'Liste de souhaits',
         'nav_support'=>'Assistance','nav_signin'=>'Connexion','nav_signup'=>'Inscription','nav_logout'=>'Déconnexion',
-        'nav_welcome'=>'Bienvenue','nav_packages'=>'Forfaits','nav_destinations'=>'Destinations','nav_explore'=>'Explorer',
+        'nav_welcome'=>'Bienvenue', 'nav_map'=>'Carte', 'nav_my_trips'=>'Mes voyages', 'nav_saved_places'=>'Lieux enregistrés', 'nav_packages_short'=>'Forfaits', 'nav_tab_profile'=>'Profil', 'nav_main'=>'Principal', 'label_privacy_policy'=>'Politique de confidentialité', 'label_terms'=>'Conditions d\'utilisation', 'footer_write_us'=>'Écrivez-nous','nav_packages'=>'Forfaits','nav_destinations'=>'Destinations','nav_explore'=>'Explorer',
         'nav_about'=>'À propos','nav_contact'=>'Contact','nav_blog'=>'Blog','nav_compare'=>'Comparer','nav_features'=>'Fonctionnalités',
         'search_placeholder'=>'Rechercher des destinations, forfaits...',
         'footer_quick_links'=>'Liens rapides','footer_support'=>'Assistance','footer_features'=>'Fonctionnalités','footer_rights'=>'Tous droits réservés.',
@@ -880,7 +880,7 @@ $TMS_TRANSLATIONS = [
     'zh' => [
         'nav_home'=>'首页','nav_profile'=>'我的资料','nav_bookings'=>'我的预订','nav_wishlist'=>'心愿单',
         'nav_support'=>'客服支持','nav_signin'=>'登录','nav_signup'=>'注册','nav_logout'=>'退出登录',
-        'nav_welcome'=>'欢迎','nav_packages'=>'旅游套餐','nav_destinations'=>'目的地','nav_explore'=>'探索',
+        'nav_welcome'=>'欢迎', 'nav_map'=>'地图', 'nav_my_trips'=>'我的行程', 'nav_saved_places'=>'已保存地点', 'nav_packages_short'=>'套餐', 'nav_tab_profile'=>'个人资料', 'nav_main'=>'主菜单', 'label_privacy_policy'=>'隐私政策', 'label_terms'=>'服务条款', 'footer_write_us'=>'联系我们','nav_packages'=>'旅游套餐','nav_destinations'=>'目的地','nav_explore'=>'探索',
         'nav_about'=>'关于我们','nav_contact'=>'联系我们','nav_blog'=>'博客','nav_compare'=>'比较','nav_features'=>'功能',
         'search_placeholder'=>'搜索目的地、套餐...',
         'footer_quick_links'=>'快速链接','footer_support'=>'客服支持','footer_features'=>'功能','footer_rights'=>'版权所有。',
@@ -1049,7 +1049,7 @@ $TMS_TRANSLATIONS = [
     'es' => [
         'nav_home'=>'Inicio','nav_profile'=>'Mi Perfil','nav_bookings'=>'Mis Reservas','nav_wishlist'=>'Lista de deseos',
         'nav_support'=>'Soporte','nav_signin'=>'Iniciar sesión','nav_signup'=>'Registrarse','nav_logout'=>'Cerrar sesión',
-        'nav_welcome'=>'Bienvenido','nav_packages'=>'Paquetes turísticos','nav_destinations'=>'Destinos','nav_explore'=>'Explorar',
+        'nav_welcome'=>'Bienvenido', 'nav_map'=>'Mapa', 'nav_my_trips'=>'Mis viajes', 'nav_saved_places'=>'Lugares guardados', 'nav_packages_short'=>'Paquetes', 'nav_tab_profile'=>'Perfil', 'nav_main'=>'Principal', 'label_privacy_policy'=>'Política de privacidad', 'label_terms'=>'Términos del servicio', 'footer_write_us'=>'Escríbenos','nav_packages'=>'Paquetes turísticos','nav_destinations'=>'Destinos','nav_explore'=>'Explorar',
         'nav_about'=>'Acerca de','nav_contact'=>'Contacto','nav_blog'=>'Blog','nav_compare'=>'Comparar','nav_features'=>'Características',
         'search_placeholder'=>'Buscar destinos, paquetes...',
         'footer_quick_links'=>'Enlaces rápidos','footer_support'=>'Soporte','footer_features'=>'Características','footer_rights'=>'Todos los derechos reservados.',
@@ -1218,7 +1218,7 @@ $TMS_TRANSLATIONS = [
     'de' => [
         'nav_home'=>'Startseite','nav_profile'=>'Mein Profil','nav_bookings'=>'Meine Buchungen','nav_wishlist'=>'Wunschliste',
         'nav_support'=>'Support','nav_signin'=>'Anmelden','nav_signup'=>'Registrieren','nav_logout'=>'Abmelden',
-        'nav_welcome'=>'Willkommen','nav_packages'=>'Reisepakete','nav_destinations'=>'Reiseziele','nav_explore'=>'Entdecken',
+        'nav_welcome'=>'Willkommen', 'nav_map'=>'Karte', 'nav_my_trips'=>'Meine Reisen', 'nav_saved_places'=>'Gespeicherte Orte', 'nav_packages_short'=>'Pakete', 'nav_tab_profile'=>'Profil', 'nav_main'=>'Hauptmenü', 'label_privacy_policy'=>'Datenschutzerklärung', 'label_terms'=>'Nutzungsbedingungen', 'footer_write_us'=>'Schreiben Sie uns','nav_packages'=>'Reisepakete','nav_destinations'=>'Reiseziele','nav_explore'=>'Entdecken',
         'nav_about'=>'Über uns','nav_contact'=>'Kontakt','nav_blog'=>'Blog','nav_compare'=>'Vergleichen','nav_features'=>'Funktionen',
         'search_placeholder'=>'Reiseziele, Pakete suchen...',
         'footer_quick_links'=>'Schnelllinks','footer_support'=>'Support','footer_features'=>'Funktionen','footer_rights'=>'Alle Rechte vorbehalten.',

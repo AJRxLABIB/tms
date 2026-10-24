@@ -188,7 +188,7 @@ if (isset($_POST['submit_reset'])) {
 <link href="css/font-awesome.min2.css" rel="stylesheet">
 <script>try{document.documentElement.setAttribute('data-theme',localStorage.getItem('tms-theme')||'light');}catch(e){}</script>
 <link rel="stylesheet" href="css/tms-theme.css?v=1">
-<link rel="stylesheet" href="css/tms-account.css?v=1">
+<link rel="stylesheet" href="css/tms-account.css?v=2">
 <script src="js/tms-motion.js?v=1" defer></script>
 </head>
 <body class="tms-auth-page">

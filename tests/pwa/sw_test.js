@@ -56,6 +56,34 @@ function make() {
   const lst = []; s.listeners.message({ data: { type: 'TMS_LIST_TRIPKIT' }, ports: [{ postMessage: m => lst.push(m) }], waitUntil: p => pending2.push(p) });
   await Promise.all(pending2.splice(0)); await new Promise(r => setTimeout(r, 10));
   t('listing the kit hides the metadata entry and returns save times', lst[0] && !lst[0].urls.some(u => u.includes('__tripkit-meta')) && lst[0].savedAt && Object.keys(lst[0].savedAt).length === 1);
+  // ---- trip planner offline copy (explicit user action only) ----
+  s = make();
+  for (const pth of ['/tourbuddy/my-trips.php', '/tourbuddy/saved-places.php', '/tourbuddy/trip-planner.php?id=5', '/tourbuddy/explore-view.php', '/tourbuddy/tour-map.php']) await s.fire(pth);
+  const gk = [...(s.stores['tms-cache-v2'] || new Map()).keys()];
+  t('planner pages (my-trips, saved-places, trip-planner, explore-view, tour-map) are never written to the generic cache by browsing', !gk.some(k => /my-trips|saved-places|trip-planner|explore-view|tour-map/.test(k)));
+  const sent2 = [];
+  const planUrls = ['/tourbuddy/trip-planner.php?id=5', '/tourbuddy/emergency.php', '/tourbuddy/css/tms-trips.css?v=123', '/tourbuddy/js/tms-trip-planner.js?v=123', '/tourbuddy/api/map.php?action=itinerary_get&id=5'];
+  s.listeners.message({ data: { type: 'TMS_CACHE_TRIP', urls: planUrls }, ports: [{ postMessage: m => sent2.push(m) }], waitUntil: p => pending2.push(p) });
+  await Promise.all(pending2.splice(0)); await new Promise(r => setTimeout(r, 30));
+  const kk = [...(s.stores['tms-tripkit'] || new Map()).keys()];
+  t('explicit save stores the planner page, the emergency page and the page scripts/styles in the TripKit', ['/tourbuddy/trip-planner.php?id=5', '/tourbuddy/emergency.php', '/tourbuddy/css/tms-trips.css?v=123', '/tourbuddy/js/tms-trip-planner.js?v=123'].every(u => kk.includes(u)));
+  t('the API URL (it would hold tokens) is refused by the kit', !kk.some(k => /api\/map/.test(k)) && (sent2[0].results.find(r => /api\/map/.test(r.url)) || {}).error === 'not_allowed');
+  t('saved trip data is only in the TripKit, never in the shared generic cache', !([...(s.stores['tms-cache-v2'] || new Map()).keys()].some(k => /trip-planner|emergency/.test(k))));
+  const sm = JSON.parse(s.stores['tms-tripkit'].get('/tourbuddy/__tripkit-meta.json').body);
+  t('save time is recorded per saved page (for the "Saved on" notice)', !isNaN(Date.parse(sm['/tourbuddy/trip-planner.php?id=5'])) && !isNaN(Date.parse(sm['/tourbuddy/emergency.php'])));
+  // a browser resolves the relative key against the scope; emulate that so the fetch handler can match it
+  for (const k of kk) s.stores['tms-tripkit'].set('http://x' + k, s.stores['tms-tripkit'].get(k));
+  s.setDown(true);
+  const off1 = await s.fire('/tourbuddy/trip-planner.php?id=5'); t('offline: the saved trip page opens from the TripKit', off1.out && off1.out.body.startsWith('net:'));
+  const off2 = await s.fire('/tourbuddy/trip-planner.php?id=6'); t('offline: a trip that was NOT saved does not open (falls back to the offline page)', !off2.out || off2.out.body === undefined || off2.out.body === 'pre');
+  const off3 = await s.fire('/tourbuddy/js/tms-trip-planner.js?v=123'); t('offline: the saved page scripts are served from the TripKit when the generic cache has none', off3.out && off3.out.body.startsWith('net:'));
+  s.setDown(false);
+  const rem = []; s.listeners.message({ data: { type: 'TMS_REMOVE_TRIP', urls: ['/tourbuddy/trip-planner.php?id=5'] }, ports: [{ postMessage: m => rem.push(m) }], waitUntil: p => pending2.push(p) });
+  await Promise.all(pending2.splice(0)); await new Promise(r => setTimeout(r, 20));
+  const rm = JSON.parse(s.stores['tms-tripkit'].get('/tourbuddy/__tripkit-meta.json').body);
+  t('remove deletes the page and its save time, and keeps the emergency page', !s.stores['tms-tripkit'].has('/tourbuddy/trip-planner.php?id=5') && !('/tourbuddy/trip-planner.php?id=5' in rm) && s.stores['tms-tripkit'].has('/tourbuddy/emergency.php'));
+  await s.fire('/tourbuddy/logout.php');
+  t('logout wipes the saved planner copy too', Object.keys(s.stores).length === 0);
   const cross = await s.fire('/x'); // same origin ok
   console.log(`\n${pass} passed, ${fail} failed`); process.exit(fail ? 1 : 0);
 })();

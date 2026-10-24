@@ -76,7 +76,7 @@ html[data-theme="dark"] .wish-card-body .loc { color: var(--text-muted) !importa
 .empty-state i{font-size:64px;color:#ddd;margin-bottom:16px;}
 .page-title{background:linear-gradient(135deg,var(--primary-dark),var(--primary));color:#fff;padding:40px 0;margin-bottom:30px;}
 </style>
-<link rel="stylesheet" href="css/tms-account.css?v=1">
+<link rel="stylesheet" href="css/tms-account.css?v=2">
 </head><body>
 <?php include('backend/header.php'); ?>
 <div class="page-title">

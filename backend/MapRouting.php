@@ -17,6 +17,7 @@ final class MapRouting
     private const TTL_OK          = 3600;
     private const TTL_FAIL        = 60;
     private const MAX_BODY        = 4194304;   // 4 MB
+    private const MAX_STEPS       = 600;       // total steps kept across all legs of one answer
 
     /** Test hook: fn(string $url, array $opts): ?array{status:int, body:string}  (null = network failure) */
     protected static $transport = null;
@@ -34,9 +35,10 @@ final class MapRouting
 
     /**
      * @param list<array{0:float|int|string,1:float|int|string}> $lngLatPairs
+     * @param bool $steps true also returns the engine's turn-by-turn steps per leg (used by the beta guidance panel). Default false keeps the old answer.
      * @return array
      */
-    public static function route(array $lngLatPairs, string $mode): array
+    public static function route(array $lngLatPairs, string $mode, bool $steps = false): array
     {
         $mode = strtolower(trim($mode));
         $endpoints = class_exists('MapConfig') ? MapConfig::routeEndpoints() : [];
@@ -51,7 +53,7 @@ final class MapRouting
             return self::err('rate_limited', 'Too many route requests. Please wait a moment.');
         }
 
-        $key = self::cacheKey($mode, $pts);
+        $key = self::cacheKey($mode, $pts, $steps);
         $cache = self::cache();
         if ($cache) {
             $hit = self::cacheGet($cache, $key);
@@ -62,7 +64,7 @@ final class MapRouting
 
         $ep = $endpoints[$mode];
         $coords = implode(';', array_map(fn($p) => self::fmt($p[0]) . ',' . self::fmt($p[1]), $pts));
-        $url = $ep['url'] . '/route/v1/' . rawurlencode($ep['profile']) . '/' . $coords . '?overview=full&geometries=geojson&steps=false';
+        $url = $ep['url'] . '/route/v1/' . rawurlencode($ep['profile']) . '/' . $coords . '?overview=full&geometries=geojson&steps=' . ($steps ? 'true' : 'false');
 
         $res = self::http($url);
         if ($res === null) {
@@ -70,7 +72,7 @@ final class MapRouting
             if ($cache) self::cacheSet($cache, $key . ':fail', $out, self::TTL_FAIL);
             return $out;
         }
-        $out = self::parse($res['status'], $res['body'], $mode, $ep['url']);
+        $out = self::parse($res['status'], $res['body'], $mode, $ep['url'], $steps);
         if ($cache) {
             if ($out['ok']) self::cacheSet($cache, $key, $out, self::TTL_OK);
             elseif (($out['error']['code'] ?? '') === 'no_route') self::cacheSet($cache, $key, $out, 600);
@@ -111,14 +113,14 @@ final class MapRouting
         return $pairs;
     }
 
-    public static function cacheKey(string $mode, array $pts): string
+    public static function cacheKey(string $mode, array $pts, bool $steps = false): string
     {
-        $s = $mode . '|' . implode(';', array_map(fn($p) => round($p[0], 5) . ',' . round($p[1], 5), $pts));
+        $s = $mode . '|' . implode(';', array_map(fn($p) => round($p[0], 5) . ',' . round($p[1], 5), $pts)) . ($steps ? '|steps' : '');
         return 'maproute:' . sha1($s);
     }
 
     /** Pure: turns an OSRM response into our result or error. */
-    public static function parse(int $status, string $body, string $mode, string $source): array
+    public static function parse(int $status, string $body, string $mode, string $source, bool $withSteps = false): array
     {
         $j = json_decode($body, true);
         if (!is_array($j)) {
@@ -140,9 +142,12 @@ final class MapRouting
             return self::err('upstream_error', 'The routing service returned no distance or duration.');
         }
         $legs = [];
+        $stepBudget = self::MAX_STEPS;
         foreach ((array)($r['legs'] ?? []) as $l) {
             if (isset($l['distance'], $l['duration']) && is_numeric($l['distance']) && is_numeric($l['duration'])) {
-                $legs[] = ['distance_m' => (int)round((float)$l['distance']), 'duration_s' => (int)round((float)$l['duration'])];
+                $leg = ['distance_m' => (int)round((float)$l['distance']), 'duration_s' => (int)round((float)$l['duration'])];
+                if ($withSteps) $leg['steps'] = self::parseSteps($l['steps'] ?? null, $stepBudget);
+                $legs[] = $leg;
             }
         }
         return [
@@ -154,6 +159,35 @@ final class MapRouting
             'legs'       => $legs,
             'source'     => (string)(parse_url($source, PHP_URL_HOST) ?: 'osrm'),
         ];
+    }
+
+    /**
+     * Pure: keeps only what guidance needs from OSRM steps. No text is made up here: type/modifier/name are the engine's own words and the
+     * client turns them into a sentence. A step without a usable maneuver location is dropped. $budget caps the total across all legs.
+     * @return list<array{distance_m:int,duration_s:int,name:string,type:string,modifier:?string,exit:?int,location:array{0:float,1:float}}>
+     */
+    public static function parseSteps($raw, int &$budget): array
+    {
+        $out = [];
+        if (!is_array($raw)) return $out;
+        foreach ($raw as $st) {
+            if ($budget <= 0) break;
+            if (!is_array($st) || !is_array($st['maneuver'] ?? null)) continue;
+            $m = $st['maneuver']; $loc = $m['location'] ?? null;
+            if (!is_array($loc) || count($loc) < 2 || !is_numeric($loc[0]) || !is_numeric($loc[1])) continue;
+            $lng = (float)$loc[0]; $lat = (float)$loc[1];
+            if ($lng < -180 || $lng > 180 || $lat < -90 || $lat > 90 || !is_numeric($st['distance'] ?? null) || !is_numeric($st['duration'] ?? null)) continue;
+            $clean = static fn($v, int $max): string => mb_substr(preg_replace('/[^\p{L}\p{N} _\-\.\x{0027}\/,&()]/u', '', (string)$v) ?? '', 0, $max, 'UTF-8');
+            $out[] = [
+                'distance_m' => (int)round((float)$st['distance']), 'duration_s' => (int)round((float)$st['duration']),
+                'name' => $clean($st['name'] ?? '', 120), 'type' => $clean($m['type'] ?? 'turn', 24),
+                'modifier' => isset($m['modifier']) ? $clean($m['modifier'], 24) : null,
+                'exit' => isset($m['exit']) && is_numeric($m['exit']) ? (int)$m['exit'] : null,
+                'location' => [round($lng, 6), round($lat, 6)],
+            ];
+            $budget--;
+        }
+        return $out;
     }
 
     private static function err(string $code, string $message): array

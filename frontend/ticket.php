@@ -111,7 +111,7 @@ if ($booking) {
     .ticket { box-shadow:none; border-radius:0; }
   }
 </style>
-<link rel="stylesheet" href="css/tms-account.css?v=1">
+<link rel="stylesheet" href="css/tms-account.css?v=2">
 </head>
 <body>
 <div class="ticket-wrap">

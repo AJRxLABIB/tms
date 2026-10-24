@@ -97,6 +97,62 @@
             .map(function (s) { return Number(s.lng).toFixed(6) + ',' + Number(s.lat).toFixed(6); }).join(';');
     }
 
+    /* ------------------------------------------------------------------ budget (user-entered numbers only, nothing is estimated) */
+    var MAX_BUDGET = 9999999999.99;   // DECIMAL(12,2)
+    function cents(n) { return Math.round(Number(n) * 100); }
+
+    /** Text from the budget box -> {ok:true, value:number|null} (null = no budget) or {ok:false}. Accepts "1,500.50"; refuses negatives, text, huge values. */
+    function parseBudgetInput(v) {
+        if (v == null) return { ok: true, value: null };
+        var t = String(v).trim().replace(/,/g, '');
+        if (t === '') return { ok: true, value: null };
+        if (!/^\d+(\.\d{1,})?$/.test(t)) return { ok: false };
+        var n = Number(t);
+        if (!isFinite(n) || n > MAX_BUDGET) return { ok: false };
+        return { ok: true, value: Math.round(n * 100) / 100 };
+    }
+
+    /**
+     * Spent = sum of the costs the user typed on the stops. Stops without a cost are COUNTED, never priced, so the total is a floor ("may be higher").
+     * budget null/undefined = none set. Money is compared in whole cents so 0.1 + 0.2 style errors cannot flip the result.
+     * status: none (no budget), under, exact, over.
+     */
+    function budgetSummary(stops, budget) {
+        var days = {}, total = { places: 0, cost: 0, known: 0, unknown: 0 }, cents_ = 0, order = [];
+        (stops || []).forEach(function (s) {
+            var d = dayOf(s), x = days[d];
+            if (!x) { x = days[d] = { day: d, places: 0, cost: 0, known: 0, unknown: 0, _c: 0 }; order.push(d); }
+            x.places++; total.places++;
+            if (s.est_cost == null || s.est_cost === '' || !isFinite(Number(s.est_cost)) || Number(s.est_cost) < 0) { x.unknown++; total.unknown++; }
+            else { x._c += cents(s.est_cost); cents_ += cents(s.est_cost); x.known++; total.known++; }
+        });
+        total.cost = cents_ / 100;
+        var perDay = order.sort(function (a, b) { return a - b; }).map(function (d) { var x = days[d]; x.cost = x._c / 100; delete x._c; return x; });
+        var hasBudget = budget != null && budget !== '' && isFinite(Number(budget)) && Number(budget) >= 0;
+        var out = { budget: hasBudget ? Number(budget) : null, spent: total.cost, known: total.known, unknown: total.unknown, places: total.places, perDay: perDay,
+            maybeHigher: total.unknown > 0, status: 'none', remaining: null, over: null };
+        if (hasBudget) {
+            var diff = cents(budget) - cents_;
+            out.status = diff > 0 ? 'under' : diff === 0 ? 'exact' : 'over';
+            out.remaining = diff > 0 ? diff / 100 : 0;
+            out.over = diff < 0 ? -diff / 100 : 0;
+        }
+        return out;
+    }
+
+    /** Plain-language lines for the budget card. icon: ok | over | info (the page pairs it with a symbol, so colour is never the only signal). */
+    function budgetText(sum, currency) {
+        var cur = currency ? ' ' + currency : '';
+        var m = function (n) { return fmtMoney(n) + cur; };
+        var unknown = sum.unknown > 0 ? sum.unknown + (sum.unknown === 1 ? ' place has' : ' places have') + ' no cost entered, so the total may be higher.' : '';
+        var spent = sum.known ? 'Costs you entered: ' + m(sum.spent) + '.' : 'No costs entered yet.';
+        if (sum.status === 'none') return { icon: 'info', headline: 'No budget set', detail: spent, unknown: unknown };
+        if (sum.status === 'over') return { icon: 'over', headline: 'Over budget by ' + m(sum.over), detail: spent + ' Budget: ' + m(sum.budget) + '.', unknown: unknown };
+        if (sum.status === 'exact') return { icon: 'ok', headline: 'Exactly on budget', detail: spent + ' Budget: ' + m(sum.budget) + '.', unknown: unknown };
+        return { icon: 'ok', headline: 'Within budget: ' + m(sum.remaining) + ' left' + (sum.unknown ? ' so far' : ''), detail: spent + ' Budget: ' + m(sum.budget) + '.', unknown: unknown };
+    }
+
     return { toMin: toMin, fmtMin: fmtMin, fmtDist: fmtDist, fmtMoney: fmtMoney, dayOf: dayOf, stopsOfDay: stopsOfDay, dayDate: dayDate,
-        dayTotals: dayTotals, dayWarnings: dayWarnings, coordsParam: coordsParam };
+        dayTotals: dayTotals, dayWarnings: dayWarnings, coordsParam: coordsParam,
+        parseBudgetInput: parseBudgetInput, budgetSummary: budgetSummary, budgetText: budgetText, MAX_BUDGET: MAX_BUDGET };
 }));

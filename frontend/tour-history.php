@@ -252,7 +252,7 @@ html[data-theme="dark"] .history-body .detail-row { color: var(--text-muted) !im
 .mod-badge{background:var(--tms-info-bg);color:var(--tms-info);}
 .mod-modal .form-control{width:100%;height:50px;border:2px solid var(--tms-border);border-radius:12px;padding:0 12px;background:var(--tms-surface);color:var(--tms-text);}
 </style>
-<link rel="stylesheet" href="css/tms-account.css?v=1">
+<link rel="stylesheet" href="css/tms-account.css?v=2">
 </head>
 <body>
 <?php include('backend/header.php'); ?>

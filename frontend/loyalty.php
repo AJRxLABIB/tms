@@ -112,7 +112,7 @@ $leaderboard = $achievementEngine->getLeaderboard(10);
 .coupon-badge{background:#e8f5e9;border:2px dashed #4caf50;border-radius:8px;padding:12px 18px;margin-bottom:10px;display:flex;justify-content:space-between;align-items:center;}
 .coupon-code{font-family:monospace;font-size:18px;font-weight:700;color:#2e7d32;letter-spacing:2px;}
 </style>
-<link rel="stylesheet" href="css/tms-account.css?v=1">
+<link rel="stylesheet" href="css/tms-account.css?v=2">
 </head><body>
 <?php include('backend/header.php'); ?>
 <div class="page-title">

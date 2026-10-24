@@ -79,5 +79,54 @@ t('toPayload: whitelisted category and context', function () {
 t('toPayload never sends an owner', function () { assert.ok(!('user_email' in T.toPayload({ lat: 1, lng: 2, name: 'x', user_email: 'a@b.c' }, {}))); });
 t('validCoord rejects 0,0 and out of range', function () { assert.ok(!T.utils.validCoord(0, 0)); assert.ok(!T.utils.validCoord(91, 0)); assert.ok(T.utils.validCoord('21.4', '91.9')); });
 
+
+/* ---- budget ---- */
+var B = function (d, c) { return { name: 'x', day_index: d, est_cost: c, lat: 21.4, lng: 91.9 }; };
+t('parseBudgetInput: empty = no budget, numbers parsed, commas allowed', function () {
+    assert.deepStrictEqual(L.parseBudgetInput(''), { ok: true, value: null }); assert.deepStrictEqual(L.parseBudgetInput(null), { ok: true, value: null }); assert.deepStrictEqual(L.parseBudgetInput('  '), { ok: true, value: null });
+    assert.strictEqual(L.parseBudgetInput('1,500.505').value, 1500.51); assert.strictEqual(L.parseBudgetInput('0').value, 0); assert.strictEqual(L.parseBudgetInput('25000').value, 25000);
+});
+t('parseBudgetInput: refuses negatives, text, exponent, absurd values', function () {
+    ['-5', 'abc', '1e3', '12 000', '--1', '1.2.3', '99999999999', '.5x', 'NaN', 'Infinity'].forEach(function (v) { assert.strictEqual(L.parseBudgetInput(v).ok, false, v); });
+    assert.strictEqual(L.parseBudgetInput('9999999999.99').ok, true);
+});
+t('budgetSummary: no budget -> status none, costs still summed, nothing invented', function () {
+    var x = L.budgetSummary([B(1, 10), B(1, null), B(2, 5.5)], null);
+    assert.strictEqual(x.status, 'none'); assert.strictEqual(x.spent, 15.5); assert.strictEqual(x.unknown, 1); assert.strictEqual(x.known, 2); assert.strictEqual(x.remaining, null); assert.strictEqual(x.maybeHigher, true);
+});
+t('budgetSummary: per-day and whole-trip sums, days sorted', function () {
+    var x = L.budgetSummary([B(2, 5), B(1, 10), B(1, 20), B(3, null)], 100);
+    assert.deepStrictEqual(x.perDay.map(function (d) { return [d.day, d.cost, d.known, d.unknown, d.places]; }), [[1, 30, 2, 0, 2], [2, 5, 1, 0, 1], [3, 0, 0, 1, 1]]);
+    assert.strictEqual(x.spent, 35); assert.strictEqual(x.remaining, 65); assert.strictEqual(x.status, 'under'); assert.strictEqual(x.over, 0);
+});
+t('budgetSummary: over budget, exact, zero budget', function () {
+    var o = L.budgetSummary([B(1, 80), B(1, 30)], 100); assert.strictEqual(o.status, 'over'); assert.strictEqual(o.over, 10); assert.strictEqual(o.remaining, 0);
+    var e = L.budgetSummary([B(1, 60), B(1, 40)], 100); assert.strictEqual(e.status, 'exact'); assert.strictEqual(e.remaining, 0);
+    var z = L.budgetSummary([B(1, 1)], 0); assert.strictEqual(z.status, 'over'); assert.strictEqual(L.budgetSummary([], 0).status, 'exact');
+});
+t('budgetSummary: floating point drift cannot flip the verdict (0.1 + 0.2 vs 0.3)', function () {
+    var x = L.budgetSummary([B(1, 0.1), B(1, 0.2)], 0.3); assert.strictEqual(x.status, 'exact'); assert.strictEqual(x.spent, 0.3);
+    var y = L.budgetSummary([B(1, 10.07), B(1, 20.01), B(1, 0.01)], 30.09); assert.strictEqual(y.status, 'exact');
+});
+t('budgetSummary: unknown, negative or non-numeric costs count as "no cost entered", never as 0 spent silently', function () {
+    var x = L.budgetSummary([B(1, null), B(1, ''), B(1, 'x'), B(1, -3), B(1, undefined), B(1, 0)], 10);
+    assert.strictEqual(x.unknown, 5); assert.strictEqual(x.known, 1); assert.strictEqual(x.spent, 0);
+});
+t('budgetSummary: stops without a day count as day 1; empty trip', function () {
+    var x = L.budgetSummary([{ est_cost: 4 }, B(1, 6)], 20); assert.strictEqual(x.perDay.length, 1); assert.strictEqual(x.perDay[0].cost, 10);
+    var e = L.budgetSummary([], 50); assert.strictEqual(e.spent, 0); assert.strictEqual(e.status, 'under'); assert.strictEqual(e.remaining, 50); assert.deepStrictEqual(e.perDay, []);
+    assert.strictEqual(L.budgetSummary(null, null).status, 'none');
+});
+t('budgetText: wording for none / under / exact / over, with the "may be higher" line', function () {
+    var cur = 'BDT';
+    var n = L.budgetText(L.budgetSummary([], null), cur); assert.strictEqual(n.headline, 'No budget set'); assert.strictEqual(n.icon, 'info'); assert.strictEqual(n.unknown, ''); assert.ok(/No costs entered yet/.test(n.detail));
+    var u = L.budgetText(L.budgetSummary([B(1, 100), B(1, null), B(1, null)], 1000), cur);
+    assert.strictEqual(u.icon, 'ok'); assert.ok(/Within budget: 900 BDT left so far/.test(u.headline)); assert.strictEqual(u.unknown, '2 places have no cost entered, so the total may be higher.');
+    var one = L.budgetText(L.budgetSummary([B(1, 100), B(1, null)], 1000), cur); assert.strictEqual(one.unknown, '1 place has no cost entered, so the total may be higher.');
+    var full = L.budgetText(L.budgetSummary([B(1, 100)], 1000), cur); assert.strictEqual(full.headline, 'Within budget: 900 BDT left'); assert.strictEqual(full.unknown, '');
+    var ex = L.budgetText(L.budgetSummary([B(1, 100)], 100), cur); assert.strictEqual(ex.headline, 'Exactly on budget');
+    var ov = L.budgetText(L.budgetSummary([B(1, 1200.5), B(1, null)], 1000), cur); assert.strictEqual(ov.icon, 'over'); assert.strictEqual(ov.headline, 'Over budget by 200.5 BDT'); assert.ok(/total may be higher/.test(ov.unknown));
+});
+
 console.log('\n' + pass + ' passed, ' + fail + ' failed');
 process.exit(fail ? 1 : 0);

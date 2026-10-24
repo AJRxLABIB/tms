@@ -23,7 +23,7 @@ tms_require_user(); // Batch 1 (landing/auth gating): whole app now requires log
 <link href="<?php echo tms_asset_ver('css/modern-theme.css'); ?>" rel="stylesheet">
 <script src="js/jquery-1.12.0.min.js" defer></script>
 <script src="js/bootstrap.min.js" defer></script>
-<link rel="stylesheet" href="css/tms-account.css?v=1">
+<link rel="stylesheet" href="css/tms-account.css?v=2">
 </head>
 <body>
 <?php include('backend/header.php');?>

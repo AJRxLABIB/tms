@@ -51,7 +51,7 @@ $groups = $groups->fetchAll(PDO::FETCH_OBJ);
 .gt-row{display:flex;justify-content:space-between;align-items:center;padding:12px 0;border-bottom:1px solid #eef1f6;}
 .gt-row:last-child{border-bottom:none;}
 </style>
-<link rel="stylesheet" href="css/tms-account.css?v=1">
+<link rel="stylesheet" href="css/tms-account.css?v=2">
 </head><body>
 <?php include('backend/header.php'); ?>
 <div class="page-title"><div class="container"><h2 style="margin:0;"><i class="fa fa-users"></i> Group Trips</h2></div></div>
