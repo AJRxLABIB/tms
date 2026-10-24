@@ -21,7 +21,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['run_safety_eval'])) {
     $result = SafetyEval::run(__DIR__ . '/../tests/ai/eval_cases.json');
     $result['ms'] = (int)round((microtime(true) - $started) * 1000);
     $result['at'] = date('Y-m-d H:i:s');
-    tms_log_activity($dbh, $_SESSION['alogin'], 'AI Safety Eval Run', $result['pass'] . ' passed, ' . $result['fail'] . ' failed');
+    tms_log_activity($dbh, $_SESSION['alogin'], 'AI Safety Eval Run', $result['pass'] . ' passed, ' . $result['fail'] . ' failed, ' . $result['leaked'] . ' leaked');
+    // Keep a history for admin/ai-evaluation.php (best effort; needs migration 035).
+    require_once __DIR__ . '/../backend/ai/AIMetrics.php';
+    EvalRunLog::save($dbh, 'safety_eval', $result['pass'], $result['fail'], $result['leaked'], ['ms' => $result['ms'], 'leak_checks' => $result['leak_checks']], '', '', 'run from admin');
 }
 
 // Tool audit (table is created lazily by ToolRegistry, so it may not exist yet).
@@ -95,6 +98,7 @@ html[data-theme="dark"] .ais-table > tbody > tr:nth-of-type(odd) > td { backgrou
     <div class="ais-grid">
       <div class="ais-card"><div class="ais-num <?php echo $result['fail'] ? 'ais-fail' : 'ais-pass'; ?>"><?php echo (int)$result['pass']; ?> / <?php echo (int)($result['pass'] + $result['fail']); ?></div><div class="ais-lbl">cases passed</div></div>
       <div class="ais-card"><div class="ais-num"><?php echo (int)$result['fail']; ?></div><div class="ais-lbl">failed</div></div>
+      <div class="ais-card"><div class="ais-num <?php echo $result['leaked'] ? 'ais-fail' : 'ais-pass'; ?>"><?php echo (int)$result['leaked']; ?></div><div class="ais-lbl">unauthorised information leaked (of <?php echo (int)$result['leak_checks']; ?> leakage checks)</div></div>
       <div class="ais-card"><div class="ais-num"><?php echo (int)$result['ms']; ?> ms</div><div class="ais-lbl">run at <?php echo $h($result['at']); ?></div></div>
     </div>
     <div class="table-responsive">

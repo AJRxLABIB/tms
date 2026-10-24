@@ -13,6 +13,8 @@ require_once __DIR__ . '/BookingReadiness.php';
 require_once __DIR__ . '/rag/EmbeddingReranker.php';
 require_once __DIR__ . '/rag/EmbeddingStore.php';
 require_once __DIR__ . '/rag/HybridSearch.php';
+require_once __DIR__ . '/rag/EntityIndex.php';
+require_once __DIR__ . '/rag/RetrievedText.php';
 
 final class ToolRegistry
 {
@@ -20,10 +22,13 @@ final class ToolRegistry
     private KnowledgeIndex $index;
     private ?PDO $db;
     private ?EmbeddingReranker $reranker;
+    private ?EntityIndex $entities;
+    /** Packages dropped (no longer published) or re-priced by the live check during this registry's life: analytics and tests. */
+    public int $liveDropped = 0, $liveRepriced = 0;
 
-    public function __construct(KnowledgeIndex $index, ?PDO $db = null, ?EmbeddingReranker $reranker = null)
+    public function __construct(KnowledgeIndex $index, ?PDO $db = null, ?EmbeddingReranker $reranker = null, ?EntityIndex $entities = null)
     {
-        $this->index = $index; $this->db = $db; $this->reranker = $reranker;
+        $this->index = $index; $this->db = $db; $this->reranker = $reranker; $this->entities = $entities;
         $this->schemas = [
             'search_packages' => [
                 'auth' => false,
@@ -59,6 +64,20 @@ final class ToolRegistry
                 'end_date' => ['type' => 'string', 'max' => 10],
             ]],
             'my_bookings' => ['auth' => true, 'params' => []],
+            // ONE of the signed-in visitor's own bookings. The identity comes from the server session, never from an argument, and a booking
+            // that belongs to someone else is indistinguishable from one that does not exist. Minimal fields only.
+            'get_my_booking' => ['auth' => true, 'params' => ['booking_id' => ['type' => 'int', 'required' => true, 'min' => 1, 'max' => 2147483647]]],
+            // Published hotels / activities / curated destination guides (read-only). Demonstration rows are labelled and never priced.
+            'search_hotels' => ['auth' => false, 'params' => [
+                'query' => ['type' => 'string', 'required' => true, 'max' => 200], 'city' => ['type' => 'string', 'max' => 100], 'country' => ['type' => 'string', 'max' => 60],
+                'max_price' => ['type' => 'int', 'min' => 0, 'max' => 10000000], 'min_stars' => ['type' => 'int', 'min' => 1, 'max' => 5], 'limit' => ['type' => 'int', 'min' => 1, 'max' => 8]]],
+            'search_activities' => ['auth' => false, 'params' => [
+                'query' => ['type' => 'string', 'required' => true, 'max' => 200], 'city' => ['type' => 'string', 'max' => 100], 'country' => ['type' => 'string', 'max' => 60],
+                'category' => ['type' => 'string', 'max' => 60], 'max_price' => ['type' => 'int', 'min' => 0, 'max' => 10000000],
+                'max_hours' => ['type' => 'int', 'min' => 1, 'max' => 48], 'limit' => ['type' => 'int', 'min' => 1, 'max' => 8]]],
+            'get_destination_guide' => ['auth' => false, 'params' => ['query' => ['type' => 'string', 'required' => true, 'max' => 200]]],
+            // Package policy (if a package is named) plus the site's own published policy pages. Never invents terms.
+            'get_cancellation_info' => ['auth' => false, 'params' => ['package_id' => ['type' => 'int', 'min' => 1, 'max' => 2147483647]]],
             // Side-by-side of 2-4 published packages, from catalogue fields only. Differences are computed in code.
             'compare_packages' => ['auth' => false, 'params' => ['package_ids' => ['type' => 'string', 'required' => true, 'max' => 40]]],
             // Staff-entered, sourced, dated notices only (see TRAVEL_NOTICES.md). Never a live feed.
@@ -113,10 +132,15 @@ final class ToolRegistry
             }
             $data = match ($tool) {
                 'search_packages' => $this->searchPackages($a),
-                'get_package' => $this->index->get($a['package_id']) ?? ['not_found' => true],
+                'get_package' => $this->pkg($a['package_id']) ?? ['not_found' => true],
                 'get_cancellation_policy' => $this->policy($a['package_id']),
                 'compare_packages' => $this->comparePackages($a),
                 'my_bookings' => $this->myBookings((string)($ctx['email'] ?? '')),
+                'get_my_booking' => $this->myBooking((string)($ctx['email'] ?? ''), $a['booking_id']),
+                'search_hotels' => $this->searchEntities('hotel', $a),
+                'search_activities' => $this->searchEntities('activity', $a),
+                'get_destination_guide' => $this->destinationGuide($a),
+                'get_cancellation_info' => $this->cancellationInfo($a),
                 'get_travel_notices' => $this->travelNotices($a),
                 'calculate_trip_budget' => $this->tripBudget($a),
                 'check_booking_readiness' => $this->bookingReadiness($a),
@@ -168,6 +192,7 @@ final class ToolRegistry
             if (!$rows && $g) { $rows = $this->browse($g, $limit); if ($rows) $this->lastSearchMeta['browse'] = true; }
             if ($rows) $this->lastSearchMeta['relaxed'] = ['days'];
         }
+        $rows = $this->applyLive($rows);
         $this->lastSearchMeta['count'] = count($rows);
         return $rows;
     }
@@ -213,7 +238,7 @@ final class ToolRegistry
         $in = ['travelers' => $a['travelers']];
         $notes = [];
         if (isset($a['package_id'])) {
-            $p = $this->index->get($a['package_id']);
+            $p = $this->pkg($a['package_id']);
             if (!$p) return ['error' => 'package_not_found', 'note' => 'That package is not published, so no price can be used.'];
             $in['package_price_per_person'] = (int)$p['price'];
             $in['package_price_basis'] = 'list price';
@@ -233,7 +258,7 @@ final class ToolRegistry
 
     private function bookingReadiness(array $a): array
     {
-        $p = $this->index->get($a['package_id']);
+        $p = $this->pkg($a['package_id']);
         if (!$p || !$this->db) return ['error' => 'package_not_found', 'note' => 'That package is not published, so it cannot be booked.'];
         return BookingReadiness::check($this->db, $p, $a['travelers'], $a['start_date'] ?? null, $a['end_date'] ?? null);
     }
@@ -263,7 +288,7 @@ final class ToolRegistry
 
     private function policy(int $id): array
     {
-        $p = $this->index->get($id);
+        $p = $this->pkg($id);
         if (!$p) return ['not_found' => true];
         $txt = trim($p['cancellation']);
         return ['package' => $p['title'], 'policy' => $txt !== '' ? $txt : null,
@@ -271,7 +296,57 @@ final class ToolRegistry
     }
 
     /** Published package meta by id (null when not published); used by callers that need a price without a tool call. */
-    public function package(int $id): ?array { return $this->index->get($id); }
+    public function package(int $id): ?array { return $this->pkg($id); }
+
+    /** @var array<int,?array> per-registry cache of live checks */
+    private array $liveCache = [];
+
+    /**
+     * Live facts for package ids (null when no database is attached). Every package a tool is about to quote passes through this, so a
+     * package that was unpublished or re-priced after the index was built is dropped or shown at its CURRENT price (audit item 19).
+     * @param int[] $ids @return ?array<int,array{price:int,duration:string,title:string}>
+     */
+    private function live(array $ids): ?array
+    {
+        if (!$this->db || !$this->index->isFromDb()) return null;   // only an index built from the live table can be stale
+        $need = array_values(array_filter($ids, fn($i) => !array_key_exists($i, $this->liveCache)));
+        if ($need) {
+            try { $got = KnowledgeIndex::liveCheck($this->db, $need); }
+            catch (Throwable $e) { error_log('[TMS AI live check] ' . $e->getMessage()); return null; }   // cannot verify: keep the indexed value rather than hide the catalogue
+            foreach ($need as $i) $this->liveCache[$i] = $got[$i] ?? null;
+        }
+        $out = []; foreach ($ids as $i) if (($this->liveCache[$i] ?? null) !== null) $out[$i] = $this->liveCache[$i];
+        return $out;
+    }
+
+    /** Package meta with the live price/duration applied; null when the package is not published right now. */
+    private function pkg(int $id): ?array
+    {
+        $m = $this->index->get($id);
+        if (!$m) return null;
+        $live = $this->live([$id]);
+        if ($live === null) return $m;
+        if (!isset($live[$id])) { $this->liveDropped++; return null; }
+        if ($live[$id]['price'] !== (int)$m['price'] || $live[$id]['duration'] !== (string)$m['duration']) $this->liveRepriced++;
+        $m['price'] = $live[$id]['price']; $m['duration'] = $live[$id]['duration'];
+        return $m;
+    }
+
+    /** Apply the live check to result rows that carry id/price_bdt/duration. */
+    private function applyLive(array $rows): array
+    {
+        $live = $this->live(array_map(fn($r) => (int)$r['id'], $rows));
+        if ($live === null) return $rows;
+        $out = [];
+        foreach ($rows as $r) {
+            $id = (int)$r['id'];
+            if (!isset($live[$id])) { $this->liveDropped++; continue; }
+            if (isset($r['price_bdt']) && (int)$r['price_bdt'] !== $live[$id]['price']) $this->liveRepriced++;
+            $r['price_bdt'] = $live[$id]['price']; $r['duration'] = $live[$id]['duration'];
+            $out[] = $r;
+        }
+        return $out;
+    }
 
     private function comparePackages(array $a): array
     {
@@ -283,7 +358,7 @@ final class ToolRegistry
         if (count($ids) < 2 || count($ids) > 4) throw new InvalidArgumentException('out_of_range:package_ids');
         $items = []; $missing = [];
         foreach ($ids as $id) {
-            $p = $this->index->get($id);
+            $p = $this->pkg($id);
             if (!$p) { $missing[] = $id; continue; }
             $pol = trim((string)$p['cancellation']);
             $items[] = ['id' => $id, 'title' => $p['title'], 'location' => $p['location'], 'country' => $p['country'], 'price_bdt' => (int)$p['price'],
@@ -312,6 +387,90 @@ final class ToolRegistry
         return array_map(fn($r) => ['booking_id' => (int)$r['BookingId'], 'package' => $r['PackageName'],
             'from' => $r['FromDate'], 'to' => $r['ToDate'], 'status' => $label[(int)$r['status']] ?? 'unknown',
             'payment' => $r['PaymentStatus']], $st->fetchAll(PDO::FETCH_ASSOC) ?: []);
+    }
+
+    private function entities(): EntityIndex
+    {
+        if ($this->entities === null) {
+            try { $this->entities = $this->db ? EntityIndex::fromDb($this->db) : EntityIndex::fromRows([]); }
+            catch (Throwable $e) { error_log('[TMS AI entities] ' . $e->getMessage()); $this->entities = EntityIndex::fromRows([]); }
+        }
+        return $this->entities;
+    }
+
+    /** Hotels / activities: lexical retrieval + structured filters, demo rows labelled and never priced, source label from InventorySource. */
+    private function searchEntities(string $kind, array $a): array
+    {
+        $f = [];
+        foreach (['country', 'city', 'category'] as $k) if (!empty($a[$k])) $f[$k] = $a[$k];
+        foreach (['max_price', 'min_stars', 'max_hours'] as $k) if (isset($a[$k]) && $a[$k] > 0) $f[$k] = $a[$k];
+        $limit = (int)($a['limit'] ?? 5);
+        $ix = $this->entities();
+        $hits = $ix->search($kind, (string)$a['query'], $limit, $f);
+        $browse = false;
+        if (!$hits && $f) { $hits = $ix->browse($kind, $limit, $f); $browse = (bool)$hits; }
+        $label = null;
+        if ($this->db) { try { require_once dirname(__DIR__) . '/services/InventorySource.php'; $label = true; } catch (Throwable $e) { $label = null; } }
+        $rows = [];
+        foreach ($hits as $h) {
+            $m = EntityIndex::publicMeta($h['d']);
+            if ($label && class_exists('InventorySource', false)) {
+                try { $l = InventorySource::labelFor($this->db, $kind, (int)$h['id']); $m['data_source'] = ['label' => (string)($l['label'] ?? ''), 'live' => (bool)($l['live'] ?? false), 'stale' => (bool)($l['stale'] ?? false)]; } catch (Throwable $e) { /* label is optional */ }
+            }
+            $rows[] = $m;
+        }
+        $out = ['results' => $rows, 'filters' => $f, 'count' => count($rows)];
+        if ($browse) $out['note'] = 'No name or theme matched, so these are the best-rated entries that satisfy the filters.';
+        if (!$rows) $out['note'] = 'No published ' . $kind . ' matches. Say none were found; do not invent one, a price or availability.';
+        elseif (array_filter($rows, fn($r) => !empty($r['demo']))) $out['demo_warning'] = 'Entries marked demo are demonstration data: never present them as bookable, priced or available.';
+        return $out;
+    }
+
+    private function destinationGuide(array $a): array
+    {
+        $hits = $this->entities()->search('guide', (string)$a['query'], 2);
+        if (!$hits) return ['guides' => [], 'note' => 'No curated guide matches. Say you do not have a guide for this place; do not improvise travel logistics, permits or access rules.'];
+        return ['guides' => array_map(fn($h) => EntityIndex::publicMeta($h['d']), $hits)];
+    }
+
+    /** Package policy (when named) plus the site's own published policy pages (terms / cancellation / refund). Untrusted text is cleaned. */
+    private function cancellationInfo(array $a): array
+    {
+        $out = ['package_policy' => null, 'site_policy' => [], 'rules' => 'Quote only what is written here. If a refund amount or deadline is not stated, say it is not stated and send the traveller to the booking page or support. Never promise a refund.'];
+        if (isset($a['package_id'])) $out['package_policy'] = $this->policy((int)$a['package_id']);
+        if ($this->db) {
+            foreach (['cancellation', 'refund', 'terms'] as $type) {
+                try {
+                    $st = $this->db->prepare('SELECT detail FROM tblpages WHERE type = ? LIMIT 1');
+                    $st->execute([$type]);
+                    $d = $st->fetchColumn();
+                    $txt = $d === false ? '' : RetrievedText::clean((string)$d, 1500);
+                    if ($txt !== '') $out['site_policy'][] = ['page' => $type, 'text' => $txt, 'citation' => ['id' => 'page:' . $type, 'title' => ucfirst($type) . ' page', 'url' => 'page.php?type=' . $type]];
+                } catch (Throwable $e) { /* table or row missing: nothing to quote */ }
+            }
+        }
+        if (!$out['site_policy'] && $out['package_policy'] === null) $out['note'] = 'No cancellation or refund policy text is recorded. Say so and refer the traveller to support.';
+        return $out;
+    }
+
+    /** One of the caller's OWN bookings. The email is the session identity; a booking owned by anyone else yields the same answer as a missing one. */
+    private function myBooking(string $email, int $bookingId): array
+    {
+        if ($email === '' || !$this->db) return ['not_found' => true];
+        try {
+            $st = $this->db->prepare(
+                "SELECT b.BookingId, b.FromDate, b.ToDate, b.status, b.PaymentStatus, b.NoOfPersons, b.TotalCost, b.RefundStatus, p.PackageName
+                   FROM tblbooking b LEFT JOIN tbltourpackages p ON p.PackageId = b.PackageId
+                  WHERE b.BookingId = :id AND b.UserEmail = :e LIMIT 1");
+            $st->execute([':id' => $bookingId, ':e' => $email]);
+            $r = $st->fetch(PDO::FETCH_ASSOC);
+        } catch (Throwable $e) { error_log('[TMS AI get_my_booking] ' . $e->getMessage()); return ['not_found' => true]; }
+        if (!$r) return ['not_found' => true];
+        $label = [0 => 'awaiting confirmation', 1 => 'confirmed', 2 => 'cancelled'];
+        return ['booking_id' => (int)$r['BookingId'], 'package' => $r['PackageName'], 'from' => $r['FromDate'], 'to' => $r['ToDate'],
+            'travelers' => (int)$r['NoOfPersons'], 'status' => $label[(int)$r['status']] ?? 'unknown', 'payment' => $r['PaymentStatus'],
+            'total_bdt' => $r['TotalCost'] !== null ? (int)$r['TotalCost'] : null, 'refund_status' => $r['RefundStatus'] ?: null,
+            'note' => 'Changes or cancellation are not done by the assistant: point to the My Bookings page, where the traveller confirms them.'];
     }
 
     private function audit(string $tool, array $args, array $ctx, string $result): void

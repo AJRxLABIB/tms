@@ -50,7 +50,7 @@ $countQ->execute($params);
 $totalRows  = (int)$countQ->fetchColumn();
 $totalPages = (int)ceil($totalRows / $perPage);
 
-$sql = "SELECT * FROM tbltourpackages $whereSQL ORDER BY (Country='Bangladesh') DESC, PackageId DESC LIMIT :limit OFFSET :offset";
+$sql = "SELECT PackageId, PackageName, PackageImage, PackagePrice, PackageLocation FROM tbltourpackages $whereSQL ORDER BY (Country='Bangladesh') DESC, PackageId DESC LIMIT :limit OFFSET :offset";
 $q = $dbh->prepare($sql);
 foreach ($params as $k => $v) { $q->bindValue($k, $v, PDO::PARAM_STR); }
 $q->bindValue(':limit', $perPage, PDO::PARAM_INT);
@@ -58,6 +58,8 @@ $q->bindValue(':offset', $offset, PDO::PARAM_INT);
 $q->execute();
 $results = $q->fetchAll(PDO::FETCH_OBJ);
 
+// PERF: the cards only show id/name/image/price/location, so only those columns are fetched (SELECT * dragged every
+// long description/itinerary column through MySQL and PHP for up to ~60 rows per page view).
 // ─── Featured, Popular, Recently Viewed (only shown when no filters active) ──
 $featured = [];
 $popular  = [];
@@ -66,15 +68,15 @@ if (!$hasFilters) {
     // Note: IsFeatured is indexed and only a small subset of rows match, so we fetch
     // a modest pool and shuffle in PHP rather than ORDER BY RAND() (which forces a
     // full filesort even on an indexed column and gets expensive as the catalog grows).
-    $featuredPool = $dbh->query("SELECT * FROM tbltourpackages WHERE " . TMS_PKG_PUBLIC_SQL . " AND IsFeatured=1 ORDER BY PackageId DESC LIMIT 30")->fetchAll(PDO::FETCH_OBJ);
+    $featuredPool = $dbh->query("SELECT PackageId, PackageName, PackageImage, PackagePrice, PackageLocation FROM tbltourpackages WHERE " . TMS_PKG_PUBLIC_SQL . " AND IsFeatured=1 ORDER BY PackageId DESC LIMIT 30")->fetchAll(PDO::FETCH_OBJ);
     shuffle($featuredPool);
     $featured = array_slice($featuredPool, 0, 6);
-    $popular  = $dbh->query("SELECT * FROM tbltourpackages WHERE " . TMS_PKG_PUBLIC_SQL . " ORDER BY ViewCount DESC, AvgRating DESC LIMIT 8")->fetchAll(PDO::FETCH_OBJ);
+    $popular  = $dbh->query("SELECT PackageId, PackageName, PackageImage, PackagePrice, PackageLocation FROM tbltourpackages WHERE " . TMS_PKG_PUBLIC_SQL . " ORDER BY ViewCount DESC, AvgRating DESC LIMIT 8")->fetchAll(PDO::FETCH_OBJ);
 
     if (!empty($_SESSION['recently_viewed'])) {
         $ids = array_map('intval', $_SESSION['recently_viewed']);
         $in  = implode(',', array_fill(0, count($ids), '?'));
-        $rq2 = $dbh->prepare("SELECT * FROM tbltourpackages WHERE " . TMS_PKG_PUBLIC_SQL . " AND PackageId IN ($in)");
+        $rq2 = $dbh->prepare("SELECT PackageId, PackageName, PackageImage, PackagePrice, PackageLocation FROM tbltourpackages WHERE " . TMS_PKG_PUBLIC_SQL . " AND PackageId IN ($in)");
         $rq2->execute($ids);
         $byId = [];
         foreach ($rq2->fetchAll(PDO::FETCH_OBJ) as $row) { $byId[(int)$row->PackageId] = $row; }
@@ -251,8 +253,8 @@ html[data-theme="dark"] .no-results { color: var(--text-light) !important; }
             <div class="dest-scroll wow fadeInUp">
                 <?php foreach ($featured as $f): ?>
                 <a href="package-details.php?pkgid=<?php echo (int)$f->PackageId; ?>" class="dest-card">
-                    <img loading="lazy" src="<?php echo htmlspecialchars(tms_package_image_src($f->PackageImage), ENT_QUOTES, 'UTF-8'); ?>"<?php echo tms_responsive_img_attrs(tms_package_image_src($f->PackageImage)); ?>
-                         onerror="this.src='images/no-image-placeholder.jpg'" alt="<?php echo htmlspecialchars($f->PackageName, ENT_QUOTES, 'UTF-8'); ?>">
+                    <?php $tmsImg_f = tms_card_image((string)$f->PackageImage, (string)$f->PackageName, (string)($f->PackageType ?? ''), (string)($f->PackageLocation ?? '')); ?><img loading="lazy" width="400" height="160" src="<?php echo htmlspecialchars($tmsImg_f['src'], ENT_QUOTES, 'UTF-8'); ?>"<?php echo tms_img_onerror($tmsImg_f['fallback']); ?>
+                          alt="<?php echo htmlspecialchars($f->PackageName, ENT_QUOTES, 'UTF-8'); ?>">
                     <div class="body">
                         <h6><?php echo htmlspecialchars($f->PackageName, ENT_QUOTES, 'UTF-8'); ?></h6>
                         <p class="loc"><i class="fa fa-map-marker"></i> <?php echo htmlspecialchars($f->PackageLocation, ENT_QUOTES, 'UTF-8'); ?></p>
@@ -268,8 +270,8 @@ html[data-theme="dark"] .no-results { color: var(--text-light) !important; }
             <div class="dest-scroll wow fadeInUp">
                 <?php foreach ($popular as $p): ?>
                 <a href="package-details.php?pkgid=<?php echo (int)$p->PackageId; ?>" class="dest-card">
-                    <img loading="lazy" src="<?php echo htmlspecialchars(tms_package_image_src($p->PackageImage), ENT_QUOTES, 'UTF-8'); ?>"<?php echo tms_responsive_img_attrs(tms_package_image_src($p->PackageImage)); ?>
-                         onerror="this.src='images/no-image-placeholder.jpg'" alt="<?php echo htmlspecialchars($p->PackageName, ENT_QUOTES, 'UTF-8'); ?>">
+                    <?php $tmsImg_p = tms_card_image((string)$p->PackageImage, (string)$p->PackageName, (string)($p->PackageType ?? ''), (string)($p->PackageLocation ?? '')); ?><img loading="lazy" width="400" height="160" src="<?php echo htmlspecialchars($tmsImg_p['src'], ENT_QUOTES, 'UTF-8'); ?>"<?php echo tms_img_onerror($tmsImg_p['fallback']); ?>
+                          alt="<?php echo htmlspecialchars($p->PackageName, ENT_QUOTES, 'UTF-8'); ?>">
                     <div class="body">
                         <h6><?php echo htmlspecialchars($p->PackageName, ENT_QUOTES, 'UTF-8'); ?></h6>
                         <p class="loc"><i class="fa fa-map-marker"></i> <?php echo htmlspecialchars($p->PackageLocation, ENT_QUOTES, 'UTF-8'); ?></p>
@@ -285,8 +287,8 @@ html[data-theme="dark"] .no-results { color: var(--text-light) !important; }
             <div class="dest-scroll wow fadeInUp">
                 <?php foreach ($recent as $rv): ?>
                 <a href="package-details.php?pkgid=<?php echo (int)$rv->PackageId; ?>" class="dest-card">
-                    <img loading="lazy" src="<?php echo htmlspecialchars(tms_package_image_src($rv->PackageImage), ENT_QUOTES, 'UTF-8'); ?>"<?php echo tms_responsive_img_attrs(tms_package_image_src($rv->PackageImage)); ?>
-                         onerror="this.src='images/no-image-placeholder.jpg'" alt="<?php echo htmlspecialchars($rv->PackageName, ENT_QUOTES, 'UTF-8'); ?>">
+                    <?php $tmsImg_rv = tms_card_image((string)$rv->PackageImage, (string)$rv->PackageName, (string)($rv->PackageType ?? ''), (string)($rv->PackageLocation ?? '')); ?><img loading="lazy" width="400" height="160" src="<?php echo htmlspecialchars($tmsImg_rv['src'], ENT_QUOTES, 'UTF-8'); ?>"<?php echo tms_img_onerror($tmsImg_rv['fallback']); ?>
+                          alt="<?php echo htmlspecialchars($rv->PackageName, ENT_QUOTES, 'UTF-8'); ?>">
                     <div class="body">
                         <h6><?php echo htmlspecialchars($rv->PackageName, ENT_QUOTES, 'UTF-8'); ?></h6>
                         <p class="loc"><i class="fa fa-map-marker"></i> <?php echo htmlspecialchars($rv->PackageLocation, ENT_QUOTES, 'UTF-8'); ?></p>
@@ -314,8 +316,8 @@ html[data-theme="dark"] .no-results { color: var(--text-light) !important; }
             <div class="col-md-3 col-sm-6">
                 <div class="grid-card wow fadeInUp">
                     <a href="package-details.php?pkgid=<?php echo (int)$r->PackageId; ?>">
-                        <img loading="lazy" src="<?php echo htmlspecialchars(tms_package_image_src($r->PackageImage), ENT_QUOTES, 'UTF-8'); ?>"<?php echo tms_responsive_img_attrs(tms_package_image_src($r->PackageImage)); ?>
-                             onerror="this.src='images/no-image-placeholder.jpg'" alt="<?php echo htmlspecialchars($r->PackageName, ENT_QUOTES, 'UTF-8'); ?>">
+                        <?php $tmsImg_r = tms_card_image((string)$r->PackageImage, (string)$r->PackageName, (string)($r->PackageType ?? ''), (string)($r->PackageLocation ?? '')); ?><img loading="lazy" width="400" height="160" src="<?php echo htmlspecialchars($tmsImg_r['src'], ENT_QUOTES, 'UTF-8'); ?>"<?php echo tms_img_onerror($tmsImg_r['fallback']); ?>
+                              alt="<?php echo htmlspecialchars($r->PackageName, ENT_QUOTES, 'UTF-8'); ?>">
                     </a>
                     <div class="body">
                         <h5><?php echo htmlspecialchars($r->PackageName, ENT_QUOTES, 'UTF-8'); ?></h5>

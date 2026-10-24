@@ -1,0 +1,147 @@
+/* tms-a11y.css — shared accessibility layer (storefront + admin). Additive only: no layout redesign.
+   Uses the brand tokens from css/modern-theme.css when present, with safe fallbacks for admin pages. */
+:root {
+  --a11y-ring: var(--primary, #176B50);
+  --a11y-ring-offset: var(--white, #ffffff);
+  --a11y-error: #B42318;            /* 6.5:1 on white */
+  --a11y-error-bg: #FEF3F2;
+  --a11y-ok: #0E3B2D;
+  --a11y-ok-bg: var(--mint, #B8E4C9);
+}
+/* Visible keyboard focus everywhere (two-ring so it shows on dark and light surfaces). */
+:where(a, button, input, select, textarea, summary, [tabindex]):focus-visible {
+  outline: 3px solid var(--a11y-ring);
+  outline-offset: 2px;
+  box-shadow: 0 0 0 5px var(--a11y-ring-offset);
+}
+/* Screen-reader-only text. */
+.sr-only, .tms-sr-only {
+  position: absolute !important; width: 1px; height: 1px; margin: -1px; padding: 0; border: 0;
+  overflow: hidden; clip: rect(0 0 0 0); clip-path: inset(50%); white-space: nowrap;
+}
+/* Skip link (same look as the storefront one; used by the admin shell). */
+.tms-skip-link {
+  position: absolute; top: -60px; left: 8px; z-index: 100000; background: #0f172a; color: #fff;
+  padding: 10px 18px; border-radius: 6px; font-size: 14px; font-weight: 600; text-decoration: none;
+}
+.tms-skip-link:focus { top: 8px; color: #fff; text-decoration: none; }
+/* Touch targets: at least 44x44 CSS px for controls in navigation and forms (WCAG 2.5.8 asks 24, we aim higher). */
+.tms-navbar a, .tms-navbar button, .tms-sidebar a, .tms-sidebar button, .topbar-toggle, .topbar-right button,
+form .btn, form button, form input[type="submit"], form input[type="button"], form select,
+form input:not([type="checkbox"]):not([type="radio"]):not([type="hidden"]), form textarea {
+  min-height: 44px;
+}
+.tms-navbar a, .tms-navbar button, .tms-sidebar a { min-width: 44px; display: inline-flex; align-items: center; }
+.tms-sidebar a { display: flex; }
+input[type="checkbox"], input[type="radio"] { min-width: 20px; min-height: 20px; }
+/* Form errors: obvious without relying on colour alone (icon-free text + border + weight). */
+[aria-invalid="true"] { border-color: var(--a11y-error) !important; box-shadow: 0 0 0 1px var(--a11y-error); }
+.tms-field-error { color: var(--a11y-error); background: var(--a11y-error-bg); font-size: 13.5px; font-weight: 600;
+  margin: 4px 0 0; padding: 4px 8px; border-radius: 6px; }
+.tms-field-error::before { content: "Error: "; }
+/* Live region used by tmsA11y.announce(). */
+#tmsA11yLive { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+/* Tables never force the page to scroll sideways. */
+.table-responsive { width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+/* Respect reduced-motion for everything, including libraries that animate on scroll (wow.js / animate.css). */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important; scroll-behavior: auto !important; }
+  .wow { visibility: visible !important; animation: none !important; }
+}
+/* Forced-colors (Windows high contrast): keep focus visible. */
+@media (forced-colors: active) { :where(a, button, input, select, textarea):focus-visible { outline: 3px solid Highlight; } }
+
+/* ───────────────────────── Contrast + overflow fixes (Unit 21) ─────────────────────────
+   Root causes found from the dark-mode recording:
+   1. Components hard-code a white background but take their text colour from --text, which turns near-white in
+      dark mode, so labels vanish (explore chips/tabs, "Save" button).
+   2. html[data-theme=dark] a { color: inherit } overrides the colour of every <a> that styles itself with a single
+      class (chat quick replies, Compare button), leaving pale text on pale chips.
+   Token pairs used below (measured, WCAG 2.x relative luminance):
+     dark: #EAF1EC on #18211C 14.4:1 · #5CC79C on #18211C 7.9:1 · ink #0B1F17 on #5CC79C 8.3:1 · border #5B6F63 on #18211C 3.1:1
+     light: #176B50 on #FFFFFF 6.4:1 · #FFFFFF on #176B50 6.4:1 · Save #B42323 on #FFFFFF 6.6:1 */
+:root {
+  --chip-bg: #FFFFFF;
+  --chip-text: #17231E;
+  --chip-border: #7C8D83;          /* 3.6:1 against white (non-text contrast) */
+  --on-secondary: #FFFFFF;         /* ink on --secondary (#176B50 in light mode) */
+  --btn-save-text: #B42323;
+  --btn-save-bg: #FFFFFF;
+}
+html[data-theme="dark"] {
+  --chip-bg: #18211C;
+  --chip-text: #EAF1EC;
+  --chip-border: #5B6F63;
+  --on-secondary: #0B1F17;         /* ink on --secondary (#5CC79C in dark mode) */
+  --btn-save-text: #FCA5A5;
+  --btn-save-bg: #3A1414;
+}
+.place-cat-btn, .explore-chip, .cat-pill, .tms-chip {
+  background: var(--chip-bg); color: var(--chip-text); border: 1.5px solid var(--chip-border);
+}
+.place-cat-btn.active, .explore-chip:hover, .explore-chip:focus-visible, .cat-pill.active, .cat-pill:hover,
+.place-cat-btn:hover {
+  background: var(--secondary); border-color: var(--secondary); color: var(--on-secondary);
+}
+html[data-theme="dark"] .cat-pill, html[data-theme="dark"] .cat-pill:visited { color: var(--chip-text) !important; }
+html[data-theme="dark"] .cat-pill.active, html[data-theme="dark"] .cat-pill:hover { color: var(--on-secondary) !important; }
+/* Explore tab strip: white card + muted text was 2.1:1 in dark mode. */
+html[data-theme="dark"] .explore-tabs { background: var(--white); border: 1px solid var(--border); }
+.explore-tab-btn:not(.active) { color: var(--text); }
+.explore-tabs { scrollbar-width: thin; -webkit-overflow-scrolling: touch; }
+@media (max-width: 640px) {
+  .explore-tabs { flex-wrap: nowrap; justify-content: flex-start; margin-left: 8px; margin-right: 8px; scroll-snap-type: x proximity; }
+  .explore-tab-btn { flex: 0 0 auto; padding: 12px 14px; scroll-snap-align: start; }
+}
+/* AI assistant quick replies live on a light panel; keep the same dark-green-on-white pairing in both themes. */
+html[data-theme="dark"] .qr-btn { color: #176B50; background: #FFFFFF; border-color: #176B50; }
+html[data-theme="dark"] .qr-btn:hover, html[data-theme="dark"] .qr-btn:focus-visible { background: #176B50; color: #FFFFFF; }
+/* Package list Save / Compare / Added buttons. */
+.tms-btn-save, .tms-btn-compare, .tms-chip-added {
+  display: inline-flex; align-items: center; gap: 6px; border-radius: 6px; font-size: 13px; font-weight: 600;
+  padding: 6px 12px; line-height: 1.2; cursor: pointer; text-decoration: none; min-height: 36px;
+}
+.tms-btn-save { background: var(--btn-save-bg); color: var(--btn-save-text); border: 1.5px solid var(--btn-save-text); }
+.tms-btn-save.is-saved { background: var(--btn-save-text); color: var(--btn-save-bg); }
+.tms-btn-compare { background: var(--secondary); color: var(--on-secondary); border: 1.5px solid var(--secondary); }
+.tms-chip-added { background: var(--success-bg, #DCFCE7); color: var(--success-text, #14532D); border: 1px solid var(--success, #218653); }
+/* Mobile nav panel is white: keep its text dark in dark mode too (its links use --text, which is pale there). */
+@media (max-width: 1179px) { html[data-theme="dark"] .tms-nav-menu { background: var(--white); } }
+
+/* Blog cards. */
+.blog-body h4 { color: var(--text) !important; }
+.blog-tag { background: var(--mint, #B8E4C9); color: var(--mint-ink, #0E3B2D); }   /* 8.9:1 */
+html[data-theme="dark"] .blog-tag { background: #1F3A2D; color: #B8E4C9; }
+.blog-card .blog-cover { width: 100%; height: 200px; object-fit: cover; display: block; background: var(--bg-dark); }
+.blog-pager a { padding: 8px 14px; border-radius: 8px; font-size: 14px; text-decoration: none; background: var(--chip-bg); color: var(--chip-text); border: 1px solid var(--chip-border); }
+.blog-pager a.is-current { background: var(--secondary); color: var(--on-secondary); border-color: var(--secondary); }
+
+/* Hero heading must never depend on a deferred animation script: if wow.js loads late the title stayed blank. */
+.banner-3 h1.wow, .banner-1 h1.wow, .banner-2 h1.wow { opacity: 1 !important; visibility: visible !important; animation: none !important; }
+.banner-3 h1, .banner-1 h1, .banner-2 h1 { color: #FFFFFF; text-shadow: 0 1px 3px rgba(0,0,0,.35); }
+
+/* Image states: representative-image / illustration captions and the sample-listing badge. */
+.tms-img-wrap { position: relative; display: block; }
+.tms-img-wrap img { display: block; width: 100%; }
+.tms-img-caption {
+  position: absolute; left: 8px; bottom: 8px; background: rgba(11,31,23,.78); color: #F7F8F5; font-size: 11px;
+  font-weight: 600; padding: 3px 8px; border-radius: 4px; line-height: 1.3; pointer-events: none;   /* 14:1 */
+}
+.tms-sample-badge {
+  display: inline-flex; align-items: center; gap: 6px; background: var(--warning-bg, #FEF3C7); color: var(--warning-text, #7A4F0E);
+  border: 1px solid var(--warning, #B7791F); border-radius: 6px; font-size: 12.5px; font-weight: 700; padding: 4px 10px;
+}
+.tms-sample-note { font-size: 12.5px; color: var(--text-muted); margin: 6px 0 0; }
+
+/* ── Top utility bar: never overflow, degrade in steps instead of being clipped at the right edge. ──
+   The old container capped at 1400px but a signed-in bar needs ~1650px, so Logout ran off the page. */
+.tms-topbar .container { max-width: 1840px; gap: 12px; }
+.tms-topbar-left { flex: 1 1 auto; min-width: 0; overflow: hidden; }
+.tms-topbar-left a { flex: 0 0 auto; }
+.tms-topbar-right { flex: 0 0 auto; }
+.tms-topbar .tms-currency-select { max-width: 120px; min-width: 0; }
+.tms-topbar-welcome { max-width: 180px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+@media (max-width: 1750px) { .tms-topbar .tms-phone, .tms-topbar .tms-phone + .tms-topbar-divider, .tms-topbar-welcome { display: none; } }
+@media (max-width: 1560px) { .tms-topbar-left .tms-tb-secondary .tms-tb-label { display: none; } }
+@media (max-width: 1380px) { .tms-topbar-left a:not(:first-child) .tms-tb-label { display: none; } }

@@ -195,12 +195,16 @@ $telemetryAvgLatency  = $telemetrySummary && $telemetrySummary->avg_latency_ms !
 // Which provider is actually live right now -- read straight from config
 // rather than instantiating AIClient, since the dashboard only needs to
 // display this, not call the AI.
-$activeProviderName  = defined('AI_PROVIDER') ? AI_PROVIDER : 'gemini';
-if ($activeProviderName === 'openai') {
+$tmsAiResolution     = AIClient::resolution($dbh);   // what 'auto' really means on this request (see admin/ai-setup.php)
+$activeProviderName  = $tmsAiResolution['provider'];
+if ($activeProviderName === 'none') {
+    $activeProviderModel = '';
+    $activeProviderReady = false;
+} elseif ($activeProviderName === 'openai') {
     $activeProviderModel = defined('OPENAI_MODEL') ? OPENAI_MODEL : '';
     $activeProviderReady = defined('OPENAI_API_KEY') && OPENAI_API_KEY !== '';
 } elseif ($activeProviderName === 'ollama') {
-    $activeProviderModel = defined('OLLAMA_MODEL') ? OLLAMA_MODEL : '';
+    $activeProviderModel = $tmsAiResolution['model'] !== '' ? $tmsAiResolution['model'] : (defined('OLLAMA_MODEL') ? OLLAMA_MODEL : '');
     $activeProviderReady = $activeProviderModel !== '';
 } else {
     $activeProviderModel = defined('GEMINI_MODEL') ? GEMINI_MODEL : '';
@@ -225,6 +229,24 @@ try {
         $providerStats[$row['provider']] = $row;
     }
 } catch (Throwable $e) { $providerStats = []; }
+
+// Local model gateway: installed Ollama models, which model each job is routed to, and 24-hour results per model
+// (from tbl_ai_model_calls, migration 032). Read-only. Shows names, digests and counts, never prompts or answers.
+$gwUsesOllama = in_array('ollama', $chainNames, true);
+$gwRegistry = null; $gwModels = []; $gwReachable = false; $gwRoutes = []; $gwModelStats = []; $gwStatsNote = '';
+if ($gwUsesOllama) {
+    $gwRegistry = new ModelRegistry(defined('OLLAMA_BASE_URL') ? (string)OLLAMA_BASE_URL : 'http://127.0.0.1:11434', null, $dbh);
+    $gwModels = $gwRegistry->list();
+    $gwReachable = $gwRegistry->reachable();
+    $gwRouter = new ModelRouter($gwRegistry);
+    foreach (ModelRouter::CAPABILITIES as $capName) { $gwRoutes[$capName] = $gwRouter->route($capName); $gwRoutes[$capName]['context'] = $gwRouter->contextLimit($capName); }
+    try {
+        foreach ($dbh->query("SELECT model, MAX(model_digest) digest, COUNT(*) calls, SUM(success) ok, AVG(latency_ms) avg_ms, SUM(context_dropped > 0) trimmed
+                                FROM tbl_ai_model_calls WHERE created_at >= DATE_SUB(NOW(), INTERVAL 24 HOUR) GROUP BY model ORDER BY calls DESC")->fetchAll(PDO::FETCH_ASSOC) as $mrow) {
+            $gwModelStats[$mrow['model']] = $mrow;
+        }
+    } catch (Throwable $e) { $gwStatsNote = 'No per-model history yet (run php database/migrate.php to create tbl_ai_model_calls).'; }
+}
 
 // Round 35 -- eval run history for the panel below.
 $recentEvalRuns = (new AIEvaluator($dbh))->recentRuns(8);
@@ -565,6 +587,15 @@ html[data-theme="dark"] [style*="background:#fff"], html[data-theme="dark"] [sty
 
 <div class="content-wrap">
 
+  <div class="panel" style="margin-bottom:20px;" role="status">
+    <div class="panel-header"><div class="panel-title"><i class="fa fa-plug"></i> Which AI is in use</div></div>
+    <div class="panel-body">
+      <p style="margin:0 0 6px;"><strong><?= htmlspecialchars($activeProviderName === 'none' ? 'AI is OFF' : 'Using ' . $activeProviderName . ($activeProviderModel !== '' ? ' (' . $activeProviderModel . ')' : '')) ?></strong>
+        &mdash; <?= htmlspecialchars(AIProviderResolver::explain($tmsAiResolution['reason'], true)) ?></p>
+      <p class="hp-note" style="font-size:12px;margin:0;">Customers never see this: with no AI they get catalogue-based answers. <a href="ai-setup.php">Open AI Setup &amp; Test</a> for the exact fix and a connection test.</p>
+    </div>
+  </div>
+
   <div class="panel" style="margin-bottom:20px;">
     <div class="panel-header"><div class="panel-title"><i class="fa fa-heartbeat"></i> Provider health (last 24 hours)</div></div>
     <div class="panel-body">
@@ -585,6 +616,53 @@ html[data-theme="dark"] [style*="background:#fff"], html[data-theme="dark"] [sty
         </tbody>
       </table>
       <p class="hp-note" style="font-size:12px;margin:10px 0 0;">Fallbacks are off unless <code>AI_FALLBACK_PROVIDERS</code> is set. A cloud fallback needs <code>AI_FALLBACK_ALLOW_EXTERNAL=1</code> (conversation text would be sent to that vendor). "Open" means the provider is being skipped until the retry time.</p>
+    </div>
+  </div>
+
+  <div class="panel" style="margin-bottom:20px;">
+    <div class="panel-header"><div class="panel-title"><i class="fa fa-cubes"></i> Local models and routing</div></div>
+    <div class="panel-body">
+      <?php if (!$gwUsesOllama): ?>
+        <p class="hp-note" style="font-size:13px;margin:0;">The self-hosted Ollama runtime is not in the provider chain (<code>AI_PROVIDER=ollama</code> or <code>AI_FALLBACK_PROVIDERS=ollama</code>), so model routing is not in use.</p>
+      <?php else: ?>
+        <p style="margin:0 0 10px;font-size:13px;font-weight:700;" role="status"><?= $gwReachable ? 'Ollama runtime reachable: ' . count($gwModels) . ' model(s) installed.' : 'Ollama runtime NOT reachable. AI answers fall back to the non-AI path until it is back.' ?></p>
+        <table class="ai-table">
+          <caption class="sr-only">Which model serves each kind of request</caption>
+          <thead><tr><th scope="col">Job</th><th scope="col">Chosen model</th><th scope="col">Configured order</th><th scope="col">Status</th><th scope="col">Context</th></tr></thead>
+          <tbody>
+          <?php foreach ($gwRoutes as $capName => $rt): ?>
+            <tr>
+              <td><?= htmlspecialchars($capName) ?></td>
+              <td><?= $rt['model'] !== null ? htmlspecialchars($rt['model']) : '—' ?></td>
+              <td><?= htmlspecialchars(implode(' → ', $rt['chain']) ?: 'not configured') ?></td>
+              <td><?= htmlspecialchars(['ok' => 'Available', 'fallback_model' => 'Using fallback (first choice not installed)', 'no_model' => 'No usable model: non-AI fallback', 'runtime_unreachable' => 'Runtime unreachable', 'unknown_capability' => 'Unknown'][$rt['reason']] ?? $rt['reason']) ?></td>
+              <td><?= (int)$rt['context'] ?> tokens</td>
+            </tr>
+          <?php endforeach; ?>
+          </tbody>
+        </table>
+        <?php if ($gwModels): ?>
+        <table class="ai-table" style="margin-top:12px;">
+          <caption class="sr-only">Installed models and their results in the last 24 hours</caption>
+          <thead><tr><th scope="col">Installed model</th><th scope="col">Size</th><th scope="col">Version (digest)</th><th scope="col">Calls (24h)</th><th scope="col">Failure rate</th><th scope="col">Avg latency</th><th scope="col">Trimmed prompts</th></tr></thead>
+          <tbody>
+          <?php foreach ($gwModels as $gm): $ms = $gwModelStats[$gm['name']] ?? null; $calls = $ms ? (int)$ms['calls'] : 0; ?>
+            <tr>
+              <td><?= htmlspecialchars($gm['name']) ?></td>
+              <td><?= $gm['size'] > 0 ? round($gm['size'] / 1073741824, 1) . ' GB' : '—' ?><?= $gm['parameter_size'] !== '' ? ' (' . htmlspecialchars($gm['parameter_size']) . ')' : '' ?></td>
+              <td><code><?= htmlspecialchars(substr($gm['digest'], 0, 12)) ?></code></td>
+              <td><?= $calls ?></td>
+              <td><?= $calls > 0 ? round(100 * (1 - (int)$ms['ok'] / $calls), 1) . '%' : '—' ?></td>
+              <td><?= $calls > 0 && $ms['avg_ms'] !== null ? (int)$ms['avg_ms'] . ' ms' : '—' ?></td>
+              <td><?= $calls > 0 ? (int)$ms['trimmed'] : '—' ?></td>
+            </tr>
+          <?php endforeach; ?>
+          </tbody>
+        </table>
+        <?php endif; ?>
+        <?php if ($gwStatsNote !== ''): ?><p class="hp-note" style="font-size:12px;margin:8px 0 0;"><?= htmlspecialchars($gwStatsNote) ?></p><?php endif; ?>
+        <p class="hp-note" style="font-size:12px;margin:10px 0 0;">Set <code>AI_MODEL_FAST</code>, <code>AI_MODEL_CHAT</code> and <code>AI_MODEL_PLAN</code> in <code>.env</code> (comma list = fallback order; default is <code>OLLAMA_MODEL</code>). Choose models from measured quality and speed on your hardware (see <code>tests/ai/live_quality.php</code>), not by size. A changed digest means the model was re-pulled and its answers may differ.</p>
+      <?php endif; ?>
     </div>
   </div>
 

@@ -27,6 +27,8 @@ $currentLabel = $pageLabels[$currentPage] ?? ucfirst(str_replace(['-','.php'],['
 $adminName = htmlentities($_SESSION['alogin']);
 $initials = strtoupper(substr($adminName,0,2));
 ?>
+<link rel="stylesheet" href="../css/tms-a11y.css">
+<a href="#tmsMain" class="tms-skip-link">Skip to main content</a>
 <!-- TOP BAR -->
 <header class="tms-topbar">
   <button class="topbar-toggle" id="sidebarToggle" aria-label="Toggle sidebar">

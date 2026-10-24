@@ -56,7 +56,7 @@ final class CitationVerifier
         // Invented citation markers.
         $known = []; foreach ($citations as $c) $known[$c['id']] = true;
         $removed = 0;
-        $reply = preg_replace_callback('/\s?\[(pkg:\d+)\]/u', function ($m) use ($known, &$removed) { if (isset($known[$m[1]])) return ''; $removed++; return ''; }, $reply) ?? $reply;
+        $reply = preg_replace_callback('/\s?\[((?:pkg|hotel|activity):\d+|guide:[a-z0-9-]+|page:[a-z]+)\]/u', function ($m) use ($known, &$removed) { if (isset($known[$m[1]])) return ''; $removed++; return ''; }, $reply) ?? $reply;
 
         if ($bad) {
             $note = $language === 'bn'

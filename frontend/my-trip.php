@@ -139,6 +139,21 @@ if (!$trip) {
     $planner = new ItineraryPlanner($dbh);
     $itinerary = $planner->getByBookingId($bookingId);
 
+    // Plan versions (owner-only: $trip above was loaded WHERE UserEmail = the signed-in user). Accepting changes the saved
+    // day-by-day plan only; the booking itself is never touched. See backend/services/ItineraryVersions.php.
+    if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['itv_action'])) {
+        tms_csrf_validate();
+        require_once dirname(__DIR__) . '/backend/services/ItineraryVersions.php';
+        $itvAct = (string)$_POST['itv_action']; $itvVid = (int)($_POST['version_id'] ?? 0);
+        if ($itvAct === 'optimize')    $itvRes = ItineraryVersions::proposeRouteOptimization($dbh, (int)$trip->BookingId, $email, ItineraryChecker::cachedGeocoder($dbh));
+        elseif ($itvAct === 'accept')  $itvRes = ItineraryVersions::accept($dbh, $itvVid, $email, !empty($_POST['itv_ack']));
+        elseif ($itvAct === 'reject')  $itvRes = ItineraryVersions::reject($dbh, $itvVid, $email);
+        else                           $itvRes = ['ok' => false, 'message' => 'Unknown action.'];
+        $_SESSION['itv_flash'] = ['ok' => !empty($itvRes['ok']), 'message' => (string)($itvRes['message'] ?? '')];
+        header('Location: my-trip.php?id=' . (int)$trip->BookingId . '#mtVersionsCard');
+        exit;
+    }
+
     // TMS V2 -- Trip Readiness Score. Only meaningful before departure
     // (during/after/cancelled trips don't need a "get ready" checklist),
     // computed from real facts already available on this page -- no new
@@ -342,11 +357,13 @@ html[data-theme="dark"] .mt-sched-item{color:var(--text-muted) !important;}
                     <?php foreach ($apProposal['signals'] as $sg): ?>
                         <div class="mt-fact-row" style="display:block;">
                         <?php if ($sg['type'] === 'notice'): ?>
+                            <?php if (!empty($sg['label'])): ?><span class="label label-<?php echo ($sg['label'] === 'verified') ? 'success' : 'default'; ?>"><?php echo $apE(ucfirst($sg['label'])); ?></span> <?php endif; ?>
+                            <?php if (!empty($sg['severity'])): ?><span class="label label-<?php echo $sg['severity'] === 'high' ? 'danger' : ($sg['severity'] === 'medium' ? 'warning' : 'info'); ?>"><?php echo $apE(ucfirst($sg['severity'])); ?> severity</span> <?php endif; ?>
                             <strong><?php echo $apE($sg['title']); ?></strong> (<?php echo $apE($sg['country']); ?>)<br>
                             <span style="font-size:13px;"><?php echo nl2br($apE($sg['body'])); ?></span><br>
                             <span style="font-size:12px;color:var(--text-muted);">Source: <a href="<?php echo $apE($sg['source_url']); ?>" target="_blank" rel="noopener noreferrer"><?php echo $apE($sg['source_name']); ?></a> &middot; checked <?php echo $apE($sg['verified_on']); ?><?php if (!empty($sg['expires_on'])): ?> &middot; valid until <?php echo $apE($sg['expires_on']); ?><?php endif; ?>. Check the source before you decide.</span>
                         <?php else: ?>
-                            <strong>Forecast:</strong> <?php echo (int)$sg['rain_chance']; ?>% chance of rain on day <?php echo (int)$sg['day']; ?> (<?php echo $apE($sg['date']); ?>).
+                            <span class="label label-default">Forecast</span> <strong>Not a confirmed event:</strong> <?php echo (int)$sg['rain_chance']; ?>% chance of rain on day <?php echo (int)$sg['day']; ?> (<?php echo $apE($sg['date']); ?>)<?php if (!empty($sg['observed_at'])): ?>, forecast fetched <?php echo $apE($sg['observed_at']); ?><?php endif; ?>.
                         <?php endif; ?>
                         </div>
                     <?php endforeach; ?>
@@ -370,6 +387,72 @@ html[data-theme="dark"] .mt-sched-item{color:var(--text-muted) !important;}
                     <button type="button" class="mt-generate-btn" id="mtApCheck" onclick="mtApCheck()">Check my trip for disruptions</button>
                 <?php endif; ?>
                 <div id="mtApMsg" role="status" aria-live="polite" style="margin-top:10px;font-size:13px;"></div>
+            </div>
+            <?php endif; ?>
+            <?php
+            // ── Plan versions: propose / compare / accept or reject (owner-only, CSRF) ──
+            if ($itinerary && !empty($itinerary['days']) && $trip->status != 2 && ($phase === 'before' || $phase === 'during')):
+                require_once dirname(__DIR__) . '/backend/services/ItineraryVersions.php';
+                $itvOv = ItineraryVersions::overview($dbh, (int)$trip->BookingId, $email);
+                $itvFlash = $_SESSION['itv_flash'] ?? null; unset($_SESSION['itv_flash']);
+            ?>
+            <div class="mt-card" id="mtVersionsCard" role="region" aria-labelledby="mtVersionsHeading">
+                <h4 id="mtVersionsHeading"><i class="fa fa-code-fork"></i> Plan versions</h4>
+                <?php if ($itvFlash): ?><div class="alert alert-<?php echo $itvFlash['ok'] ? 'success' : 'warning'; ?>" role="status"><?php echo $apE($itvFlash['message']); ?></div><?php endif; ?>
+                <?php if (!$itvOv['ready']): ?>
+                    <p style="font-size:13px;color:var(--text-muted);">Plan versions are not available yet on this site (a database update is pending).</p>
+                <?php else: ?>
+                    <p style="font-size:13px;color:var(--text-muted);">Every change to your plan is kept as a version you can compare. A suggestion never replaces your plan until you accept it, and accepting never changes or cancels a booking.</p>
+                    <form method="post" action="my-trip.php?id=<?php echo (int)$trip->BookingId; ?>" style="margin-bottom:12px;">
+                        <?php tms_csrf_field(); ?>
+                        <input type="hidden" name="itv_action" value="optimize">
+                        <button type="submit" class="mt-generate-btn">Suggest a route with less backtracking</button>
+                    </form>
+                    <?php foreach ($itvOv['versions'] as $v):
+                        $chk = $v['check']; $df = $v['diff']; $cost = json_decode((string)$v['CostJson'], true) ?: [];
+                    ?>
+                    <div class="mt-fact-row" style="display:block;border-top:1px solid #e5e7eb;padding-top:8px;">
+                        <strong>v<?php echo (int)$v['VersionNo']; ?></strong>
+                        <span class="label label-<?php echo $v['Status'] === 'current' ? 'success' : ($v['Status'] === 'proposed' ? 'warning' : 'default'); ?>"><?php echo $apE($v['Status']); ?></span>
+                        <span style="font-size:12px;color:var(--text-muted);"><?php echo $apE($v['Source']); ?> &middot; <?php echo $apE($v['CreatedAt']); ?></span>
+                        <?php if ($v['Note']): ?><div style="font-size:13px;"><?php echo $apE($v['Note']); ?></div><?php endif; ?>
+                        <div style="font-size:12px;color:var(--text-muted);">
+                            Costs in this version: estimated <?php echo number_format((float)($cost['estimated'] ?? 0)); ?>, quoted <?php echo number_format((float)($cost['quoted'] ?? 0)); ?>, confirmed <?php echo number_format((float)($cost['confirmed'] ?? 0)); ?>.
+                            Only &quot;confirmed&quot; amounts come from a real booking; estimated amounts are AI figures.
+                        </div>
+                        <?php if ($v['Status'] === 'proposed' && $df): ?>
+                            <div style="font-size:13px;margin-top:4px;"><strong>Compared with your current plan:</strong> <?php echo $apE($df['summary']); ?>
+                                <?php if (!empty($df['cost_delta']['total'])): ?> (estimated cost change <?php echo ($df['cost_delta']['total'] > 0 ? '+' : '') . number_format((float)$df['cost_delta']['total']); ?>)<?php endif; ?></div>
+                            <ul style="font-size:13px;margin:4px 0 4px 18px;">
+                            <?php foreach ($df['days'] as $dd): foreach (['added' => 'Added', 'removed' => 'Removed', 'moved' => 'Moved', 'changed' => 'Changed'] as $k => $lbl): foreach ($dd[$k] as $txt): ?>
+                                <li>Day <?php echo (int)$dd['day']; ?> &middot; <?php echo $lbl; ?>: <?php echo $apE($txt); ?></li>
+                            <?php endforeach; endforeach; endforeach; ?>
+                            </ul>
+                            <?php if ($chk): ?>
+                                <div style="font-size:13px;"><?php echo !empty($chk['feasible']) ? 'No timing or hours contradictions found by our automatic checks.' : 'Our automatic checks found problems with this version:'; ?>
+                                <?php if (!empty($chk['issues'])): ?><ul style="margin:4px 0 4px 18px;color:#92400e;"><?php foreach (array_slice($chk['issues'], 0, 5) as $is): ?><li><?php echo isset($is['day']) ? 'Day ' . (int)$is['day'] . ': ' : ''; echo $apE($is['message']); ?></li><?php endforeach; ?></ul><?php endif; ?></div>
+                            <?php endif; ?>
+                            <form method="post" action="my-trip.php?id=<?php echo (int)$trip->BookingId; ?>" style="margin-top:6px;">
+                                <?php tms_csrf_field(); ?>
+                                <input type="hidden" name="version_id" value="<?php echo (int)$v['VersionId']; ?>">
+                                <?php if (!empty($v['affected'])): ?>
+                                    <div class="alert alert-warning" style="font-size:13px;">This version moves or removes items tied to your <strong>confirmed bookings</strong>:
+                                        <ul style="margin:4px 0 4px 18px;"><?php foreach ($v['affected'] as $af): ?><li><?php echo $apE($af['activity']); ?> (booking #<?php echo $apE($af['booking_ref']); ?>, <?php echo $apE($af['change']); ?>)</li><?php endforeach; ?></ul>
+                                        Accepting only changes your plan. Your bookings stay as they are; change them through the normal booking process.
+                                        <label style="display:block;margin-top:6px;"><input type="checkbox" name="itv_ack" value="1"> I understand, accept anyway</label></div>
+                                <?php endif; ?>
+                                <button type="submit" name="itv_action" value="accept" class="mt-generate-btn">Accept this version</button>
+                                <button type="submit" name="itv_action" value="reject" class="mt-generate-btn" style="background:#595959;">Reject</button>
+                            </form>
+                        <?php endif; ?>
+                    </div>
+                    <?php endforeach; ?>
+                    <?php if ($itvOv['audit']): ?>
+                    <details style="margin-top:10px;font-size:12px;"><summary>History</summary>
+                        <ul style="margin:6px 0 0 18px;"><?php foreach ($itvOv['audit'] as $au): ?><li><?php echo $apE($au['CreatedAt']); ?> &middot; <?php echo $apE($au['Action']); ?><?php if ($au['Detail']): ?> &mdash; <?php echo $apE($au['Detail']); ?><?php endif; ?></li><?php endforeach; ?></ul>
+                    </details>
+                    <?php endif; ?>
+                <?php endif; ?>
             </div>
             <?php endif; ?>
             <div class="mt-card" id="mtItineraryCard">

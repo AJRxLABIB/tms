@@ -134,6 +134,10 @@
 .msg-time { font-size:10px; color:#aaa; margin-top:3px; }
 .msg-sources { font-size:12px; color:#4a5568; margin-top:4px; }
 .msg-sources a { color:#0b5cab; text-decoration:underline; }
+.msg-action { border:1px solid #cbd5e0; border-radius:8px; padding:8px 10px; margin-top:6px; font-size:13px; background:#f7fafc; }
+.msg-action button { margin:6px 6px 0 0; padding:6px 12px; min-height:36px; border-radius:6px; border:1px solid #2f855a; background:#2f855a; color:#fff; cursor:pointer; }
+.msg-action button.msg-action-no { background:#fff; color:#2d3748; border-color:#a0aec0; }
+.msg-action button:disabled { opacity:.5; cursor:default; }
 .msg-bot .msg-time { text-align:left; }
 .msg-user .msg-time { text-align:right; }
 .bot-name { font-size:11px; color:#176B50; font-weight:700; margin-bottom:3px; }
@@ -374,7 +378,7 @@ function chatFormat(text) {
         );
 }
 
-function addMessage(type, text, quickReplies, sources) {
+function addMessage(type, text, quickReplies, sources, actions) {
     var msgs = document.getElementById('tmsWidgetChatMessages');
     var div = document.createElement('div');
     div.className = 'msg msg-' + type;
@@ -386,10 +390,20 @@ function addMessage(type, text, quickReplies, sources) {
         '<div class="msg-time">' + time + '</div>';
 
     // Sources come from the server's verified citations (real published packages only); same-site relative links only.
-    var srcLinks = (sources || []).filter(function (x) { return x && /^package-details\.php\?pkgid=\d+$/.test(x.url); }).map(function (x) {
+    var srcLinks = (sources || []).filter(function (x) { return x && /^(package-details\.php\?pkgid=\d+|hotel-details\.php\?id=\d+|activity-details\.php\?id=\d+|bd-guide\.php|page\.php\?type=[a-z]+)$/.test(x.url); }).map(function (x) {
         return '<a href="' + chatEscape(x.url) + '">' + chatEscape(x.title) + '</a>';
     });
     if (srcLinks.length) html += '<div class="msg-sources">Sources: ' + srcLinks.join(' &middot; ') + '</div>';
+
+    // Confirmation cards for actions the server PREPARED (cancel / change a booking, use a coupon). Pressing Confirm does not perform the
+    // action: it takes the visitor to the real page, which asks again. The card text comes from the server, escaped here.
+    (actions || []).forEach(function (a) {
+        if (!a || !a.id || typeof a.summary !== 'string') return;
+        html += '<div class="msg-action" data-proposal="' + chatEscape(String(a.id)) + '" role="group" aria-label="Action needs your confirmation">' +
+                '<div class="msg-action-text">' + chatEscape(a.summary) + '</div>' +
+                '<button type="button" class="msg-action-yes">Confirm</button> <button type="button" class="msg-action-no">Not now</button>' +
+                '<div class="msg-action-result" role="status" aria-live="polite"></div></div>';
+    });
 
     if(quickReplies && quickReplies.length > 0) {
         html += '<div class="quick-replies">';
@@ -493,7 +507,7 @@ function askAI(text) {
             // respondTo() below can offer THOSE instead of the same fixed 4
             // buttons after every message. An empty/missing array here is
             // normal (no natural follow-up) and falls back to the defaults.
-            return { ok: true, text: data.data.reply, suggestions: Array.isArray(data.data.suggestions) ? data.data.suggestions : [], sources: Array.isArray(data.data.sources) ? data.data.sources : [] };
+            return { ok: true, text: data.data.reply, suggestions: Array.isArray(data.data.suggestions) ? data.data.suggestions : [], sources: Array.isArray(data.data.sources) ? data.data.sources : [], actions: Array.isArray(data.data.actions) ? data.data.actions : [] };
         }
         // Keep the reason. It used to be discarded, so "the AI is switched off",
         // "you've hit the rate limit" and "the network is down" were all
@@ -503,6 +517,30 @@ function askAI(text) {
         return { ok: false, reason: 'network' };
     });
 }
+
+// Confirm / dismiss buttons on assistant action cards (event delegation: cards are added dynamically).
+document.addEventListener('click', function (ev) {
+    var btn = ev.target && ev.target.closest ? ev.target.closest('.msg-action button') : null;
+    if (!btn) return;
+    var card = btn.closest('.msg-action'); var id = card && card.getAttribute('data-proposal');
+    if (!id) return;
+    var yes = btn.classList.contains('msg-action-yes');
+    var out = card.querySelector('.msg-action-result');
+    card.querySelectorAll('button').forEach(function (b) { b.disabled = true; });
+    fetch('api/ai.php?action=' + (yes ? 'action_confirm' : 'action_dismiss'), {
+        method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: 'proposal_id=' + encodeURIComponent(id) + '&csrf_token=' + encodeURIComponent(CHAT_CSRF)
+    }).then(function (r) { return r.json(); }).then(function (d) {
+        out.textContent = '';
+        if (d && d.success && d.data) {
+            if (!yes) { out.textContent = 'Okay, nothing was changed.'; return; }
+            out.appendChild(document.createTextNode(String(d.data.message || '') + ' '));
+            if (typeof d.data.next_url === 'string' && /^[a-z0-9_-]+\.php$/.test(d.data.next_url)) {
+                var a = document.createElement('a'); a.href = d.data.next_url; a.textContent = 'Continue'; out.appendChild(a);
+            }
+        } else { out.textContent = (d && d.error) ? d.error : 'This could not be processed.'; }
+    }).catch(function () { out.textContent = 'Network problem. Please try again.'; card.querySelectorAll('button').forEach(function (b) { b.disabled = false; }); });
+});
 
 function setChatBusy(busy) {
     chatBusy = busy;
@@ -526,7 +564,7 @@ function respondTo(text, appendUserTurn, matchText) {
             // (a page-navigation quick-reply row is still better than none).
             var qr = (result.suggestions && result.suggestions.length) ? result.suggestions
                    : ['Show Packages','AI Recommender','Budget Planner','Contact Us'];
-            addMessage('bot', result.text, qr, result.sources);
+            addMessage('bot', result.text, qr, result.sources, result.actions);
             speakChatReply(result.text);
             return;
         }

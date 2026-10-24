@@ -77,12 +77,12 @@ tms_seo_meta([
 .blog-card:hover{transform:translateY(-4px);}
 .blog-card img{width:100%;height:200px;object-fit:cover;}
 .blog-body{padding:18px;}
-.blog-body h4{font-size:17px;font-weight:700;color:#222;margin:0 0 8px;}
+.blog-body h4{font-size:17px;font-weight:700;color:var(--text);margin:0 0 8px;}
 .blog-meta{color:var(--text-muted);font-size:12px;margin-bottom:10px;}
 html[data-theme="dark"] .blog-meta { color: var(--text-light) !important; }
 html[data-theme="dark"] .blog-body p { color: var(--text-muted) !important; }
 .blog-body p{color:#666;font-size:14px;line-height:1.7;}
-.blog-tag{display:inline-block;background:#e3f2fd;color:#1976d2;padding:3px 10px;border-radius:20px;font-size:12px;margin-bottom:8px;}
+.blog-tag{display:inline-block;padding:3px 10px;border-radius:20px;font-size:12px;margin-bottom:8px;}
 </style>
 </head><body>
 <?php include('backend/header.php'); ?>
@@ -113,10 +113,11 @@ html[data-theme="dark"] .blog-body p { color: var(--text-muted) !important; }
 <?php foreach ($posts as $p): ?>
 <div class="col-md-4 col-sm-6">
   <div class="blog-card">
+    <?php $blogPh = tms_placeholder_image((string)($p->Tag ?? ''), (string)$p->id); ?>
     <?php if ($p->CoverImage): ?>
-      <img loading="lazy" src="admin/blogimages/<?= htmlspecialchars($p->CoverImage) ?>" onerror="this.src='images/1.jpg'" alt="blog">
+      <img class="blog-cover" loading="lazy" width="400" height="200" src="admin/blogimages/<?= htmlspecialchars($p->CoverImage) ?>"<?= tms_img_onerror($blogPh) ?> alt="<?= htmlspecialchars($p->Title, ENT_QUOTES, 'UTF-8') ?>">
     <?php else: ?>
-      <img loading="lazy" src="images/1.jpg" alt="blog">
+      <img class="blog-cover" loading="lazy" width="400" height="200" src="<?= htmlspecialchars($blogPh, ENT_QUOTES, 'UTF-8') ?>" alt="">
     <?php endif; ?>
     <div class="blog-body">
       <?php if ($p->Tag): ?><span class="blog-tag"><?= htmlspecialchars($p->Tag) ?></span><?php endif; ?>
@@ -130,11 +131,10 @@ html[data-theme="dark"] .blog-body p { color: var(--text-muted) !important; }
 <?php endforeach; ?>
 </div>
 <?php if ($blogTotalPages > 1): ?>
-<div style="display:flex;justify-content:center;gap:6px;margin-top:30px;flex-wrap:wrap;">
+<div class="blog-pager" style="display:flex;justify-content:center;gap:6px;margin-top:30px;flex-wrap:wrap;" role="navigation" aria-label="Blog pages">
     <?php for ($pn = 1; $pn <= $blogTotalPages; $pn++):
         $qs = http_build_query(array_merge($_GET, ['p' => $pn])); ?>
-    <a href="?<?= $qs ?>" style="padding:8px 14px;border-radius:8px;font-size:14px;text-decoration:none;
-        <?= $pn === $blogPage ? 'background:var(--secondary);color:#fff;' : 'background:#f1f5f9;color:#334155;'; ?>"><?= $pn ?></a>
+    <a href="?<?= $qs ?>" class="<?= $pn === $blogPage ? 'is-current' : '' ?>"<?= $pn === $blogPage ? ' aria-current="page"' : '' ?>><?= $pn ?></a>
     <?php endfor; ?>
 </div>
 <?php endif; ?>

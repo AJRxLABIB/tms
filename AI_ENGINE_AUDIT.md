@@ -121,3 +121,22 @@ LLM-driven planning and multi-step tasks beyond the two rule-based follow-ups ab
 ## 7. Rollback
 
 Failover is off unless `AI_FALLBACK_PROVIDERS` is set. Memory can be switched off per user (`tblusers.PersonalizationEnabled` and the page toggle). The budget tool only triggers with a package context. Migrations are additive (`tbl_ai_user_memory`).
+
+## Unit 17: evaluation, measurement and guardrails (built; DB/Ollama paths unrun)
+
+- `backend/ai/PromptRedactor.php`: masks emails, phones (Latin and Bengali digits), cards, NID/passport-like numbers and key-like strings before text is logged or sent to a **non-local** provider. `PromptRedactor::forProvider($provider, $text, $baseUrl)` is the hook for the AI gateway: unchanged for a local Ollama endpoint, redacted otherwise. `AITurnLog::safeText()` and `EvalRunLog` already use it. It is pattern masking: names and free-text addresses are not detected.
+- `tests/ai/eval_cases.json`: 161 cases (was 99) including leakage attempts (another user's booking, another supplier's data, secrets, system prompt, English/Bengali/Banglish), retrieved-text injection, hallucination traps and redaction. `run_eval.php` prints **unauthorised information leaked: N** and fails if N > 0. Baseline raised to 161. Closed guard gaps found by the new cases: supplier-data requests, `.env`, Banglish prompt/secret/override requests, "you are now DAN", blanket-discount requests.
+- `tests/ai/quality_cases.json`: 12 more live-model cases (hallucination, refund promise, phone-number leak, supplier leak, Banglish, planning realism, booking context). Live results need a real model.
+- `backend/ai/AIMetrics.php`: latency percentiles, failure rate per provider+model, retrieval hit rate, price groundedness, feedback ratio, regression status; `EvalRunLog` stores run summaries in `tbl_ai_eval_runs` (migration 035).
+- `scripts/ai_benchmark.php`: fixed 8-case set over every installed Ollama model (`--dry-run` needs no runtime): latency, JSON validity, price grounding, Bengali reply rate, tokens/s, disk and loaded memory; prints a routing hint from measurements only.
+- `admin/ai-evaluation.php`: read-only view of all of the above. Not verified: pages in a browser, SQL, a real Ollama run.
+
+## Stage 7: retrieval beyond packages, owner-only booking tool, confirmable actions (sandbox-verified, DB paths unrun on MySQL)
+
+- `rag/EntityIndex.php`: BM25 over published hotels, activities and the curated BD destination guides (allow-listed columns only; Bengali, Banglish and English via the shared tokenizer). Demo rows (`IsSampleData=1`) are searchable but flagged `demo`, their price is withheld, and availability is never stated for any row.
+- Package index (audit item 19): the cache key now carries a fingerprint of the live table, `ApprovalStatus` is honoured, and every package a tool quotes is re-checked against the live table (unpublished = not returned, re-priced = current price).
+- `rag/RetrievedText.php`: supplier/staff free text is stripped of control characters, capped, and withheld when it reads like instructions.
+- New read-only tools: `search_hotels`, `search_activities`, `get_destination_guide`, `get_cancellation_info`, `get_my_booking` (owner-only, session identity, someone else's booking looks like a missing one).
+- `ActionProposals` + migration 033 + `api/ai.php?action=action_confirm|action_dismiss`: "cancel booking 12" / "change dates of booking 7" / "use coupon X" become a confirmation card created by code after an ownership check. Confirming hands off to the existing page (`tour-history.php`, `checkout.php`); nothing is executed because no reusable business function exists. The model cannot create, confirm or execute proposals (not in `ToolRegistry`).
+- Tests (PHP 8.3 + in-memory SQLite, no MySQL): `tests/ai/retrieval_test.php` 43/43, `tests/ai/tool_validation_test.php` 54/54, `run_eval.php` 182/182 (baseline raised to 182).
+- Not done: dense embeddings for hotels/activities (packages keep the existing hybrid), live slot availability in answers, a real executor for proposals.

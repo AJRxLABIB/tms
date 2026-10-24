@@ -20,7 +20,7 @@ tms_require_user(); // Batch 1 (landing/auth gating): whole app now requires log
 <link href="<?php echo tms_asset_ver('css/modern-theme.css'); ?>" rel="stylesheet">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<link rel="stylesheet" href="js/vendor/leaflet/leaflet.css" />
 <script src="js/jquery-1.12.0.min.js" defer></script>
 <script src="js/bootstrap.min.js" defer></script>
 <style>
@@ -66,7 +66,7 @@ tms_require_user(); // Batch 1 (landing/auth gating): whole app now requires log
 
 </div>
 <?php include('backend/footer.php'); ?>
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="js/vendor/leaflet/leaflet.js"></script>
 <script>
 function esc(v) { return String(v == null ? "" : v).replace(/[&<>"']/g, function (c) { return {"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c]; }); }
 let flightMap = null, flightMarker = null;

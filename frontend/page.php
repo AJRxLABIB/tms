@@ -288,29 +288,52 @@ function tms_page_t(array $T, string $key, string $fallback): string {
 			</div>
 		</div>
 		<div class="col-md-5" style="margin-bottom:20px;">
+			<?php
+			// Contact details come from .env so the site never shows made-up or leftover template details.
+			// A field that is not configured is simply not shown.
+			$tmsOffAddr  = trim((string)tms_env('TMS_OFFICE_ADDRESS', ''));
+			$tmsOffPhone = trim((string)tms_env('TMS_SUPPORT_PHONE', '+880 1759-443004'));
+			$tmsOffMail  = trim((string)tms_env('TMS_SUPPORT_EMAIL', ''));
+			$tmsOffLat   = tms_env('TMS_OFFICE_LAT', '');
+			$tmsOffLng   = tms_env('TMS_OFFICE_LNG', '');
+			$tmsHasMap   = is_numeric($tmsOffLat) && is_numeric($tmsOffLng) && abs((float)$tmsOffLat) <= 90 && abs((float)$tmsOffLng) <= 180;
+			?>
+			<?php if ($tmsOffAddr !== '' || $tmsOffPhone !== '' || $tmsOffMail !== ''): ?>
 			<div class="pkg-card" style="padding:24px;margin-bottom:16px;">
-				<h5 style="font-weight:700;"><i class="fa fa-map-marker" style="color:#e74c3c"></i> <?php echo htmlspecialchars(tms_page_t($T, 'office_title', 'Our Office'), ENT_QUOTES, 'UTF-8'); ?></h5>
-				<p style="color:#666;font-size:14px;"><?php echo htmlspecialchars(tms_page_t($T, 'office_addr', 'Gulshan Avenue, Dhaka 1212, Bangladesh'), ENT_QUOTES, 'UTF-8'); ?></p>
-				<h5 style="font-weight:700;margin-top:14px;"><i class="fa fa-phone" style="color:var(--secondary)"></i> <?php echo htmlspecialchars(tms_page_t($T, 'phone_title', 'Phone'), ENT_QUOTES, 'UTF-8'); ?></h5>
-				<p style="color:#666;font-size:14px;">Toll: +880 1759-443004</p>
-				<h5 style="font-weight:700;margin-top:14px;"><i class="fa fa-envelope-o" style="color:var(--secondary)"></i> <?php echo htmlspecialchars(tms_page_t($T, 'email_title', 'Email'), ENT_QUOTES, 'UTF-8'); ?></h5>
-				<p style="color:#666;font-size:14px;">support@tms.example.com</p>
+				<?php if ($tmsOffAddr !== ''): ?>
+				<h5 style="font-weight:700;"><i class="fa fa-map-marker" style="color:var(--danger)" aria-hidden="true"></i> <?php echo htmlspecialchars(tms_page_t($T, 'office_title', 'Our Office'), ENT_QUOTES, 'UTF-8'); ?></h5>
+				<p style="color:var(--text-muted);font-size:14px;"><?php echo htmlspecialchars($tmsOffAddr, ENT_QUOTES, 'UTF-8'); ?></p>
+				<?php endif; ?>
+				<?php if ($tmsOffPhone !== ''): ?>
+				<h5 style="font-weight:700;margin-top:14px;"><i class="fa fa-phone" style="color:var(--secondary)" aria-hidden="true"></i> <?php echo htmlspecialchars(tms_page_t($T, 'phone_title', 'Phone'), ENT_QUOTES, 'UTF-8'); ?></h5>
+				<p style="color:var(--text-muted);font-size:14px;"><?php echo htmlspecialchars($tmsOffPhone, ENT_QUOTES, 'UTF-8'); ?></p>
+				<?php endif; ?>
+				<?php if ($tmsOffMail !== '' && filter_var($tmsOffMail, FILTER_VALIDATE_EMAIL)): ?>
+				<h5 style="font-weight:700;margin-top:14px;"><i class="fa fa-envelope-o" style="color:var(--secondary)" aria-hidden="true"></i> <?php echo htmlspecialchars(tms_page_t($T, 'email_title', 'Email'), ENT_QUOTES, 'UTF-8'); ?></h5>
+				<p style="color:var(--text-muted);font-size:14px;"><?php echo htmlspecialchars($tmsOffMail, ENT_QUOTES, 'UTF-8'); ?></p>
+				<?php endif; ?>
 			</div>
+			<?php endif; ?>
+			<?php if ($tmsHasMap): ?>
 			<div id="contactMap" style="height:220px;border-radius:8px;overflow:hidden;"></div>
+			<?php endif; ?>
 		</div>
 	</div>
-	<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-	<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+	<?php if ($tmsHasMap): ?>
+	<link rel="stylesheet" href="js/vendor/leaflet/leaflet.css" />
+	<script src="js/vendor/leaflet/leaflet.js"></script>
 	<script>
 	window.addEventListener('load', function () {
 		if (typeof L === 'undefined') return;
-		var map = L.map('contactMap', { scrollWheelZoom: false }).setView([23.7925, 90.4078], 14);
+		var pos = [<?php echo (float)$tmsOffLat; ?>, <?php echo (float)$tmsOffLng; ?>];
+		var map = L.map('contactMap', { scrollWheelZoom: false }).setView(pos, 14);
 		L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
 			attribution: '&copy; OpenStreetMap contributors'
 		}).addTo(map);
-		L.marker([23.7925, 90.4078]).addTo(map).bindPopup('TMS Office — Gulshan, Dhaka');
+		L.marker(pos).addTo(map).bindPopup('TMS office');
 	});
 	</script>
+	<?php endif; ?>
 
 <?php elseif ($cms): ?>
 	<?php $cmsTitles = ['terms'=>'Terms of Service','privacy'=>'Privacy Policy']; ?>

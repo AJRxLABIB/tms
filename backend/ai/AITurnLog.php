@@ -11,6 +11,17 @@ final class AITurnLog
     public static bool $suppress = false;
     private const OUTCOMES = ['answered', 'guard_blocked', 'memory_command', 'model_error'];
 
+    /**
+     * The only way free text may reach a log line or eval result from this class: personal/secret-looking values are
+     * masked (PromptRedactor) and the length is capped. Turn rows themselves never store text; this is for the error
+     * strings and notes that callers attach around them.
+     */
+    public static function safeText(string $text, int $max = 200): string
+    {
+        require_once __DIR__ . '/PromptRedactor.php';
+        return PromptRedactor::forLog($text, $max);
+    }
+
     public static function migrate(PDO $dbh): void
     {
         $dbh->exec("CREATE TABLE IF NOT EXISTS `tbl_ai_turn_log` (
@@ -58,7 +69,7 @@ final class AITurnLog
                 preg_replace('/[^a-z0-9_-]/i', '', mb_substr((string)($d['provider'] ?? ''), 0, 20)),
             ]);
             if (random_int(1, 200) === 1) $dbh->exec('DELETE FROM tbl_ai_turn_log WHERE created_at < DATE_SUB(NOW(), INTERVAL ' . self::RETENTION_DAYS . ' DAY)');
-        } catch (Throwable $e) { error_log('[TMS AI turnlog] ' . $e->getMessage()); }
+        } catch (Throwable $e) { error_log('[TMS AI turnlog] ' . self::safeText($e->getMessage(), 300)); }
     }
 
     /** @return array<string,mixed>|null null when the table is unavailable */

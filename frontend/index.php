@@ -18,7 +18,7 @@ if (empty($_SESSION['login'])) {
 // once the catalog grew to 400+ packages; replaced with an indexed pool + PHP shuffle)
 $featuredPkgs = [];
 try {
-    $pool = $dbh->query("SELECT * FROM tbltourpackages WHERE Status=1 ORDER BY PackageId DESC LIMIT 60")->fetchAll(PDO::FETCH_OBJ);
+    $pool = $dbh->query("SELECT PackageId, PackageName, PackageImage, PackagePrice, PackageLocation, PackageType, PackageDuration, AvgRating FROM tbltourpackages WHERE " . TMS_PKG_PUBLIC_SQL . " ORDER BY PackageId DESC LIMIT 60")->fetchAll(PDO::FETCH_OBJ);
     shuffle($pool);
     $featuredPkgs = array_slice($pool, 0, 8);
 } catch(Exception $e) {}

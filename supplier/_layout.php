@@ -44,7 +44,7 @@ function sup_status_badge(string $status): string
 
 function sup_head(string $title, ?array $supplier = null, string $active = ''): void
 {
-    $nav = ['dashboard.php' => 'Dashboard', 'packages.php' => 'Packages', 'blackouts.php' => 'Blackout dates', 'bookings.php' => 'Bookings', 'settlements.php' => 'Settlements'];
+    $nav = ['dashboard.php' => 'Dashboard', 'packages.php' => 'Packages', 'blackouts.php' => 'Blackout dates', 'bookings.php' => 'Bookings', 'settlements.php' => 'Settlements', 'quality.php' => 'Quality'];
     ?><!DOCTYPE html>
 <html lang="en">
 <head>

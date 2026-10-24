@@ -10,8 +10,76 @@ require_once __DIR__ . '/AIClient.php';
 require_once __DIR__ . '/../ExploreService.php';
 require_once __DIR__ . '/CrowdPredictor.php';
 require_once __DIR__ . '/BudgetOptimizer.php';
+require_once __DIR__ . '/PlanValidator.php';
 
 class ItineraryPlanner {
+
+    /** Free-text trip fields go into the prompt: strip control characters and brace/markup characters, cap the length. */
+    private static function cleanField($v, int $max = 200): string {
+        $s = is_array($v) ? implode(', ', array_map('strval', $v)) : (string)$v;
+        $s = preg_replace('/[\x00-\x1F\x7F]+/u', ' ', $s) ?? '';
+        $s = str_replace(['{', '}', '<', '>', '`'], ' ', $s);
+        return trim(mb_substr(preg_replace('/\s+/u', ' ', $s) ?? '', 0, $max, 'UTF-8'));
+    }
+
+    /**
+     * Real, published catalogue rows for a destination, in the shape PlanValidator expects. Read-only; any failure gives an
+     * empty list (the plan is then validated without catalogue prices and says so).
+     * @return array<int,array<string,mixed>>
+     */
+    private function loadCatalogue(string $dest): array {
+        $dest = trim($dest);
+        if ($dest === '' || $dest === 'Unknown') return [];
+        $like = '%' . str_replace(['\\', '%', '_'], ['\\\\', '\\%', '\\_'], mb_substr($dest, 0, 80, 'UTF-8')) . '%';
+        $rows = [];
+        try {
+            $q = $this->db->prepare("SELECT ActivityId, ActivityName, PricePerPerson, DurationHours, AvgRating, IsSampleData FROM tblactivities
+                                     WHERE Status = 1 AND (City LIKE :d OR Country LIKE :d) ORDER BY AvgRating DESC, ActivityId LIMIT 40");
+            $q->execute([':d' => $like]);
+            foreach ($q->fetchAll(PDO::FETCH_ASSOC) as $r) {
+                $rows[] = ['kind' => 'activity', 'id' => (int)$r['ActivityId'], 'name' => (string)$r['ActivityName'],
+                    'price' => $r['PricePerPerson'] !== null ? (int)$r['PricePerPerson'] : null, 'price_unit' => 'per_person',
+                    'duration_min' => $r['DurationHours'] !== null ? (int)round((float)$r['DurationHours'] * 60) : null,
+                    'rating' => (float)$r['AvgRating'], 'sample' => (int)$r['IsSampleData'] === 1];
+            }
+            $q = $this->db->prepare("SELECT HotelId, HotelName, PricePerNight, AvgRating, IsSampleData FROM tblhotels
+                                     WHERE Status = 1 AND (City LIKE :d OR Country LIKE :d) ORDER BY AvgRating DESC, HotelId LIMIT 20");
+            $q->execute([':d' => $like]);
+            foreach ($q->fetchAll(PDO::FETCH_ASSOC) as $r) {
+                $rows[] = ['kind' => 'hotel', 'id' => (int)$r['HotelId'], 'name' => (string)$r['HotelName'],
+                    'price' => $r['PricePerNight'] !== null ? (int)$r['PricePerNight'] : null, 'price_unit' => 'per_night',
+                    'rating' => (float)$r['AvgRating'], 'sample' => (int)$r['IsSampleData'] === 1];
+            }
+        } catch (Throwable $e) {
+            error_log('[TMS planner catalogue] ' . $e->getMessage());
+        }
+        return $rows;
+    }
+
+    /** date => ['rain_pct'=>int] from the forecast days buildWeatherContext() already fetched (empty when none). */
+    private static function weatherMap(array $weatherContext): array {
+        $m = [];
+        foreach ((array)($weatherContext['relevant_days'] ?? []) as $d) {
+            if (!empty($d['date']) && isset($d['pop'])) $m[substr((string)$d['date'], 0, 10)] = ['rain_pct' => (int)$d['pop']];
+        }
+        return $m;
+    }
+
+    /**
+     * Plan to show when the model is unavailable or returned nothing usable: built by code from the real catalogue when there is
+     * one, otherwise the generic template, honestly marked as not feasible/unavailable. Never throws.
+     */
+    private function fallbackFor(array $tripData, array $weatherContext = []): array {
+        try {
+            $trip = $tripData + ['duration' => 3];
+            $plan = PlanValidator::buildFallback($trip, $this->loadCatalogue((string)($trip['destination'] ?? '')), ['weather' => self::weatherMap($weatherContext)]);
+            if ($plan !== null) return $plan;
+        } catch (Throwable $e) { error_log('[TMS planner fallback] ' . $e->getMessage()); }
+        $plan = $this->fallbackItinerary($tripData);
+        $plan['validation'] = ['status' => 'infeasible', 'mode' => PlanValidator::normalizeMode($tripData), 'issues' => [], 'adjustments' => [],
+            'reasons' => [['code' => 'no_catalogue_data', 'message' => 'The AI planner is unavailable and we have no published places for this destination to build a draft from. Nothing was invented.']]];
+        return $plan;
+    }
 
     private AIClient $ai;
     private PDO      $db;
@@ -48,9 +116,13 @@ class ItineraryPlanner {
     // or reject, never one silently written over their existing saved
     // plan the moment it's generated.
     public function generate(array $tripData, string $email = 'guest', ?int $bookingId = null, bool $save = true): array {
-        $dest      = $tripData['destination'] ?? 'Unknown';
-        $duration  = $tripData['duration'] ?? 5;
-        $startDate = $tripData['start_date'] ?? date('Y-m-d', strtotime('+7 days'));
+        // Every free-text field below ends up inside the prompt: control characters/markup stripped, lengths capped, numbers cast.
+        $dest      = self::cleanField($tripData['destination'] ?? 'Unknown', 100) ?: 'Unknown';
+        $duration  = max(1, min(30, (int)($tripData['duration'] ?? 5)));
+        $startDate = (isset($tripData['start_date']) && preg_match('/^\d{4}-\d{2}-\d{2}$/', (string)$tripData['start_date']) && strtotime((string)$tripData['start_date']))
+            ? (string)$tripData['start_date'] : date('Y-m-d', strtotime('+7 days'));
+        $tripData['duration'] = $duration; $tripData['start_date'] = $startDate;
+        $mode = PlanValidator::normalizeMode($tripData);   // one of a fixed list: safe to put in the prompt
 
         $weatherContext = $this->buildWeatherContext($dest, $startDate, $duration);
         $crowdContext   = $this->buildCrowdContext($dest);
@@ -91,10 +163,10 @@ Guidelines:
 - Return ONLY valid JSON
 SYSTEM;
 
-        $budget    = $tripData['budget'] ?? 0;
-        $travelers = $tripData['travelers'] ?? 2;
-        $style     = $tripData['travel_type'] ?? 'leisure';
-        $activities = implode(', ', (array)($tripData['activities'] ?? ['sightseeing']));
+        $budget    = max(0, (int)($tripData['budget'] ?? 0));
+        $travelers = max(1, min(50, (int)($tripData['travelers'] ?? 2)));
+        $style     = self::cleanField($tripData['travel_type'] ?? 'leisure', 40) ?: 'leisure';
+        $activities = self::cleanField((array)($tripData['activities'] ?? ['sightseeing']), 200) ?: 'sightseeing';
         // FIX (Round 113, AI-upgrade priority): these three were interpolated
         // directly from $tripData below with no ?? fallback, unlike every
         // other field on this same trip-details block. With APP_DEBUG=true
@@ -104,9 +176,13 @@ SYSTEM;
         // for any caller that omits one of these three optional fields (e.g.
         // custom-trip.php's ad-hoc planner, which doesn't collect all three).
         // AIEvaluator's own fixtures already exercise exactly this gap.
-        $accommodation   = $tripData['accommodation'] ?? 'No preference';
-        $transport       = $tripData['transport'] ?? 'No preference';
-        $specialRequests = $tripData['special_requests'] ?? 'None';
+        $accommodation   = self::cleanField($tripData['accommodation'] ?? 'No preference', 100) ?: 'No preference';
+        $transport       = self::cleanField($tripData['transport'] ?? 'No preference', 100) ?: 'No preference';
+        $specialRequests = self::cleanField($tripData['special_requests'] ?? 'None', 600) ?: 'None';
+        $c = PlanValidator::constraints($mode);
+        $modeLine = "Planning mode: {$mode} (at most {$c['max_items']} paid activities per day, nothing before "
+                  . sprintf('%02d:%02d', intdiv($c['earliest'], 60), $c['earliest'] % 60) . ', finish by '
+                  . sprintf('%02d:%02d', intdiv($c['latest_end'], 60), $c['latest_end'] % 60) . '). Prices you write are estimates; the platform recomputes costs from its own catalogue.';
 
         $userMessage = <<<MSG
 Create a complete {$duration}-day travel itinerary for the following trip:
@@ -120,6 +196,7 @@ TRIP DETAILS:
 - Accommodation: {$accommodation}
 - Transport preference: {$transport}
 - Special requests: {$specialRequests}
+- {$modeLine}
 
 {$weatherContext['prompt_block']}
 {$crowdContext}
@@ -212,7 +289,7 @@ MSG;
             // itinerary is now saved too, so a real AI outage still leaves the
             // traveler with the honest, clearly-labeled template (see ai_notes
             // below) instead of the button silently doing nothing.
-            $itinerary = $this->fallbackItinerary($tripData);
+            $itinerary = $this->fallbackFor($tripData, $weatherContext);
             if ($save) { $this->saveItinerary($itinerary, $tripData, $email, $bookingId); }
             return $itinerary;
         }
@@ -226,7 +303,7 @@ MSG;
             // long multi-day itinerary) must not be saved silently as if it
             // succeeded -- but it must still be saved as a fallback so the
             // trip page has something to show instead of nothing.
-            $itinerary = $this->fallbackItinerary($tripData);
+            $itinerary = $this->fallbackFor($tripData, $weatherContext);
             if ($save) { $this->saveItinerary($itinerary, $tripData, $email, $bookingId); }
             return $itinerary;
         }
@@ -252,11 +329,20 @@ MSG;
             $itinerary['restaurant_recommendations'] ?? [], $nearbyContext['real_restaurant_names']
         );
 
+        // Deterministic validation + repair + costing in code (see PlanValidator): day count, overlaps, opening hours, transfers, route order,
+        // mode limits, weather flags, catalogue-priced totals, budget trade-offs, and an explicit 'infeasible' status with reasons.
+        // The model's own numbers are kept only as ai_estimated_cost. Fail-soft: a validator problem never loses the plan.
+        $modelPlan = $itinerary;      // exactly what the model wrote: plan_check below reports on THIS (its self-consistency), validation reports on the repaired plan
+        try {
+            $itinerary = PlanValidator::finalize($itinerary, $tripData, $this->loadCatalogue($dest),
+                ['weather' => self::weatherMap($weatherContext), 'geocoder' => ItineraryChecker::cachedGeocoder($this->db)]);
+        } catch (Throwable $e) { error_log('[TMS planner validate] ' . $e->getMessage()); }
+
         // Deterministic self-consistency check (times, overlaps, dates, cost totals, budget, known distances). Never changes the plan;
         // reported next to it. See ItineraryChecker for exactly what is and is not checked.
         try {
             require_once __DIR__ . '/ItineraryChecker.php';
-            $itinerary['plan_check'] = ItineraryChecker::check($itinerary, $tripData, ItineraryChecker::cachedGeocoder($this->db));
+            $itinerary['plan_check'] = ItineraryChecker::check($modelPlan, $tripData, ItineraryChecker::cachedGeocoder($this->db));
         } catch (Throwable $e) { error_log('[TMS planner check] ' . $e->getMessage()); }
 
         // Save to database for future reference -- unless this is a

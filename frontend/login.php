@@ -63,7 +63,15 @@ if (isset($_POST['btn-verify-2fa'])) {
         $q->execute([':e' => $pendingEmail]);
         $row = $q->fetch(PDO::FETCH_OBJ);
 
-        if ($row && $row->TwoFASecret && tms_totp_verify($row->TwoFASecret, $code)) {
+        // An authenticator code, or (if the phone is lost) one single-use recovery code. Both share the same lockout bucket.
+        require_once __DIR__ . '/../backend/TwoFactorRecovery.php';
+        $viaRecovery = false;
+        $codeOk = $row && $row->TwoFASecret && tms_totp_verify($row->TwoFASecret, $code);
+        if (!$codeOk && $row && TwoFactorRecovery::looksLikeRecovery($code) && TwoFactorRecovery::consume($dbh, (int)$row->id, $code)) {
+            $codeOk = true; $viaRecovery = true;
+        }
+        if ($codeOk) {
+            if ($viaRecovery) tms_log_system_event($dbh, 'auth', '2fa_recovery_code_used', true, $pendingEmail);
             tms_clear_login_attempts($dbh, $lockoutKey, $ip);
             $safeRedirect = $_SESSION['u2fa_pending_redirect'] ?? 'index.php';
             unset($_SESSION['u2fa_pending'], $_SESSION['u2fa_pending_redirect']);
@@ -241,15 +249,15 @@ $showingTwoFactorPrompt = !empty($_SESSION['u2fa_pending']);
       <form method="POST" action="login.php" id="twoFactorForm">
         <?php tms_csrf_field(); ?>
         <p style="font-size:13px;color:var(--text-muted);margin-bottom:16px;">
-          <i class="fa fa-shield"></i> Enter the 6-digit code from your authenticator app.
+          <i class="fa fa-shield"></i> Enter the 6-digit code from your authenticator app, or one of your recovery codes.
         </p>
         <div class="form-group">
           <label for="totpCodeField">Authentication Code</label>
           <div class="input-icon">
             <i class="fa fa-key fi"></i>
             <input type="text" name="totp_code" id="totpCodeField" class="form-control"
-                   inputmode="numeric" pattern="[0-9]*" maxlength="6"
-                   placeholder="123456" required autofocus autocomplete="one-time-code">
+                   inputmode="text" maxlength="12" autocapitalize="characters" spellcheck="false"
+                   placeholder="123456 or XXXXX-XXXXX" required autofocus autocomplete="one-time-code">
           </div>
         </div>
         <button type="submit" name="btn-verify-2fa" class="btn-login mt-1">

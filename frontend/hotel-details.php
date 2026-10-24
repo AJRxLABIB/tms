@@ -2,6 +2,7 @@
 require_once __DIR__ . '/../backend/session-boot.php';
 error_reporting(E_ALL); ini_set('display_errors', '0'); ini_set('log_errors', '1');
 include('backend/config.php');
+require_once __DIR__ . '/../backend/Seo.php';
 // Public browsing, same pattern as package-details.php -- only the booking
 // POST below requires sign-in.
 
@@ -64,16 +65,53 @@ if (isset($_POST['book_hotel'])) {
             $total  = (int)$hotel->PricePerNight * $nights * $rooms;
             $verificationCode = strtoupper(bin2hex(random_bytes(5)));
 
-            $ins = $dbh->prepare(
-                "INSERT INTO tblhotel_bookings(HotelId,UserEmail,CheckInDate,CheckOutDate,NumRooms,NumGuests,MobileNumber,Comment,TotalCost,VerificationCode,status)
-                 VALUES(:hid,:email,:in,:out,:rooms,:guests,:mobile,:comment,:total,:vcode,0)"
-            );
-            $ins->execute([
-                ':hid' => $hotelId, ':email' => $email, ':in' => $in->format('Y-m-d'), ':out' => $out->format('Y-m-d'),
-                ':rooms' => $rooms, ':guests' => $guests, ':mobile' => $mobile ?: null, ':comment' => $comment,
-                ':total' => $total, ':vcode' => $verificationCode,
-            ]);
-            $newId = $dbh->lastInsertId();
+            // Slot-managed hotels (tbl_inventory_slots has rows for it): reserve every night atomically in the SAME
+            // transaction as the booking insert and take the price from the slots. Unmanaged hotels skip all of this
+            // and behave exactly as before.
+            require_once __DIR__ . '/../backend/services/InventoryService.php';
+            $invManaged = InventoryService::isManaged($dbh, 'hotel', (int)$hotelId);
+            $newId = 0;
+            try {
+                if ($invManaged) {
+                    $nightDates = [];
+                    for ($nd = clone $in; $nd < $out; $nd->modify('+1 day')) { $nightDates[] = $nd->format('Y-m-d'); }
+                    $invHolder = substr((string)$email, 0, 100) . '#' . $verificationCode;
+                    $dbh->beginTransaction();
+                    $invRes = InventoryService::reserveForBooking($dbh, 'hotel', (int)$hotelId, $nightDates, $rooms, $invHolder, (int)$hotel->PricePerNight);
+                    if ($invRes['status'] !== 'ok') {
+                        $dbh->rollBack();
+                        $error = $invRes['status'] === 'unavailable'
+                            ? ($invRes['reason'] === 'too_long' ? 'Inventory-managed stays are limited to 62 nights.' : InventoryService::reasonMessage((string)($invRes['reason'] ?? ''), (string)($invRes['date'] ?? '')))
+                            : 'Could not check availability right now. Please try again.';
+                    } else {
+                        $total = (int)$invRes['total'];   // authoritative price (slot override or listing price), not client-derived
+                    }
+                }
+                if ($error === '') {
+                    $ins = $dbh->prepare(
+                        "INSERT INTO tblhotel_bookings(HotelId,UserEmail,CheckInDate,CheckOutDate,NumRooms,NumGuests,MobileNumber,Comment,TotalCost,VerificationCode,status)
+                         VALUES(:hid,:email,:in,:out,:rooms,:guests,:mobile,:comment,:total,:vcode,0)"
+                    );
+                    $ins->execute([
+                        ':hid' => $hotelId, ':email' => $email, ':in' => $in->format('Y-m-d'), ':out' => $out->format('Y-m-d'),
+                        ':rooms' => $rooms, ':guests' => $guests, ':mobile' => $mobile ?: null, ':comment' => $comment,
+                        ':total' => $total, ':vcode' => $verificationCode,
+                    ]);
+                    $newId = $dbh->lastInsertId();
+                    if ($invManaged) {
+                        if ($newId && InventoryService::confirmReservation($dbh, $invRes['hold_ids'], $invHolder, InventoryService::bookingRef('hotel', (int)$newId))) {
+                            $dbh->commit();
+                        } else {
+                            $dbh->rollBack(); $newId = 0;
+                        }
+                    }
+                }
+            } catch (Throwable $e) {
+                if ($dbh->inTransaction()) $dbh->rollBack();
+                error_log('[TMS Hotel booking] ' . $e->getMessage());
+                $newId = 0;
+                if ($invManaged) { $error = 'Something went wrong. Please try again.'; } else { throw $e; }
+            }
             if ($newId) {
                 // Same loyalty mechanic as package bookings (checkout.php /
                 // package-details.php), at half the points -- a hotel-only
@@ -87,7 +125,7 @@ if (isset($_POST['book_hotel'])) {
 
                 $msg = 'Hotel booked successfully! Verification code: <strong>'.htmlspecialchars($verificationCode, ENT_QUOTES, 'UTF-8').'</strong>. '
                      . 'View it in <a href="my-marketplace-bookings.php">My Marketplace Bookings</a>. You earned <strong>50 loyalty points!</strong>';
-            } else {
+            } elseif ($error === '') {
                 $error = 'Something went wrong. Please try again.';
             }
         }
@@ -110,7 +148,8 @@ if (isset($_POST['book_hotel'])) {
 // package-details.php/blog-post.php: ?id= is this page's resource
 // identifier, not a filter, so it's kept in the canonical explicitly
 // (tms_seo_meta()'s default strips the whole query string).
-// RULE 3: no JSON-LD/structured data on purpose. tblhotels is explicitly
+// RULE 3: structured data only for NON-sample rows (tms_seo_hotel_jsonld() returns null for IsSampleData=1).
+// Original note: no JSON-LD/structured data for demo rows on purpose. tblhotels is explicitly
 // sample/demo data (see this page's own "sample/demo hotel listing"
 // banner above) -- emitting schema.org Hotel/Offer/AggregateRating markup
 // would tell search engines this is a real, ratable, bookable-today
@@ -127,6 +166,7 @@ tms_seo_meta([
     'description' => $hotelSeoDesc,
     'image'       => $hotel->HotelImage ?: '',
     'canonical'   => $hdScheme . '://' . $hdHost . $hdPath . '?id=' . (int)$hotelId,
+    'jsonld'      => tms_seo_hotel_jsonld($hotel, $hdScheme . '://' . $hdHost . $hdPath . '?id=' . (int)$hotelId),
     'breadcrumbs' => [
         ['label' => 'Home', 'url' => 'index.php'],
         ['label' => 'Hotels', 'url' => 'hotels.php'],
@@ -182,6 +222,24 @@ tms_seo_meta([
                 <img src="<?php echo htmlspecialchars($hotel->HotelImage ?: 'images/no-image-placeholder.jpg', ENT_QUOTES, 'UTF-8'); ?>" onerror="this.src='images/no-image-placeholder.jpg'" class="hd-img" alt="<?php echo htmlspecialchars($hotel->HotelName, ENT_QUOTES, 'UTF-8'); ?>">
                 <div class="hd-body">
                     <span class="tms-sample-badge"><i class="fa fa-flask"></i> Sample Listing</span>
+                    <?php
+                    // Availability badge only where inventory slots exist. InventorySource decides the label; a sample/demo
+                    // listing is always "Demo data" and never shows availability numbers.
+                    try {
+                        require_once __DIR__ . '/../backend/services/InventoryService.php';
+                        require_once __DIR__ . '/../backend/services/InventorySource.php';
+                        if (InventoryService::isManaged($dbh, 'hotel', (int)$hotelId)) {
+                            $invLabel = InventorySource::labelFor($dbh, 'hotel', (int)$hotelId);
+                            echo InventoryService::badgeHtml($invLabel);
+                            if (!in_array($invLabel['badge'], ['demo'], true)) {
+                                $invSum = InventoryService::summaryForNextDays($dbh, 'hotel', (int)$hotelId, 14);
+                                if ($invSum) echo ' <small style="color:var(--text-muted);">' . ($invSum['slots_open'] > 0
+                                    ? (int)$invSum['slots_open'] . ' bookable night(s) in the next ' . (int)$invSum['days'] . ' days' . ($invLabel['stale'] ? ' (data may be out of date)' : '')
+                                    : 'No bookable nights in the next ' . (int)$invSum['days'] . ' days') . '</small>';
+                            }
+                        }
+                    } catch (Throwable $e) { error_log('[TMS] inventory badge: ' . $e->getMessage()); }
+                    ?>
                     <h1 style="margin-top:10px;"><?php echo htmlspecialchars($hotel->HotelName, ENT_QUOTES, 'UTF-8'); ?></h1>
                     <p><i class="fa fa-map-marker" style="color:#e74c3c"></i> <?php echo htmlspecialchars($hotel->City.', '.$hotel->Country, ENT_QUOTES, 'UTF-8'); ?></p>
                     <p><?php for ($s=1;$s<=5;$s++): ?><i class="fa fa-star<?php echo $s<=(int)$hotel->StarRating?'':'-o'; ?>" style="color:#f0ad4e;"></i><?php endfor; ?>

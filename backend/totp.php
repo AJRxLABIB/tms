@@ -123,6 +123,8 @@ if (!function_exists('tms_totp_qr_url')) {
      * load (e.g. offline dev environment, or the free service being down).
      */
     function tms_totp_qr_url(string $otpauthUri): string {
-        return 'https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=' . rawurlencode($otpauthUri);
+        // Deprecated: the TOTP secret must never be sent to a third-party QR service. The setup pages now draw
+        // the QR code in the browser with js/qrcode.js. Kept (returning '') only so old callers do not fatal.
+        return '';
     }
 }

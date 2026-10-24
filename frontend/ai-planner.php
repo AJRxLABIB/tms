@@ -567,6 +567,23 @@ function renderItinerary(itin) {
         </div>
     </div>`;
 
+    if (itin.validation && itin.validation.status) {
+        // Computed in code (PlanValidator), not by the model: status, what was changed, trade-offs, and which places are bookable.
+        const v = itin.validation, cc = itin.computed_cost || {}, bc = itin.budget_check || null;
+        const label = { ok: 'No problems found', adjusted: 'Adjusted by our checks', infeasible: 'Does not work as asked' }[v.status] || v.status;
+        const colour = v.status === 'infeasible' ? '#b91c1c' : (v.status === 'adjusted' ? '#92400e' : '#166534');
+        const reasons = (v.reasons || []).map(r => '<li>' + esc(r.message) + '</li>').join('');
+        const adj = (v.adjustments || []).slice(0, 6).map(a => '<li>' + (a.day != null ? 'Day ' + esc(String(a.day)) + ': ' : '') + esc(a.message) + '</li>').join('');
+        const trade = bc && bc.status === 'over_budget' ? (bc.trade_offs || []).map(t => '<li>' + esc(t) + '</li>').join('') : '';
+        html += `<div role="note" style="background:#f8fafc;color:#1f2937;border:1px solid #cbd5e1;border-left:4px solid ${colour};border-radius:12px;padding:16px;margin-top:20px;font-size:13px;">
+            <strong style="color:${colour};">Checked by code: ${esc(label)}</strong> <span style="color:#475569;">(${esc(v.mode || 'standard')} mode)</span>
+            ${cc.total ? `<div style="margin-top:6px;">Cost recalculated by us: <strong>৳${Number(cc.total).toLocaleString()}</strong> (${Number(cc.verified_from_catalogue || 0).toLocaleString()} from our catalogue prices, the rest are estimates).${bc ? ' Budget ' + (bc.status === 'within_budget' ? 'respected.' : 'exceeded by ৳' + Number(bc.over_by).toLocaleString() + '.') : ''}</div>` : ''}
+            ${reasons ? '<ul style="margin:6px 0 0 18px;padding:0;color:#b91c1c;">' + reasons + '</ul>' : ''}
+            ${adj ? '<div style="margin-top:6px;">What we changed:</div><ul style="margin:2px 0 0 18px;padding:0;color:#92400e;">' + adj + '</ul>' : ''}
+            ${trade ? '<div style="margin-top:6px;">Ways to bring it under budget:</div><ul style="margin:2px 0 0 18px;padding:0;">' + trade + '</ul>' : ''}
+            <div style="margin-top:6px;color:#475569;font-size:12px;">Places marked "suggestion (not bookable)" are not in our catalogue, so their prices are estimates. Times, totals and order were checked by code, not by the AI. This is not a booking or a quote.</div></div>`;
+    }
+
     if (itin.plan_check) {
         const pc = itin.plan_check, items = pc.issues || [];
         html += `<div role="note" style="background:#f1f5f9;color:#1f2937;border:1px solid #cbd5e1;border-radius:12px;padding:16px;margin-top:20px;font-size:13px;">

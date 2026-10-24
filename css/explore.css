@@ -382,3 +382,21 @@ html[data-theme="dark"] .pd-close-btn { background: rgba(255,255,255,.15); }
   .pd-hero { height: 160px; }
   .pd-gallery { grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); }
 }
+
+/* ── Readable category chips + load states (video review: chips were white text on a white pill in the dark theme) ── */
+.map-cat-btn, .place-cat-btn { background: #fff; color: #1f2937; border: 2px solid #cbd5e1; min-height: 38px; }
+.map-cat-btn:hover, .place-cat-btn:hover { border-color: var(--primary); color: #0f3d2e; }
+.map-cat-btn:focus-visible, .place-cat-btn:focus-visible, .explore-retry-btn:focus-visible { outline: 3px solid #34d399; outline-offset: 2px; }
+.map-cat-btn.active, .place-cat-btn.active, .map-cat-btn[aria-pressed="true"], .place-cat-btn[aria-pressed="true"] { background: var(--primary); color: #fff; border-color: var(--primary); }
+html[data-theme="dark"] .map-cat-btn:not(.active), html[data-theme="dark"] .place-cat-btn:not(.active) { background: #1b222c; color: #e5e7eb; border-color: #3b4757; }
+html[data-theme="dark"] .map-cat-btn:not(.active):hover, html[data-theme="dark"] .place-cat-btn:not(.active):hover { color: #fff; border-color: #34d399; }
+.explore-skeleton { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 14px; }
+.explore-skeleton .sk { height: 120px; border-radius: 12px; background: linear-gradient(90deg, rgba(148,163,184,.18) 25%, rgba(148,163,184,.32) 37%, rgba(148,163,184,.18) 63%); background-size: 400% 100%; animation: exploreSk 1.4s ease infinite; }
+@keyframes exploreSk { 0% { background-position: 100% 50%; } 100% { background-position: 0 50%; } }
+@media (prefers-reduced-motion: reduce) { .explore-skeleton .sk { animation: none; } }
+.explore-source { font-size: 12.5px; margin: 0 0 12px; padding: 8px 12px; border-radius: 8px; background: rgba(16,185,129,.12); color: var(--text); border: 1px solid rgba(16,185,129,.35); }
+.explore-source.is-warn { background: rgba(245,158,11,.14); border-color: rgba(245,158,11,.5); }
+.explore-error { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+.explore-retry-btn { margin-left: auto; border: 2px solid #c0392b; background: #fff; color: #7f1d1d; border-radius: 20px; padding: 6px 14px; font-weight: 700; font-size: 12.5px; cursor: pointer; min-height: 36px; }
+.explore-empty { text-align: center; padding: 24px 12px; color: var(--text-muted); }
+.explore-source:empty { display: none; }

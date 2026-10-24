@@ -1,4 +1,4 @@
-<!DOCTYPE html><html><head><title>TMS – Offline</title>
+<!DOCTYPE html><html lang="en"><head><title>TMS – Offline</title>
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <style>body{font-family:Arial,sans-serif;text-align:center;padding:60px 20px;background:#f5f8ff;}
 h1{color:#3F84B1;font-size:36px;}p{color:#666;font-size:18px;}
@@ -23,6 +23,7 @@ h1{color:#3F84B1;font-size:36px;}p{color:#666;font-size:18px;}
      tag -- nothing invented if the cache is empty or unsupported. -->
 <div id="tmsOfflineKit">
   <h3>Saved for offline:</h3>
+  <p id="tmsOfflineStale" role="note" style="display:none;font-size:13px;color:#8a5a00;background:#fff7e0;border:1px solid #f0d28a;border-radius:8px;padding:8px 12px;margin:0 0 10px;"></p>
   <p class="empty" id="tmsOfflineKitEmpty">Checking what you've saved…</p>
 </div>
 
@@ -41,6 +42,15 @@ h1{color:#3F84B1;font-size:36px;}p{color:#666;font-size:18px;}
         return;
       }
       emptyEl.remove();
+      var metaP = cache.match('/tms/__tripkit-meta.json').then(function (r) { return r ? r.json() : {}; }).catch(function () { return {}; });
+      requests = requests.filter(function (rq) { return rq.url.indexOf('__tripkit-meta') === -1; });
+      metaP.then(function (meta) {
+        var times = Object.keys(meta).map(function (k) { return Date.parse(meta[k]); }).filter(function (n) { return !isNaN(n); });
+        var note = document.getElementById('tmsOfflineStale');
+        var when = times.length ? new Date(Math.min.apply(null, times)).toLocaleString() : 'an earlier visit';
+        note.textContent = 'This saved information may be out of date \u2014 last saved ' + when + '. It cannot show live availability or current booking status.';
+        note.style.display = 'block';
+      });
       return Promise.all(requests.map(function (req) {
         return cache.match(req).then(function (res) {
           return res.text().then(function (html) {

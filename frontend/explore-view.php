@@ -41,11 +41,12 @@ if ($destName === '' || $lat === null || $lng === null) {
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="css/animate.css" rel="stylesheet">
 <link href="<?php echo tms_asset_ver('css/explore.css'); ?>" rel="stylesheet">
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<link rel="stylesheet" href="js/vendor/leaflet/leaflet.css" />
 <script src="js/jquery-1.12.0.min.js" defer></script>
 <script src="js/bootstrap.min.js" defer></script>
 <script src="js/wow.min.js" defer></script>
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="js/vendor/leaflet/leaflet.js"></script>
+<script src="<?php echo tms_asset_ver('js/tms-map.js'); ?>"></script>
 </head>
 <body data-explore-dest="<?php echo htmlspecialchars($destName, ENT_QUOTES); ?>">
 <?php include('backend/header.php'); ?>
@@ -88,7 +89,8 @@ if ($destName === '' || $lat === null || $lng === null) {
                  unaffected -- this banner only covers this Overview tab. -->
             <div class="tms-sample-banner" style="margin-bottom:16px;">
                 <i class="fa fa-robot"></i>
-                This overview is AI-generated for quick orientation, not sourced from a licensed travel database --
+                When an AI summary is shown it is generated for quick orientation, not sourced from a licensed travel database
+                (a note says so when only verified catalogue information is available) --
                 treat costs, culture notes, and history as estimates and verify anything time-sensitive (prices,
                 customs, safety) with an official source before relying on it.
             </div>
@@ -148,7 +150,8 @@ if ($destName === '' || $lat === null || $lng === null) {
                     <button class="map-cat-btn" data-cat="shopping_mall" onclick="exploreLoadMapCategory('shopping_mall')"><i class="fa fa-shopping-bag"></i> Malls</button>
                     <button class="map-cat-btn" data-cat="tourist_info" onclick="exploreLoadMapCategory('tourist_info')"><i class="fa fa-info-circle"></i> Tourist Info</button>
                 </div>
-                <div id="exploreMap"></div>
+                <div id="mapStatus" class="explore-source" role="status" aria-live="polite"></div>
+                <div id="exploreMap" aria-label="Interactive map"></div>
                 <div class="route-summary" id="routeSummary"></div>
                 <p style="font-size:12px;color:var(--text-muted);margin-top:10px;">
                     <i class="fa fa-map-pin"></i> Colored pins show real nearby places for the category selected above, from live map data. Click "Locate Me" for distance &amp; ETA to <?php echo htmlspecialchars($destName); ?>.

@@ -81,9 +81,10 @@ unset($p);
 <link href="<?php echo tms_asset_ver('css/modern-theme.css'); ?>" rel="stylesheet">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script src="https://unpkg.com/leaflet.heat@0.2.0/dist/leaflet-heat.js"></script>
+<link rel="stylesheet" href="js/vendor/leaflet/leaflet.css" />
+<script src="js/vendor/leaflet/leaflet.js"></script>
+<script src="js/tms-map.js"></script>
+<script src="js/vendor/leaflet/leaflet-heat.js"></script>
 <script src="js/jquery-1.12.0.min.js" defer></script>
 <script src="js/bootstrap.min.js" defer></script>
 <style>
@@ -170,9 +171,8 @@ html[data-theme="dark"] .heat-legend { color: var(--text-muted) !important; }
 <?php if (!empty($points)): ?>
 <script>
 var heatMap = L.map('heatMap').setView([20, 70], 3);
-L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    attribution: '&copy; OpenStreetMap contributors', maxZoom: 18
-}).addTo(heatMap);
+if (window.TmsMap) { TmsMap.addTiles(heatMap, { maxZoom: 18 }); TmsMap.fixSize(heatMap); }
+else L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '&copy; OpenStreetMap contributors', maxZoom: 18 }).addTo(heatMap);
 
 var heatPoints = <?php echo json_encode($points); ?>;
 

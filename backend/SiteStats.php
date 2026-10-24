@@ -11,6 +11,14 @@ if (!function_exists('tms_site_stats')) {
      * @return array{packages:int,destinations:int,hotels:int,activities:int,reviews:int,avg_rating:?float}
      */
     function tms_site_stats(PDO $dbh): array {
+        // PERF: five aggregate queries (one with COUNT DISTINCT over TRIM) ran on every home-page view. The numbers
+        // are marketing counters, so a 10-minute shared cache is plenty; a cache miss or failure just recomputes.
+        global $tmsCache;
+        $cacheKey = 'site_stats:v1';
+        if (isset($tmsCache) && $tmsCache instanceof CacheService) {
+            $hit = $tmsCache->get($cacheKey);
+            if (is_array($hit) && isset($hit['packages'])) { return $hit; }
+        }
         $out = ['packages' => 0, 'destinations' => 0, 'hotels' => 0, 'activities' => 0, 'reviews' => 0, 'avg_rating' => null];
         $one = static function (string $sql) use ($dbh): ?array {
             try {
@@ -30,6 +38,9 @@ if (!function_exists('tms_site_stats')) {
         if ($r = $one("SELECT COUNT(*) AS c, AVG(Rating) AS a FROM tblreviews WHERE Status=1 AND Rating BETWEEN 1 AND 5")) {
             $out['reviews'] = (int)$r['c'];
             $out['avg_rating'] = $out['reviews'] > 0 ? round((float)$r['a'], 1) : null;
+        }
+        if (isset($tmsCache) && $tmsCache instanceof CacheService && ($out['packages'] > 0 || $out['hotels'] > 0)) {
+            $tmsCache->set($cacheKey, $out, 600);
         }
         return $out;
     }

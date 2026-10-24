@@ -25,3 +25,4 @@
   });
 })();
 </script>
+<script src="../js/tms-a11y.js" defer></script>

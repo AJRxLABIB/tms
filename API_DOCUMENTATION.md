@@ -144,6 +144,9 @@ Returns the logged-in user's profile.
 ### `GET ?action=my_bookings` — auth required
 Returns the logged-in user's bookings, same shape as My Bookings on the
 website (status, dates, persons, total cost, verification code).
+Optional pagination: send `page` and/or `per_page` (default 20, max 100) and
+`meta` is added with `total`, `page`, `per_page`, `total_pages` and `links`.
+Without them the full list is returned exactly as before.
 
 ### `POST ?action=book` — auth required
 Body: `package_id`, `from_date` (`YYYY-MM-DD`), `to_date` (`YYYY-MM-DD`),
@@ -172,6 +175,16 @@ master prompt item 37) are non-null only if the session making this
 request had a non-BDT display currency selected (see the website's
 currency selector) — `total_cost` itself is always the real BDT amount
 charged.
+
+**Idempotency.** Send an `Idempotency-Key` header (8–128 characters: letters,
+digits, `- _ . :`; a UUID works) with `book`. Repeating the same key with the
+same body within 24 h returns the first response again (with
+`Idempotent-Replayed: true`) and creates nothing new. The same key with a
+different body returns `422` (`idempotency_key_reused`); a duplicate that
+arrives while the first is still running returns `409`
+(`idempotency_in_progress`). Failed attempts (non-2xx) release the key so you
+can correct the request and retry with it. Requires migration
+`019_api_idempotency.sql`; if the table is missing the header is ignored.
 
 ### `POST ?action=cancel_booking` — auth required
 Body: `booking_id`. Same 24-hour-before-departure rule as the website. If
@@ -246,6 +259,21 @@ booking, or `null` if it has never fired — see `scripts/check_budget_overspend
 | 409 | Valid request, but not allowed right now (e.g. cancel within 24h) |
 | 429 | Too many failed login attempts for this email/IP (login), or too many requests to this endpoint in the current window (any action) — wait and retry |
 | 500 | Server error — check the PHP error log |
+
+## Request ids, error detail and pagination (additive)
+
+- **`X-Request-Id`**: send your own (8–64 characters: letters, digits, `. _ -`)
+  or let the server generate one (`req_…`). It is returned as a response header
+  and in `meta.request_id`; quote it when reporting a problem.
+- **Errors** keep `{ "success": false, "error": "text" }` and now also carry
+  `error_code` (stable, e.g. `not_found`, `rate_limited`, `unprocessable`),
+  `request_id`, and `error_detail: { code, message, request_id }`.
+- **Pagination** (`packages`, and `my_bookings` when asked): `page`, and
+  `per_page` (alias `limit`), clamped to the endpoint maximum. `meta` has
+  `total`, `page`, `per_page`, `total_pages` and `links`
+  (`self`, `first`, `prev`, `next`, `last`; `prev`/`next` are `null` at the ends).
+- **Rate-limit headers** on every response: `X-RateLimit-Limit`,
+  `X-RateLimit-Remaining`, `X-RateLimit-Reset` (seconds); a `429` also has `Retry-After`.
 
 ## Rate limiting (Round 71)
 

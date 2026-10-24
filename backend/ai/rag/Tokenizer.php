@@ -40,6 +40,7 @@ final class RagTokenizer
     {
         // Bangla digits -> ASCII so "৩ দিন" matches "3 Days" (the caller's original text is untouched).
         require_once dirname(__DIR__) . '/BanglaNormalizer.php';
+        require_once dirname(__DIR__) . '/Banglish.php';
         $text = mb_strtolower(BanglaNormalizer::digits($text), 'UTF-8');
         if (!preg_match_all('/[\p{L}\p{N}\p{M}]+/u', $text, $m)) return [];
         $out = [];
@@ -49,6 +50,12 @@ final class RagTokenizer
                 continue;
             }
             if (in_array($w, self::STOP, true)) continue;
+            // Banglish (Bangla in Latin letters): small data table in Banglish.php. Plain-English words are untouched.
+            if (preg_match('/^[a-z]+$/', $w)) {
+                $bt = Banglish::tokens($w);
+                if ($bt !== null) { if ($expand) foreach ($bt as $a) $out[] = self::stem($a); else $out[] = self::stem($w); continue; }
+                if (Banglish::isStopWord($w)) continue;
+            }
             if (ctype_digit($w) && strlen($w) >= 4) continue; // prices/years are noise for topical matching
             $out[] = self::stem($w);
         }

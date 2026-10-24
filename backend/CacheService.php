@@ -42,6 +42,9 @@ class CacheService {
         }
     }
 
+    /** Creates tblcache if missing. Called from the schema gate / migration, not on every request. */
+    public function createTable(): void { $this->migrate(); }
+
     private function migrate(): void {
         try {
             $this->db->exec("

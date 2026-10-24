@@ -79,6 +79,12 @@ t('compare_packages: one id / five ids / junk rejected', !$reg->execute('compare
 $run = ToolRouter::run($reg, [['tool' => 'compare_packages', 'args' => ['package_ids' => '9301,9302']]], [], [], 'compare them');
 t('run(): compare result is in the facts with citations for both packages', str_contains($run['facts'], 'compare_packages') && count($run['citations']) === 2);
 
+// Stage 19: state-based refinements (pure logic; full coverage in tests/ai/banglish_test.php)
+$r = FollowUp::refine('make that trip cheaper', ['ids' => $ids, 'prices' => $prices, 'focus' => 9301, 'search' => ['query' => 'beach']]);
+t('refine: "make that trip cheaper" -> new search strictly below the focused package price', $r['intent'] === 'refine_search' && $r['search']['max_price'] === 19999);
+t('resolve: "make that trip cheaper" is no longer a pick from the list', FollowUp::resolve('make that trip cheaper', $ids, $prices)['kind'] === 'none');
+t('resolve: "the cheaper one" still picks from the list (tie -> unresolved, never a silent pick)', FollowUp::resolve('the cheaper one', $ids, $prices)['unresolved'] === true);
+
 $clean();
 echo "\n$pass passed, $fail failed\n";
 exit($fail ? 1 : 0);

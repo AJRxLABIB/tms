@@ -128,6 +128,100 @@ foreach ($upcomingDestinations as $dest) {
     }
 }
 
+// ───────────────────────── Action panels (read-only) ─────────────────────────
+// Each panel is independent: a missing table or column shows "not available" for that panel only. Nothing here
+// changes data; each row links to the page where the action is taken (with its own permission check).
+function tms_ops_panel(callable $fn, int $limit = 10): array {
+    try { return ['ok' => true, 'rows' => $fn($limit)]; }
+    catch (Throwable $e) { error_log('[TMS ops dashboard] panel failed: ' . $e->getMessage()); return ['ok' => false, 'rows' => []]; }
+}
+function tms_ops_age(?string $ts): string {
+    if (!$ts) return '-';
+    $s = time() - (int)strtotime($ts);
+    if ($s < 90) return 'just now';
+    if ($s < 5400) return (int)round($s / 60) . ' min ago';
+    if ($s < 129600) return (int)round($s / 3600) . ' h ago';
+    return (int)round($s / 86400) . ' d ago';
+}
+
+$panelOldPending = tms_ops_panel(function (int $n) use ($dbh) {
+    return $dbh->query(
+        "SELECT b.BookingId, b.UserEmail, p.PackageName, COALESCE(b.BookingDate, b.RegDate) AS ts, b.PaymentStatus
+         FROM tblbooking b LEFT JOIN tbltourpackages p ON p.PackageId = b.PackageId
+         WHERE b.status = 0 AND COALESCE(b.BookingDate, b.RegDate) < DATE_SUB(NOW(), INTERVAL 24 HOUR)
+         ORDER BY ts ASC LIMIT " . (int)$n
+    )->fetchAll(PDO::FETCH_ASSOC);
+});
+$panelPayPending = tms_ops_panel(function (int $n) use ($dbh) {
+    return $dbh->query(
+        "SELECT p.PaymentId, p.BookingId, p.Provider, p.ProviderMode, p.AmountMinor, p.Currency, p.CreatedAt AS ts
+         FROM tblpayments p WHERE p.Status = 'pending' AND p.CreatedAt < DATE_SUB(NOW(), INTERVAL 60 MINUTE)
+         ORDER BY p.CreatedAt ASC LIMIT " . (int)$n
+    )->fetchAll(PDO::FETCH_ASSOC);
+});
+$panelRefunds = tms_ops_panel(function (int $n) use ($dbh) {
+    $rows = $dbh->query(
+        "SELECT b.BookingId, b.UserEmail, b.TotalCost, b.UpdationDate AS ts, 'booking refund requested' AS kind
+         FROM tblbooking b WHERE b.RefundStatus = 'requested' ORDER BY b.UpdationDate ASC LIMIT " . (int)$n
+    )->fetchAll(PDO::FETCH_ASSOC);
+    try {
+        $more = $dbh->query(
+            "SELECT p.BookingId, '' AS UserEmail, r.AmountMinor / 100 AS TotalCost, r.CreatedAt AS ts, 'payment refund pending' AS kind
+             FROM tblpayment_refunds r JOIN tblpayments p ON p.PaymentId = r.PaymentId
+             WHERE r.Status = 'pending' ORDER BY r.CreatedAt ASC LIMIT " . (int)$n
+        )->fetchAll(PDO::FETCH_ASSOC);
+        $rows = array_merge($rows, $more);
+    } catch (Throwable $e) { /* refunds table not present */ }
+    return $rows;
+});
+$panelPayEvents = tms_ops_panel(function (int $n) use ($dbh) {
+    return $dbh->query(
+        "SELECT EventId, Provider, EventType, ProcessingStatus, SignatureValid, RetryCount, ReceivedAt AS ts
+         FROM tblpayment_events
+         WHERE ProcessingStatus IN ('failed','rejected') OR (ProcessingStatus = 'received' AND ReceivedAt < DATE_SUB(NOW(), INTERVAL 10 MINUTE))
+         ORDER BY EventId DESC LIMIT " . (int)$n
+    )->fetchAll(PDO::FETCH_ASSOC);
+});
+$panelJobs = tms_ops_panel(function (int $n) use ($dbh) {
+    return $dbh->query(
+        "SELECT id, event_type, status, attempts, max_attempts, last_error, created_at AS ts
+         FROM tbl_outbox_events WHERE status IN ('failed','dead')
+            OR (status = 'processing' AND locked_at < DATE_SUB(NOW(), INTERVAL 15 MINUTE))
+         ORDER BY id DESC LIMIT " . (int)$n
+    )->fetchAll(PDO::FETCH_ASSOC);
+});
+$jobCounts = tms_ops_panel(function (int $n) use ($dbh) {
+    return $dbh->query("SELECT status, COUNT(*) AS c FROM tbl_outbox_events GROUP BY status")->fetchAll(PDO::FETCH_KEY_PAIR);
+});
+$panelSecurity = tms_ops_panel(function (int $n) use ($dbh) {
+    $rows = [];
+    foreach ($dbh->query(
+        "SELECT Actor, Action, Details, CreatedAt AS ts FROM tblactivity_log
+         WHERE Action LIKE '%login%' OR Action LIKE '%2FA%' OR Action LIKE '%password%' OR Action LIKE '%role%' OR Action LIKE '%admin%' OR Action LIKE '%locked%' OR Action LIKE '%denied%'
+         ORDER BY id DESC LIMIT " . (int)$n)->fetchAll(PDO::FETCH_ASSOC) as $r) {
+        $rows[] = ['source' => 'activity log', 'what' => $r['Action'], 'detail' => trim(($r['Actor'] ? $r['Actor'] . ': ' : '') . mb_substr((string)$r['Details'], 0, 120)), 'ts' => $r['ts'], 'sev' => 'info'];
+    }
+    try {
+        foreach ($dbh->query(
+            "SELECT category, event_type, message, created_at AS ts FROM tbl_system_events WHERE success = 0 ORDER BY id DESC LIMIT " . (int)$n)->fetchAll(PDO::FETCH_ASSOC) as $r) {
+            $rows[] = ['source' => 'system event', 'what' => $r['category'] . ' / ' . $r['event_type'], 'detail' => (string)$r['message'], 'ts' => $r['ts'], 'sev' => 'warning'];
+        }
+    } catch (Throwable $e) { /* table absent */ }
+    usort($rows, fn($a, $b) => strcmp((string)$b['ts'], (string)$a['ts']));
+    return array_slice($rows, 0, $n);
+});
+$aiHealth = [];
+try {
+    require_once __DIR__ . '/../backend/ai/ProviderHealth.php';
+    foreach (['gemini', 'openai', 'ollama'] as $prov) {
+        $st = ProviderHealth::state($dbh, $prov);
+        $aiHealth[$prov] = $st + ['open' => $st['open_until'] > time()];
+    }
+} catch (Throwable $e) { $aiHealth = []; }
+$aiActive = defined('AI_PROVIDER') ? (string)AI_PROVIDER : '';
+
+$opsEsc = fn($v) => htmlspecialchars((string)$v, ENT_QUOTES, 'UTF-8');
+
 $pageTitle = 'Operations Dashboard';
 ?>
 <!DOCTYPE html>
@@ -211,6 +305,72 @@ $pageTitle = 'Operations Dashboard';
       </tbody>
     </table>
     <?php endif; ?>
+
+    <?php
+    // Small renderer: heading, "not available" fallback, "all clear" message, or a table.
+    $opsPanel = function (string $icon, string $title, array $panel, array $cols, callable $row, string $clear) use ($opsEsc) {
+        echo '<h4 style="margin-top:28px;"><i class="fa fa-' . $opsEsc($icon) . '" style="color:var(--text-muted);"></i> ' . $opsEsc($title) . '</h4>';
+        if (!$panel['ok']) { echo '<p style="color:var(--text-muted);">Not available on this install right now (a table this panel reads is missing or unreadable).</p>'; return; }
+        if (!$panel['rows']) { echo '<p style="color:#2e9e5b;"><i class="fa fa-check-circle"></i> ' . $opsEsc($clear) . '</p>'; return; }
+        echo '<div class="table-responsive"><table class="table table-striped"><thead><tr>';
+        foreach ($cols as $c) echo '<th scope="col">' . $opsEsc($c) . '</th>';
+        echo '</tr></thead><tbody>';
+        foreach ($panel['rows'] as $r) { echo '<tr>'; foreach ($row($r) as $cell) echo '<td>' . $cell . '</td>'; echo '</tr>'; }
+        echo '</tbody></table></div>';
+    };
+    $sev = function (?string $ts, int $midH, int $highH) {
+        $h = $ts ? (time() - (int)strtotime($ts)) / 3600 : 0;
+        if ($h >= $highH) return '<span style="color:#C0392B;font-weight:700;">High</span>';
+        if ($h >= $midH)  return '<span style="color:#B45309;font-weight:700;">Medium</span>';
+        return '<span style="color:var(--text-muted);">Low</span>';
+    };
+    $opsPanel('hourglass-half', 'Pending bookings older than 24 hours (holding seats)', $panelOldPending,
+        ['Severity', 'Booking', 'Package', 'Traveler', 'Payment', 'Created'],
+        fn($r) => [$sev($r['ts'], 24, 72), '<a href="manage-bookings.php">#BK' . (int)$r['BookingId'] . '</a>', $opsEsc($r['PackageName']), $opsEsc($r['UserEmail']), $opsEsc($r['PaymentStatus'] ?: 'unpaid'), $opsEsc($r['ts']) . ' <small style="color:var(--text-muted);">(' . $opsEsc(tms_ops_age($r['ts'])) . ')</small>'],
+        'No pending booking is older than 24 hours.');
+    $opsPanel('credit-card', 'Payments pending for over 60 minutes', $panelPayPending,
+        ['Severity', 'Payment', 'Booking', 'Provider', 'Amount', 'Started'],
+        fn($r) => [$sev($r['ts'], 1, 24), '#' . (int)$r['PaymentId'], '<a href="manage-bookings.php">#BK' . (int)$r['BookingId'] . '</a>', $opsEsc($r['Provider'] . ' (' . $r['ProviderMode'] . ')'), $opsEsc(number_format(((int)$r['AmountMinor']) / 100, 2) . ' ' . $r['Currency']), $opsEsc($r['ts']) . ' <small style="color:var(--text-muted);">(' . $opsEsc(tms_ops_age($r['ts'])) . ')</small>'],
+        'No payment has been pending for more than an hour.');
+    $opsPanel('undo', 'Refunds awaiting action', $panelRefunds,
+        ['Severity', 'Booking', 'Type', 'Traveler', 'Amount (BDT)', 'Waiting since'],
+        fn($r) => [$sev($r['ts'], 48, 120), '<a href="manage-bookings.php">#BK' . (int)$r['BookingId'] . '</a>', $opsEsc($r['kind']), $opsEsc($r['UserEmail'] ?: '-'), $opsEsc($r['TotalCost'] !== null ? number_format((float)$r['TotalCost'], 2) : '-'), $opsEsc($r['ts']) . ' <small style="color:var(--text-muted);">(' . $opsEsc(tms_ops_age($r['ts'])) . ')</small>'],
+        'No refund is waiting for action.');
+    $opsPanel('exchange', 'Failed, rejected or stuck payment webhook events', $panelPayEvents,
+        ['Severity', 'Event', 'Provider', 'Type', 'Status', 'Signature', 'Retries', 'Received'],
+        fn($r) => [$r['ProcessingStatus'] === 'received' ? '<span style="color:#B45309;font-weight:700;">Medium</span>' : '<span style="color:#C0392B;font-weight:700;">High</span>', '#' . (int)$r['EventId'], $opsEsc($r['Provider']), $opsEsc($r['EventType']), $opsEsc($r['ProcessingStatus']), $r['SignatureValid'] ? 'valid' : 'not verified', (int)$r['RetryCount'], $opsEsc($r['ts']) . ' <small style="color:var(--text-muted);">(' . $opsEsc(tms_ops_age($r['ts'])) . ')</small>'],
+        'No failed or stuck webhook events.');
+    $jobsTotals = $jobCounts['ok'] ? $jobCounts['rows'] : [];
+    $opsPanel('cogs', 'Background jobs: failed, dead or stuck' . ($jobCounts['ok'] ? ' (queue: ' . (int)($jobsTotals['pending'] ?? 0) . ' pending, ' . (int)($jobsTotals['done'] ?? 0) . ' done)' : ''), $panelJobs,
+        ['Severity', 'Job', 'Type', 'Status', 'Attempts', 'Last error', 'Created'],
+        fn($r) => [$r['status'] === 'dead' ? '<span style="color:#C0392B;font-weight:700;">High</span>' : '<span style="color:#B45309;font-weight:700;">Medium</span>', '#' . (int)$r['id'], $opsEsc($r['event_type']), $opsEsc($r['status']), (int)$r['attempts'] . '/' . (int)$r['max_attempts'], $opsEsc(mb_substr((string)$r['last_error'], 0, 120)), $opsEsc($r['ts']) . ' <small style="color:var(--text-muted);">(' . $opsEsc(tms_ops_age($r['ts'])) . ')</small>'],
+        'No failed or stuck background jobs.');
+    ?>
+
+    <h4 style="margin-top:28px;"><i class="fa fa-magic" style="color:var(--text-muted);"></i> AI runtime health <small style="font-weight:400;color:var(--text-muted);">— configured provider: <strong><?php echo $opsEsc($aiActive ?: 'unknown'); ?></strong>. Booking and payments work without AI; see <a href="ai-dashboard.php">AI Usage</a> and <a href="ai-safety.php">AI Safety</a>.</small></h4>
+    <?php if (!$aiHealth): ?>
+      <p style="color:var(--text-muted);">Not available on this install right now.</p>
+    <?php else: ?>
+      <div class="table-responsive"><table class="table table-striped"><thead><tr><th scope="col">Provider</th><th scope="col">Circuit breaker</th><th scope="col">Consecutive failures</th><th scope="col">Last failure type</th></tr></thead><tbody>
+      <?php foreach ($aiHealth as $name => $st): ?>
+        <tr>
+          <td><?php echo $opsEsc($name); ?><?php echo $name === $aiActive ? ' <small>(active)</small>' : ''; ?></td>
+          <td><?php echo $st['open'] ? '<span style="color:#C0392B;font-weight:700;">Open until ' . $opsEsc(date('H:i:s', $st['open_until'])) . '</span>' : '<span style="color:#2e9e5b;">Closed</span>'; ?></td>
+          <td><?php echo (int)$st['fails']; ?></td>
+          <td><?php echo $opsEsc($st['last'] ?: '-'); ?></td>
+        </tr>
+      <?php endforeach; ?>
+      </tbody></table></div>
+      <p style="color:var(--text-muted);font-size:13px;">The breaker only reflects recent calls this site made; a provider with no recent calls shows Closed.</p>
+    <?php endif; ?>
+
+    <?php
+    $opsPanel('shield', 'Recent security and admin-account events', $panelSecurity,
+        ['Severity', 'Source', 'Event', 'Detail', 'When'],
+        fn($r) => [$r['sev'] === 'warning' ? '<span style="color:#B45309;font-weight:700;">Medium</span>' : '<span style="color:var(--text-muted);">Info</span>', $opsEsc($r['source']), $opsEsc($r['what']), $opsEsc($r['detail']), $opsEsc($r['ts']) . ' <small style="color:var(--text-muted);">(' . $opsEsc(tms_ops_age($r['ts'])) . ')</small>'],
+        'No recent security or admin-account events.');
+    ?>
+    <p style="color:var(--text-muted);font-size:13px;">Full history: <a href="activity-log.php">Activity Log</a> · <a href="system-health.php">System Health</a>. Panels here are read-only; actions are taken on the linked pages under their own permissions.</p>
 
     <h4><i class="fa fa-cloud" style="color:#0ea5e9;"></i> Weather alerts <small style="font-weight:400;color:var(--text-muted);">— destinations with confirmed travelers arriving in the next <?php echo (int)$weatherWindowDays; ?> days, checked against live weather</small></h4>
     <?php if (!empty($weatherAlerts)): ?>

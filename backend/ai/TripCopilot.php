@@ -13,6 +13,7 @@
 require_once __DIR__ . '/AIClient.php';
 require_once __DIR__ . '/../CacheService.php';
 require_once __DIR__ . '/../ExploreService.php';
+require_once __DIR__ . '/TripState.php';
 
 class TripCopilot {
 
@@ -48,7 +49,11 @@ class TripCopilot {
             return ['reply' => "I can't find that booking on your account.", 'suggestions' => [], 'action' => 'none'];
         }
         $history  = $this->getHistory($bookingId, 10, $email); // last 10 turns
-        $system   = $this->buildSystemPrompt($booking);
+        // Structured trip state: confirmed facts from the booking + what the traveller has said (budget, constraints), labelled by basis.
+        // Survives beyond the 10-turn history window so "keep the hotel but change the activities" still knows the budget and constraints.
+        $state    = TripState::applyMessage(TripState::fromBooking($booking, TripState::load($this->db, $bookingId, $email)), $userMsg);
+        TripState::save($this->db, $bookingId, $email, $state);
+        $system   = $this->buildSystemPrompt($booking, TripState::render($state));
 
         // Build messages array with history
         $messages = [];
@@ -186,7 +191,7 @@ class TripCopilot {
 
     // ── Private ───────────────────────────────────────────────────────────────
 
-    private function buildSystemPrompt(?array $booking): string {
+    private function buildSystemPrompt(?array $booking, string $stateBlock = ''): string {
         $now = date('Y-m-d H:i');
         // Phase 2b — context compression: this used to be
         // json_encode($booking, JSON_PRETTY_PRINT), which re-sent the ENTIRE
@@ -209,6 +214,8 @@ Current datetime: {$now}
 
 ACTIVE TRIP CONTEXT:
 {$tripInfo}
+
+{$stateBlock}
 
 Your personality: warm, knowledgeable, proactive, concise. You speak like a trusted local friend who happens to be a travel expert.
 

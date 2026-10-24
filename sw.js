@@ -18,6 +18,12 @@ const CACHE = 'tms-cache-v2';
 // (tour packages only, with a TransportMode field already shown on
 // my-trip.php), so there is no separate "flight information" page to cache.
 const TRIPKIT_CACHE = 'tms-tripkit';
+// Pages that must never be stored in the offline kit, even on an explicit save request: payment steps, sign-in /
+// password / 2FA flows, raw documents, and anything under /api/ (tokens). Saved trips are itinerary, ticket,
+// emergency and packing pages only.
+const NEVER_SAVE = /\/(payment|pay-now|checkout|cart|login|logout|register|forgot-password|change-password|two-factor-setup|wallet-document|google-login|google-callback|google-link|export-my-data|admin|supplier|api)(\/|\.php|$)/i;
+// Metadata (when each page was saved) lives under this key in TRIPKIT_CACHE; it is never listed as a page.
+const TRIPKIT_META = '/tms/__tripkit-meta.json';
 const PRECACHE = ['/', '/tms/', '/tms/index.php', '/tms/css/style.min.css', '/tms/offline.html'];
 
 // REAL GAP FOUND AND CLOSED (Phase H continuation -- auditing what
@@ -149,6 +155,26 @@ self.addEventListener('fetch', e => {
   );
 });
 
+// Records when each offline page was saved, so the UI can say "may be out of date -- last saved <time>".
+async function readMeta(cache) {
+  try {
+    const r = await cache.match(TRIPKIT_META);
+    if (!r) return {};
+    const txt = typeof r.text === 'function' ? await r.text() : String(r.body || '');
+    const o = JSON.parse(txt || '{}');
+    return o && typeof o === 'object' ? o : {};
+  } catch (err) { return {}; }
+}
+async function writeMeta(cache, add, removeUrls) {
+  try {
+    if (typeof Response === 'undefined') return;
+    const meta = await readMeta(cache);
+    Object.assign(meta, add || {});
+    for (const u of (removeUrls || [])) delete meta[u];
+    await cache.put(TRIPKIT_META, new Response(JSON.stringify(meta), { headers: { 'Content-Type': 'application/json' } }));
+  } catch (err) { /* metadata is best-effort; the pages themselves are already saved */ }
+}
+
 // Round 83: explicit save/remove/list commands from a page (my-trip.php's
 // "Save for Offline" button), answered over the MessageChannel port the
 // page provides -- this never runs on its own, only in direct response to
@@ -161,7 +187,11 @@ self.addEventListener('message', event => {
     event.waitUntil((async () => {
       const cache = await caches.open(TRIPKIT_CACHE);
       const results = [];
+      const savedAt = {};
       for (const url of data.urls) {
+        let pathname = '';
+        try { pathname = new URL(url, self.location.origin).pathname; } catch (err) { /* handled below */ }
+        if (!pathname || NEVER_SAVE.test(pathname)) { results.push({ url, ok: false, error: 'not_allowed' }); continue; }
         try {
           // cache: 'reload' bypasses the HTTP cache so this always stores
           // the real, current version of the page (today's booking status,
@@ -170,6 +200,7 @@ self.addEventListener('message', event => {
           const res = await fetch(url, { credentials: 'include', cache: 'reload' });
           if (res && res.status === 200) {
             await cache.put(url, res.clone());
+            savedAt[url] = new Date().toISOString();
             results.push({ url, ok: true });
           } else {
             results.push({ url, ok: false, status: res ? res.status : 0 });
@@ -188,6 +219,7 @@ self.addEventListener('message', event => {
       // user-visible because a partial CSS/font miss still leaves a
       // readable (if less polished) offline page, unlike a missing page
       // entirely.
+      await writeMeta(cache, savedAt);
       if (port) port.postMessage({ type: 'TMS_CACHE_TRIP_RESULT', results });
       await Promise.allSettled(TRIPKIT_STATIC_ASSETS.map(async (url) => {
         try {
@@ -206,6 +238,7 @@ self.addEventListener('message', event => {
       for (const url of data.urls) {
         results.push({ url, deleted: await cache.delete(url) });
       }
+      await writeMeta(cache, {}, data.urls);
       if (port) port.postMessage({ type: 'TMS_REMOVE_TRIP_RESULT', results });
     })());
     return;
@@ -215,7 +248,8 @@ self.addEventListener('message', event => {
     event.waitUntil((async () => {
       const cache = await caches.open(TRIPKIT_CACHE);
       const keys = await cache.keys();
-      if (port) port.postMessage({ type: 'TMS_LIST_TRIPKIT_RESULT', urls: keys.map(k => k.url) });
+      const meta = await readMeta(cache);
+      if (port) port.postMessage({ type: 'TMS_LIST_TRIPKIT_RESULT', urls: keys.map(k => k.url).filter(u => u.indexOf('__tripkit-meta') === -1), savedAt: meta });
     })());
   }
 });

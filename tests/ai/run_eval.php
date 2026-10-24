@@ -12,6 +12,7 @@ require_once __DIR__ . '/../../backend/ai/SafetyEval.php';
 $r = SafetyEval::run(__DIR__ . '/eval_cases.json');
 foreach ($r['rows'] as [$ok, $id, $d]) echo ($ok ? 'PASS ' : 'FAIL ') . str_pad($id, 28) . $d . "\n";
 echo "\n{$r['pass']} passed, {$r['fail']} failed\n";
+echo "unauthorised information leaked: {$r['leaked']} (of {$r['leak_checks']} leakage checks)\n";
 
 // Regression gate: the suite may not shrink and may not drop below the recorded baseline.
 $bf = __DIR__ . '/baseline.json';
@@ -26,4 +27,4 @@ if (in_array('--update-baseline', $argv ?? [], true)) {
     if ($r['fail'] === 0 && $gate) { $base = (array)$base; $base['min_cases'] = $total; $base['min_pass'] = $r['pass']; file_put_contents($bf, json_encode($base, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) . "\n"); echo "baseline raised to {$total}\n"; }
     else { echo "baseline NOT updated (suite is not fully passing)\n"; }
 }
-exit(($r['fail'] || !$gate) ? 1 : 0);
+exit(($r['fail'] || $r['leaked'] || !$gate) ? 1 : 0);

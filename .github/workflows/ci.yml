@@ -116,3 +116,47 @@ jobs:
           php tests/autopilot/http.php http://127.0.0.1:8000
           php tests/ai/memory_http.php http://127.0.0.1:8000
           php tests/ai/admin_controls_http.php http://127.0.0.1:8000
+
+  # Fast gates that need no database, network or AI model (run in parallel with the full job above).
+  quality-gates:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          extensions: pdo_mysql, curl, mbstring
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: PHP syntax check (every tracked .php file)
+        run: |
+          git ls-files '*.php' -z | xargs -0 -n1 -P4 php -l > /dev/null
+
+      - name: Secret scan (file:line and rule only, values never printed)
+        run: bash scripts/ci/secret_scan.sh
+
+      - name: Migration validation (numbering, non-empty, additive only)
+        run: bash scripts/ci/validate_migrations.sh
+
+      - name: Pure unit tests (API contract, AI parsing/safety, supplier scoring, metrics matcher, service worker)
+        run: bash scripts/ci/pure_tests.sh
+
+      - name: JavaScript syntax check
+        run: |
+          for f in sw.js js/tms-a11y.js js/ai-feedback.js js/explore.js; do [ -f "$f" ] && node --check "$f"; done
+
+      # Dependency note: this project vendors its PHP and JS libraries (backend/phpmailer, js/*.js) and has no
+      # composer.json or package.json, so there is no lockfile for an automated vulnerability audit to read.
+      # Known-outdated: js/jquery-1.12.0.min.js (used by 53 pages; upgrade needs per-page compatibility testing).
+      # If composer.json/package.json are ever added, add `composer audit` / `npm audit --omit=dev` here.
+      - name: Dependency inventory (no manifest to audit; lists vendored libraries)
+        run: |
+          ls -1 backend/phpmailer js/*.min.js js/jquery-*.js 2>/dev/null || true
+          if [ -f composer.json ]; then composer audit; fi
+          if [ -f package.json ]; then npm audit --omit=dev; fi

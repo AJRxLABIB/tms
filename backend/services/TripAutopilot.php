@@ -69,19 +69,75 @@ final class TripAutopilot
         return $out;
     }
 
-    /** Turn matched notices (+ optional flagged weather days) into plain signal records. */
+    /**
+     * How sure are we, and how bad? Pure.
+     *   label    verified    an admin-verified notice that names a source and a verification date
+     *            forecast    a weather forecast day (a prediction, never a confirmed event)
+     *            unconfirmed anything that lacks a named source or verification date
+     *   severity high / medium / low from the wording of the notice (closures, strikes, evacuations... = high) or the rain chance.
+     * Severity is a triage hint for ordering alerts, not a prediction; the customer always sees the source text.
+     * @return array{label:string,severity:string}
+     */
+    public static function classifySignal(array $s): array
+    {
+        if (($s['type'] ?? '') === 'weather') {
+            $rain = (int)($s['rain_chance'] ?? 0);
+            return ['label' => 'forecast', 'severity' => $rain >= 85 ? 'medium' : 'low'];
+        }
+        $label = (trim((string)($s['source_name'] ?? '')) !== '' && trim((string)($s['verified_on'] ?? '')) !== '') ? 'verified' : 'unconfirmed';
+        $text = mb_strtolower((string)($s['title'] ?? '') . ' ' . (string)($s['body'] ?? ''), 'UTF-8');
+        $sev = 'low';
+        if (preg_match('/\b(clos(ed|ure)|evacuat\w*|strike|curfew|suspend\w*|cancel\w*|shut ?down|emergency|conflict|war|flood\w*|cyclone|hurricane|earthquake|do not travel|airport)\b/u', $text)) $sev = 'high';
+        elseif (preg_match('/\b(delay\w*|warning|advisory|protest\w*|disruption|restrict\w*|alert|storm|reduced|limited)\b/u', $text)) $sev = 'medium';
+        return ['label' => $label, 'severity' => $sev];
+    }
+
+    /** Turn matched notices (+ optional flagged weather days) into plain signal records (with label, severity, source and time). */
     public static function buildSignals(array $matchedNotices, array $flaggedWeatherDays = []): array
     {
         $s = [];
         foreach ($matchedNotices as $n) {
-            $s[] = ['type' => 'notice', 'id' => (int)$n['NoticeId'], 'title' => (string)$n['Title'], 'body' => (string)$n['Body'],
+            $x = ['type' => 'notice', 'id' => (int)$n['NoticeId'], 'title' => (string)$n['Title'], 'body' => (string)$n['Body'],
                 'country' => (string)$n['Country'], 'source_name' => (string)$n['SourceName'], 'source_url' => (string)$n['SourceUrl'],
                 'verified_on' => (string)$n['VerifiedOn'], 'expires_on' => $n['ExpiresOn'] ?? null];
+            $s[] = $x + self::classifySignal($x) + ['observed_at' => (string)$n['VerifiedOn']];
         }
         foreach ($flaggedWeatherDays as $d) {
-            $s[] = ['type' => 'weather', 'day' => (int)($d['day'] ?? 0), 'date' => (string)($d['date'] ?? ''), 'rain_chance' => (int)($d['rain_chance'] ?? 0)];
+            $x = ['type' => 'weather', 'day' => (int)($d['day'] ?? 0), 'date' => (string)($d['date'] ?? ''), 'rain_chance' => (int)($d['rain_chance'] ?? 0)];
+            $s[] = $x + self::classifySignal($x) + ['observed_at' => date('Y-m-d H:i:s'), 'source_name' => 'Weather forecast'];
         }
         return $s;
+    }
+
+    /**
+     * Keep one tracked row per (booking, signal) with label, severity, source and when we saw it. Idempotent: seeing the same
+     * signal again only refreshes LastSeenAt (so alerts are never duplicated). Best-effort: a missing table (migration 021 not applied) never
+     * breaks the check. Resolution is recorded by resolveMissing() when the signal is no longer present.
+     */
+    public static function recordDisruptions(PDO $dbh, int $bookingId, array $signals): void
+    {
+        try {
+            $st = $dbh->prepare("INSERT INTO tbl_disruption_events (BookingId, SignalKey, Label, Severity, Summary, SourceName, SourceUrl, ObservedAt)
+                VALUES (?,?,?,?,?,?,?,?) ON DUPLICATE KEY UPDATE LastSeenAt = NOW(), Status = IF(Status='resolved','open',Status), ResolvedAt = IF(Status='resolved', NULL, ResolvedAt)");
+            foreach ($signals as $x) {
+                $key = sha1(self::signalKey([$x]));
+                $sum = $x['type'] === 'notice' ? mb_substr((string)$x['title'], 0, 300) : 'Forecast: ' . (int)$x['rain_chance'] . '% chance of rain on day ' . (int)$x['day'];
+                $when = (string)($x['observed_at'] ?? date('Y-m-d H:i:s')); if (strlen($when) === 10) $when .= ' 00:00:00';
+                $st->execute([$bookingId, $key, $x['label'] ?? 'unconfirmed', $x['severity'] ?? 'low', $sum, $x['source_name'] ?? null, $x['source_url'] ?? null, $when]);
+            }
+            self::resolveMissing($dbh, $bookingId, array_map(fn($x) => sha1(self::signalKey([$x])), $signals));
+        } catch (Throwable $e) {
+            if (!($e instanceof PDOException && (string)$e->getCode() === '42S02')) error_log('[TMS Autopilot] recordDisruptions: ' . $e->getMessage());
+        }
+    }
+
+    /** Open events for this booking whose signal is no longer present are marked resolved (with a reason), never deleted. */
+    public static function resolveMissing(PDO $dbh, int $bookingId, array $presentKeys): void
+    {
+        $sql = "UPDATE tbl_disruption_events SET Status='resolved', ResolvedAt=NOW(), Resolution='no longer reported by the source' WHERE BookingId=? AND Status='open'";
+        $args = [$bookingId];
+        if ($presentKeys) { $sql .= ' AND SignalKey NOT IN (' . implode(',', array_fill(0, count($presentKeys), '?')) . ')'; $args = array_merge($args, $presentKeys); }
+        $dbh->prepare($sql)->execute($args);
     }
 
     /** Stable fingerprint of a signal set: same disruption => same key, so we never propose twice for one event. */
@@ -317,7 +373,11 @@ final class TripAutopilot
             } catch (Throwable $e) { error_log('[TMS Autopilot] weather: ' . $e->getMessage()); }
         }
         $signals = self::buildSignals($matched, $weather);
-        if (!$signals) return ['status' => 'no_disruption', 'proposal_id' => null, 'signals' => 0];
+        if (!$signals) {
+            try { self::resolveMissing($dbh, $bid, []); } catch (Throwable $e) { /* tracking table not migrated yet: not fatal */ }
+            return ['status' => 'no_disruption', 'proposal_id' => null, 'signals' => 0];
+        }
+        self::recordDisruptions($dbh, $bid, $signals);
 
         $proposed = null; $summary = null;
         $base = $planner ? $planner->getByBookingId($bid) : null;

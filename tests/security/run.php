@@ -69,7 +69,10 @@ $h = (new Client())->req("$base/index.php")["headers"];
 t('session cookie is HttpOnly', (bool)preg_match('/Set-Cookie: PHPSESSID=[^;]+;.*HttpOnly/i', $h), '');
 t('session cookie has SameSite', (bool)preg_match('/Set-Cookie: PHPSESSID=[^;]+;.*SameSite=(Lax|Strict)/i', $h));
 t('server refuses a session ID it did not issue (strict mode)', (function () use ($base) {
-    $c = new Client(); file_put_contents($c->jar, "#HttpOnly_127.0.0.1\tFALSE\t/\tFALSE\t0\tPHPSESSID\tattackerchosenid1234567890\n");
+    // The cookie must be scoped to the host actually under test (it was hard-coded to 127.0.0.1, so against
+    // http://localhost/tms the forged cookie was never sent and the check could not pass).
+    $host = (string)parse_url($base, PHP_URL_HOST);
+    $c = new Client(); file_put_contents($c->jar, "#HttpOnly_{$host}\tFALSE\t/\tFALSE\t0\tPHPSESSID\tattackerchosenid1234567890\n");
     $r = $c->req($base . '/index.php'); return !str_contains(file_get_contents($c->jar), 'attackerchosenid1234567890'); })());
 
 foreach ([['my-trip', "/my-trip.php?id=$bid", '2031-01-01', '2031'], ['ticket', "/ticket.php?bkid=$bid", '01999888777', '01999888777']] as [$n, $u, $own, $mark]) {

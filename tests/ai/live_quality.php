@@ -86,6 +86,11 @@ $prevFile = null; foreach (array_reverse(glob($dir . '/quality-*.json') ?: []) a
 $out = ['at' => date('c'), 'provider' => $provider, 'model' => $model, 'catalogue_packages' => $catalogue, 'pass' => $pass, 'fail' => $fail, 'skipped' => $skip,
         'cases' => array_map(fn($r) => ['id' => $r[0], 'result' => $r[1], 'failed' => $r[2]], $rows)];
 file_put_contents($dir . '/quality-' . date('Ymd-His') . '.json', json_encode($out, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
+// Summary row for admin/ai-evaluation.php (best effort; needs migration 035). Latency is the real per-turn wall time.
+require_once 'backend/ai/AIMetrics.php';
+$lat = array_values(array_filter(array_map(fn($r) => $r[3] ?? null, $rows), 'is_int'));
+EvalRunLog::save($dbh, 'live_quality', $pass, $fail, 0, ['skipped' => $skip, 'catalogue_packages' => $catalogue, 'turn_p50_ms' => AIMetrics::percentile($lat, 50), 'turn_p95_ms' => AIMetrics::percentile($lat, 95),
+    'by_category' => array_map(fn($v) => [array_sum($v), count($v)], $byCat)], $provider, $model);
 if ($prevFile) {
     $pm = []; foreach ($prevFile['cases'] as $c) $pm[$c['id']] = $c['result'];
     foreach ($out['cases'] as $c) { $o = $pm[$c['id']] ?? null; if ($o === 'PASS' && $c['result'] === 'FAIL') echo "REGRESSION since {$prevFile['at']}: {$c['id']}\n"; if ($o === 'FAIL' && $c['result'] === 'PASS') echo "fixed since {$prevFile['at']}: {$c['id']}\n"; }

@@ -59,6 +59,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'], $_POST['id'
             break;
         case 'cancel':
             $dbh->prepare("UPDATE $table SET status=2 WHERE BookingId=:id")->execute([':id' => $bid]);
+            // Release slot inventory held by this booking (idempotent: a repeat cancel releases nothing more).
+            require_once __DIR__ . '/../backend/services/InventoryService.php';
+            InventoryService::releaseBooking($dbh, $type, $bid);
             tms_notify_marketplace_booking_owner(
                 $dbh, $type, $bid,
                 "Your $label booking #$code has been cancelled by our team. Please contact support if you have questions.",
@@ -70,6 +73,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'], $_POST['id'
             tms_log_activity($dbh, $_SESSION['alogin'], "Marketplace $label Booking Cancelled", "BookingId=$bid");
             break;
         case 'delete':
+            // A deleted booking must not keep its slot units: release first (idempotent, no-op if already released/unmanaged).
+            require_once __DIR__ . '/../backend/services/InventoryService.php';
+            InventoryService::releaseBooking($dbh, $type, $bid);
             $dbh->prepare("DELETE FROM $table WHERE BookingId=:id")->execute([':id' => $bid]);
             $msg = "$label booking #$code deleted."; $msgType = 'success';
             tms_log_activity($dbh, $_SESSION['alogin'], "Marketplace $label Booking Deleted", "BookingId=$bid");

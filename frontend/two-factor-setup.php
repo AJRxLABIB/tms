@@ -26,10 +26,12 @@
 require_once __DIR__ . '/../backend/session-boot.php';
 error_reporting(E_ALL); ini_set('display_errors', '0'); ini_set('log_errors', '1');
 include('backend/config.php');
+require_once __DIR__ . '/../backend/TwoFactorRecovery.php';
 tms_require_user();
 
 $email = $_SESSION['login'];
 $msg = ''; $msgType = '';
+$newRecoveryCodes = [];
 
 $q = $dbh->prepare("SELECT id, Password, TwoFAEnabled, TwoFASecret FROM tblusers WHERE EmailId = :e LIMIT 1");
 $q->execute([':e' => $email]);
@@ -57,6 +59,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['confirm_enable'])) {
         unset($_SESSION['pending_u2fa_secret']);
         $msg = 'Two-factor authentication is now enabled on your account.'; $msgType = 'success';
         $me->TwoFAEnabled = 1;
+        $newRecoveryCodes = TwoFactorRecovery::regenerate($dbh, (int)$me->id); // shown once below, never stored in plain text
+    }
+}
+
+// ─── Regenerate recovery codes (needs password + a current code; old codes stop working) ──
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['regen_recovery'])) {
+    tms_csrf_validate();
+    $pw = $_POST['confirm_password'] ?? '';
+    $code = $_POST['regen_totp_code'] ?? '';
+    if (empty($me->TwoFAEnabled) || !$me->TwoFASecret || !tms_verify_password($pw, $me->Password, (int)$me->id, $dbh)) {
+        $msg = 'Incorrect password.'; $msgType = 'error';
+    } elseif (!tms_totp_verify($me->TwoFASecret, $code)) {
+        $msg = 'Incorrect or expired code.'; $msgType = 'error';
+    } else {
+        $newRecoveryCodes = TwoFactorRecovery::regenerate($dbh, (int)$me->id);
+        if ($newRecoveryCodes) { $msg = 'New recovery codes generated. Your previous codes no longer work.'; $msgType = 'success'; }
+        else { $msg = 'Could not create recovery codes (has the latest database migration been applied?).'; $msgType = 'error'; }
     }
 }
 
@@ -79,6 +98,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['disable_2fa'])) {
     } else {
         $dbh->prepare("UPDATE tblusers SET TwoFASecret = NULL, TwoFAEnabled = 0 WHERE id = :id")
             ->execute([':id' => $me->id]);
+        TwoFactorRecovery::deleteAll($dbh, (int)$me->id);
         $msg = 'Two-factor authentication has been disabled.'; $msgType = 'success';
         $me->TwoFAEnabled = 0;
     }
@@ -173,11 +193,23 @@ $qrUrl  = $otpUri ? tms_totp_qr_url($otpUri) : '';
                     Scan this QR code with Google Authenticator, Authy, 1Password, or any standard TOTP app.
                 </p>
                 <div class="qr-box">
-                    <img src="<?php echo htmlspecialchars($qrUrl, ENT_QUOTES, 'UTF-8'); ?>" width="220" height="220" alt="2FA QR code"
-                         onerror="this.style.display='none'; document.getElementById('tfaQrFallback').style.display='block';">
+                    <?php /* Rendered in the browser with the bundled js/qrcode.js: the secret never goes to a third-party QR service. */ ?>
+                    <div id="tfaQr" data-otpauth="<?php echo htmlspecialchars($otpUri, ENT_QUOTES, 'UTF-8'); ?>" role="img" aria-label="2FA QR code"></div>
                     <p id="tfaQrFallback" style="display:none;font-size:12.5px;color:#92400e;margin-top:8px;">
-                        Couldn't load the QR image — use the manual entry key below instead.
+                        Couldn't draw the QR code — use the manual entry key below instead.
                     </p>
+                    <script src="js/qrcode.js"></script>
+                    <script>
+                    (function () {
+                        var el = document.getElementById('tfaQr');
+                        try {
+                            var qr = qrcode(0, 'M'); qr.addData(el.getAttribute('data-otpauth')); qr.make();
+                            el.innerHTML = qr.createImgTag(5, 8);
+                            var im = el.firstChild; im.setAttribute('width', '220'); im.setAttribute('height', '220'); im.setAttribute('alt', '2FA QR code');
+                            im.style.cssText = 'width:220px;height:220px;image-rendering:pixelated';
+                        } catch (e) { document.getElementById('tfaQrFallback').style.display = 'block'; }
+                    })();
+                    </script>
                 </div>
                 <p style="font-size:12px;color:var(--text-muted);margin-bottom:4px;">Or enter this key manually:</p>
                 <div class="manual-key"><?php echo htmlspecialchars($pendingSecret, ENT_QUOTES, 'UTF-8'); ?></div>
@@ -197,6 +229,30 @@ $qrUrl  = $otpUri ? tms_totp_qr_url($otpUri) : '';
             <?php else: ?>
                 <h4><i class="fa fa-check-circle" style="color:#059669;"></i> Two-factor authentication is active</h4>
                 <p style="font-size:13.5px;color:#64748b;margin-bottom:20px;">You'll be asked for a code from your authenticator app every time you sign in.</p>
+
+                <h4><i class="fa fa-life-ring"></i> Recovery codes</h4>
+                <?php if (!empty($newRecoveryCodes)): ?>
+                    <div role="alert" style="background:#fffbeb;border:1px solid #fcd34d;border-radius:10px;padding:14px 16px;margin-bottom:14px;">
+                        <p style="margin:0 0 8px;font-size:13.5px;"><strong>Save these now.</strong> They are shown only once. Each works one time if you lose your phone.</p>
+                        <ul style="list-style:none;padding:0;margin:0;columns:2;font-family:monospace;font-size:15px;letter-spacing:1px;">
+                            <?php foreach ($newRecoveryCodes as $rc): ?><li><?php echo htmlspecialchars(TwoFactorRecovery::format($rc), ENT_QUOTES, 'UTF-8'); ?></li><?php endforeach; ?>
+                        </ul>
+                    </div>
+                <?php else: ?>
+                    <p style="font-size:13.5px;color:#64748b;margin-bottom:12px;">Unused recovery codes: <strong><?php echo (int)TwoFactorRecovery::remaining($dbh, (int)$me->id); ?></strong>. Generating new ones cancels the old set.</p>
+                <?php endif; ?>
+                <form method="post" style="margin-bottom:24px;">
+                    <?php tms_csrf_field(); ?>
+                    <div class="form-row">
+                        <label for="tfaRegenPassword">Current Password</label>
+                        <input type="password" id="tfaRegenPassword" name="confirm_password" required autocomplete="current-password">
+                    </div>
+                    <div class="form-row">
+                        <label for="tfaRegenCode">Current 2FA Code</label>
+                        <input type="text" id="tfaRegenCode" name="regen_totp_code" inputmode="numeric" pattern="[0-9]*" maxlength="6" required autocomplete="one-time-code">
+                    </div>
+                    <button type="submit" name="regen_recovery" class="btn-ghost-sm"><i class="fa fa-refresh"></i> Generate new recovery codes</button>
+                </form>
 
                 <h4><i class="fa fa-ban" style="color:#dc2626;"></i> Disable Two-Factor Authentication</h4>
                 <p style="font-size:13px;color:var(--text-muted);margin-bottom:14px;">Requires your current password and a valid code, since this reduces your account's security.</p>

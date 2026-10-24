@@ -2,6 +2,7 @@
 require_once __DIR__ . '/../backend/session-boot.php';
 error_reporting(E_ALL); ini_set('display_errors', '0'); ini_set('log_errors', '1');
 include('backend/config.php');
+require_once __DIR__ . '/../backend/Seo.php';
 // LIVE BUG FIX (customer-facing audit): this page is real browsing/
 // marketing content -- it's explicitly allowed in robots.txt and listed
 // in sitemap.php for search engines -- but a blanket "require login
@@ -130,6 +131,9 @@ if ($maxPrice !== null) {
 }
 $whereSQL = $where ? ('WHERE ' . implode(' AND ', $where)) : '';
 
+// Only the columns the listing renders (avoids pulling PackageDescription and other long text for every row).
+$listCols = 'PackageId, PackageName, PackageType, PackageLocation, PackagePrice, PackageFetures, PackageImage, PackageDuration, SeatsAvailable, AvgRating, MapLat, MapLng';
+
 $orderSQL = match($sortBy) {
     'price_asc'  => 'ORDER BY PackagePrice ASC',
     'price_desc' => 'ORDER BY PackagePrice DESC',
@@ -146,7 +150,7 @@ if ($durationMin !== null) {
     // it would need revisiting well before the catalog reached a size where
     // that stopped being true.
     require_once dirname(__DIR__) . '/backend/ai/NLSearchParser.php';
-    $sql   = "SELECT * FROM tbltourpackages $whereSQL $orderSQL";
+    $sql   = "SELECT $listCols FROM tbltourpackages $whereSQL $orderSQL";
     $query = $dbh->prepare($sql);
     foreach ($params as $k => $v) { $query->bindValue($k, $v, PDO::PARAM_STR); }
     $query->execute();
@@ -165,7 +169,7 @@ if ($durationMin !== null) {
     $totalPages = (int)ceil($totalRows / $perPage);
 
     // Paginated results
-    $sql   = "SELECT * FROM tbltourpackages $whereSQL $orderSQL LIMIT :limit OFFSET :offset";
+    $sql   = "SELECT $listCols FROM tbltourpackages $whereSQL $orderSQL LIMIT :limit OFFSET :offset";
     $query = $dbh->prepare($sql);
     foreach ($params as $k => $v) { $query->bindValue($k, $v, PDO::PARAM_STR); }
     $query->bindValue(':limit',  $perPage, PDO::PARAM_INT);
@@ -241,6 +245,7 @@ tms_seo_meta([
     'description' => $totalRows > 0
         ? "Browse {$totalRows} tour packages" . ($filterType ? " in {$filterType}" : '') . '.'
         : 'Browse our tour packages.',
+    'jsonld'      => tms_seo_itemlist_jsonld($results ?? []),
     'breadcrumbs' => [
         ['label' => 'Home', 'url' => 'index.php'],
         ['label' => 'Package List'],
@@ -253,7 +258,6 @@ tms_seo_meta([
 <link href="<?php echo tms_asset_ver('css/style.min.css'); ?>" rel='stylesheet' type='text/css' />
 <link href="css/font-awesome.min2.css" rel="stylesheet">
 <link href="<?php echo tms_asset_ver('css/modern-theme.css'); ?>" rel="stylesheet">
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <script src="js/jquery-1.12.0.min.js" defer></script>
@@ -521,10 +525,13 @@ html[data-theme="dark"] .no-results { color: var(--text-light) !important; }
                 <div class="rom-btm wow fadeInUp animated" data-wow-delay=".05s">
                     <div class="col-md-3 room-left">
                         <span class="tms-stamp"><?php echo htmlspecialchars(mb_strtoupper(substr($result->PackageType ?? 'TOUR', 0, 12), 'UTF-8'), ENT_QUOTES, 'UTF-8'); ?></span>
-                        <img loading="lazy"
-                             src="<?php echo htmlspecialchars(tms_package_image_src($result->PackageImage), ENT_QUOTES, 'UTF-8'); ?>"
-                             onerror="this.src='images/no-image-placeholder.jpg'"
+                        <?php $tmsCardImg = tms_card_image((string)$result->PackageImage, (string)$result->PackageName, (string)$result->PackageType, (string)$result->PackageLocation); ?>
+                        <span class="tms-img-wrap">
+                        <img loading="lazy" width="400" height="260"
+                             src="<?php echo htmlspecialchars($tmsCardImg['src'], ENT_QUOTES, 'UTF-8'); ?>"<?php echo tms_img_onerror($tmsCardImg['fallback']); ?>
                              class="img-responsive" alt="<?php echo htmlspecialchars(tms_pkg_name($result, $translatedNames), ENT_QUOTES, 'UTF-8'); ?>">
+                        <?php if ($tmsCardImg['caption'] !== ''): ?><span class="tms-img-caption"><?php echo htmlspecialchars($tmsCardImg['caption'], ENT_QUOTES, 'UTF-8'); ?></span><?php endif; ?>
+                        </span>
                     </div>
                     <div class="col-md-6 room-midle">
                         <h4><?php echo htmlspecialchars(tms_pkg_name($result, $translatedNames), ENT_QUOTES, 'UTF-8'); ?></h4>
@@ -575,7 +582,7 @@ html[data-theme="dark"] .no-results { color: var(--text-light) !important; }
                             <form method="post" action="wishlist.php" style="display:inline;">
                                 <?php tms_csrf_field(); ?>
                                 <input type="hidden" name="pkgid" value="<?php echo (int)$result->PackageId; ?>">
-                                <button name="toggle_wish" style="background:<?php echo $inWish?'var(--danger)':'#fff'; ?>;color:<?php echo $inWish?'#fff':'var(--danger)'; ?>;border:1px solid var(--danger);padding:5px 12px;border-radius:6px;font-size:13px;cursor:pointer;">
+                                <button name="toggle_wish" class="tms-btn-save<?php echo $inWish?' is-saved':''; ?>" aria-pressed="<?php echo $inWish?'true':'false'; ?>">
                                     <i class="fa fa-heart<?php echo $inWish?'':'-o'; ?>"></i> <?php echo $inWish?'Saved':'Save'; ?>
                                 </button>
                             </form>
@@ -589,12 +596,12 @@ html[data-theme="dark"] .no-results { color: var(--text-light) !important; }
                             <form method="post" action="compare.php" style="display:inline;">
                                 <?php tms_csrf_field(); ?>
                                 <input type="hidden" name="pkgid" value="<?php echo (int)$result->PackageId; ?>">
-                                <button name="add_compare" style="background:var(--secondary);color:#fff;border:none;padding:5px 12px;border-radius:6px;font-size:13px;cursor:pointer;">
+                                <button name="add_compare" class="tms-btn-compare">
                                     <i class="fa fa-columns"></i> Compare
                                 </button>
                             </form>
                             <?php elseif($inCompare): ?>
-                            <span style="background:#e8f5e9;color:#2e7d32;padding:5px 12px;border-radius:6px;font-size:13px;border:1px solid #a5d6a7;">
+                            <span class="tms-chip-added">
                                 <i class="fa fa-check"></i> Added
                             </span>
                             <?php endif; ?>
@@ -643,7 +650,8 @@ html[data-theme="dark"] .no-results { color: var(--text-light) !important; }
 </div>
 
 <?php if (count($results) > 0): ?>
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="js/tms-leaflet-loader.js"></script>
+<script src="js/tms-map.js"></script>
 <script>
 var TMS_MAP_POINTS = <?php echo json_encode($mapPoints, JSON_UNESCAPED_SLASHES); ?>;
 var tmsPkgMap = null;
@@ -673,23 +681,28 @@ function tmsSwitchView(view) {
             // spinner immediately, and a clear message instead of a crash
             // if Leaflet itself never loaded.
             mapEl.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:var(--text-muted);font-size:13px;"><i class="fa fa-spinner fa-spin" style="margin-right:8px;"></i> Loading map…</div>';
-            if (typeof L === 'undefined') {
-                mapEl.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:var(--text-muted);font-size:13px;text-align:center;padding:20px;"><i class="fa fa-exclamation-triangle" style="display:block;font-size:24px;margin-bottom:8px;"></i>Map couldn\'t load (offline or blocked script). Use List view to browse these packages instead.</div>';
-                return;
-            }
-            mapEl.innerHTML = '';
-            tmsPkgMap = L.map('pkgMapView');
-            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                attribution: '&copy; OpenStreetMap contributors', maxZoom: 18
-            }).addTo(tmsPkgMap);
-            var bounds = [];
-            TMS_MAP_POINTS.forEach(function(p) {
-                var m = L.marker([p.lat, p.lng]).addTo(tmsPkgMap)
-                    .bindPopup('<strong>' + p.name.replace(/</g,'&lt;') + '</strong><br>' + p.price +
-                        '<br><a href="package-details.php?pkgid=' + p.id + '">View package</a>');
-                bounds.push([p.lat, p.lng]);
+            // Leaflet is loaded on demand (js/tms-leaflet-loader.js) so the CDN never blocks first paint.
+            if (window.tmsPkgMapBuilding) { return; }
+            window.tmsPkgMapBuilding = true;
+            tmsLoadLeaflet(function (err) {
+                window.tmsPkgMapBuilding = false;
+                if (err || typeof L === 'undefined') {
+                    mapEl.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:var(--text-muted);font-size:13px;text-align:center;padding:20px;"><i class="fa fa-exclamation-triangle" style="display:block;font-size:24px;margin-bottom:8px;"></i>Map couldn\'t load (offline or blocked script). Use List view to browse these packages instead.</div>';
+                    return;
+                }
+                mapEl.innerHTML = '';
+                tmsPkgMap = L.map('pkgMapView');
+                if (window.TmsMap) { TmsMap.addTiles(tmsPkgMap, { maxZoom: 18 }); TmsMap.fixSize(tmsPkgMap); }
+                else L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '&copy; OpenStreetMap contributors', maxZoom: 18 }).addTo(tmsPkgMap);
+                var bounds = [];
+                TMS_MAP_POINTS.forEach(function(p) {
+                    var m = L.marker([p.lat, p.lng]).addTo(tmsPkgMap)
+                        .bindPopup('<strong>' + p.name.replace(/</g,'&lt;') + '</strong><br>' + p.price +
+                            '<br><a href="package-details.php?pkgid=' + p.id + '">View package</a>');
+                    bounds.push([p.lat, p.lng]);
+                });
+                tmsPkgMap.fitBounds(bounds, { padding: [40, 40], maxZoom: 12 });
             });
-            tmsPkgMap.fitBounds(bounds, { padding: [40, 40], maxZoom: 12 });
         } else {
             setTimeout(function(){ tmsPkgMap.invalidateSize(); }, 50);
         }

@@ -112,6 +112,8 @@ class CrowdPredictor {
     // ── Private ───────────────────────────────────────────────────────────────
 
     private function getNarrative(string $destination, array $busiest, array $quietest, string $email, bool $hasRealData): string {
+        $rawDestination = $destination;
+        $destination = trim(mb_substr(str_replace(['{', '}', '<', '>', '`', '"'], ' ', preg_replace('/[\x00-\x1F\x7F]+/u', ' ', $destination) ?? ''), 0, 100, 'UTF-8')) ?: 'this destination';
         $cacheKey = 'crowd_narrative_' . md5($destination . '_' . implode(',', $busiest) . '_' . implode(',', $quietest));
 
         if ($hasRealData) {

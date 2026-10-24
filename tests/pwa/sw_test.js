@@ -9,12 +9,13 @@ function make() {
     match: async (r, o) => { const u = r.url ?? r; for (const n of o && o.cacheName ? [o.cacheName] : Object.keys(stores)) if (stores[n] && stores[n].has(u)) return stores[n].get(u); return undefined; } };
   const self = { location: { origin: 'http://x' }, addEventListener: (e, f) => listeners[e] = f, skipWaiting() {}, clients: { claim() {} } };
   const fetchFn = async u => { if (netDown) throw new Error('offline'); const url = u.url ?? u; return new Resp('net:' + url, 200, netHeaders[url] || {}); };
-  vm.runInNewContext(fs.readFileSync(path.join(__dirname, '../../sw.js'), 'utf8'), { self, caches, fetch: fetchFn, URL, Promise, console });
+  vm.runInNewContext(fs.readFileSync(path.join(__dirname, '../../sw.js'), 'utf8'), { self, caches, fetch: fetchFn, URL, Promise, console, Response: class { constructor(b) { this.body = b; } async text() { return this.body; } clone() { return this; } } });
   const pending = [];
   const fire = async (urlPath, extra = {}) => { let res; const e = { request: { method: 'GET', url: 'http://x' + urlPath, ...extra }, respondWith: p => { res = p; }, waitUntil: p => pending.push(p) }; listeners.fetch(e); const out = res ? await res : undefined; await Promise.all(pending.splice(0)); await new Promise(r => setTimeout(r, 5)); return { intercepted: !!res, out }; };
   return { stores, caches, fire, setDown: v => netDown = v, netHeaders, listeners, cacheObj };
 }
 (async () => {
+  const pending2 = [];
   let s = make();
   await s.fire('/tms/package-list.php');
   t('public page: cached for offline', s.stores['tms-cache-v2'].has('http://x/tms/package-list.php'));
@@ -40,6 +41,21 @@ function make() {
   s.listeners.activate({ waitUntil: p => p }); await new Promise(r => setTimeout(r, 10));
   t('activate removes the old v1 cache (that held logged-in pages) but keeps tripkit and v2', !('tms-cache-v1' in s.stores) && 'tms-tripkit' in s.stores && 'tms-cache-v2' in s.stores);
   const post = await s.fire('/tms/package-list.php', { method: 'POST' }); t('non-GET requests are ignored', post.intercepted === false);
+  // saved-trip kit rules: never store payment/auth/API/document pages; record when pages were saved
+  s = make();
+  const sent = []; const port = { postMessage: m => sent.push(m) };
+  s.listeners.message({ data: { type: 'TMS_CACHE_TRIP', urls: ['/tms/my-trip.php?id=5', '/tms/payment.php?id=5', '/tms/api/index.php?action=me', '/tms/wallet-document.php?id=3', '/tms/checkout.php', '/tms/change-password.php'] }, ports: [port], waitUntil: p => pending2.push(p) });
+  await Promise.all(pending2.splice(0)); await new Promise(r => setTimeout(r, 20));
+  const trip = s.stores['tms-tripkit'] || new Map(); const tkeys = [...trip.keys()];
+  t('offline kit saves an itinerary page', tkeys.includes('/tms/my-trip.php?id=5'));
+  t('offline kit REFUSES payment, API, document, checkout and password pages', !tkeys.some(k => /payment|api|wallet-document|checkout|change-password/.test(k)));
+  const res = (sent[0] && sent[0].results) || [];
+  t('refused pages are reported as not_allowed', res.filter(r => r.error === 'not_allowed').length === 5);
+  const meta = trip.get('/tms/__tripkit-meta.json');
+  t('save time is recorded for the stale-data notice', !!meta && !isNaN(Date.parse(JSON.parse(meta.body)['/tms/my-trip.php?id=5'])));
+  const lst = []; s.listeners.message({ data: { type: 'TMS_LIST_TRIPKIT' }, ports: [{ postMessage: m => lst.push(m) }], waitUntil: p => pending2.push(p) });
+  await Promise.all(pending2.splice(0)); await new Promise(r => setTimeout(r, 10));
+  t('listing the kit hides the metadata entry and returns save times', lst[0] && !lst[0].urls.some(u => u.includes('__tripkit-meta')) && lst[0].savedAt && Object.keys(lst[0].savedAt).length === 1);
   const cross = await s.fire('/x'); // same origin ok
   console.log(`\n${pass} passed, ${fail} failed`); process.exit(fail ? 1 : 0);
 })();

@@ -229,6 +229,7 @@ html[data-theme="dark"] .quick-links a { color: var(--text-muted) !important; }
                          Password, rather than a separate "Security Center"
                          page duplicating what profile.php already is. -->
                     <a href="two-factor-setup.php"><i class="fa fa-shield"></i> Two-Factor Authentication</a>
+                    <a href="appeal.php"><i class="fa fa-balance-scale"></i> Account review &amp; appeals</a>
                     <a href="ai-recommend.php"><i class="fa fa-magic"></i> Get Recommendations</a>
                     <a href="package-list.php"><i class="fa fa-search"></i> Browse Packages</a>
                 </div>

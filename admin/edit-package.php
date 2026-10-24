@@ -272,17 +272,19 @@ document.getElementById('suggestPriceBtn').addEventListener('click', function() 
             btn.disabled = false;
             btn.innerHTML = originalHtml;
             if (!res.success || !res.data || !res.data.prediction || !res.data.prediction.has_data) {
-                box.innerHTML = (res.data && res.data.prediction && res.data.prediction.message) || 'No comparable packages found — you\'ll need to set the price based on judgment for this one.';
+                box.textContent = (res.data && res.data.prediction && res.data.prediction.message) || 'No comparable packages found — you\'ll need to set the price based on judgment for this one.';
                 return;
             }
             var p = res.data.prediction;
-            var html = '<strong>' + p.comparable_count + ' comparable package(s)</strong> (matched by ' + p.match_basis + '): '
-                + '৳' + p.min_price + ' – ৳' + p.max_price + ' (median ৳' + p.median_price + ', avg ৳' + p.avg_price + ').';
+            var E = function (s) { var d = document.createElement('div'); d.textContent = (s == null ? '' : String(s)); return d.innerHTML; };
+            var N = function (v) { v = Number(v); return isFinite(v) ? v : 0; };
+            var html = '<strong>' + N(p.comparable_count) + ' comparable package(s)</strong> (matched by ' + E(p.match_basis) + '): '
+                + '৳' + N(p.min_price) + ' – ৳' + N(p.max_price) + ' (median ৳' + N(p.median_price) + ', avg ৳' + N(p.avg_price) + ').';
             if (p.own_price) {
-                html += '<br>This package (৳' + p.own_price + ') is currently <strong>' + p.position.replace('_',' ') + '</strong> (' + (p.diff_percent > 0 ? '+' : '') + p.diff_percent + '% vs avg).';
+                html += '<br>This package (৳' + N(p.own_price) + ') is currently <strong>' + E(String(p.position).replace('_',' ')) + '</strong> (' + (p.diff_percent > 0 ? '+' : '') + N(p.diff_percent) + '% vs avg).';
             }
-            if (p.ai_verdict) html += '<br><em>' + p.ai_verdict + '</em>';
-            html += '<br><button type="button" class="btn btn-xs btn-primary" style="margin-top:6px;" onclick="document.getElementById(\'packagePriceInput\').value=' + p.suggested_price + '">Use ৳' + p.suggested_price + '</button>';
+            if (p.ai_verdict) html += '<br><em>' + E(p.ai_verdict) + '</em>';
+            html += '<br><button type="button" class="btn btn-xs btn-primary" style="margin-top:6px;" onclick="document.getElementById(\'packagePriceInput\').value=' + N(p.suggested_price) + '">Use ৳' + N(p.suggested_price) + '</button>';
             box.innerHTML = html;
         })
         .catch(function() {

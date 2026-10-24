@@ -1,10 +1,19 @@
 <!-- TMS Explore Mode — Floating AI Travel Assistant -->
 <!-- Include on any Explore page: include('backend/explore-chatbot.php'); -->
 <?php
-// FIX (Round 14): this widget rendered a "🟢 Live · powered by Gemini" badge and
-// a working-looking launcher even with no API key configured — every message
-// then came back as an error. If the assistant can't run, don't offer it.
-if (defined('GEMINI_API_KEY') && GEMINI_API_KEY !== ''):
+// The assistant is always offered. What the badge says depends on what actually answers (AIClient::resolution()):
+//   ollama -> local model, gemini -> Gemini, none -> catalogue answers only (no language model, still useful and honest).
+// (FIX Round 14 hid the widget when no Gemini key existed; with local Ollama and the catalogue fallback that is no longer needed.)
+$tmsExploreAiBadge = '🟢 Live &middot; local AI';
+try {
+    if (isset($dbh) && $dbh instanceof PDO) {
+        require_once __DIR__ . '/ai/AIClient.php';
+        $tmsExploreRes = AIClient::resolution($dbh);
+        if ($tmsExploreRes['provider'] === 'gemini')      $tmsExploreAiBadge = '🟢 Live &middot; powered by Gemini';
+        elseif ($tmsExploreRes['provider'] === 'openai')  $tmsExploreAiBadge = '🟢 Live &middot; powered by OpenAI';
+        elseif ($tmsExploreRes['provider'] === 'none')    $tmsExploreAiBadge = '🟡 Catalogue answers only &middot; AI is offline';
+    }
+} catch (Throwable $e) { error_log('[TMS] explore chatbot badge: ' . $e->getMessage()); }
 ?>
 <button id="exploreChatToggle" onclick="toggleExploreChat()" title="Ask the AI Travel Assistant">
     <i class="fa fa-robot"></i>
@@ -15,7 +24,7 @@ if (defined('GEMINI_API_KEY') && GEMINI_API_KEY !== ''):
         <div class="exp-chat-avatar">🧭</div>
         <div class="exp-chat-header-info">
             <h5>AI Travel Assistant</h5>
-            <p>🟢 Live &middot; powered by Gemini</p>
+            <p><?php echo $tmsExploreAiBadge; ?></p>
         </div>
         <button class="exp-chat-close" onclick="toggleExploreChat()"><i class="fa fa-times"></i></button>
     </div>
@@ -25,4 +34,3 @@ if (defined('GEMINI_API_KEY') && GEMINI_API_KEY !== ''):
         <button class="exp-chat-send" onclick="sendExploreChat()"><i class="fa fa-paper-plane"></i></button>
     </div>
 </div>
-<?php endif; ?>

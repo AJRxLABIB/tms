@@ -1,6 +1,7 @@
 <?php
 // header.php - Modern redesigned header for TMS
 $currentPage = basename($_SERVER['PHP_SELF']);
+require_once __DIR__ . '/ContentHelpers.php';   // placeholder images + filler-text filters (see that file)
 ?>
 <script>
 // Round 61 (item 36, multilingual system): every page already renders the
@@ -63,6 +64,7 @@ $currentPage = basename($_SERVER['PHP_SELF']);
 }
 .tms-skip-link:focus { top: 8px; color: #fff; text-decoration: none; }
 </style>
+<link rel="stylesheet" href="css/tms-a11y.css">
 <!-- ═══════════════════════════════════════════ TOP BAR ═══════════════════════════════════════════ -->
 <?php if (empty($tms_landing_mode)): ?>
 <div class="tms-topbar">
@@ -72,14 +74,14 @@ $currentPage = basename($_SERVER['PHP_SELF']);
             <a href="index.php"><i class="fa fa-home"></i> <?php echo tms_t('nav_home','Home'); ?></a>
             <?php if(isset($_SESSION['login']) && !empty($_SESSION['login'])): ?>
             <span class="tms-topbar-divider"></span>
-            <a href="dashboard.php"><i class="fa fa-th-large"></i> Dashboard</a>
-            <a href="profile.php"><i class="fa fa-user-circle"></i> <?php echo tms_t('nav_profile','My Profile'); ?></a>
-            <a href="tour-history.php"><i class="fa fa-suitcase"></i> <?php echo tms_t('nav_bookings','My Bookings'); ?></a>
-            <a href="alerts.php"><i class="fa fa-bell"></i> Price Alerts</a>
-            <a href="group-trips.php"><i class="fa fa-users"></i> Group Trips</a>
-            <a href="referral.php"><i class="fa fa-gift"></i> Refer Friends</a>
-            <a href="ai-memory.php"><i class="fa fa-bookmark"></i> My AI memory</a>
-            <a href="privacy.php"><i class="fa fa-lock"></i> Privacy &amp; My Data</a>
+            <a href="dashboard.php" title="Dashboard"><i class="fa fa-th-large" aria-hidden="true"></i><span class="tms-tb-label"> Dashboard</span></a>
+            <a href="profile.php" title="<?php echo htmlspecialchars(tms_t('nav_profile','My Profile'), ENT_QUOTES, 'UTF-8'); ?>"><i class="fa fa-user-circle" aria-hidden="true"></i><span class="tms-tb-label"> <?php echo tms_t('nav_profile','My Profile'); ?></span></a>
+            <a href="tour-history.php" title="<?php echo htmlspecialchars(tms_t('nav_bookings','My Bookings'), ENT_QUOTES, 'UTF-8'); ?>"><i class="fa fa-suitcase" aria-hidden="true"></i><span class="tms-tb-label"> <?php echo tms_t('nav_bookings','My Bookings'); ?></span></a>
+            <a href="alerts.php" class="tms-tb-secondary" title="Price Alerts"><i class="fa fa-bell" aria-hidden="true"></i><span class="tms-tb-label"> Price Alerts</span></a>
+            <a href="group-trips.php" class="tms-tb-secondary" title="Group Trips"><i class="fa fa-users" aria-hidden="true"></i><span class="tms-tb-label"> Group Trips</span></a>
+            <a href="referral.php" class="tms-tb-secondary" title="Refer Friends"><i class="fa fa-gift" aria-hidden="true"></i><span class="tms-tb-label"> Refer Friends</span></a>
+            <a href="ai-memory.php" class="tms-tb-secondary" title="My AI memory"><i class="fa fa-bookmark" aria-hidden="true"></i><span class="tms-tb-label"> My AI memory</span></a>
+            <a href="privacy.php" class="tms-tb-secondary" title="Privacy &amp; My Data"><i class="fa fa-lock" aria-hidden="true"></i><span class="tms-tb-label"> Privacy &amp; My Data</span></a>
             <?php else: ?>
             <span class="tms-topbar-divider"></span>
             <a href="admin/index.php"><i class="fa fa-shield"></i> Admin</a>
@@ -100,7 +102,10 @@ $currentPage = basename($_SERVER['PHP_SELF']);
                 <?php endforeach; ?>
             </select>
             <span class="tms-topbar-divider"></span>
-            <span class="tms-phone"><i class="fa fa-phone"></i> Toll: +880 1759-443004</span>
+            <?php $tmsHdrPhone = trim((string)tms_env('TMS_SUPPORT_PHONE', '+880 1759-443004')); ?>
+            <?php if ($tmsHdrPhone !== ''): ?>
+            <span class="tms-phone"><i class="fa fa-phone" aria-hidden="true"></i> Toll: <?php echo htmlspecialchars($tmsHdrPhone, ENT_QUOTES, 'UTF-8'); ?></span>
+            <?php endif; ?>
             <span class="tms-topbar-divider"></span>
             <?php endif; ?>
             <?php if(empty($tms_landing_mode) && isset($_SESSION['login']) && !empty($_SESSION['login'])):
@@ -136,7 +141,7 @@ $currentPage = basename($_SERVER['PHP_SELF']);
             <span class="tms-topbar-divider"></span>
             <?php endif; ?>
             <?php if(isset($_SESSION['login']) && !empty($_SESSION['login'])): ?>
-            <span class="tms-topbar-welcome" style="color:rgba(255,255,255,0.85);font-size:12.5px;"><?php echo tms_t('nav_welcome','Welcome'); ?>, <?php echo htmlspecialchars(explode('@',$_SESSION['login'])[0]); ?>!</span>
+            <span class="tms-topbar-welcome" title="<?php echo htmlspecialchars((string)$_SESSION['login'], ENT_QUOTES, 'UTF-8'); ?>" style="color:rgba(255,255,255,0.85);font-size:12.5px;"><?php echo tms_t('nav_welcome','Welcome'); ?>, <?php echo htmlspecialchars(explode('@',$_SESSION['login'])[0]); ?>!</span>
             <a href="logout.php?t=<?php echo urlencode(tms_csrf_token()); ?>" class="btn-topbar-login"><i class="fa fa-sign-out"></i> <?php echo tms_t('nav_logout','Logout'); ?></a>
             <?php else: ?>
             <a href="javascript:void(0)" onclick="openModal('signupModal')" class="btn-topbar-signup"><i class="fa fa-user-plus"></i> <?php echo tms_t('nav_signup','Sign Up'); ?></a>

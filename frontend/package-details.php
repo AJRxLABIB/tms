@@ -366,14 +366,21 @@ $gallery = [];
 $galleryOwnCount = 0;
 if ($pkg) {
     $ownImg = tms_package_image_src($pkg->PackageImage);
-    if ($ownImg && strpos($ownImg, 'no-image-placeholder') === false) {
+    // A stock photo chosen only by a generic category (no destination keyword matched) is how a rice-terrace
+    // package got a city skyline. Those are replaced by a neutral illustration instead of a wrong "photo".
+    $tmsStockSpecific = tms_stock_photo_is_specific((string)$pkg->PackageName, (string)$pkg->PackageLocation, (string)$pkg->PackageType);
+    $tmsOwnIsMismatchedStock = tms_is_stock_url((string)$pkg->PackageImage) && !$tmsStockSpecific;
+    if ($ownImg && strpos($ownImg, 'no-image-placeholder') === false && !$tmsOwnIsMismatchedStock) {
         $gallery[] = $ownImg;
         $galleryOwnCount = 1;
     }
-    foreach (tms_destination_gallery($pkg->PackageName, $pkg->PackageLocation, $pkg->PackageType) as $g) {
-        if (!in_array($g, $gallery, true)) $gallery[] = $g;
+    if ($tmsStockSpecific) {
+        foreach (tms_destination_gallery($pkg->PackageName, $pkg->PackageLocation, $pkg->PackageType) as $g) {
+            if (!in_array($g, $gallery, true)) $gallery[] = $g;
+        }
     }
 }
+$tmsHeroImg = $pkg ? tms_card_image('', (string)$pkg->PackageName, (string)$pkg->PackageType, (string)$pkg->PackageLocation) : null;
 // Master prompt item 65 (photo/content provenance): everything past the
 // package's own uploaded photo (if any) comes from tms_destination_gallery()'s
 // curated Unsplash stock-photo pool, picked by keyword match on the
@@ -487,7 +494,6 @@ if ($pkg) {
 <link href="<?php echo tms_asset_ver('css/style.min.css'); ?>" rel='stylesheet'/>
 <link href="css/font-awesome.min2.css" rel="stylesheet">
 <link href="<?php echo tms_asset_ver('css/modern-theme.css'); ?>" rel="stylesheet">
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <script src="js/jquery-1.12.0.min.js" defer></script>
@@ -554,10 +560,9 @@ if ($pkg) {
             <div class="col-md-8">
                 <div class="pkg-card wow fadeInLeft">
                     <div class="pkg-gallery" id="pkgGallery">
-                        <img loading="lazy" id="pkgGalleryMain"
-                             src="<?php echo htmlspecialchars($gallery[0] ?? tms_package_image_src($pkg->PackageImage),ENT_QUOTES,'UTF-8'); ?>"
-                             <?php echo tms_responsive_img_attrs($gallery[0] ?? ''); ?>
-                             onerror="this.src='images/no-image-placeholder.jpg'"
+                        <img loading="lazy" id="pkgGalleryMain" width="1200" height="600"
+                             src="<?php echo htmlspecialchars($gallery[0] ?? $tmsHeroImg['src'],ENT_QUOTES,'UTF-8'); ?>"
+                             <?php echo tms_responsive_img_attrs($gallery[0] ?? ''); ?><?php echo tms_img_onerror($tmsHeroImg['fallback']); ?>
                              alt="<?php echo htmlspecialchars($pkgNameT ?? $pkg->PackageName,ENT_QUOTES,'UTF-8'); ?>">
                         <?php if (count($gallery) > 1): ?>
                         <button type="button" class="pkg-gallery-nav prev" onclick="tmsGalleryStep(-1)" aria-label="Previous photo">&#8249;</button>
@@ -590,6 +595,11 @@ if ($pkg) {
                     })();
                     </script>
                     <?php endif; ?>
+                    <?php if (!$gallery): ?>
+                    <div class="pkg-gallery-stock-note" style="font-size:11.5px;color:var(--text-muted);padding:6px 2px 0;">
+                        <i class="fa fa-info-circle"></i> Illustration only. No photo of this destination has been added yet.
+                    </div>
+                    <?php endif; ?>
                     <?php if ($galleryHasStockPhotos): ?>
                     <div class="pkg-gallery-stock-note" style="font-size:11.5px;color:var(--text-muted);padding:6px 2px 0;">
                         <i class="fa fa-info-circle"></i> Some photos are representative stock images of this destination, not exclusive property photos.
@@ -598,6 +608,10 @@ if ($pkg) {
                     <div class="pkg-body">
                         <p style="font-size:12px;color:var(--text-muted);margin:0;">#PKG-<?php echo (int)$pkg->PackageId; ?></p>
                         <h2><?php echo htmlspecialchars($pkgNameT ?? $pkg->PackageName,ENT_QUOTES,'UTF-8'); ?></h2>
+                        <?php $tmsMetaProbe = !empty($pkg->PackageMeta) ? json_decode((string)$pkg->PackageMeta, true) : null; ?>
+                        <?php if (tms_meta_is_sample($tmsMetaProbe)): ?>
+                        <p style="margin:6px 0 10px;"><span class="tms-sample-badge"><i class="fa fa-flask" aria-hidden="true"></i> <?php echo !empty($tmsMetaProbe) && tms_meta_is_generated($tmsMetaProbe) ? 'Sample listing — details are placeholders' : 'Sample listing'; ?></span></p>
+                        <?php endif; ?>
                         <?php if (!empty($pkg->AvgRating) && $pkg->AvgRating > 0): ?>
                         <div style="color:var(--brass);font-size:16px;margin-bottom:8px;">
                             <?php for ($i=1;$i<=5;$i++) echo $i<=round($pkg->AvgRating)?'★':'☆'; ?>
@@ -689,6 +703,9 @@ if ($pkg) {
                         }
                         if (is_array($meta)):
                             $esc = function($s) { return htmlspecialchars((string)$s, ENT_QUOTES, 'UTF-8'); };
+                            // Hide generic filler and invented numbers (random suitability stars, formula price ranges) on
+                            // template-generated sample listings; real, written content is untouched.
+                            $meta = tms_clean_package_meta($meta);
                         ?>
                         <hr style="margin:24px 0;border-color:#eee;">
 
@@ -1063,14 +1080,17 @@ html[data-theme="dark"] .meta-row { color: var(--text-muted) !important; }
                         <div class="pd-body" id="pdBody"></div>
                     </div>
                 </div>
-                <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+                <script src="js/tms-leaflet-loader.js"></script>
+                <script src="js/tms-map.js"></script>
                 <script>
+                tmsLoadLeaflet(function (leafletErr) {
+                if (leafletErr || typeof L === "undefined") { var nm = document.getElementById("nearbyMap"); if (nm) nm.innerHTML = '<div style="padding:24px;text-align:center;color:#94a3b8;font-size:13px;">The map could not be loaded right now. Check your connection and reload.</div>'; return; }
                 (function(){
                     var lat = <?php echo (float)$pkg->MapLat; ?>, lng = <?php echo (float)$pkg->MapLng; ?>;
                     var map = L.map('nearbyMap').setView([lat, lng], 13);
-                    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                        attribution: '&copy; OpenStreetMap contributors', maxZoom: 18
-                    }).addTo(map);
+                    // Tile fallback chain (OSM -> Carto -> OSM France) and redraw when the container is resized/revealed.
+                    if (window.TmsMap) { TmsMap.addTiles(map, { maxZoom: 18 }); TmsMap.fixSize(map); }
+                    else L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '&copy; OpenStreetMap contributors', maxZoom: 18 }).addTo(map);
                     var destIcon = L.divIcon({className:'', html:'<div style="width:16px;height:16px;background:var(--accent);border:3px solid #fff;border-radius:50%;box-shadow:0 2px 6px rgba(0,0,0,.3);"></div>', iconSize:[16,16]});
                     // FIX (Round 114, package/places/map upgrade): this used to be
                     // htmlspecialchars(addslashes(...)) -- HTML-entity-encoding a
@@ -1217,12 +1237,24 @@ html[data-theme="dark"] .meta-row { color: var(--text-muted) !important; }
                         if (e.target === this) tmsClosePlaceDetails();
                     });
 
+                    var nearbyToken = 0;
+                    function nearbyRetryHtml(msg, cat, label) {
+                        return '<div style="text-align:center;padding:16px;color:#e11d48;" role="alert">' + escHtml(msg) +
+                            '<br><button type="button" class="nearby-retry" data-cat="' + cat + '" data-label="' + escHtml(label) + '" style="margin-top:8px;border:2px solid #e11d48;background:#fff;color:#9f1239;border-radius:18px;padding:6px 14px;font-weight:700;font-size:12.5px;cursor:pointer;min-height:36px;">Try again</button></div>';
+                    }
+                    document.getElementById('nearbyList').addEventListener('click', function(e){
+                        var b = e.target.closest ? e.target.closest('.nearby-retry') : null;
+                        if (b) loadCategory(b.getAttribute('data-cat'), b.getAttribute('data-label'));
+                    });
                     function loadCategory(cat, label){
-                        document.getElementById('nearbyList').innerHTML = '<div style="text-align:center;padding:16px;color:var(--text-muted);"><i class="fa fa-spinner fa-spin"></i> Loading ' + label + ' nearby…</div>';
+                        var token = ++nearbyToken;   // ignore answers for a category the visitor has already left
+                        document.getElementById('nearbyList').innerHTML = '<div style="text-align:center;padding:16px;color:var(--text-muted);" role="status"><i class="fa fa-spinner fa-spin"></i> Loading ' + label + ' nearby…</div>';
                         clearMarkers();
-                        fetch('api/explore.php?action=places&lat=' + lat + '&lng=' + lng + '&category=' + cat)
-                            .then(function(r){ return r.json(); })
+                        var placesUrl = 'api/explore.php?action=places&lat=' + lat + '&lng=' + lng + '&category=' + cat;
+                        // Hard 14 s timeout (TmsMap.fetchJson): this used to wait forever when the map-data server stalled.
+                        (window.TmsMap ? TmsMap.fetchJson(placesUrl, { timeout: 14000 }) : fetch(placesUrl).then(function(r){ return r.json(); }))
                             .then(function(res){
+                                if (token !== nearbyToken) return;
                                 // api/explore.php wraps its response as
                                 // {success, data:{places, source}, ts}.
                                 // FIX (Round 14): a failed lookup used to be turned into an
@@ -1232,19 +1264,26 @@ html[data-theme="dark"] .meta-row { color: var(--text-muted) !important; }
                                 // rate-limits aggressively, so this fired regularly. The API
                                 // already returns a real message; show it.
                                 if (!res || !res.success) {
-                                    document.getElementById('nearbyList').innerHTML =
-                                        '<div style="text-align:center;padding:16px;color:#e11d48;">' +
-                                        escHtml((res && res.error) || 'Nearby places are temporarily unavailable — please try again shortly.') +
-                                        '</div>';
+                                    document.getElementById('nearbyList').innerHTML = nearbyRetryHtml((res && res.error) || 'Nearby places are temporarily unavailable — please try again shortly.', cat, label);
                                     return;
                                 }
                                 var results = (res.data && res.data.places) ? res.data.places : [];
+                                var origin = res.origin || (res.data && res.data.origin) || 'live';
                                 if (!results.length) {
                                     document.getElementById('nearbyList').innerHTML = '<div style="text-align:center;padding:16px;color:var(--text-muted);">No ' + label + ' found within a few kilometres of this destination.</div>';
                                     return;
                                 }
                                 var listEl = document.getElementById('nearbyList');
                                 listEl.innerHTML = '';
+                                if (origin === 'stale' || origin === 'local') {
+                                    var note = document.createElement('div');
+                                    note.setAttribute('role', 'status');
+                                    note.style.cssText = 'font-size:12px;padding:8px 10px;margin-bottom:8px;border-radius:8px;background:#fff7e6;color:#8a5a00;border:1px solid #f5d38a;';
+                                    note.textContent = origin === 'local'
+                                        ? 'Live map data is unavailable right now. Showing places from our own catalogue.'
+                                        : 'Live data is unavailable right now. Showing results saved earlier; they may be out of date.';
+                                    listEl.appendChild(note);
+                                }
                                 results.slice(0, 8).forEach(function(p){
                                     // BUG FIX: distance_m can be null (e.g. a
                                     // Google Places result missing lat/lng —
@@ -1272,7 +1311,10 @@ html[data-theme="dark"] .meta-row { color: var(--text-muted) !important; }
                                     row.innerHTML = '<div><div class="name">' + escHtml(p.name) + '</div>' +
                                         (p.address ? '<div class="addr">' + escHtml(p.address) + '</div>' : '') + openBadge + '</div>' +
                                         '<div class="dist">' + distKm + '</div>';
-                                    row.addEventListener('click', function(){ openPlaceDetails(p, cat); });
+                                    row.addEventListener('click', function(){
+                                        if (p.source === 'local' && p.local_url) { window.location.href = p.local_url; return; }   // catalogue item: open its own page
+                                        openPlaceDetails(p, cat);
+                                    });
                                     listEl.appendChild(row);
                                     // Round 14: L.marker() with a null lat/lng throws
                                     // "Invalid LatLng object", which aborted the rest of
@@ -1285,8 +1327,10 @@ html[data-theme="dark"] .meta-row { color: var(--text-muted) !important; }
                                     }
                                 });
                             })
-                            .catch(function(){
-                                document.getElementById('nearbyList').innerHTML = '<div style="text-align:center;padding:16px;color:#e11d48;">Nearby places service is temporarily unavailable.</div>';
+                            .catch(function(err){
+                                if (token !== nearbyToken) return;
+                                var msg = (err && err.message === 'timeout') ? 'Loading took too long. The map data servers may be busy.' : 'Nearby places service is temporarily unavailable.';
+                                document.getElementById('nearbyList').innerHTML = nearbyRetryHtml(msg, cat, label);
                             });
                     }
                     document.querySelectorAll('.nearby-tab').forEach(function(btn){
@@ -1298,6 +1342,7 @@ html[data-theme="dark"] .meta-row { color: var(--text-muted) !important; }
                     });
                     loadCategory('hotel', 'hotels');
                 })();
+                });
                 </script>
                 <?php endif; ?>
             </div>
@@ -1420,8 +1465,8 @@ html[data-theme="dark"] .meta-row { color: var(--text-muted) !important; }
                                        id="datepicker" min="<?php echo date('Y-m-d', strtotime('+1 day')); ?>" required>
                             </div>
                             <div class="form-group">
-                                <label for="fld_todate" style="font-weight:600;font-size:13px;">Return Date</label>
-                                <input id="fld_todate" type="date" name="todate" class="form-control date"
+                                <label for="datepicker1" style="font-weight:600;font-size:13px;">Return Date</label>
+                                <input type="date" name="todate" class="form-control date"
                                        id="datepicker1" min="<?php echo date('Y-m-d', strtotime('+1 day')); ?>" required>
                             </div>
                             <script>

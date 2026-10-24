@@ -61,8 +61,12 @@ require_once dirname(__DIR__) . '/backend/services/TripReadinessScore.php';
 require_once dirname(__DIR__) . '/backend/services/SupplierService.php';
 require_once dirname(__DIR__) . '/backend/ai/ExpenseAnalyst.php';
 
+require_once dirname(__DIR__) . '/backend/ApiSupport.php';
+
 header('Content-Type: application/json; charset=utf-8');
 header('X-Content-Type-Options: nosniff');
+// Correlation id: accepted from a safe X-Request-Id, otherwise generated; echoed as a header, in meta.request_id and in errors.
+ApiSupport::begin($_SERVER);
 
 // ─── Route ────────────────────────────────────────────────────────────────────
 $action = tms_clean($_GET['action'] ?? $_POST['action'] ?? '');
@@ -114,13 +118,16 @@ function api_json(array $payload, int $status = 200): void {
         // confirm the versioned path is really being used).
         'versioned_path' => (bool) (strpos($_SERVER['SCRIPT_NAME'] ?? '', '/v1/') !== false),
     ];
+    $payload['meta']['request_id'] = ApiSupport::requestId();      // additive field
+    ApiSupport::idempotencyFinish($status, $payload);              // no-op unless an Idempotency-Key request is in flight
     http_response_code($status);
     echo json_encode($payload, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
     exit;
 }
 
-function api_error(int $status, string $message): void {
-    api_json(['success' => false, 'error' => $message], $status);
+function api_error(int $status, string $message, ?string $code = null): void {
+    // Legacy {"success":false,"error":"text"} is unchanged; error_code, request_id and error_detail are added.
+    api_json(ApiSupport::legacyErrorBody($status, $message, $code), $status);
 }
 
 /**
@@ -149,6 +156,15 @@ function tms_api_rate_limit_check(PDO $dbh, string $bucket, string $identifier, 
         );
         $q->execute([':b' => $bucket, ':i' => $identifier, ':w' => $windowSeconds]);
         $count = (int) $q->fetchColumn();
+
+        // Standard rate-limit headers (the tighter of the buckets wins because later calls overwrite earlier ones only if stricter).
+        if (!headers_sent()) {
+            $remaining = max(0, $maxRequests - $count);
+            if (!isset($GLOBALS['tms_api_rl_remaining']) || $remaining <= $GLOBALS['tms_api_rl_remaining']) {
+                $GLOBALS['tms_api_rl_remaining'] = $remaining;
+                foreach (ApiSupport::rateLimitHeaders($maxRequests, $count, $windowSeconds) as $hk => $hv) header("$hk: $hv");
+            }
+        }
 
         // Opportunistic cleanup (~1% of requests) so this table doesn't grow
         // unbounded -- same "self-maintaining, no cron required" philosophy
@@ -247,8 +263,9 @@ function tms_api_scope_allows(?string $tokenScopes, string $required): bool {
 function api_packages(PDO $dbh): void {
     $search    = tms_clean($_GET['search'] ?? '');
     $type      = tms_clean($_GET['type']   ?? '');
-    $page      = tms_int($_GET['page']     ?? 1, 1);
-    $limit     = tms_int($_GET['limit']    ?? 12, 1, 50);
+    $pp        = ApiSupport::pageParams($_GET, 12, 50);   // accepts page + (limit | per_page), clamped
+    $page      = $pp['page'];
+    $limit     = $pp['per_page'];
     $sortBy    = in_array($_GET['sort'] ?? '', ['price_asc','price_desc','name']) ? $_GET['sort'] : 'default';
     $offset    = ($page - 1) * $limit;
 
@@ -287,12 +304,7 @@ function api_packages(PDO $dbh): void {
     api_json([
         'success' => true,
         'data'    => $rows,
-        'meta'    => [
-            'total'       => $total,
-            'page'        => $page,
-            'per_page'    => $limit,
-            'total_pages' => (int)ceil($total / $limit),
-        ],
+        'meta'    => ApiSupport::pageMeta($total, $page, $limit, strtok($_SERVER['REQUEST_URI'] ?? '/api/', '?'), $_GET),
     ]);
 }
 
@@ -627,9 +639,21 @@ function api_my_bookings(PDO $dbh): void {
                 b.status, b.NoOfPersons, b.TotalCost, b.RegDate, b.VerificationCode
          FROM tblbooking b JOIN tbltourpackages p ON p.PackageId = b.PackageId
          WHERE b.UserEmail=:e ORDER BY b.BookingId DESC"
+        // Pagination is opt-in (?page= or ?per_page=) so existing clients still receive the full list unchanged.
+        . (isset($_GET['page']) || isset($_GET['per_page']) ? ' LIMIT :lim OFFSET :off' : '')
     );
-    $q->execute([':e' => $email]);
-    api_json(['success' => true, 'data' => $q->fetchAll(PDO::FETCH_ASSOC)]);
+    $paged = isset($_GET['page']) || isset($_GET['per_page']);
+    $pp = ApiSupport::pageParams($_GET, 20, 100);
+    $q->bindValue(':e', $email, PDO::PARAM_STR);
+    if ($paged) { $q->bindValue(':lim', $pp['per_page'], PDO::PARAM_INT); $q->bindValue(':off', $pp['offset'], PDO::PARAM_INT); }
+    $q->execute();
+    $out = ['success' => true, 'data' => $q->fetchAll(PDO::FETCH_ASSOC)];
+    if ($paged) {
+        $c = $dbh->prepare('SELECT COUNT(*) FROM tblbooking WHERE UserEmail=:e');
+        $c->execute([':e' => $email]);
+        $out['meta'] = ApiSupport::pageMeta((int)$c->fetchColumn(), $pp['page'], $pp['per_page'], strtok($_SERVER['REQUEST_URI'] ?? '/api/', '?'), $_GET);
+    }
+    api_json($out);
 }
 
 /**
@@ -642,6 +666,10 @@ function api_my_bookings(PDO $dbh): void {
 function api_book(PDO $dbh): void {
     if ($_SERVER['REQUEST_METHOD'] !== 'POST') { api_error(405, 'POST required.'); }
     $email = api_auth_user($dbh, 'bookings:write');
+
+    // Optional Idempotency-Key header: a retried request (lost response, double tap) replays the first result instead of
+    // creating a second booking. Without the header behaviour is exactly as before.
+    ApiSupport::idempotencyBegin($dbh, $email, 'book', $_POST, $_SERVER, function (int $status, array $payload): void { api_json($payload, $status); });
 
     $pid      = tms_int($_POST['package_id'] ?? 0, 1);
     $persons  = tms_int($_POST['persons'] ?? 1, 1, 20);

@@ -129,9 +129,11 @@ try {
 $providerChecks = [
     'Weather (OpenWeatherMap)' => tms_env('OPENWEATHER_API_KEY', '') !== '',
     'Maps (Google Maps)'       => tms_env('GOOGLE_MAPS_API_KEY', '') !== '',
-    'AI provider'              => (defined('AI_PROVIDER') && AI_PROVIDER === 'openai')
-                                       ? (defined('OPENAI_API_KEY') && OPENAI_API_KEY !== '')
-                                       : (defined('GEMINI_API_KEY') && GEMINI_API_KEY !== '' && GEMINI_API_KEY !== 'YOUR_GEMINI_API_KEY_HERE'),
+    // What the app really uses right now (auto = local Ollama, else a valid Gemini key, else none). Details: ai-setup.php.
+    'AI provider'              => (function () use ($dbh) {
+                                       try { require_once __DIR__ . '/../backend/ai/AIClient.php'; return AIClient::resolution($dbh)['provider'] !== 'none'; }
+                                       catch (Throwable $e) { return false; }
+                                   })(),
     'SMTP (Email)'             => tms_env('SMTP_HOST', '') !== '',
 ];
 
@@ -191,6 +193,42 @@ $pageTitle = 'System Health';
         <div style="font-size:28px;font-weight:800;color:<?php echo $mapsFailures>0?'#B45309':'var(--text-primary)'; ?>;"><?php echo $mapsFailures; ?></div>
         <div style="color:var(--text-muted);">Maps/Explore fetch failures (7d, of <?php echo $mapsTotal; ?>)</div>
       </div>
+    </div>
+
+    <?php
+    // Inventory synchronisation health (additive panel). Table comes from migration 023; absent = "not available".
+    require_once __DIR__ . '/../backend/services/InventoryService.php';
+    $invSync = null; $invHolds = null;
+    try {
+        $invSync = InventoryService::syncHealth($dbh);
+        $invHolds = (int)$dbh->query("SELECT COUNT(*) FROM tbl_inventory_holds WHERE Status = 'active' AND ExpiresAt < NOW()")->fetchColumn();
+    } catch (Throwable $e) { $invSync = null; }
+    ?>
+    <div class="ops-card" style="background:#fff;border-radius:10px;padding:18px;box-shadow:0 2px 8px rgba(0,0,0,.06);margin-bottom:16px;">
+      <h4 style="margin:0 0 10px;font-weight:700;">Inventory synchronisation</h4>
+      <?php if ($invSync === null): ?>
+        <div style="color:var(--text-muted);">Not available (apply migration 023 with <code>php database/migrate.php</code>).</div>
+      <?php elseif (!$invSync): ?>
+        <div style="color:var(--text-muted);">No synchronisation runs recorded. Inventory is maintained manually or not tracked.</div>
+      <?php else: ?>
+        <table class="table table-condensed" style="margin:0;">
+          <thead><tr><th>Source</th><th>State</th><th>Detail</th><th>Seen / changed</th><th>Started</th></tr></thead>
+          <tbody>
+          <?php foreach ($invSync as $s): $h = $s['health']; $bad = $h['stale'] || $h['state'] === 'failed'; ?>
+            <tr>
+              <td><?php echo htmlspecialchars($s['source'], ENT_QUOTES, 'UTF-8'); ?><?php echo $s['entity_type'] ? ' <small>(' . htmlspecialchars((string)$s['entity_type'], ENT_QUOTES, 'UTF-8') . ')</small>' : ''; ?></td>
+              <td style="font-weight:700;color:<?php echo $bad ? '#B45309' : '#047857'; ?>;"><?php echo $bad ? 'Needs attention' : 'Healthy'; ?> · <?php echo htmlspecialchars($h['state'], ENT_QUOTES, 'UTF-8'); ?></td>
+              <td><?php echo htmlspecialchars($h['message'], ENT_QUOTES, 'UTF-8'); ?></td>
+              <td><?php echo (int)$s['items_seen']; ?> / <?php echo (int)$s['items_changed']; ?></td>
+              <td><?php echo htmlspecialchars($s['started_at'], ENT_QUOTES, 'UTF-8'); ?></td>
+            </tr>
+          <?php endforeach; ?>
+          </tbody>
+        </table>
+      <?php endif; ?>
+      <?php if ($invHolds): ?>
+        <div style="margin-top:10px;color:#B45309;font-weight:600;"><?php echo (int)$invHolds; ?> inventory hold(s) have lapsed and not been released: run <code>php scripts/expire_inventory_holds.php --apply</code> (schedule it every 5 minutes).</div>
+      <?php endif; ?>
     </div>
 
     <?php

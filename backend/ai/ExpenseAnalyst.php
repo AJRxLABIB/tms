@@ -122,6 +122,8 @@ class ExpenseAnalyst {
             if ($data['total'] > $topAmount) { $topAmount = $data['total']; $topCategory = $cat; }
         }
 
+        // The category name is free text typed by the traveller: strip markup/control characters and cap it before it enters the prompt.
+        $topCategory = $topCategory === null ? 'n/a' : (trim(mb_substr(str_replace(['{', '}', '<', '>', '`', '"'], ' ', preg_replace('/[\x00-\x1F\x7F]+/u', ' ', (string)$topCategory) ?? ''), 0, 40, 'UTF-8')) ?: 'n/a');
         $prompt = "Real expense data — ";
         if ($comparison) {
             $prompt .= "Budget: {$comparison['budget']} BDT, spent so far: {$comparison['spent']} BDT ({$comparison['percent_used']}% of budget), "
@@ -140,7 +142,18 @@ class ExpenseAnalyst {
             feature: 'expense'
         );
 
-        if ($result['success']) return trim($result['content']);
+        if ($result['success']) {
+            $reply = trim(mb_substr(strip_tags((string)$result['content']), 0, 400, 'UTF-8'));
+            // Every amount the model quotes must be one of the real figures it was given; otherwise the deterministic sentence below is used.
+            $known = array_filter(array_map('intval', [
+                $comparison['budget'] ?? 0, $comparison['spent'] ?? 0, $comparison['percent_used'] ?? 0, abs((int)($comparison['remaining'] ?? 0)),
+                $breakdown['total'] ?? 0, $topAmount,
+            ]));
+            preg_match_all('/\d[\d,]*(?:\.\d+)?/', $reply, $mm);
+            $foreign = false;
+            foreach ($mm[0] as $n) { $v = (int)round((float)str_replace(',', '', $n)); if ($v >= 100 && !in_array($v, $known, true)) { $foreign = true; break; } }
+            if ($reply !== '' && !$foreign) return $reply;
+        }
 
         // Deterministic fallback — still useful without the AI call.
         if ($comparison && $comparison['over_budget']) {

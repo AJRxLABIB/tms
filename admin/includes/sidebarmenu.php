@@ -93,10 +93,16 @@
       <?php endif; ?>
       <?php if ($canSee(['ai_manager', 'manager'])): ?>
         <?php navItem('ai-dashboard.php','magic','AI Usage Dashboard',$cur); ?>
+        <?php navItem('ai-setup.php','plug','AI Setup &amp; Test',$cur); ?>
         <?php navItem('ai-safety.php','shield','AI Safety &amp; Evaluation',$cur); ?>
+        <?php navItem('ai-evaluation.php','line-chart','AI Evaluation &amp; Metrics',$cur); ?>
+      <?php endif; ?>
+      <?php if ($canSee(['manager'])): ?>
+        <?php navItem('bi-copilot.php','comments-o','Business Copilot',$cur); ?>
       <?php endif; ?>
       <?php if ($canSee(['manager', 'package_manager'])): ?>
         <?php navItem('manage-suppliers.php','briefcase','Suppliers',$cur); ?>
+        <?php navItem('supplier-quality.php','balance-scale','Supplier Quality',$cur); ?>
       <?php endif; ?>
       <?php if ($canSee(['finance', 'manager'])): ?>
         <?php navItem('supplier-settlements.php','money','Supplier Settlements',$cur); ?>
@@ -108,6 +114,8 @@
         <?php navItem('manage-emergency.php','phone','Emergency Contacts',$cur); ?>
         <?php navItem('manage-travel-notices.php','info-circle','Travel Notices',$cur); ?>
         <?php navItem('activity-log.php','history','Activity Log',$cur); ?>
+        <?php navItem('fraud-cases.php','search','Fraud Review',$cur); ?>
+        <?php if (isset($dbh) && tms_admin_role($dbh) === 'superadmin') navItem('workflow-rules.php','cogs','Workflow Rules',$cur); ?>
         <?php navItem('system-health.php','heartbeat','System Health',$cur); ?>
       <?php endif; ?>
       <?php if ($canSee(['content_manager', 'manager'])): ?>

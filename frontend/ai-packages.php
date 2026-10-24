@@ -343,7 +343,7 @@ function renderPackage(pkg) {
   const included     = pkg.included || [];
   const excluded     = pkg.excluded || [];
   const highlights   = pkg.highlights || [];
-  const ecoScore     = pkg.eco_score || 70;
+  const ecoScore     = Math.max(0, Math.min(100, Number(pkg.eco_score) || 70)); // numeric only: it is placed in HTML/CSS below
 
   const diffColors   = { easy:'#48bb78', moderate:'#ed8936', challenging:'#e53e3e' };
   const diffColor    = diffColors[pkg.difficulty_level] || '#718096';

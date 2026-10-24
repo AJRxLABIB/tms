@@ -294,4 +294,5 @@ document.addEventListener('DOMContentLoaded', function() {
 // silently never reached a real visitor. Now points at the real sibling.
 include('backend/chatbot.php');
 ?>
+<script src="js/tms-a11y.js" defer></script>
 <?php /* Human "Chat with our team" widget removed per user request — Contact page covers this */ ?>

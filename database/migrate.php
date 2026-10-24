@@ -36,6 +36,12 @@ declare(strict_types=1);
 
 $isCli = (PHP_SAPI === 'cli');
 
+// Applying (not --status) also runs the application's built-in schema setup/repair (backend/config.php), which web
+// requests skip when TMS_AUTO_SCHEMA=0 (the default in production). This is the one explicit place it happens.
+if (!in_array('--status', $argv ?? [], true) && !isset($_GET['status'])) {
+    define('TMS_RUN_SCHEMA', true);
+}
+
 if (!$isCli) {
     // Reuses the project's own existing RBAC helper (backend/config.php)
     // instead of inventing a parallel admin-check -- tms_admin_require_role()

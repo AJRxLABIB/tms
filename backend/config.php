@@ -28,7 +28,12 @@ require_once __DIR__ . '/totp.php';
 // AI_PROVIDER. Default stays 'gemini' -- an existing .env with only
 // GEMINI_API_KEY set (and no AI_PROVIDER line at all) behaves exactly as
 // before this round.
-define('AI_PROVIDER',     strtolower(trim((string) tms_env('AI_PROVIDER', 'gemini'))));
+// AI_PROVIDER: ollama | gemini | openai | none | auto. Unset means "auto": the app uses a running local Ollama with an
+// installed chat model, else a Gemini key ONLY if it has the shape of a real Google AI Studio key, else no AI at all
+// (every feature then answers from the catalogue). Decided per request in AIClient::resolution() -- see
+// backend/ai/AIProviderResolver.php. OpenAI is never auto-selected, and nothing is sent to an external provider unless an
+// operator configured it. Run `php scripts/ai_setup_check.php` to see what is selected and why.
+define('AI_PROVIDER',     strtolower(trim((string) tms_env('AI_PROVIDER', 'auto'))));
 
 define('GEMINI_API_KEY',  tms_env('GEMINI_API_KEY', ''));
 define('GEMINI_MODEL',    tms_env('GEMINI_MODEL', 'gemini-2.5-flash')); // free-tier model as of mid-2026 (gemini-1.5-flash is shut down)
@@ -49,6 +54,9 @@ define('OPENAI_BASE_URL', rtrim((string) tms_env('OPENAI_BASE_URL', 'https://api
 // Self-hosted inference (AI_PROVIDER=ollama). Keep the runtime on localhost/private network.
 define('OLLAMA_BASE_URL', rtrim((string) tms_env('OLLAMA_BASE_URL', 'http://127.0.0.1:11434'), '/'));
 define('OLLAMA_MODEL',    tms_env('OLLAMA_MODEL', 'qwen2.5:3b-instruct'));
+// Latency controls for the local runtime: cap on generated tokens per answer, and how long Ollama keeps the model in memory.
+define('OLLAMA_MAX_TOKENS', max(128, min(8192, (int) tms_env('OLLAMA_MAX_TOKENS', 1536))));
+define('OLLAMA_KEEP_ALIVE', (string) tms_env('OLLAMA_KEEP_ALIVE', '30m'));
 // Optional semantic re-ranking of assistant search results (see backend/ai/rag/EmbeddingReranker.php).
 // Empty = off (BM25 only). Example: AI_EMBED_MODEL=nomic-embed-text after `ollama pull nomic-embed-text`.
 define('AI_EMBED_MODEL',  trim((string) tms_env('AI_EMBED_MODEL', '')));
@@ -84,7 +92,9 @@ if (AI_PROVIDER === 'openai') {
             . 'feature (chatbot, Explore overview, AI Recommender, planner, packing assistant) '
             . 'will return its non-AI fallback. Set OPENAI_API_KEY in .env. See .env.example.');
     }
-} else {
+} elseif (AI_PROVIDER === 'gemini') {
+    // (Only for an explicit AI_PROVIDER=gemini. In "auto" mode a missing or malformed key is not an error: the app just
+    // uses Ollama or the catalogue-only fallback, and `php scripts/ai_setup_check.php` explains the choice.)
     // A valid Google AI Studio key normally starts with "AIza". This does
     // NOT block the app (some proxied/alternate key formats exist), it just
     // logs so "AI features silently return 503" isn't a total mystery.
@@ -128,7 +138,10 @@ define('EXPLORE_CACHE_TTL_WEATHER', 60 * 20);            // weather cached 20 mi
 define('EXPLORE_CACHE_TTL_PLACES',  60 * 60 * 6);        // nearby places cached 6 hours
 
 // ─── Database credentials ──────────────────────────────────────────────────────
-define('DB_HOST', tms_env('DB_HOST', 'localhost'));
+// PERF (Windows/XAMPP): the name 'localhost' is resolved to IPv6 ::1 first, MySQL only listens on IPv4, and every new
+// connection waits for that attempt to fail (often ~1 s). Use the IPv4 loopback address instead. Other OSes keep
+// 'localhost' (unix socket). An explicit DB_HOST in .env is always used as written.
+define('DB_HOST', tms_env('DB_HOST', PHP_OS_FAMILY === 'Windows' ? '127.0.0.1' : 'localhost'));
 define('DB_USER', tms_env('DB_USER', 'root'));
 define('DB_PASS', tms_env('DB_PASS', ''));
 define('DB_NAME', tms_env('DB_NAME', 'tms'));
@@ -188,7 +201,13 @@ try {
 // same as $dbh itself. See includes/CacheService.php for backend details.
 require_once __DIR__ . '/CacheService.php';
 require_once __DIR__ . '/PricingEngine.php';
-$tmsCache = new CacheService($dbh);
+// PERF: second argument false = do not run CREATE TABLE IF NOT EXISTS on every request; the table is created in the
+// schema gate below (empty($_SESSION['tms_db_init'])) and by database/migrations/040_cache_table.sql.
+$tmsCache = new CacheService($dbh, false);
+// Optional timing (TMS_PROFILE=1): Server-Timing header + one log line per page. Off by default.
+require_once __DIR__ . '/Profiler.php';
+TmsProfiler::init();
+TmsProfiler::mark('db_connected');
 
 // ─── Fatal-error safety net ────────────────────────────────────────────────────
 // ROOT-CAUSE FIX: pages like destinations.php ran with error_reporting(0) and
@@ -265,7 +284,17 @@ if (!empty($_GET['ref']) && preg_match('/^[A-Za-z0-9]{4,20}$/', $_GET['ref'])) {
 // TMS_FORCE_SCHEMA_CHECK=1 in .env to force a re-check on every request.
 $tmsSchemaFp = md5((string)@md5_file(__FILE__) . '|' . (string)@filesize(__DIR__ . '/../data/packages_seed.json') . '|schema-v1');
 $tmsSchemaOk = false;
-if (!in_array(strtolower((string)tms_env('TMS_FORCE_SCHEMA_CHECK', '')), ['1', 'true', 'yes', 'on'], true)) {
+// Schema changes inside ordinary web requests are a deployment hazard (DDL under live traffic, no review, no lock).
+// TMS_AUTO_SCHEMA=0 turns that off: requests then never run DDL, and `php database/migrate.php` (which defines
+// TMS_RUN_SCHEMA) applies the same setup explicitly. Default: ON for development (unchanged behaviour), OFF when
+// APP_ENV is production/prod/live. An explicit TMS_AUTO_SCHEMA value always wins.
+$tmsAutoSchemaEnv = strtolower(trim((string)tms_env('TMS_AUTO_SCHEMA', '')));
+$tmsIsProdEnv     = in_array(strtolower((string)tms_env('APP_ENV', '')), ['production', 'prod', 'live'], true);
+$tmsAutoSchema    = $tmsAutoSchemaEnv !== '' ? in_array($tmsAutoSchemaEnv, ['1', 'true', 'yes', 'on'], true) : !$tmsIsProdEnv;
+$tmsSchemaRunExplicit = defined('TMS_RUN_SCHEMA');
+if (!$tmsAutoSchema && !$tmsSchemaRunExplicit) {
+    $tmsSchemaOk = true;     // web request in no-auto mode: skip every schema step below
+} elseif (!$tmsSchemaRunExplicit && !in_array(strtolower((string)tms_env('TMS_FORCE_SCHEMA_CHECK', '')), ['1', 'true', 'yes', 'on'], true)) {
     try {
         $tmsSchemaOk = hash_equals($tmsSchemaFp, (string)$dbh->query("SELECT v FROM tbl_app_meta WHERE k = 'schema_fingerprint'")->fetchColumn());
     } catch (Throwable $e) { $tmsSchemaOk = false; } // table not created yet
@@ -279,6 +308,7 @@ if ($tmsSchemaOk) {
 // ─── Core table setup (CREATE TABLE IF NOT EXISTS calls — safe/idempotent,
 //     so gating them once-per-session is just a perf optimisation) ─────────────
 if (empty($_SESSION['tms_db_init'])) {
+    $tmsCache->createTable();
     _tms_run_core_migrations($dbh);
     $_SESSION['tms_db_init'] = true;
 }
@@ -3967,3 +3997,4 @@ function tms_default_policy_pages(): array {
 
 // Stage 17: idle/absolute session timeout and 'password changed' session revocation, for every page that loads config.
 tms_session_guard();
+TmsProfiler::mark('boot_done');

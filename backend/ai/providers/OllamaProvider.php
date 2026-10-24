@@ -34,6 +34,16 @@ class OllamaProvider implements AIProviderInterface {
         $this->temperature = $temperature;
     }
 
+    /** Same runtime, different installed model (used by ModelRouter). Returns a new object; this one is unchanged. */
+    public function withModel(string $model): self
+    {
+        $c = clone $this;
+        $c->model = $model;
+        return $c;
+    }
+
+    public function baseUrl(): string { return $this->baseUrl; }
+
     public function name(): string { return 'ollama'; }
     public function model(): string { return $this->model; }
     public function isConfigured(): bool { return $this->model !== '' && $this->baseUrl !== ''; }
@@ -45,15 +55,26 @@ class OllamaProvider implements AIProviderInterface {
             $chat[] = ['role' => $role, 'content' => (string)($msg['content'] ?? '')];
         }
 
+        // A small local model on a laptop CPU generates a few tokens per second, so an uncapped answer (the shared
+        // AI_MAX_TOKENS default is sized for cloud models) is the main cause of "the assistant is slow". Cap the output
+        // (OLLAMA_MAX_TOKENS, default 1536) and keep the model loaded between requests (OLLAMA_KEEP_ALIVE, default 30m)
+        // so only the very first request after a restart pays the model-load time.
+        $cap = defined('OLLAMA_MAX_TOKENS') ? (int)OLLAMA_MAX_TOKENS : 1536;
         $payload = [
-            'model'    => $this->model,
-            'messages' => $chat,
-            'stream'   => false,
-            'options'  => [
-                'num_predict' => (int)($options['maxTokens'] ?? 1024),
+            'model'      => $this->model,
+            'messages'   => $chat,
+            'stream'     => false,
+            'keep_alive' => defined('OLLAMA_KEEP_ALIVE') ? (string)OLLAMA_KEEP_ALIVE : '30m',
+            'options'    => [
+                'num_predict' => max(64, min((int)($options['maxTokens'] ?? 1024), $cap)),
                 'temperature' => $this->temperature,
             ],
         ];
+
+        // Context window: only set when the caller (gateway) has measured the prompt against it.
+        if (!empty($options['numCtx'])) {
+            $payload['options']['num_ctx'] = max(1024, (int)$options['numCtx']);
+        }
 
         $body = json_encode($payload, JSON_INVALID_UTF8_SUBSTITUTE);
         if ($body === false) {

@@ -21,6 +21,8 @@
  *   POST /api/ai.php?action=weather_replan_check    (Round 115, item 12)
  *   POST /api/ai.php?action=weather_replan_preview  (Round 115, item 12)
  *   POST /api/ai.php?action=weather_replan_apply    (Round 115, item 12)
+ *   POST /api/ai.php?action=action_confirm  (proposal_id; the visitor's own click on a confirmation card, CSRF + signed in)
+ *   POST /api/ai.php?action=action_dismiss  (proposal_id)
  */
 
 require_once __DIR__ . '/../backend/session-boot.php';
@@ -89,6 +91,17 @@ if (in_array($action, TMS_AI_GUEST_ACTIONS, true)) {
     }
 }
 
+// PERF: PHP keeps an exclusive lock on the session file until the script ends. These actions wait on an AI model or a
+// third-party server (seconds to tens of seconds) and never write to $_SESSION, so the lock is released first;
+// otherwise every other page the same visitor opens (even a plain link click) queues behind the slow AI call.
+// $_SESSION stays readable afterwards. chatbot/copilot_chat (ConversationState) and autopilot_check write to it and keep the lock.
+const TMS_AI_SESSION_FREE_ACTIONS = ['crowd_prediction', 'sustainability', 'flight_status', 'suggest_price', 'packing_list',
+    'virtual_guide', 'proactive_alert', 'image_analyze', 'nl_search', 'recommend', 'itinerary', 'itinerary_regenerate',
+    'budget', 'generate_package', 'ai_feedback', 'copilot_history'];
+if (in_array($action, TMS_AI_SESSION_FREE_ACTIONS, true) && session_status() === PHP_SESSION_ACTIVE) {
+    session_write_close();
+}
+
 try {
     match ($action) {
         'recommend'       => handleRecommend($dbh, $userEmail),
@@ -117,6 +130,8 @@ try {
         'autopilot_check'   => handleAutopilotCheck($dbh, $userEmail),
         'autopilot_approve' => handleAutopilotDecision($dbh, $userEmail, true),
         'autopilot_decline' => handleAutopilotDecision($dbh, $userEmail, false),
+        'action_confirm'    => handleActionDecision($dbh, $userEmail, true),
+        'action_dismiss'    => handleActionDecision($dbh, $userEmail, false),
         default           => apiError(404, "Unknown action: $action"),
     };
 } catch (Throwable $e) {
@@ -297,9 +312,13 @@ function handleChatbot(PDO $dbh, string $email): void {
     $result    = $assistant->reply($message, $history, $email, $pageContext, $chatLanguage);
 
     if (!$result['success']) {
-        // The frontend falls back to its local rule-based responder — and now
-        // tells the visitor that's what happened (see backend/chatbot.php).
-        apiError(503, $result['error'] ?: 'AI assistant temporarily unavailable.');
+        // No language model answered (not configured, runtime down, quota, rate limit, admin switch). The same read-only
+        // catalogue tools still run, deterministically, and the visitor gets a grounded answer; the note that conversational AI
+        // is offline is added once per session. Nothing is generated or guessed (backend/ai/OfflineAssistant.php).
+        require_once dirname(__DIR__) . '/backend/ai/OfflineAssistant.php';
+        $sessionOk = session_status() === PHP_SESSION_ACTIVE;
+        $result = OfflineAssistant::reply($dbh, $message, $history, $email, $pageContext, $chatLanguage, $sessionOk && empty($_SESSION['tms_ai_offline_noted']));
+        if ($sessionOk) $_SESSION['tms_ai_offline_noted'] = true;
     }
 
     if ($chatUid !== '' && function_exists('tms_chat_save')) {
@@ -314,7 +333,7 @@ function handleChatbot(PDO $dbh, string $email): void {
     // widget can offer them instead of always showing the same 4 static
     // buttons. Empty array is a completely normal result (nothing sensible
     // followed on) and the widget already falls back to its own defaults.
-    apiSuccess(['reply' => $result['reply'], 'suggestions' => $result['suggestions'] ?? [], 'sources' => $result['sources'] ?? []]);
+    apiSuccess(['reply' => $result['reply'], 'suggestions' => $result['suggestions'] ?? [], 'sources' => $result['sources'] ?? [], 'actions' => $result['actions'] ?? []]);
 }
 
 function handleTrackQuickReply(PDO $dbh): void {
@@ -901,6 +920,27 @@ function handleAutopilotDecision(PDO $dbh, string $email, bool $approve): void {
     }
     if (!TripAutopilot::decline($dbh, $id, $email)) { apiError(409, 'This proposal is not open.'); }
     apiSuccess(['status' => 'declined']);
+}
+
+/**
+ * The visitor pressed Confirm / Dismiss on an assistant confirmation card. POST + CSRF + signed in; the proposal must belong to the
+ * session identity (ActionProposals re-checks ownership and booking state under a lock). Confirming does NOT perform the action: it
+ * returns the existing page that does, unless a real executor has been registered.
+ */
+function handleActionDecision(PDO $dbh, string $email, bool $confirm): void {
+    if ($_SERVER['REQUEST_METHOD'] !== 'POST') { apiError(405, 'POST required.'); }
+    if ($email === 'guest') { apiError(401, 'Please sign in.'); }
+    tms_csrf_validate();
+    require_once dirname(__DIR__) . '/backend/ai/ActionProposals.php';
+    $id = (int)($_POST['proposal_id'] ?? 0);
+    if ($id <= 0) { apiError(400, 'proposal_id is required.'); }
+    if (!$confirm) {
+        if (!ActionProposals::dismiss($dbh, $id, $email)) { apiError(409, 'This request is not open.'); }
+        apiSuccess(['status' => 'dismissed']);
+    }
+    $r = ActionProposals::confirm($dbh, $id, $email);
+    if (!$r['ok']) { apiError($r['status'] === 'not_found' ? 404 : 409, $r['message']); }
+    apiSuccess(['status' => $r['status'], 'message' => $r['message'], 'next_url' => $r['next_url'] ?? null, 'executed' => (bool)($r['executed'] ?? false)]);
 }
 
 function apiSuccess(array $data): void {

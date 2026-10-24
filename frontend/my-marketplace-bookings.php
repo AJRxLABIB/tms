@@ -30,6 +30,9 @@ if (isset($_POST['cancel_hotel'])) {
         $hoursUntil = (new DateTime($b->CheckInDate))->getTimestamp() - (new DateTime())->getTimestamp();
         if ($hoursUntil / 3600 > 24) {
             $dbh->prepare("UPDATE tblhotel_bookings SET status=2 WHERE BookingId=:b")->execute([':b' => $bid]);
+            // Give any slot inventory this booking held back (idempotent; no-op for unmanaged hotels).
+            require_once __DIR__ . '/../backend/services/InventoryService.php';
+            InventoryService::releaseBooking($dbh, 'hotel', (int)$bid);
             $msg = 'Hotel booking cancelled.';
         } else {
             $error = 'Hotel bookings can only be cancelled more than 24 hours before check-in.';
@@ -49,6 +52,9 @@ if (isset($_POST['cancel_activity'])) {
         $hoursUntil = (new DateTime($b->ActivityDate))->getTimestamp() - (new DateTime())->getTimestamp();
         if ($hoursUntil / 3600 > 24) {
             $dbh->prepare("UPDATE tblactivity_bookings SET status=2 WHERE BookingId=:b")->execute([':b' => $bid]);
+            // Give any slot inventory this booking held back (idempotent; no-op for unmanaged activities).
+            require_once __DIR__ . '/../backend/services/InventoryService.php';
+            InventoryService::releaseBooking($dbh, 'activity', (int)$bid);
             $msg = 'Activity booking cancelled.';
         } else {
             $error = 'Activity bookings can only be cancelled more than 24 hours before the activity date.';

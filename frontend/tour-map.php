@@ -77,8 +77,9 @@ $tmsMapOtherColor = '#5F6D65';
 <link href="<?php echo tms_asset_ver('css/modern-theme.css'); ?>" rel="stylesheet">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<link rel="stylesheet" href="js/vendor/leaflet/leaflet.css" />
+<script src="js/vendor/leaflet/leaflet.js"></script>
+<script src="js/tms-map.js"></script>
 <script src="js/jquery-1.12.0.min.js" defer></script>
 <script src="js/bootstrap.min.js" defer></script>
 <style>
@@ -263,9 +264,8 @@ html[data-theme="dark"] .map-search-result span { color: var(--text-muted) !impo
 
 <script>
 var map = L.map('tourMap').setView([20, 70], 3);
-L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    attribution: '© OpenStreetMap contributors', maxZoom: 18
-}).addTo(map);
+if (window.TmsMap) { TmsMap.addTiles(map, { maxZoom: 18 }); TmsMap.fixSize(map); }
+else L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OpenStreetMap contributors', maxZoom: 18 }).addTo(map);
 
 var markers = {};
 var allMarkerData = [];

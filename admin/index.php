@@ -63,12 +63,20 @@ if (isset($_POST['btn-verify-2fa'])) {
         $q->execute([':u' => $pendingUser]);
         $row = $q->fetch(PDO::FETCH_OBJ);
 
-        if ($row && $row->TwoFASecret && tms_totp_verify($row->TwoFASecret, $code)) {
+        // A TOTP code, or (lost phone) one single-use recovery code. Both share the same lockout bucket above.
+        require_once __DIR__ . '/../backend/TwoFactorRecovery.php';
+        $viaRecovery = false;
+        $codeOk = $row && $row->TwoFASecret && tms_totp_verify($row->TwoFASecret, $code);
+        if (!$codeOk && $row && TwoFactorRecovery::looksLikeRecovery($code)
+            && TwoFactorRecovery::consume($dbh, (int)$row->id, $code, TwoFactorRecovery::TABLE_ADMIN)) {
+            $codeOk = true; $viaRecovery = true;
+        }
+        if ($codeOk) {
             tms_clear_login_attempts($dbh, $lockoutKey, $ip);
             unset($_SESSION['a2fa_pending']);
             $_SESSION['alogin'] = $pendingUser;
             session_regenerate_id(true);
-            tms_log_activity($dbh, $pendingUser, 'Admin Login', 'Successful admin sign-in (2FA verified)');
+            tms_log_activity($dbh, $pendingUser, 'Admin Login', $viaRecovery ? 'Successful admin sign-in (2FA recovery code used)' : 'Successful admin sign-in (2FA verified)');
             header('location:dashboard.php');
             exit;
         } else {
@@ -282,7 +290,7 @@ body{font-family:'Inter',sans-serif;min-height:100vh;display:flex;background:#17
   <div class="login-form">
     <?php if ($showingTwoFactorPrompt): ?>
       <div class="form-title">Two-Factor Code</div>
-      <div class="form-sub">Enter the 6-digit code from your authenticator app</div>
+      <div class="form-sub">Enter the 6-digit code from your authenticator app, or a recovery code</div>
 
       <?php if($error): ?>
       <div class="error-box">&#9888; <?= htmlspecialchars($error) ?></div>
@@ -292,7 +300,7 @@ body{font-family:'Inter',sans-serif;min-height:100vh;display:flex;background:#17
         <?php tms_csrf_field(); ?>
         <div class="field-group">
           <label class="form-label" for="adminTotpCodeField">Authentication Code</label>
-          <input type="text" id="adminTotpCodeField" name="totp_code" class="form-input" placeholder="123456" inputmode="numeric" pattern="[0-9]*" maxlength="6" required autocomplete="one-time-code" autofocus>
+          <input type="text" id="adminTotpCodeField" name="totp_code" class="form-input" placeholder="123456 or recovery code" maxlength="16" required autocomplete="one-time-code" autofocus>
         </div>
         <button type="submit" name="btn-verify-2fa" class="btn-login">Verify &#8594;</button>
       </form>

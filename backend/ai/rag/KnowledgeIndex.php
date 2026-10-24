@@ -17,6 +17,7 @@
  * exact package page.
  */
 require_once __DIR__ . '/Tokenizer.php';
+require_once __DIR__ . '/RetrievedText.php';
 
 final class KnowledgeIndex
 {
@@ -27,6 +28,10 @@ final class KnowledgeIndex
     /** @var array<int,array> */ private array $docs = [];
     /** @var array<string,int> */ private array $df = [];
     private float $avgLen = 1.0;
+    /** True only for an index built from the live table (fromDb). Fixture indexes built with fromRows() have no live table to re-check. */
+    private bool $fromDb = false;
+
+    public function isFromDb(): bool { return $this->fromDb; }
 
     /** Build from an array of package rows (assoc). Pure; no DB. */
     public static function fromRows(array $rows): self
@@ -40,31 +45,81 @@ final class KnowledgeIndex
     /** Build from the live DB (published packages only). */
     public static function fromDb(PDO $db, int $limit = 5000): self
     {
-        // Built index is cached for 10 minutes (shared CacheService when present)
-        // so a chat burst does not re-tokenise the whole catalogue per message.
+        // Built index is cached for 10 minutes (shared CacheService when present) so a chat burst does not re-tokenise the whole
+        // catalogue per message. The cache key carries a cheap fingerprint of the live table (row count, price sum, published
+        // count, highest id), so a re-priced, unpublished or newly published package changes the key and the stale index is never
+        // served (audit item 19). ToolRegistry additionally re-checks every package it is about to quote against the live table.
         global $tmsCache;
+        $key = 'rag_index_v2_' . self::fingerprint($db);
         if (isset($tmsCache)) {
-            $hit = $tmsCache->get('rag_index_v1');
+            $hit = $tmsCache->get($key);
             if (is_string($hit) && $hit !== '') {
                 $obj = @unserialize($hit, ['allowed_classes' => [self::class]]);
                 if ($obj instanceof self) return $obj;
             }
         }
         $ix = self::buildFromDb($db, $limit);
-        if (isset($tmsCache)) { try { $tmsCache->set('rag_index_v1', serialize($ix), 600); } catch (Throwable $e) {} }
+        if (isset($tmsCache)) { try { $tmsCache->set($key, serialize($ix), 600); } catch (Throwable $e) {} }
         return $ix;
+    }
+
+    /** Short hash that changes whenever a package is added, removed, (un)published, approved or re-priced. */
+    public static function fingerprint(PDO $db): string
+    {
+        try {
+            $r = $db->query("SELECT COUNT(*), COALESCE(SUM(PackagePrice),0), COALESCE(SUM(Status),0), COALESCE(MAX(PackageId),0) FROM tbltourpackages")->fetch(PDO::FETCH_NUM) ?: [];
+            $a = '';
+            try { $a = (string)$db->query("SELECT COUNT(*) FROM tbltourpackages WHERE Status = 1 AND (ApprovalStatus IS NULL OR ApprovalStatus = 'approved')")->fetchColumn(); } catch (Throwable $e) { $a = 'noapproval'; }
+            return substr(md5(implode('|', $r) . '|' . $a), 0, 12);
+        } catch (Throwable $e) { return 'nofp'; }
+    }
+
+    /**
+     * Live check of the packages a tool is about to quote: only ids that are published AND approved right now are returned, with their
+     * CURRENT price, duration and name. Anything else (unpublished, rejected, deleted) is absent, so it cannot be quoted.
+     * @param int[] $ids
+     * @return array<int,array{price:int,duration:string,title:string}>
+     */
+    public static function liveCheck(PDO $db, array $ids): array
+    {
+        $ids = array_values(array_unique(array_filter(array_map('intval', $ids), fn($i) => $i > 0)));
+        if (!$ids) return [];
+        $in = implode(',', array_fill(0, count($ids), '?'));
+        try {
+            $st = $db->prepare("SELECT PackageId, PackageName, PackagePrice, PackageDuration FROM tbltourpackages WHERE PackageId IN ($in) AND Status = 1 AND (ApprovalStatus IS NULL OR ApprovalStatus = 'approved')");
+            $st->execute($ids);
+        } catch (Throwable $e) {
+            // No ApprovalStatus column (very old install): published = Status 1.
+            $st = $db->prepare("SELECT PackageId, PackageName, PackagePrice, PackageDuration FROM tbltourpackages WHERE PackageId IN ($in) AND Status = 1");
+            $st->execute($ids);
+        }
+        $out = [];
+        foreach ($st->fetchAll(PDO::FETCH_ASSOC) as $r) $out[(int)$r['PackageId']] = ['price' => (int)$r['PackagePrice'], 'duration' => (string)$r['PackageDuration'], 'title' => (string)$r['PackageName']];
+        return $out;
     }
 
     private static function buildFromDb(PDO $db, int $limit): self
     {
-        $st = $db->prepare(
-            "SELECT PackageId, PackageName, PackageType, PackageLocation, Country, Region, PackagePrice,
+        $cols = "PackageId, PackageName, PackageType, PackageLocation, Country, Region, PackagePrice,
                     PackageDuration, PackageFetures, PackageDescription, Inclusions, Exclusions,
-                    CancellationPolicy, AvgRating
-               FROM tbltourpackages WHERE Status = 1 ORDER BY PackageId LIMIT " . (int)$limit
-        );
-        $st->execute();
-        return self::fromRows($st->fetchAll(PDO::FETCH_ASSOC) ?: []);
+                    CancellationPolicy, AvgRating";
+        $variants = [
+            [$cols . ", MealPlan, HotelRating", true],   // extra signals used only for deterministic re-ranking
+            [$cols, true],
+            [$cols, false],                               // install without ApprovalStatus
+        ];
+        $lastErr = null;
+        foreach ($variants as [$c, $withApproval]) {
+            try {
+                $where = $withApproval ? "Status = 1 AND (ApprovalStatus IS NULL OR ApprovalStatus = 'approved')" : "Status = 1";
+                $st = $db->prepare("SELECT $c FROM tbltourpackages WHERE $where ORDER BY PackageId LIMIT " . (int)$limit);
+                $st->execute();
+                $ix = self::fromRows($st->fetchAll(PDO::FETCH_ASSOC) ?: []);
+                $ix->fromDb = true;
+                return $ix;
+            } catch (Throwable $e) { $lastErr = $e; }
+        }
+        throw $lastErr ?? new RuntimeException('package index could not be built');
     }
 
     private function add(array $r): void
@@ -72,11 +127,14 @@ final class KnowledgeIndex
         $id = (int)($r['PackageId'] ?? 0);
         if ($id <= 0) return;
         $f = fn(string $k) => trim((string)($r[$k] ?? ''));
+        // Free text written by suppliers/staff is untrusted: control characters stripped, length capped, and a description that
+        // contains instruction-like text is withheld (structured fields such as name, place and price are unaffected).
+        $tx = fn(string $k, int $max = 4000) => RetrievedText::clean($r[$k] ?? '', $max);
         $fields = [
             'name' => $f('PackageName'),
             'loc'  => trim($f('PackageLocation') . ' ' . $f('Country') . ' ' . $f('Region')),
             'type' => $f('PackageType'),
-            'body' => trim($f('PackageFetures') . ' ' . $f('PackageDescription') . ' ' . $f('Inclusions') . ' ' . $f('PackageDuration')),
+            'body' => trim($tx('PackageFetures') . ' ' . $tx('PackageDescription') . ' ' . $tx('Inclusions') . ' ' . $f('PackageDuration')),
         ];
         $tf = []; $len = 0;
         foreach ($fields as $fname => $text) {
@@ -91,8 +149,9 @@ final class KnowledgeIndex
                 'title' => $f('PackageName'), 'location' => $f('PackageLocation'), 'country' => $f('Country'),
                 'type' => $f('PackageType'), 'price' => (int)($r['PackagePrice'] ?? 0),
                 'duration' => $f('PackageDuration'), 'rating' => (float)($r['AvgRating'] ?? 0),
-                'cancellation' => $f('CancellationPolicy'),
-                'inclusions' => $f('Inclusions'), 'exclusions' => $f('Exclusions'),
+                'cancellation' => $tx('CancellationPolicy', 1500),
+                'inclusions' => $tx('Inclusions', 600), 'exclusions' => $tx('Exclusions', 600),
+                'meal_plan' => $f('MealPlan'), 'hotel_rating' => (float)($r['HotelRating'] ?? 0),
             ],
         ];
     }
