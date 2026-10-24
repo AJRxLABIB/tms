@@ -5,6 +5,14 @@ name: TMS CI
 # (no hosting credentials exist for this project yet, see HOSTING_GUIDE.md);
 # it only proves every PHP file still parses and the test suite still
 # passes before anything reaches a "develop"/"main" branch.
+#
+# Round 115 continuation (TMS V2 Phase 4, master prompt item 58 -- "zero
+# E2E tests" was a confirmed real gap): the last two steps below boot the
+# app with PHP's own built-in server and run tests/e2e/run_e2e.php against
+# it -- real HTTP requests over the real routes (registration, CSRF,
+# login, booking, cancellation), not the in-process calls tests/run.php
+# makes. See tests/e2e/run_e2e.php's own header comment for why this is
+# curl-based rather than a Node/Playwright browser suite.
 
 on:
   push:
@@ -37,7 +45,10 @@ jobs:
         uses: shivammathur/setup-php@v2
         with:
           php-version: '8.2'
-          extensions: pdo_mysql
+          extensions: pdo_mysql, curl, mbstring
+
+      - name: Secret scan (never prints values; fails if .env or a key file is tracked)
+        run: php tools/scan-secrets.php
 
       - name: Lint every PHP file (php -l)
         run: |
@@ -46,11 +57,9 @@ jobs:
 
       - name: Load base schema
         run: |
-          mysql -h127.0.0.1 -uroot tms < tms.sql
-          mysql -h127.0.0.1 -uroot tms < v6_migration.sql
-          mysql -h127.0.0.1 -uroot tms < AI_MIGRATION.sql
-          mysql -h127.0.0.1 -uroot tms < explore_migration.sql
-          mysql -h127.0.0.1 -uroot tms < schema_repair_migration.sql
+          for f in tms v6_migration AI_MIGRATION explore_migration schema_repair_migration; do
+            mysql -h127.0.0.1 -uroot tms < database/legacy-sql/$f.sql
+          done
 
       - name: Configure environment
         run: |
@@ -58,9 +67,96 @@ jobs:
           sed -i 's/^DB_HOST=.*/DB_HOST=127.0.0.1/' .env
           sed -i 's/^DB_NAME=.*/DB_NAME=tms/' .env
           sed -i 's/^DB_USER=.*/DB_USER=root/' .env
+          # Fixtures the DB-backed suites need (sample catalogue); never set this on a real install.
+          echo "TMS_SEED_SAMPLE_PACKAGES=1" >> .env
 
       - name: Run migrations
         run: php database/migrate.php
 
       - name: Run test suite
         run: php tests/run.php
+
+      - name: AI safety/retrieval evaluation, re-ranker, payments, suppliers, travel notices
+        run: |
+          php tests/ai/run_eval.php
+          php tests/ai/rerank_test.php
+          php tests/ai/resilience_test.php
+          php tests/ai/engine_test.php
+          php tests/ai/quality_scorer_test.php
+          php tests/ai/itinerary_checker_test.php
+          php tests/ai/hybrid_test.php
+          php tests/ai/booking_readiness_test.php
+          php tests/ai/query_parser_test.php
+          php tests/ai/search_filters_test.php
+          php tests/ai/followup_test.php
+          php tests/ai/conversation_test.php
+          php tests/auth/google_test.php "" http://127.0.0.1:8000
+          php tests/payments/run.php
+          php tests/suppliers/run.php
+          php tests/notices/run.php
+          php tests/autopilot/run.php
+
+      - name: Start the app (PHP built-in server) for E2E testing
+        run: |
+          PHP_CLI_SERVER_WORKERS=8 php -S 127.0.0.1:8000 &   # several workers so the concurrency tests are real
+          for i in $(seq 1 20); do
+            curl -sf http://127.0.0.1:8000/index.php > /dev/null && break
+            sleep 0.5
+          done
+
+      - name: Run E2E test suite (real HTTP requests against the running app)
+        run: php tests/e2e/run_e2e.php
+
+      - name: Security and Trip Autopilot checks over real HTTP
+        run: |
+          php tests/security/run.php http://127.0.0.1:8000
+          php tests/security/stage10_test.php http://127.0.0.1:8000
+          php tests/perf/listing_test.php http://127.0.0.1:8000
+          node tests/pwa/sw_test.js
+          php tests/autopilot/http.php http://127.0.0.1:8000
+          php tests/ai/memory_http.php http://127.0.0.1:8000
+          php tests/ai/admin_controls_http.php http://127.0.0.1:8000
+
+  # Fast gates that need no database, network or AI model (run in parallel with the full job above).
+  quality-gates:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          extensions: pdo_mysql, curl, mbstring
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: PHP syntax check (every tracked .php file)
+        run: |
+          git ls-files '*.php' -z | xargs -0 -n1 -P4 php -l > /dev/null
+
+      - name: Secret scan (file:line and rule only, values never printed)
+        run: bash scripts/ci/secret_scan.sh
+
+      - name: Migration validation (numbering, non-empty, additive only)
+        run: bash scripts/ci/validate_migrations.sh
+
+      - name: Pure unit tests (API contract, AI parsing/safety, supplier scoring, metrics matcher, service worker)
+        run: bash scripts/ci/pure_tests.sh
+
+      - name: JavaScript syntax check
+        run: |
+          for f in sw.js js/tms-a11y.js js/ai-feedback.js js/explore.js; do [ -f "$f" ] && node --check "$f"; done
+
+      # Dependency note: this project vendors its PHP and JS libraries (backend/phpmailer, js/*.js) and has no
+      # composer.json or package.json, so there is no lockfile for an automated vulnerability audit to read.
+      # Known-outdated: js/jquery-1.12.0.min.js (used by 53 pages; upgrade needs per-page compatibility testing).
+      # If composer.json/package.json are ever added, add `composer audit` / `npm audit --omit=dev` here.
+      - name: Dependency inventory (no manifest to audit; lists vendored libraries)
+        run: |
+          ls -1 backend/phpmailer js/*.min.js js/jquery-*.js 2>/dev/null || true
+          if [ -f composer.json ]; then composer audit; fi
+          if [ -f package.json ]; then npm audit --omit=dev; fi

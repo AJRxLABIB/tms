@@ -66,16 +66,22 @@ class TravelRecommender {
         // request. AIEvaluator's own recommender fixture already omits
         // start_date/end_date/accommodation/food_preference and hits this
         // exact gap on every eval run.
-        $budget         = $prefs['budget'] ?? 0;
-        $travelers      = $prefs['travelers'] ?? 1;
-        $startDate      = $prefs['start_date'] ?? 'Flexible';
-        $endDate        = $prefs['end_date'] ?? 'Flexible';
-        $duration       = $prefs['duration'] ?? '';
-        $travelType     = $prefs['travel_type'] ?? 'No preference';
-        $climate        = $prefs['climate'] ?? 'No preference';
-        $activities     = $prefs['activities'] ?? 'General sightseeing';
-        $accommodation  = $prefs['accommodation'] ?? 'No preference';
-        $foodPreference = $prefs['food_preference'] ?? 'No preference';
+        // Every value below goes into the prompt: numbers are cast, free text is stripped of markup/control characters and capped.
+        $clean = static function ($v, int $max = 120, string $default = 'No preference'): string {
+            $t = preg_replace('/[\x00-\x1F\x7F]+/u', ' ', is_array($v) ? implode(', ', array_map('strval', $v)) : (string)$v) ?? '';
+            $t = trim(mb_substr(preg_replace('/\s+/u', ' ', str_replace(['{', '}', '<', '>', '`'], ' ', $t)) ?? '', 0, $max, 'UTF-8'));
+            return $t !== '' ? $t : $default;
+        };
+        $budget         = max(0, (int)($prefs['budget'] ?? 0));
+        $travelers      = max(1, min(50, (int)($prefs['travelers'] ?? 1)));
+        $startDate      = $clean($prefs['start_date'] ?? '', 30, 'Flexible');
+        $endDate        = $clean($prefs['end_date'] ?? '', 30, 'Flexible');
+        $duration       = $clean($prefs['duration'] ?? '', 10, '');
+        $travelType     = $clean($prefs['travel_type'] ?? '', 40);
+        $climate        = $clean($prefs['climate'] ?? '', 40);
+        $activities     = $clean($prefs['activities'] ?? '', 200, 'General sightseeing');
+        $accommodation  = $clean($prefs['accommodation'] ?? '', 80);
+        $foodPreference = $clean($prefs['food_preference'] ?? '');
 
         $system = <<<SYSTEM
 You are an expert senior travel consultant at TMS, a premium travel platform specializing in destinations across Bangladesh, South Asia, and international locations.
@@ -135,7 +141,7 @@ For each recommendation return this exact JSON structure:
 Return a JSON array of exactly 5 objects. No other text.
 MSG;
 
-        $cacheKey = md5('recommend_' . json_encode($prefs));
+        $cacheKey = md5('recommend_v2_' . json_encode($prefs) . '|' . $profileContext); // personalised text must be part of the key
         $result = $this->ai->ask($system, $userMessage, $cacheKey, $email, feature: 'recommender');
 
         if (!$result['success']) {
@@ -159,8 +165,10 @@ MSG;
         // full 50-package inventory) so it stays cheap. See groundWeatherScores().
         $this->groundWeatherScores($recommendations, $prefs);
 
-        // Enrich with package images from database
-        return $this->enrichWithPackageData($recommendations, $packages, $prefs);
+        // Enrich with package images from database. Anything the model recommended that is NOT in our inventory is dropped;
+        // if nothing real is left, the rule-based path answers instead of showing an empty or invented list.
+        $enriched = $this->enrichWithPackageData($recommendations, $packages, $prefs);
+        return $enriched ?: $this->fallbackRuleBasedRecommend($prefs, $packages);
     }
 
     /**
@@ -558,6 +566,23 @@ MSG;
         foreach ($packages as $p) {
             $pkgMap[(int)$p->PackageId] = $p;
         }
+        if (!isset($recommendations[0]) && $recommendations) $recommendations = array_values($recommendations);   // a lone object instead of a list
+        $kept = [];
+        $budget = isset($prefs['budget']) && is_numeric($prefs['budget']) ? (int)$prefs['budget'] : 0;
+        foreach ($recommendations as $rec) {
+            if (!is_array($rec) || !isset($pkgMap[(int)($rec['package_id'] ?? 0)])) continue;     // not in our inventory: never shown
+            $id = (int)$rec['package_id'];
+            // Facts the explanation rests on, taken from the database (not from the model's text).
+            $pr = (int)$pkgMap[$id]->PackagePrice;
+            $rec['evidence'] = array_filter([
+                'price' => $pr, 'avg_rating' => isset($pkgMap[$id]->AvgRating) ? (float)$pkgMap[$id]->AvgRating : null,
+                'location' => (string)($pkgMap[$id]->PackageLocation ?? ''),
+                'budget_gap' => $budget > 0 ? $pr - $budget : null,
+            ], fn($v) => $v !== null && $v !== '');
+            $rec['inventory_verified'] = true;
+            $kept[] = $rec;
+        }
+        $recommendations = array_slice($kept, 0, 5);
         foreach ($recommendations as &$rec) {
             $id = (int)($rec['package_id'] ?? 0);
             if (isset($pkgMap[$id])) {

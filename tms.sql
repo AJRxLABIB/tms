@@ -39,8 +39,8 @@ CREATE TABLE `admin` (
 -- Dumping data for table `admin`
 --
 
-INSERT INTO `admin` (`id`, `UserName`, `Password`, `updationDate`) VALUES
-(1, 'admin', 'f925916e2754e5e03f75dd58a5733251', '2020-05-11 11:18:49');
+-- No default admin is seeded (the old seed used a publicly known password).
+-- Create one with:  php tools/create-admin.php
 
 -- --------------------------------------------------------
 
@@ -202,11 +202,11 @@ CREATE TABLE `tblusers` (
 --
 
 INSERT INTO `tblusers` (`id`, `FullName`, `MobileNumber`, `EmailId`, `Password`, `RegDate`, `UpdationDate`) VALUES
-(1, 'Manju Srivatav', '4456464654', 'manju@gmail.com', '202cb962ac59075b964b07152d234b70', '2020-07-08 06:33:20', NULL),
-(2, 'Kishan', '9871987979', 'kishan@gmail.com', '202cb962ac59075b964b07152d234b70', '2020-07-08 06:33:56', NULL),
-(3, 'Salvi Chandra', '1398756416', 'salvi@gmail.com', '202cb962ac59075b964b07152d234b70', '2020-07-08 06:34:20', NULL),
-(4, 'Abir', '4789756456', 'abir@gmail.com', '202cb962ac59075b964b07152d234b70', '2020-07-08 06:34:38', NULL),
-(5, 'Test', '1987894654', 'anuj@gmail.com', 'f925916e2754e5e03f75dd58a5733251', '2020-07-08 06:35:06', '2021-05-11 04:37:41');
+(1, 'Manju Srivatav', '4456464654', 'manju@gmail.com', '!disabled-demo-account', '2020-07-08 06:33:20', NULL),
+(2, 'Kishan', '9871987979', 'kishan@gmail.com', '!disabled-demo-account', '2020-07-08 06:33:56', NULL),
+(3, 'Salvi Chandra', '1398756416', 'salvi@gmail.com', '!disabled-demo-account', '2020-07-08 06:34:20', NULL),
+(4, 'Abir', '4789756456', 'abir@gmail.com', '!disabled-demo-account', '2020-07-08 06:34:38', NULL),
+(5, 'Test', '1987894654', 'anuj@gmail.com', '!disabled-demo-account', '2020-07-08 06:35:06', '2021-05-11 04:37:41');
 
 --
 -- Indexes for dumped tables

@@ -1,5 +1,5 @@
 <?php
-session_start();
+require_once __DIR__ . '/../backend/session-boot.php';
 error_reporting(E_ALL); ini_set('display_errors', '0'); ini_set('log_errors', '1');
 include('backend/config.php');
 tms_require_user();
@@ -16,8 +16,8 @@ if (isset($_POST['submit5'])) {
 
     if (empty($currentPass) || empty($newPass) || empty($confirmPass)) {
         $error = 'All fields are required.';
-    } elseif (strlen($newPass) < 6) {
-        $error = 'New password must be at least 6 characters.';
+    } elseif (($pwErr = tms_password_error($newPass)) !== null) {
+        $error = $pwErr;
     } elseif ($newPass !== $confirmPass) {
         $error = 'New password and confirm password do not match.';
     } else {
@@ -33,6 +33,7 @@ if (isset($_POST['submit5'])) {
             $upd->bindParam(':pwd',   $newHash, PDO::PARAM_STR);
             $upd->bindParam(':email', $email,   PDO::PARAM_STR);
             $upd->execute();
+            tms_revoke_user_sessions($dbh, (string)$email, true);   // other devices and API tokens are signed out; this session stays
             $msg = 'Your password has been changed successfully.';
         } else {
             $error = 'Your current password is incorrect.';
@@ -44,18 +45,21 @@ if (isset($_POST['submit5'])) {
 <html lang="<?php echo htmlspecialchars(tms_active_language(), ENT_QUOTES, 'UTF-8'); ?>">
 <head>
 <link rel="manifest" href="manifest.json">
-<meta name="theme-color" content="#0B2B3C">
+<meta name="theme-color" content="#104B3A">
 <link rel="apple-touch-icon" href="images/icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="TMS">
+<meta name="mobile-web-app-capable" content="yes">
 <title>TMS | Change Password</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
 <link href="css/bootstrap.min2.css" rel='stylesheet' type='text/css' />
-<link href="css/style.min.css" rel='stylesheet' type='text/css' />
+<link href="<?php echo tms_asset_ver('css/style.min.css'); ?>" rel='stylesheet' type='text/css' />
 <link href="css/font-awesome.min2.css" rel="stylesheet">
 <link href="<?php echo tms_asset_ver('css/modern-theme.css'); ?>" rel="stylesheet">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700;9..144,800&family=Manrope:wght@400;500;600;700;800&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
 <script src="js/jquery-1.12.0.min.js" defer></script>
 <script src="js/bootstrap.min.js" defer></script>
 <link href="css/animate.css" rel="stylesheet" type="text/css" media="all">
@@ -66,7 +70,7 @@ if (isset($_POST['submit5'])) {
 .succWrap{padding:10px;margin:0 0 20px;background:var(--white);border-left:4px solid #5cb85c;box-shadow:0 1px 1px rgba(0,0,0,.1);border-radius:8px;}
 .pwd-strength{height:6px;border-radius:4px;margin-top:6px;transition:width .3s,background .3s;}
 .tms-page-hero{position:relative;min-height:220px;display:flex;align-items:center;justify-content:center;overflow:hidden;
-  background:radial-gradient(ellipse 80% 60% at 30% 0%, rgba(15,163,163,0.35), transparent 60%),
+  background:radial-gradient(ellipse 80% 60% at 30% 0%, rgba(23,107,80,0.35), transparent 60%),
   linear-gradient(160deg, var(--primary-dark) 0%, var(--primary) 55%, #0C3A4A 100%);}
 .tms-page-hero h1{position:relative;z-index:2;color:#fff;font-family:var(--font-display);font-size:clamp(28px,4vw,42px);font-weight:600;margin:0;}
 .pwd-card{background:rgba(255,255,255,0.7);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);
@@ -99,7 +103,7 @@ if (isset($_POST['submit5'])) {
                 <b>New Password</b>
                 <input type="password" name="newpassword" id="newpassword" class="form-control" placeholder="At least 6 characters" required autocomplete="new-password" oninput="checkStrength(this.value)">
                 <div id="strengthBar" class="pwd-strength" style="width:0;background:#ddd;"></div>
-                <small id="strengthText" style="color:#888;font-size:12px;"></small>
+                <small id="strengthText" style="color:var(--text-muted);font-size:12px;"></small>
             </div>
             <div class="form-group">
                 <b>Confirm New Password</b>

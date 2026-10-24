@@ -1,7 +1,8 @@
 <?php
-session_start();
+require_once __DIR__ . '/../backend/session-boot.php';
 error_reporting(E_ALL); ini_set('display_errors', '0'); ini_set('log_errors', '1');
 include('backend/config.php');
+require_once __DIR__ . '/../backend/Seo.php';
 
 $error = '';
 $msg   = '';
@@ -14,7 +15,7 @@ $activity = $aq->fetch(PDO::FETCH_OBJ);
 if (!$activity) {
     http_response_code(404);
     include('backend/header.php');
-    echo '<div class="container" style="padding:60px 20px;text-align:center;color:#aaa;"><i class="fa fa-map-signs" style="font-size:50px;display:block;margin-bottom:16px;"></i><h3>Activity not found</h3><p><a href="activities.php">Back to Activities</a></p></div>';
+    echo '<div class="container" style="padding:60px 20px;text-align:center;color:var(--text-muted);"><i class="fa fa-map-signs" style="font-size:50px;display:block;margin-bottom:16px;"></i><h3>Activity not found</h3><p><a href="activities.php">Back to Activities</a></p></div>';
     include('backend/footer.php');
     exit;
 }
@@ -56,16 +57,50 @@ if (isset($_POST['book_activity'])) {
             $total = (int)$activity->PricePerPerson * $people;
             $verificationCode = strtoupper(bin2hex(random_bytes(5)));
 
-            $ins = $dbh->prepare(
-                "INSERT INTO tblactivity_bookings(ActivityId,UserEmail,ActivityDate,NumParticipants,MobileNumber,Comment,TotalCost,VerificationCode,status)
-                 VALUES(:aid,:email,:date,:people,:mobile,:comment,:total,:vcode,0)"
-            );
-            $ins->execute([
-                ':aid' => $activityId, ':email' => $email, ':date' => $when->format('Y-m-d'),
-                ':people' => $people, ':mobile' => $mobile ?: null, ':comment' => $comment,
-                ':total' => $total, ':vcode' => $verificationCode,
-            ]);
-            $newId = $dbh->lastInsertId();
+            // Slot-managed activities (tbl_inventory_slots has rows): hold the seats in the SAME transaction as the
+            // booking insert and take the price from the slot. Unmanaged activities behave exactly as before.
+            require_once __DIR__ . '/../backend/services/InventoryService.php';
+            $invManaged = InventoryService::isManaged($dbh, 'activity', (int)$activityId);
+            $newId = 0;
+            try {
+                if ($invManaged) {
+                    $invHolder = substr((string)$email, 0, 100) . '#' . $verificationCode;
+                    $dbh->beginTransaction();
+                    $invRes = InventoryService::reserveForBooking($dbh, 'activity', (int)$activityId, [$when->format('Y-m-d')], $people, $invHolder, (int)$activity->PricePerPerson);
+                    if ($invRes['status'] !== 'ok') {
+                        $dbh->rollBack();
+                        $error = $invRes['status'] === 'unavailable'
+                            ? InventoryService::reasonMessage((string)($invRes['reason'] ?? ''), (string)($invRes['date'] ?? ''))
+                            : 'Could not check availability right now. Please try again.';
+                    } else {
+                        $total = (int)$invRes['total'];   // authoritative price (slot override or listing price)
+                    }
+                }
+                if ($error === '') {
+                    $ins = $dbh->prepare(
+                        "INSERT INTO tblactivity_bookings(ActivityId,UserEmail,ActivityDate,NumParticipants,MobileNumber,Comment,TotalCost,VerificationCode,status)
+                         VALUES(:aid,:email,:date,:people,:mobile,:comment,:total,:vcode,0)"
+                    );
+                    $ins->execute([
+                        ':aid' => $activityId, ':email' => $email, ':date' => $when->format('Y-m-d'),
+                        ':people' => $people, ':mobile' => $mobile ?: null, ':comment' => $comment,
+                        ':total' => $total, ':vcode' => $verificationCode,
+                    ]);
+                    $newId = $dbh->lastInsertId();
+                    if ($invManaged) {
+                        if ($newId && InventoryService::confirmReservation($dbh, $invRes['hold_ids'], $invHolder, InventoryService::bookingRef('activity', (int)$newId))) {
+                            $dbh->commit();
+                        } else {
+                            $dbh->rollBack(); $newId = 0;
+                        }
+                    }
+                }
+            } catch (Throwable $e) {
+                if ($dbh->inTransaction()) $dbh->rollBack();
+                error_log('[TMS Activity booking] ' . $e->getMessage());
+                $newId = 0;
+                if ($invManaged) { $error = 'Something went wrong. Please try again.'; } else { throw $e; }
+            }
             if ($newId) {
                 $dbh->prepare("INSERT INTO tblloyalty(UserEmail,Points,TotalEarned) VALUES(:e,50,50)
                     ON DUPLICATE KEY UPDATE Points=Points+50, TotalEarned=TotalEarned+50")->execute([':e'=>$email]);
@@ -76,7 +111,7 @@ if (isset($_POST['book_activity'])) {
 
                 $msg = 'Activity booked successfully! Verification code: <strong>'.htmlspecialchars($verificationCode, ENT_QUOTES, 'UTF-8').'</strong>. '
                      . 'View it in <a href="my-marketplace-bookings.php">My Marketplace Bookings</a>. You earned <strong>50 loyalty points!</strong>';
-            } else {
+            } elseif ($error === '') {
                 $error = 'Something went wrong. Please try again.';
             }
         }
@@ -87,7 +122,12 @@ if (isset($_POST['book_activity'])) {
 <html lang="<?php echo htmlspecialchars(tms_active_language(), ENT_QUOTES, 'UTF-8'); ?>">
 <head>
 <link rel="manifest" href="manifest.json">
-<meta name="theme-color" content="#0B2B3C">
+<meta name="theme-color" content="#104B3A">
+<link rel="apple-touch-icon" href="images/icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="TMS">
+<meta name="mobile-web-app-capable" content="yes">
 <title>TMS | <?php echo htmlspecialchars($activity->ActivityName, ENT_QUOTES, 'UTF-8'); ?></title>
 <?php
 // SEO meta broadening (master prompt item 53), same pattern as
@@ -108,6 +148,7 @@ tms_seo_meta([
     'description' => $activitySeoDesc,
     'image'       => $activity->ActivityImage ?: '',
     'canonical'   => $adScheme . '://' . $adHost . $adPath . '?id=' . (int)$activityId,
+    'jsonld'      => tms_seo_activity_jsonld($activity, $adScheme . '://' . $adHost . $adPath . '?id=' . (int)$activityId),
     'breadcrumbs' => [
         ['label' => 'Home', 'url' => 'index.php'],
         ['label' => 'Activities', 'url' => 'activities.php'],
@@ -117,12 +158,11 @@ tms_seo_meta([
 ?>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <link href="css/bootstrap.min2.css" rel='stylesheet' type='text/css' />
-<link href="css/style.min.css" rel='stylesheet' type='text/css' />
+<link href="<?php echo tms_asset_ver('css/style.min.css'); ?>" rel='stylesheet' type='text/css' />
 <link href="css/font-awesome.min2.css" rel="stylesheet">
 <link href="<?php echo tms_asset_ver('css/modern-theme.css'); ?>" rel="stylesheet">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700;9..144,800&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <script src="js/jquery-1.12.0.min.js" defer></script>
 <script src="js/bootstrap.min.js" defer></script>
 <style>
@@ -164,16 +204,33 @@ tms_seo_meta([
                 <img src="<?php echo htmlspecialchars($activity->ActivityImage ?: 'images/no-image-placeholder.jpg', ENT_QUOTES, 'UTF-8'); ?>" onerror="this.src='images/no-image-placeholder.jpg'" class="hd-img" alt="<?php echo htmlspecialchars($activity->ActivityName, ENT_QUOTES, 'UTF-8'); ?>">
                 <div class="hd-body">
                     <span class="tms-sample-badge"><i class="fa fa-flask"></i> Sample Listing</span>
+                    <?php
+                    // Availability badge only where inventory slots exist; demo/sample data is labelled Demo, never Live.
+                    try {
+                        require_once __DIR__ . '/../backend/services/InventoryService.php';
+                        require_once __DIR__ . '/../backend/services/InventorySource.php';
+                        if (InventoryService::isManaged($dbh, 'activity', (int)$activityId)) {
+                            $invLabel = InventorySource::labelFor($dbh, 'activity', (int)$activityId);
+                            echo InventoryService::badgeHtml($invLabel);
+                            if ($invLabel['badge'] !== 'demo') {
+                                $invSum = InventoryService::summaryForNextDays($dbh, 'activity', (int)$activityId, 14);
+                                if ($invSum) echo ' <small style="color:var(--text-muted);">' . ($invSum['slots_open'] > 0
+                                    ? (int)$invSum['slots_open'] . ' bookable session(s) in the next ' . (int)$invSum['days'] . ' days' . ($invLabel['stale'] ? ' (data may be out of date)' : '')
+                                    : 'No bookable sessions in the next ' . (int)$invSum['days'] . ' days') . '</small>';
+                            }
+                        }
+                    } catch (Throwable $e) { error_log('[TMS] inventory badge: ' . $e->getMessage()); }
+                    ?>
                     <h1 style="margin-top:10px;"><?php echo htmlspecialchars($activity->ActivityName, ENT_QUOTES, 'UTF-8'); ?></h1>
                     <p><i class="fa fa-map-marker" style="color:#e74c3c"></i> <?php echo htmlspecialchars($activity->City.', '.$activity->Country, ENT_QUOTES, 'UTF-8'); ?>
                     &nbsp;·&nbsp; <i class="fa fa-tags"></i> <?php echo htmlspecialchars($activity->Category ?? '', ENT_QUOTES, 'UTF-8'); ?>
                     &nbsp;·&nbsp; <i class="fa fa-clock-o"></i> <?php echo rtrim(rtrim(number_format((float)$activity->DurationHours,1),'0'),'.'); ?> hours</p>
                     <?php if ((float)$activity->AvgRating>0): ?>
                     <p><?php for ($s=1;$s<=5;$s++): ?><i class="fa fa-star<?php echo $s<=round((float)$activity->AvgRating)?'':'-o'; ?>" style="color:#f0ad4e;"></i><?php endfor; ?>
-                    <span style="color:#888;font-size:13px;"> <?php echo number_format((float)$activity->AvgRating,1); ?>/5<?php if ($activityReviewCount > 0): ?> (<?php echo $activityReviewCount; ?> review<?php echo $activityReviewCount===1?'':'s'; ?>)<?php endif; ?></span></p>
+                    <span style="color:var(--text-muted);font-size:13px;"> <?php echo number_format((float)$activity->AvgRating,1); ?>/5<?php if ($activityReviewCount > 0): ?> (<?php echo $activityReviewCount; ?> review<?php echo $activityReviewCount===1?'':'s'; ?>)<?php endif; ?></span></p>
                     <?php endif; ?>
                     <p style="color:var(--text-muted);"><?php echo nl2br(htmlspecialchars($activity->Description ?? '', ENT_QUOTES, 'UTF-8')); ?></p>
-                    <h3 style="color:var(--primary);margin-top:16px;"><?php echo tms_currency((float)$activity->PricePerPerson); ?> <span style="font-size:13px;color:#999;font-weight:400;">/person</span></h3>
+                    <h3 style="color:var(--primary);margin-top:16px;"><?php echo tms_currency((float)$activity->PricePerPerson); ?> <span style="font-size:13px;color:var(--text-muted);font-weight:400;">/person</span></h3>
                 </div>
             </div>
 
@@ -215,11 +272,11 @@ tms_seo_meta([
                             <input type="number" name="participants" id="actParticipantsField" class="form-control" value="1" min="1" max="30" required>
                         </div>
                         <div class="form-group">
-                            <label for="actMobileField">Mobile Number <small style="color:#aaa;">(optional)</small></label>
+                            <label for="actMobileField">Mobile Number <small style="color:var(--text-muted);">(optional)</small></label>
                             <input type="tel" name="mobile" id="actMobileField" class="form-control" placeholder="e.g. 017XXXXXXXX" maxlength="20">
                         </div>
                         <div class="form-group">
-                            <label for="actCommentField">Special Requests <small style="color:#aaa;">(optional)</small></label>
+                            <label for="actCommentField">Special Requests <small style="color:var(--text-muted);">(optional)</small></label>
                             <textarea name="comment" id="actCommentField" class="form-control" style="height:70px;padding:10px 12px;"></textarea>
                         </div>
                         <button type="submit" name="book_activity" class="btn-book"><i class="fa fa-check-circle"></i> Book Now</button>

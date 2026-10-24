@@ -1,6 +1,7 @@
 <?php
 // header.php - Modern redesigned header for TMS
 $currentPage = basename($_SERVER['PHP_SELF']);
+require_once __DIR__ . '/ContentHelpers.php';   // placeholder images + filler-text filters (see that file)
 ?>
 <script>
 // Round 61 (item 36, multilingual system): every page already renders the
@@ -63,6 +64,7 @@ $currentPage = basename($_SERVER['PHP_SELF']);
 }
 .tms-skip-link:focus { top: 8px; color: #fff; text-decoration: none; }
 </style>
+<link rel="stylesheet" href="css/tms-a11y.css">
 <!-- ═══════════════════════════════════════════ TOP BAR ═══════════════════════════════════════════ -->
 <?php if (empty($tms_landing_mode)): ?>
 <div class="tms-topbar">
@@ -72,13 +74,14 @@ $currentPage = basename($_SERVER['PHP_SELF']);
             <a href="index.php"><i class="fa fa-home"></i> <?php echo tms_t('nav_home','Home'); ?></a>
             <?php if(isset($_SESSION['login']) && !empty($_SESSION['login'])): ?>
             <span class="tms-topbar-divider"></span>
-            <a href="dashboard.php"><i class="fa fa-th-large"></i> Dashboard</a>
-            <a href="profile.php"><i class="fa fa-user-circle"></i> <?php echo tms_t('nav_profile','My Profile'); ?></a>
-            <a href="tour-history.php"><i class="fa fa-suitcase"></i> <?php echo tms_t('nav_bookings','My Bookings'); ?></a>
-            <a href="alerts.php"><i class="fa fa-bell"></i> Price Alerts</a>
-            <a href="group-trips.php"><i class="fa fa-users"></i> Group Trips</a>
-            <a href="referral.php"><i class="fa fa-gift"></i> Refer Friends</a>
-            <a href="privacy.php"><i class="fa fa-lock"></i> Privacy &amp; My Data</a>
+            <a href="dashboard.php" title="Dashboard"><i class="fa fa-th-large" aria-hidden="true"></i><span class="tms-tb-label"> Dashboard</span></a>
+            <a href="profile.php" title="<?php echo htmlspecialchars(tms_t('nav_profile','My Profile'), ENT_QUOTES, 'UTF-8'); ?>"><i class="fa fa-user-circle" aria-hidden="true"></i><span class="tms-tb-label"> <?php echo tms_t('nav_profile','My Profile'); ?></span></a>
+            <a href="tour-history.php" title="<?php echo htmlspecialchars(tms_t('nav_bookings','My Bookings'), ENT_QUOTES, 'UTF-8'); ?>"><i class="fa fa-suitcase" aria-hidden="true"></i><span class="tms-tb-label"> <?php echo tms_t('nav_bookings','My Bookings'); ?></span></a>
+            <a href="alerts.php" class="tms-tb-secondary" title="Price Alerts"><i class="fa fa-bell" aria-hidden="true"></i><span class="tms-tb-label"> Price Alerts</span></a>
+            <a href="group-trips.php" class="tms-tb-secondary" title="Group Trips"><i class="fa fa-users" aria-hidden="true"></i><span class="tms-tb-label"> Group Trips</span></a>
+            <a href="referral.php" class="tms-tb-secondary" title="Refer Friends"><i class="fa fa-gift" aria-hidden="true"></i><span class="tms-tb-label"> Refer Friends</span></a>
+            <a href="ai-memory.php" class="tms-tb-secondary" title="My AI memory"><i class="fa fa-bookmark" aria-hidden="true"></i><span class="tms-tb-label"> My AI memory</span></a>
+            <a href="privacy.php" class="tms-tb-secondary" title="Privacy &amp; My Data"><i class="fa fa-lock" aria-hidden="true"></i><span class="tms-tb-label"> Privacy &amp; My Data</span></a>
             <?php else: ?>
             <span class="tms-topbar-divider"></span>
             <a href="admin/index.php"><i class="fa fa-shield"></i> Admin</a>
@@ -99,7 +102,10 @@ $currentPage = basename($_SERVER['PHP_SELF']);
                 <?php endforeach; ?>
             </select>
             <span class="tms-topbar-divider"></span>
-            <span class="tms-phone"><i class="fa fa-phone"></i> Toll: +880 1759-443004</span>
+            <?php $tmsHdrPhone = trim((string)tms_env('TMS_SUPPORT_PHONE', '+880 1759-443004')); ?>
+            <?php if ($tmsHdrPhone !== ''): ?>
+            <span class="tms-phone"><i class="fa fa-phone" aria-hidden="true"></i> Toll: <?php echo htmlspecialchars($tmsHdrPhone, ENT_QUOTES, 'UTF-8'); ?></span>
+            <?php endif; ?>
             <span class="tms-topbar-divider"></span>
             <?php endif; ?>
             <?php if(empty($tms_landing_mode) && isset($_SESSION['login']) && !empty($_SESSION['login'])):
@@ -135,8 +141,8 @@ $currentPage = basename($_SERVER['PHP_SELF']);
             <span class="tms-topbar-divider"></span>
             <?php endif; ?>
             <?php if(isset($_SESSION['login']) && !empty($_SESSION['login'])): ?>
-            <span class="tms-topbar-welcome" style="color:rgba(255,255,255,0.85);font-size:12.5px;"><?php echo tms_t('nav_welcome','Welcome'); ?>, <?php echo htmlspecialchars(explode('@',$_SESSION['login'])[0]); ?>!</span>
-            <a href="logout.php" class="btn-topbar-login"><i class="fa fa-sign-out"></i> <?php echo tms_t('nav_logout','Logout'); ?></a>
+            <span class="tms-topbar-welcome" title="<?php echo htmlspecialchars((string)$_SESSION['login'], ENT_QUOTES, 'UTF-8'); ?>" style="color:rgba(255,255,255,0.85);font-size:12.5px;"><?php echo tms_t('nav_welcome','Welcome'); ?>, <?php echo htmlspecialchars(explode('@',$_SESSION['login'])[0]); ?>!</span>
+            <a href="logout.php?t=<?php echo urlencode(tms_csrf_token()); ?>" class="btn-topbar-login"><i class="fa fa-sign-out"></i> <?php echo tms_t('nav_logout','Logout'); ?></a>
             <?php else: ?>
             <a href="javascript:void(0)" onclick="openModal('signupModal')" class="btn-topbar-signup"><i class="fa fa-user-plus"></i> <?php echo tms_t('nav_signup','Sign Up'); ?></a>
             <a href="javascript:void(0)" onclick="openModal('signinModal')" class="btn-topbar-login"><i class="fa fa-sign-in"></i> <?php echo tms_t('nav_signin','Sign In'); ?></a>
@@ -326,6 +332,13 @@ $currentPage = basename($_SERVER['PHP_SELF']);
                                     <span>Emergency contacts & tips</span>
                                 </div>
                             </a>
+                            <a href="travel-notices.php" class="tms-mega-item">
+                                <div class="tms-mega-icon icon-safety"><i class="fa fa-info-circle"></i></div>
+                                <div class="tms-mega-label">
+                                    <strong>Travel Notices</strong>
+                                    <span>Entry rules & advisories, with sources</span>
+                                </div>
+                            </a>
                         </div>
                     </div>
                     <div style="border-top:1px solid #f0f4f8;margin-top:16px;padding-top:14px;display:flex;gap:10px;flex-wrap:wrap;">
@@ -386,6 +399,7 @@ $currentPage = basename($_SERVER['PHP_SELF']);
             <div style="text-align:right;margin-bottom:20px;"><a href="forgot-password.php" style="font-size:13px;color:var(--secondary);"><?php echo tms_t('link_forgot_password','Forgot password?'); ?></a></div>
             <button type="submit" name="signin" class="tms-btn-modal"><?php echo tms_t('nav_signin','Sign In'); ?> <i class="fa fa-arrow-right"></i></button>
         </form>
+        <?php require_once __DIR__ . '/auth/GoogleAuth.php'; echo GoogleAuth::button((string)($_SESSION['post_login_redirect'] ?? ($_SERVER['PHP_SELF'] ?? ''))); ?>
         <p class="tms-modal-switch"><?php echo tms_t('msg_no_account_yet','No account yet?'); ?> <a href="javascript:void(0)" onclick="closeModal('signinModal');openModal('signupModal')"><?php echo tms_t('link_create_account','Create one free'); ?> →</a></p>
     </div>
 </div>
@@ -432,6 +446,7 @@ $currentPage = basename($_SERVER['PHP_SELF']);
             </div>
             <button type="submit" name="submit" id="regSubmitBtn" class="tms-btn-modal" style="background:linear-gradient(135deg,var(--secondary),var(--primary));"><?php echo tms_t('btn_create_account','Create My Account'); ?> <i class="fa fa-arrow-right"></i></button>
         </form>
+        <?php require_once __DIR__ . '/auth/GoogleAuth.php'; echo GoogleAuth::button('', 'Sign up with Google'); ?>
         <p class="tms-modal-switch"><?php echo tms_t('msg_already_have_account','Already have an account?'); ?> <a href="javascript:void(0)" onclick="closeModal('signupModal');openModal('signinModal')"><?php echo tms_t('nav_signin','Sign In'); ?> →</a></p>
     </div>
 </div>
@@ -514,7 +529,7 @@ $currentPage = basename($_SERVER['PHP_SELF']);
     padding: 12px 14px 12px 40px;
     border: 2px solid #e8ecf0;
     border-radius: 10px;
-    font-family: 'Poppins', sans-serif;
+    font-family: var(--font-body);
     font-size: 14px;
     outline: none;
     transition: border-color 0.2s;
@@ -528,7 +543,7 @@ $currentPage = basename($_SERVER['PHP_SELF']);
     color: #fff;
     border: none;
     border-radius: 12px;
-    font-family: 'Poppins', sans-serif;
+    font-family: var(--font-body);
     font-size: 15px;
     font-weight: 700;
     cursor: pointer;
@@ -633,12 +648,18 @@ html[data-theme="dark"] .tms-theme-knob { transform: translateX(32px); color: #4
    on the browser's own auto-dark-mode inversion, which is what was producing
    unreadable text before (see chat notes). */
 html[data-theme="dark"] {
-    --bg: #10151c;
-    --bg-dark: #171e28;
-    --white: #1b222c;
-    --text: #eef2f7;
-    --text-muted: #b7c1cf;
-    --text-light: #8b96a6;
+    --bg: #0F1612;
+    --bg-dark: #141D18;
+    --white: #18211C;
+    --text: #EAF1EC;
+    --text-muted: #AAB8AF;
+    --text-light: #AAB8AF;
+    /* brand greens re-tuned for dark surfaces (links 7.9:1 on --white) */
+    --secondary: #5CC79C;
+    --secondary-light: #7ED6B2;
+    --accent: #1B7F5F;
+    --accent-dark: #176B50;
+    --brass: #E0A93B;
     --shadow-sm: 0 2px 8px rgba(0,0,0,0.35);
     --shadow-md: 0 8px 30px rgba(0,0,0,0.45);
     --shadow-lg: 0 20px 60px rgba(0,0,0,0.55);
@@ -650,7 +671,7 @@ html[data-theme="dark"] {
        tint + pale ink (readable on the dark --white surface) -- kept as
        genuinely distinct hues per status, not just one gray, so a status
        badge still differs by color (not just position/label) in dark mode. */
-    --border: #2b3542;
+    --border: #2A362F;
     --success: #4ADE80;
     --success-bg: #14321F;
     --success-text: #86EFAC;
@@ -662,12 +683,7 @@ html[data-theme="dark"] {
     --danger-text: #FCA5A5;
 }
 html[data-theme="dark"] body {
-    background:
-        linear-gradient(rgba(16,21,28,0.93), rgba(16,21,28,0.96)),
-        url('images/7.jpg');
-    background-size: auto, cover;
-    background-position: center, center;
-    background-attachment: scroll, fixed;
+    background: var(--bg);
     color: var(--text);
 }
 /* .tms-section-title (css/modern-theme.css) is used for section headings
@@ -850,6 +866,30 @@ html[data-theme="dark"] .leave-comment textarea {
 @keyframes tmsRippleAnim {
     to { transform: scale(1); opacity: 0; }
 }
+/* a11y (WCAG 1.4.3): the forest primary (#176B50) is a dark-on-light colour; on dark
+   surfaces text uses the mint tint, and white-on-mint controls use dark ink. */
+html[data-theme="dark"] .tms-nav-menu > li.active > a,
+html[data-theme="dark"] .rom-btm .room-midle h4,
+html[data-theme="dark"] .rom-btm .room-midle h4 a,
+html[data-theme="dark"] [style*="color:#176B50"], html[data-theme="dark"] [style*="color: #176B50"] { color: #5CC79C !important; }
+html[data-theme="dark"] .view, html[data-theme="dark"] .btn-book, html[data-theme="dark"] .btn-enquiry,
+html[data-theme="dark"] .btn-save, html[data-theme="dark"] .wallet-card .btn-primary, html[data-theme="dark"] .btn-pay,
+html[data-theme="dark"] .btn-login, html[data-theme="dark"] .btn-recover, html[data-theme="dark"] .rom-btm .room-right button { color: #0E3B2D !important; }
+html[data-theme="dark"] [style*="background:#fff"], html[data-theme="dark"] [style*="background: #fff"],
+html[data-theme="dark"] [style*="background:#ffffff"], html[data-theme="dark"] [style*="background: white"],
+html[data-theme="dark"] [style*="background:white"], html[data-theme="dark"] .wallet-card, html[data-theme="dark"] .btn-default { background: #18211C !important; border-color: #2A362F !important; color: #EAF1EC; }
+html[data-theme="dark"] .wallet-card h4 { color: #5CC79C !important; }
+html[data-theme="dark"] .field-label, html[data-theme="dark"] .planner-card label { color: #AAB8AF !important; }
+html[data-theme="dark"] .bk-timeline .step { color: #93A399 !important; }
+html[data-theme="dark"] .bk-timeline .step.done { color: #4CC38A !important; }
+html[data-theme="dark"] .cancel-btn { color: #F08080 !important; border-color: #F08080 !important; }
+html[data-theme="dark"] .nearby-tab { color: #AAB8AF; }
+html[data-theme="dark"] #nlSearchBtn, html[data-theme="dark"] .btn-search, html[data-theme="dark"] .btn-checkout { color: #0E3B2D !important; }
+html[data-theme="dark"] .btn-reset { background: #232E27 !important; color: #EAF1EC !important; border-color: #2A362F !important; }
+html[data-theme="dark"] .planner-card, html[data-theme="dark"] .history-header { background: #18211C !important; color: #EAF1EC; }
+html[data-theme="dark"] .history-header .booking-id { color: #5CC79C !important; }
+html[data-theme="dark"] .nearby-tab.active,
+html[data-theme="dark"] .btn-secondary, html[data-theme="dark"] .btn-info { color: #0E3B2D !important; }
 </style>
 
 <script>
@@ -1134,7 +1174,7 @@ window.onload = function(){ openModal('signupModal'); };
     display: flex; align-items: flex-start; gap: 10px;
     background: #fff; color: #1a2535; border-radius: 10px;
     box-shadow: 0 10px 30px rgba(0,0,0,0.18); padding: 13px 14px;
-    font-family: 'Poppins', sans-serif; font-size: 13.5px; line-height: 1.4;
+    font-family: var(--font-body); font-size: 13.5px; line-height: 1.4;
     border-left: 4px solid var(--primary, #0F4C81);
     animation: tmsToastIn 0.25s ease-out;
 }
@@ -1161,7 +1201,7 @@ window.onload = function(){ openModal('signupModal'); };
     font-size: 15px; line-height: 1;
 }
 .tms-toast .tms-toast-close:hover, .tms-toast .tms-toast-close:focus-visible { opacity: 0.8; }
-.tms-toast .tms-toast-close:focus-visible { outline: 2px solid var(--accent, #FF6B45); outline-offset: 1px; border-radius: 4px; }
+.tms-toast .tms-toast-close:focus-visible { outline: 2px solid var(--accent, #176B50); outline-offset: 1px; border-radius: 4px; }
 @keyframes tmsToastIn { from { opacity: 0; transform: translateX(30px); } to { opacity: 1; transform: translateX(0); } }
 @keyframes tmsToastOut { from { opacity: 1; } to { opacity: 0; transform: translateX(30px); } }
 html[data-theme="dark"] .tms-toast { background: #1a2535; color: #e2e8f0; }
@@ -1212,3 +1252,20 @@ function tmsToast(message, type) {
     setTimeout(remove, 5000);
 }
 </script>
+
+<!-- NEW (Round 118, master prompt item 32 -- Accessibility/WCAG 2.2 AA):
+     a project-wide audit found zero <main> landmark elements across all 61
+     full-page frontend files, despite a working skip-link (above, targeting
+     #tmsMainContent) whose destination wasn't actually a landmark a screen
+     reader could jump to via landmark navigation -- only a bare, empty div.
+     This <main> opens here (the true end of the shared header partial,
+     after all of its own nav/modal/toast markup) and is closed at the very
+     start of backend/footer.php, so it wraps exactly each individual
+     page's own body content -- never the shared nav, modals, or footer,
+     which correctly stay outside the main landmark. The 3 pages that
+     include this header but not the shared footer (login.php, register.php,
+     mark-notifications-read.php -- the last of these turned out not to
+     actually include this file at all) rely on the browser's standard
+     HTML5 auto-close of an unclosed <main> at </body>, which is valid,
+     unremarkable parsing behavior, not a defect. -->
+<main id="tmsPageMain">

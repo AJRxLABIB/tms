@@ -1,5 +1,5 @@
 <?php
-session_start();
+require_once __DIR__ . '/../backend/session-boot.php';
 error_reporting(E_ALL);
 ini_set('display_errors', 0);
 ini_set('log_errors', 1);
@@ -13,18 +13,17 @@ tms_admin_require_role($dbh, ['finance', 'package_manager', 'manager']); // Roun
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>TMS | Manage Coupons</title>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Plus+Jakarta+Sans:wght@600;700;800&display=swap" rel="stylesheet">
 <link href="css/font-awesome.css" rel="stylesheet">
 <link href="css/bootstrap.min.css" rel="stylesheet">
 <link href="<?php echo tms_asset_ver('css/admin-v6.css'); ?>" rel="stylesheet">
 <style>
 .page-title-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;flex-wrap:wrap;gap:12px;}
-.page-title-row h2{font-family:'Plus Jakarta Sans',sans-serif;font-size:22px;font-weight:800;color:#0f172a;margin:0;}
+.page-title-row h2{font-family:'Inter',sans-serif;font-size:22px;font-weight:800;color:var(--text-primary);margin:0;}
 .alert-msg{padding:12px 16px;border-radius:10px;font-size:13.5px;margin-bottom:18px;display:flex;align-items:center;gap:8px;}
 .alert-success{background:#d1fae5;color:#065f46;border:1px solid #a7f3d0;}
 .alert-error{background:#fee2e2;color:#991b1b;border:1px solid #fca5a5;}
 .action-btn{display:inline-flex;align-items:center;gap:5px;padding:5px 10px;border-radius:6px;font-size:12px;font-weight:500;border:none;cursor:pointer;text-decoration:none;transition:all .15s;}
-.btn-edit{background:#dbeafe;color:#1e40af;}.btn-edit:hover{background:#bfdbfe;}
+.btn-edit{background:#DCF1E5;color:#104B3A;}.btn-edit:hover{background:#B8E4C9;}
 .btn-delete{background:#fee2e2;color:#991b1b;}.btn-delete:hover{background:#fecaca;}
 .btn-approve{background:#d1fae5;color:#065f46;}.btn-approve:hover{background:#a7f3d0;}
 </style>
@@ -36,7 +35,7 @@ tms_admin_require_role($dbh, ['finance', 'package_manager', 'manager']); // Roun
 <?php include('includes/header.php'); ?>
 <div class="tms-content">
 <div class="page-title-row">
-  <h2><i class="fa fa-tag" style="color:#1d4ed8;margin-right:10px;"></i>Manage Coupons</h2>
+  <h2><i class="fa fa-tag" style="color:#176B50;margin-right:10px;"></i>Manage Coupons</h2>
 </div>
 
 
@@ -92,11 +91,11 @@ catch(Exception $e){ $coupons=[]; }
   <h3 style="font-size:16px;font-weight:700;margin-bottom:14px;">Add New Coupon</h3>
   <form method="post" style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;">
   <?php tms_csrf_field(); ?>
-    <div><label style="font-size:12px;font-weight:500;color:#64748b;display:block;margin-bottom:4px;" for="cpn_code">Coupon Code</label>
+    <div><label style="font-size:12px;font-weight:500;color:var(--text-muted);display:block;margin-bottom:4px;" for="cpn_code">Coupon Code</label>
     <input type="text" id="cpn_code" name="code" placeholder="e.g. SAVE20" style="padding:8px 12px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:13px;" required></div>
-    <div><label style="font-size:12px;font-weight:500;color:#64748b;display:block;margin-bottom:4px;" for="cpn_discount">Discount (%)</label>
+    <div><label style="font-size:12px;font-weight:500;color:var(--text-muted);display:block;margin-bottom:4px;" for="cpn_discount">Discount (%)</label>
     <input type="number" id="cpn_discount" name="discount" placeholder="20" min="1" max="100" style="padding:8px 12px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:13px;width:100px;" required></div>
-    <div><label style="font-size:12px;font-weight:500;color:#64748b;display:block;margin-bottom:4px;" for="cpn_expiry">Expiry Date</label>
+    <div><label style="font-size:12px;font-weight:500;color:var(--text-muted);display:block;margin-bottom:4px;" for="cpn_expiry">Expiry Date</label>
     <input type="date" id="cpn_expiry" name="expiry" style="padding:8px 12px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:13px;"></div>
     <button type="submit" name="add_coupon" class="btn-v6 primary"><i class="fa fa-plus"></i> Add Coupon</button>
   </form>
@@ -106,7 +105,7 @@ catch(Exception $e){ $coupons=[]; }
   <thead><tr><th>#</th><th>Coupon Code</th><th>Discount</th><th>Expiry</th><th>Status</th><th>Actions</th></tr></thead>
   <tbody>
   <?php if(empty($coupons)): ?>
-  <tr><td colspan="6" style="text-align:center;padding:40px;color:#94a3b8;">No coupons yet.</td></tr>
+  <tr><td colspan="6" style="text-align:center;padding:40px;color:var(--text-muted);">No coupons yet.</td></tr>
   <?php else: $i=1; foreach($coupons as $c): $active=empty($c->IsUsed); ?>
   <tr>
     <td><?=$i++?></td>

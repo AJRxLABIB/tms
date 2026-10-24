@@ -1,5 +1,5 @@
 <?php
-session_start();
+require_once __DIR__ . '/../backend/session-boot.php';
 error_reporting(E_ALL);
 ini_set('display_errors', 0);
 ini_set('log_errors', 1);
@@ -12,13 +12,12 @@ tms_admin_require_role($dbh, ['superadmin', 'operations', 'finance']);
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>TMS | User Analytics</title>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Plus+Jakarta+Sans:wght@600;700;800&display=swap" rel="stylesheet">
 <link href="css/font-awesome.css" rel="stylesheet">
 <link href="css/bootstrap.min.css" rel="stylesheet">
 <link href="<?php echo tms_asset_ver('css/admin-v6.css'); ?>" rel="stylesheet">
 <style>
 .page-title-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;flex-wrap:wrap;gap:12px;}
-.page-title-row h2{font-family:'Plus Jakarta Sans',sans-serif;font-size:22px;font-weight:800;color:#0f172a;margin:0;}
+.page-title-row h2{font-family:'Inter',sans-serif;font-size:22px;font-weight:800;color:var(--text-primary);margin:0;}
 </style>
 </head>
 <body>
@@ -28,7 +27,7 @@ tms_admin_require_role($dbh, ['superadmin', 'operations', 'finance']);
 <?php include('includes/header.php'); ?>
 <div class="tms-content">
 <div class="page-title-row">
-  <h2><i class="fa fa-users" style="color:#1d4ed8;margin-right:10px;"></i>User Analytics</h2>
+  <h2><i class="fa fa-users" style="color:#176B50;margin-right:10px;"></i>User Analytics</h2>
 </div>
 
 <?php
@@ -69,36 +68,36 @@ $mostActive = safe_q($dbh, "SELECT b.UserEmail, COALESCE(u.FullName, b.UserEmail
 
 <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:16px;margin-bottom:28px;">
   <div style="background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:20px;">
-    <div style="font-size:26px;font-weight:800;color:#1d4ed8;"><?=$totalUsers?></div>
-    <div style="font-size:12px;color:#64748b;margin-top:4px;">Total Users</div>
+    <div style="font-size:26px;font-weight:800;color:#176B50;"><?=$totalUsers?></div>
+    <div style="font-size:12px;color:var(--text-muted);margin-top:4px;">Total Users</div>
   </div>
   <div style="background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:20px;">
-    <div style="font-size:26px;font-weight:800;color:#16a34a;"><?=$newThisMonth?></div>
-    <div style="font-size:12px;color:#64748b;margin-top:4px;">New This Month</div>
+    <div style="font-size:26px;font-weight:800;color:#0B6B2E;"><?=$newThisMonth?></div>
+    <div style="font-size:12px;color:var(--text-muted);margin-top:4px;">New This Month</div>
   </div>
   <div style="background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:20px;">
-    <div style="font-size:26px;font-weight:800;color:#0f172a;"><?=$activeUsers?></div>
-    <div style="font-size:12px;color:#64748b;margin-top:4px;">Users w/ ≥1 Booking</div>
+    <div style="font-size:26px;font-weight:800;color:var(--text-primary);"><?=$activeUsers?></div>
+    <div style="font-size:12px;color:var(--text-muted);margin-top:4px;">Users w/ ≥1 Booking</div>
   </div>
   <div style="background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:20px;">
-    <div style="font-size:26px;font-weight:800;color:#7c3aed;"><?=$avgBookings?></div>
-    <div style="font-size:12px;color:#64748b;margin-top:4px;">Avg. Bookings / User</div>
+    <div style="font-size:26px;font-weight:800;color:#1F8A66;"><?=$avgBookings?></div>
+    <div style="font-size:12px;color:var(--text-muted);margin-top:4px;">Avg. Bookings / User</div>
   </div>
 </div>
 
 <div style="background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:20px;margin-bottom:20px;">
-  <h3 style="font-size:15px;font-weight:700;margin-bottom:20px;"><i class="fa fa-line-chart" style="color:#1d4ed8;margin-right:8px;"></i>User Growth (Signups by Month)</h3>
+  <h3 style="font-size:15px;font-weight:700;margin-bottom:20px;"><i class="fa fa-line-chart" style="color:#176B50;margin-right:8px;"></i>User Growth (Signups by Month)</h3>
   <?php if (empty($signupsByMonth)): ?>
-  <div style="text-align:center;color:#94a3b8;padding:20px;">No signup data yet.</div>
+  <div style="text-align:center;color:var(--text-muted);padding:20px;">No signup data yet.</div>
   <?php else: ?>
   <div style="display:flex;align-items:flex-end;gap:10px;height:180px;padding-top:10px;">
     <?php foreach (array_reverse($signupsByMonth) as $m):
       $barHeight = $maxSignups > 0 ? max(4, round(((int)$m->cnt / $maxSignups) * 150)) : 4;
     ?>
     <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:6px;">
-      <div style="font-size:10.5px;color:#64748b;font-weight:600;"><?= $m->cnt ?></div>
+      <div style="font-size:10.5px;color:var(--text-muted);font-weight:600;"><?= $m->cnt ?></div>
       <div style="width:100%;max-width:38px;background:linear-gradient(180deg,#34d399,#059669);border-radius:6px 6px 0 0;height:<?= $barHeight ?>px;" title="<?= htmlspecialchars($m->month) ?>: <?= $m->cnt ?> signups"></div>
-      <div style="font-size:10px;color:#94a3b8;"><?= date('M', strtotime($m->month.'-01')) ?></div>
+      <div style="font-size:10px;color:var(--text-muted);"><?= date('M', strtotime($m->month.'-01')) ?></div>
     </div>
     <?php endforeach; ?>
   </div>
@@ -112,7 +111,7 @@ $mostActive = safe_q($dbh, "SELECT b.UserEmail, COALESCE(u.FullName, b.UserEmail
       <thead><tr><th>#</th><th>User</th><th>Bookings</th><th>Total Spent</th></tr></thead>
       <tbody>
       <?php if(empty($topSpenders)): ?>
-      <tr><td colspan="4" style="text-align:center;color:#94a3b8;padding:20px;">No confirmed bookings yet.</td></tr>
+      <tr><td colspan="4" style="text-align:center;color:var(--text-muted);padding:20px;">No confirmed bookings yet.</td></tr>
       <?php else: $i=1; foreach($topSpenders as $ts): ?>
       <tr>
         <td><?=$i++?></td>
@@ -125,12 +124,12 @@ $mostActive = safe_q($dbh, "SELECT b.UserEmail, COALESCE(u.FullName, b.UserEmail
     </table></div>
   </div>
   <div style="background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:20px;">
-    <h3 style="font-size:15px;font-weight:700;margin-bottom:16px;"><i class="fa fa-star" style="color:#1d4ed8;margin-right:8px;"></i>Most Active Users</h3>
+    <h3 style="font-size:15px;font-weight:700;margin-bottom:16px;"><i class="fa fa-star" style="color:#176B50;margin-right:8px;"></i>Most Active Users</h3>
     <div class="table-responsive"><table class="tms-table" style="font-size:12px;">
       <thead><tr><th>#</th><th>User</th><th>Bookings (all)</th></tr></thead>
       <tbody>
       <?php if(empty($mostActive)): ?>
-      <tr><td colspan="3" style="text-align:center;color:#94a3b8;padding:20px;">No bookings yet.</td></tr>
+      <tr><td colspan="3" style="text-align:center;color:var(--text-muted);padding:20px;">No bookings yet.</td></tr>
       <?php else: $i=1; foreach($mostActive as $ma): ?>
       <tr>
         <td><?=$i++?></td>

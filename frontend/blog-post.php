@@ -1,5 +1,5 @@
 <?php
-session_start();
+require_once __DIR__ . '/../backend/session-boot.php';
 error_reporting(E_ALL); ini_set('display_errors', '0'); ini_set('log_errors', '1');
 include('backend/config.php');
 // LIVE BUG FIX (customer-facing audit): this page is real browsing/
@@ -32,8 +32,12 @@ if (!empty($post->RelatedPackageId)) {
 ?>
 <!DOCTYPE HTML><html lang="<?php echo htmlspecialchars(tms_active_language(), ENT_QUOTES, 'UTF-8'); ?>"><head>
 <link rel="manifest" href="manifest.json">
-<meta name="theme-color" content="#0B2B3C">
+<meta name="theme-color" content="#104B3A">
 <link rel="apple-touch-icon" href="images/icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="TMS">
+<meta name="mobile-web-app-capable" content="yes">
 <title>TMS | <?= htmlspecialchars($post->Title) ?></title>
 <?php
 // NEW (Round 20, spec item 53 — SEO): real data only — description is the
@@ -80,22 +84,23 @@ tms_seo_meta([
 ?>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <link href="css/bootstrap.min2.css" rel='stylesheet'/>
-<link href="css/style.min.css" rel='stylesheet'/>
+<link href="<?php echo tms_asset_ver('css/style.min.css'); ?>" rel='stylesheet'/>
 <link href="css/font-awesome.min2.css" rel="stylesheet">
 <link href="<?php echo tms_asset_ver('css/modern-theme.css'); ?>" rel="stylesheet">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700;9..144,800&family=Manrope:wght@400;500;600;700;800&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
 <script src="js/jquery-1.12.0.min.js" defer></script>
 <style>
 .post-hero{width:100%;max-height:420px;object-fit:cover;border-radius:12px;margin-bottom:28px;}
 .post-body{max-width:820px;margin:0 auto;}
-.post-body h1{font-size:30px;font-weight:800;color:#222;margin-bottom:10px;}
-.post-meta{color:#aaa;font-size:14px;margin-bottom:24px;padding-bottom:16px;border-bottom:1px solid #eee;}
-.post-content{font-size:16px;line-height:1.9;color:#444;}
+.post-body h1{font-size:30px;font-weight:800;color:var(--text);margin-bottom:10px;}
+.post-meta{color:var(--text-muted);font-size:14px;margin-bottom:24px;padding-bottom:16px;border-bottom:1px solid var(--border);}
+.post-content{font-size:16px;line-height:1.9;color:var(--text);}
 html[data-theme="dark"] .post-meta { color: var(--text-light) !important; }
 html[data-theme="dark"] .post-content { color: var(--text) !important; }
-.share-row{margin-top:36px;padding-top:20px;border-top:1px solid #eee;}
+.share-row{margin-top:36px;padding-top:20px;border-top:1px solid var(--border);}
+.post-chip{display:inline-block;background:var(--mint);color:var(--mint-ink);padding:5px 12px;border-radius:20px;font-size:13px;margin:0 8px 8px 0;text-decoration:none;}
+html[data-theme="dark"] .post-chip{background:#1F3A2D;color:#B8E4C9;}
 </style>
 </head><body>
 <?php include('backend/header.php'); ?>
@@ -108,9 +113,9 @@ html[data-theme="dark"] .post-content { color: var(--text) !important; }
   <a href="blog.php" style="color:var(--secondary);font-size:14px;"><i class="fa fa-arrow-left"></i> Back to Blog</a>
   <div class="post-body" style="margin-top:20px;">
     <?php if ($post->CoverImage): ?>
-      <img src="admin/blogimages/<?= htmlspecialchars($post->CoverImage) ?>" class="post-hero" onerror="this.src='images/1.jpg'" alt="<?= htmlspecialchars($post->Title) ?>">
+      <img src="admin/blogimages/<?= htmlspecialchars($post->CoverImage) ?>" class="post-hero" width="820" height="420"<?= tms_img_onerror(tms_placeholder_image((string)($post->Tag ?? ''), (string)$post->id)) ?> alt="<?= htmlspecialchars($post->Title) ?>">
     <?php endif; ?>
-    <?php if ($post->Tag): ?><span style="background:#e3f2fd;color:#1976d2;padding:4px 12px;border-radius:20px;font-size:13px;"><?= htmlspecialchars($post->Tag) ?></span><?php endif; ?>
+    <?php if ($post->Tag): ?><span class="post-chip" style="padding:4px 12px;"><?= htmlspecialchars($post->Tag) ?></span><?php endif; ?>
     <h1 style="margin-top:12px;"><?= htmlspecialchars($post->Title) ?></h1>
     <div class="post-meta">
       <i class="fa fa-user"></i> <?= htmlspecialchars($post->AuthorName ?? 'Admin') ?>
@@ -122,12 +127,12 @@ html[data-theme="dark"] .post-content { color: var(--text) !important; }
     <?php if (!empty($post->RelatedDestination) || $relatedPackage): ?>
     <div class="post-related-tags" style="margin-bottom:20px;">
       <?php if (!empty($post->RelatedDestination)): ?>
-      <a href="destinations.php?country=<?= urlencode($post->RelatedDestination) ?>" style="display:inline-block;background:#eafaf1;color:#1a8754;padding:5px 12px;border-radius:20px;font-size:13px;margin:0 8px 8px 0;text-decoration:none;">
+      <a href="destinations.php?country=<?= urlencode($post->RelatedDestination) ?>" class="post-chip">
         <i class="fa fa-map-marker"></i> <?= htmlspecialchars($post->RelatedDestination, ENT_QUOTES, 'UTF-8') ?>
       </a>
       <?php endif; ?>
       <?php if ($relatedPackage): ?>
-      <a href="package-details.php?pkgid=<?= (int)$relatedPackage->PackageId ?>" style="display:inline-block;background:#e3f2fd;color:#1976d2;padding:5px 12px;border-radius:20px;font-size:13px;margin:0 8px 8px 0;text-decoration:none;">
+      <a href="package-details.php?pkgid=<?= (int)$relatedPackage->PackageId ?>" class="post-chip">
         <i class="fa fa-suitcase"></i> <?= htmlspecialchars($relatedPackage->PackageName, ENT_QUOTES, 'UTF-8') ?>
       </a>
       <?php endif; ?>
@@ -135,7 +140,7 @@ html[data-theme="dark"] .post-content { color: var(--text) !important; }
     <?php endif; ?>
     <div class="post-content"><?= nl2br(htmlspecialchars($post->Content)) ?></div>
     <?php if (!empty($post->Sources)): ?>
-    <div class="post-sources" style="margin-top:28px;padding-top:18px;border-top:1px solid #eee;font-size:13.5px;color:#777;">
+    <div class="post-sources" style="margin-top:28px;padding-top:18px;border-top:1px solid #eee;font-size:13.5px;color:var(--text-muted);">
       <strong>Sources:</strong>
       <ul style="margin:8px 0 0;padding-left:20px;">
         <?php foreach (preg_split('/\r\n|\r|\n/', trim($post->Sources)) as $srcLine): ?>

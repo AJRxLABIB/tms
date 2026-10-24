@@ -1,5 +1,5 @@
 <?php
-session_start();
+require_once __DIR__ . '/../backend/session-boot.php';
 error_reporting(E_ALL); ini_set('display_errors', '0'); ini_set('log_errors', '1');
 include('backend/config.php');
 // LIVE BUG FIX (customer-facing audit): this page is real browsing/
@@ -38,17 +38,17 @@ if (!empty($compare)) {
 }
 
 $fields = [
-    'PackageName'        => 'Package Name',
-    'PackageType'        => 'Type',
-    'PackageLocation'    => 'Destination',
-    'PackageDuration'    => 'Duration',
-    'PackagePrice'       => 'Price (per person)',
-    'AvgRating'          => 'Rating',
-    'HotelName'          => 'Hotel',
-    'MealPlan'           => 'Meals',
-    'TransportMode'      => 'Transport',
-    'PackageFetures'     => 'Highlights',
-    'PackageDescription' => 'Description',
+    'PackageName'        => tms_t('label_package_name','Package Name'),
+    'PackageType'        => tms_t('label_type','Type'),
+    'PackageLocation'    => tms_t('label_destination','Destination'),
+    'PackageDuration'    => tms_t('label_duration','Duration'),
+    'PackagePrice'       => tms_t('label_price_per_person','Price (per person)'),
+    'AvgRating'          => tms_t('label_rating','Rating'),
+    'HotelName'          => tms_t('label_hotel','Hotel'),
+    'MealPlan'           => tms_t('label_meals','Meals'),
+    'TransportMode'      => tms_t('label_transport','Transport'),
+    'PackageFetures'     => tms_t('label_highlights','Highlights'),
+    'PackageDescription' => tms_t('label_description','Description'),
 ];
 
 // Live current weather per destination, only for packages that actually have
@@ -74,17 +74,20 @@ foreach ($packages as $p) {
 ?>
 <!DOCTYPE HTML><html lang="<?php echo htmlspecialchars(tms_active_language(), ENT_QUOTES, 'UTF-8'); ?>"><head>
 <link rel="manifest" href="manifest.json">
-<meta name="theme-color" content="#0B2B3C">
+<meta name="theme-color" content="#104B3A">
 <link rel="apple-touch-icon" href="images/icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="TMS">
+<meta name="mobile-web-app-capable" content="yes">
 <title>TMS | Compare Packages</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <link href="css/bootstrap.min2.css" rel='stylesheet'/>
-<link href="css/style.min.css" rel='stylesheet'/>
+<link href="<?php echo tms_asset_ver('css/style.min.css'); ?>" rel='stylesheet'/>
 <link href="css/font-awesome.min2.css" rel="stylesheet">
 <link href="<?php echo tms_asset_ver('css/modern-theme.css'); ?>" rel="stylesheet">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700;9..144,800&family=Manrope:wght@400;500;600;700;800&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
 <script src="js/jquery-1.12.0.min.js" defer></script>
 <style>
 .page-title{background:linear-gradient(135deg,var(--primary-dark),var(--primary));color:#fff;padding:40px 0;margin-bottom:30px;}
@@ -105,25 +108,25 @@ foreach ($packages as $p) {
 </head><body>
 <?php include('backend/header.php'); ?>
 <div class="page-title">
-  <div class="container"><h2 style="margin:0;"><i class="fa fa-columns"></i> Compare Packages</h2></div>
+  <div class="container"><h2 style="margin:0;"><i class="fa fa-columns"></i> <?php echo tms_t('heading_compare_packages','Compare Packages'); ?></h2></div>
 </div>
 <div class="container" style="padding-bottom:50px;">
 <?php if (count($packages) === 0): ?>
 <div class="empty-state">
   <i class="fa fa-columns" style="font-size:64px;color:#ddd;"></i>
-  <h3 style="margin-top:16px;">No packages to compare</h3>
-  <p style="color:#888;">Go to <a href="package-list.php">Tour Packages</a> and click "Compare" on up to 3 packages.</p>
+  <h3 style="margin-top:16px;"><?php echo tms_t('msg_no_packages_to_compare','No packages to compare'); ?></h3>
+  <p style="color:var(--text-muted);"><?php echo tms_t('dest_compare_instructions','Go to <a href="package-list.php" style="text-decoration:underline;">Tour Packages</a> and click "Compare" on up to 3 packages.'); ?></p>
 </div>
 <?php else: ?>
 <div style="margin-bottom:16px;display:flex;justify-content:space-between;align-items:center;">
-  <span style="color:#666;"><?= count($packages) ?> package(s) selected (max 3)</span>
-  <a href="compare.php?clear=1" class="btn btn-default btn-sm"><i class="fa fa-times"></i> Clear All</a>
+  <span style="color:#666;"><?= count($packages) ?> <?php echo tms_t('label_packages_selected_suffix','package(s) selected (max 3)'); ?></span>
+  <a href="compare.php?clear=1" class="btn btn-default btn-sm"><i class="fa fa-times"></i> <?php echo tms_t('btn_clear_all','Clear All'); ?></a>
 </div>
 <div class="table-responsive">
 <table class="compare-table">
   <thead>
     <tr>
-      <th style="width:160px;">Feature</th>
+      <th style="width:160px;"><?php echo tms_t('label_feature','Feature'); ?></th>
       <?php foreach ($packages as $p): ?>
       <th>
         <img loading="lazy" src="<?= htmlspecialchars(tms_package_image_src($p->PackageImage),ENT_QUOTES,'UTF-8') ?>"
@@ -148,7 +151,7 @@ foreach ($packages as $p) {
           <?php $cmpPricing = ((float)$p->PackagePrice > 0) ? tms_dynamic_price($dbh, (int)$p->PackageId, (float)$p->PackagePrice) : null; ?>
           <span class="badge-price"><?= tms_currency((float)($cmpPricing['final'] ?? $p->$col)) ?></span>
           <?php if (!empty($cmpPricing) && $cmpPricing['demand_pct'] > 0): ?>
-          <div style="font-size:10px;color:#f97316;font-weight:600;margin-top:4px;"><i class="fa fa-bolt"></i> High demand</div>
+          <div style="font-size:10px;color:#f97316;font-weight:600;margin-top:4px;"><i class="fa fa-bolt"></i> <?php echo tms_t('msg_high_demand','High demand'); ?></div>
           <?php endif; ?>
         <?php elseif ($col === 'AvgRating'): ?>
           <?php if (!empty($p->AvgRating) && $p->AvgRating > 0): ?>
@@ -159,10 +162,10 @@ foreach ($packages as $p) {
               <span style="color:var(--text-muted);font-size:12px;margin-left:4px;"><?= number_format($p->AvgRating,1) ?></span>
             </div>
           <?php else: ?>
-            <span class="compare-na">No reviews yet</span>
+            <span class="compare-na"><?php echo tms_t('msg_no_reviews_yet','No reviews yet'); ?></span>
           <?php endif; ?>
         <?php elseif ($col === 'PackageDuration'): ?>
-          <?= !empty($p->PackageDuration) ? '<i class="fa fa-clock-o" style="color:var(--secondary)"></i> '.htmlspecialchars($p->PackageDuration,ENT_QUOTES,'UTF-8') : '<span class="compare-na">Not specified</span>' ?>
+          <?= !empty($p->PackageDuration) ? '<i class="fa fa-clock-o" style="color:var(--secondary)"></i> '.htmlspecialchars($p->PackageDuration,ENT_QUOTES,'UTF-8') : '<span class="compare-na">'.tms_t('msg_not_specified','Not specified').'</span>' ?>
         <?php elseif ($col === 'HotelName'): ?>
           <?php if (!empty($p->HotelName)): ?>
             <i class="fa fa-building" style="color:var(--secondary)"></i> <?= htmlspecialchars($p->HotelName,ENT_QUOTES,'UTF-8') ?>
@@ -173,25 +176,25 @@ foreach ($packages as $p) {
               </div>
             <?php endif; ?>
           <?php else: ?>
-            <span class="compare-na">Not specified</span>
+            <span class="compare-na"><?php echo tms_t('msg_not_specified','Not specified'); ?></span>
           <?php endif; ?>
         <?php elseif ($col === 'MealPlan'): ?>
-          <?= !empty($p->MealPlan) ? '<i class="fa fa-cutlery" style="color:var(--secondary)"></i> '.htmlspecialchars($p->MealPlan,ENT_QUOTES,'UTF-8') : '<span class="compare-na">Not specified</span>' ?>
+          <?= !empty($p->MealPlan) ? '<i class="fa fa-cutlery" style="color:var(--secondary)"></i> '.htmlspecialchars($p->MealPlan,ENT_QUOTES,'UTF-8') : '<span class="compare-na">'.tms_t('msg_not_specified','Not specified').'</span>' ?>
         <?php elseif ($col === 'TransportMode'): ?>
-          <?= !empty($p->TransportMode) ? '<i class="fa fa-bus" style="color:var(--secondary)"></i> '.htmlspecialchars($p->TransportMode,ENT_QUOTES,'UTF-8') : '<span class="compare-na">Not specified</span>' ?>
+          <?= !empty($p->TransportMode) ? '<i class="fa fa-bus" style="color:var(--secondary)"></i> '.htmlspecialchars($p->TransportMode,ENT_QUOTES,'UTF-8') : '<span class="compare-na">'.tms_t('msg_not_specified','Not specified').'</span>' ?>
         <?php elseif ($col === 'PackageFetures'): ?>
-          <?= !empty($p->PackageFetures) ? nl2br(htmlspecialchars(substr($p->PackageFetures, 0, 160),ENT_QUOTES,'UTF-8')) : '<span class="compare-na">Not listed</span>' ?>
+          <?= !empty($p->PackageFetures) ? nl2br(htmlspecialchars(substr($p->PackageFetures, 0, 160),ENT_QUOTES,'UTF-8')) : '<span class="compare-na">'.tms_t('msg_not_listed','Not listed').'</span>' ?>
         <?php elseif ($col === 'PackageDescription'): ?>
           <?= nl2br(htmlspecialchars(substr($p->$col ?? '', 0, 200),ENT_QUOTES,'UTF-8')) ?>...
         <?php else: ?>
-          <?= htmlspecialchars($p->$col ?? 'N/A',ENT_QUOTES,'UTF-8') ?>
+          <?= htmlspecialchars($p->$col ?? tms_t('msg_na','N/A'),ENT_QUOTES,'UTF-8') ?>
         <?php endif; ?>
       </td>
       <?php endforeach; ?>
     </tr>
     <?php endforeach; ?>
     <tr>
-      <td class="field-name">Current Weather</td>
+      <td class="field-name"><?php echo tms_t('label_current_weather','Current Weather'); ?></td>
       <?php foreach ($packages as $p): $w = $compareWeather[$p->PackageId] ?? null; ?>
       <td>
         <?php if ($w && !empty($w['ok'])): ?>
@@ -208,30 +211,30 @@ foreach ($packages as $p) {
           </div>
         <?php else: ?>
           <span class="compare-na"><?= (($w['error'] ?? '') === 'no_coords')
-              ? 'No map location saved for this destination yet'
-              : 'Live weather unavailable right now — try refreshing' ?></span>
+              ? tms_t('msg_no_coords_weather','No map location saved for this destination yet')
+              : tms_t('msg_weather_unavailable','Live weather unavailable right now — try refreshing') ?></span>
         <?php endif; ?>
       </td>
       <?php endforeach; ?>
     </tr>
     <tr>
-      <td class="field-name">Seats Available</td>
+      <td class="field-name"><?php echo tms_t('label_seats_available','Seats Available'); ?></td>
       <?php foreach ($packages as $p): $seatsLeft = tms_remaining_seats($dbh, (int)$p->PackageId); ?>
       <td>
         <?php if ($seatsLeft === null): ?>
-          <span class="compare-na">Not tracked for this package</span>
+          <span class="compare-na"><?php echo tms_t('msg_not_tracked_package','Not tracked for this package'); ?></span>
         <?php elseif ($seatsLeft <= 2): ?>
-          <span style="color:#dc2626;font-weight:700;"><i class="fa fa-exclamation-triangle"></i> Only <?= $seatsLeft ?> left!</span>
+          <span style="color:#dc2626;font-weight:700;"><i class="fa fa-exclamation-triangle"></i> <?php echo tms_t('msg_only_prefix','Only'); ?> <?= $seatsLeft ?> <?php echo tms_t('msg_left_suffix','left!'); ?></span>
         <?php else: ?>
-          <span style="color:var(--text);font-weight:600;"><i class="fa fa-users" style="color:var(--secondary);"></i> <?= $seatsLeft ?> seats left</span>
+          <span style="color:var(--text);font-weight:600;"><i class="fa fa-users" style="color:var(--secondary);"></i> <?= $seatsLeft ?> <?php echo tms_t('label_seats_left_suffix','seats left'); ?></span>
         <?php endif; ?>
       </td>
       <?php endforeach; ?>
     </tr>
     <tr>
-      <td class="field-name">Action</td>
+      <td class="field-name"><?php echo tms_t('label_action','Action'); ?></td>
       <?php foreach ($packages as $p): ?>
-      <td><a href="package-details.php?pkgid=<?= (int)$p->PackageId ?>" class="btn btn-primary btn-sm">Book Now</a></td>
+      <td><a href="package-details.php?pkgid=<?= (int)$p->PackageId ?>" class="btn btn-primary btn-sm"><?php echo tms_t('btn_book_now','Book Now'); ?></a></td>
       <?php endforeach; ?>
     </tr>
   </tbody>

@@ -3,7 +3,7 @@
  * admin/ai-dashboard.php — AI Analytics & Monitoring Dashboard
  * Admin-only view of AI system health, usage, insights, and fraud flags.
  */
-session_start();
+require_once __DIR__ . '/../backend/session-boot.php';
 error_reporting(E_ALL); ini_set('display_errors', '0'); ini_set('log_errors', '1');
 include('../backend/config.php');
 tms_require_admin();
@@ -13,6 +13,40 @@ require_once '../backend/ai/AIClient.php';
 require_once '../backend/ai/SentimentAnalyser.php';
 require_once '../backend/ai/FraudDetector.php';
 require_once '../backend/ai/AIEvaluator.php';
+
+
+// ── Engine controls (AIConfig). Admin-only, CSRF-protected, bounded and logged; post/redirect/get. ──
+require_once '../backend/ai/AIConfig.php';
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['ai_cfg_action'])) {
+    tms_csrf_validate();
+    $by = (string)($_SESSION['alogin'] ?? 'admin'); $errs = [];
+    if ($_POST['ai_cfg_action'] === 'reset') {
+        foreach (array_keys(AIConfig::SPEC) as $n) AIConfig::reset($dbh, $n, $by);
+        $_SESSION['ai_cfg_flash'] = 'All engine controls restored to defaults.';
+    } else {
+        foreach (AIConfig::SPEC as $n => $sp) {
+            $raw = $sp[0] === 'bool' ? (isset($_POST['cfg'][$n]) ? '1' : '0') : ($_POST['cfg'][$n] ?? '');
+            $r = AIConfig::set($dbh, $n, $raw, $by);
+            if (!$r['ok']) $errs[] = $sp[4] . ': ' . $r['error'];
+        }
+        $_SESSION['ai_cfg_flash'] = $errs ? 'Some values were rejected (' . implode('; ', $errs) . '); the others were saved.' : 'Engine controls saved.';
+    }
+    header('Location: ai-dashboard.php'); exit;
+}
+// ── Embedding index (bounded, admin-triggered). Needs AI_EMBED_MODEL; never runs on page load. ──
+require_once '../backend/ai/rag/EmbeddingStore.php';
+require_once '../backend/ai/rag/EmbeddingReranker.php';
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['ai_embed_action'])) {
+    tms_csrf_validate();
+    $rrx = EmbeddingReranker::fromEnv(15);
+    if (!$rrx) { $_SESSION['ai_cfg_flash'] = 'No embedding model is configured (AI_EMBED_MODEL in .env), so there is nothing to index.'; }
+    else {
+        $sr = EmbeddingStore::syncCatalogue($dbh, $rrx, 40, 20.0);
+        $_SESSION['ai_cfg_flash'] = 'Indexed ' . (int)$sr['embedded'] . ' package(s), ' . (int)$sr['unchanged'] . ' already current, ' . (int)$sr['failed'] . ' failed, ' . (int)$sr['remaining'] . ' remaining' . (!empty($sr['stopped']) ? ' (stopped: ' . $sr['stopped'] . ')' : '') . '.';
+    }
+    header('Location: ai-dashboard.php'); exit;
+}
+$cfgFlash = (string)($_SESSION['ai_cfg_flash'] ?? ''); unset($_SESSION['ai_cfg_flash']);
 
 // Round 35 (item 22, "AI Evaluation suite"), extended Round 95 with 3 more
 // content-accuracy cases and Round 98 with a 4th (weather_accuracy):
@@ -161,13 +195,57 @@ $telemetryAvgLatency  = $telemetrySummary && $telemetrySummary->avg_latency_ms !
 // Which provider is actually live right now -- read straight from config
 // rather than instantiating AIClient, since the dashboard only needs to
 // display this, not call the AI.
-$activeProviderName  = defined('AI_PROVIDER') ? AI_PROVIDER : 'gemini';
-if ($activeProviderName === 'openai') {
+$tmsAiResolution     = AIClient::resolution($dbh);   // what 'auto' really means on this request (see admin/ai-setup.php)
+$activeProviderName  = $tmsAiResolution['provider'];
+if ($activeProviderName === 'none') {
+    $activeProviderModel = '';
+    $activeProviderReady = false;
+} elseif ($activeProviderName === 'openai') {
     $activeProviderModel = defined('OPENAI_MODEL') ? OPENAI_MODEL : '';
     $activeProviderReady = defined('OPENAI_API_KEY') && OPENAI_API_KEY !== '';
+} elseif ($activeProviderName === 'ollama') {
+    $activeProviderModel = $tmsAiResolution['model'] !== '' ? $tmsAiResolution['model'] : (defined('OLLAMA_MODEL') ? OLLAMA_MODEL : '');
+    $activeProviderReady = $activeProviderModel !== '';
 } else {
     $activeProviderModel = defined('GEMINI_MODEL') ? GEMINI_MODEL : '';
     $activeProviderReady = defined('GEMINI_API_KEY') && GEMINI_API_KEY !== '' && GEMINI_API_KEY !== 'YOUR_GEMINI_API_KEY_HERE';
+}
+
+// Provider chain health (primary + any AI_FALLBACK_PROVIDERS) and last-24h numbers per provider from tbl_ai_telemetry.
+// Read-only; never shows keys or request contents.
+$chainNames = array_values(array_unique(array_filter(array_merge([$activeProviderName], array_map('trim', explode(',', defined('AI_FALLBACK_PROVIDERS') ? (string)AI_FALLBACK_PROVIDERS : ''))))));
+$providerHealth = ProviderHealth::snapshot($dbh, $chainNames);
+require_once dirname(__DIR__) . '/backend/ai/AITurnLog.php';
+$turnStats = AITurnLog::summary($dbh, 7);
+$providerStats = [];
+try {
+    foreach ($dbh->query("SELECT provider, COUNT(*) calls, SUM(success) ok, AVG(latency_ms) avg_ms, SUM(CASE WHEN error_message LIKE '%circuit_open%' THEN 1 ELSE 0 END) skipped
+                            FROM tbl_ai_telemetry WHERE created_at >= DATE_SUB(NOW(), INTERVAL 24 HOUR) AND cached = 0 GROUP BY provider")->fetchAll(PDO::FETCH_ASSOC) as $row) {
+        // p95 per provider (small table scan, last 24 h only)
+        $lat = $dbh->prepare("SELECT latency_ms FROM tbl_ai_telemetry WHERE provider = ? AND success = 1 AND cached = 0 AND created_at >= DATE_SUB(NOW(), INTERVAL 24 HOUR) ORDER BY latency_ms");
+        $lat->execute([$row['provider']]);
+        $vals = $lat->fetchAll(PDO::FETCH_COLUMN);
+        $row['p95'] = $vals ? (int)$vals[(int)max(0, ceil(0.95 * count($vals)) - 1)] : null;
+        $providerStats[$row['provider']] = $row;
+    }
+} catch (Throwable $e) { $providerStats = []; }
+
+// Local model gateway: installed Ollama models, which model each job is routed to, and 24-hour results per model
+// (from tbl_ai_model_calls, migration 032). Read-only. Shows names, digests and counts, never prompts or answers.
+$gwUsesOllama = in_array('ollama', $chainNames, true);
+$gwRegistry = null; $gwModels = []; $gwReachable = false; $gwRoutes = []; $gwModelStats = []; $gwStatsNote = '';
+if ($gwUsesOllama) {
+    $gwRegistry = new ModelRegistry(defined('OLLAMA_BASE_URL') ? (string)OLLAMA_BASE_URL : 'http://127.0.0.1:11434', null, $dbh);
+    $gwModels = $gwRegistry->list();
+    $gwReachable = $gwRegistry->reachable();
+    $gwRouter = new ModelRouter($gwRegistry);
+    foreach (ModelRouter::CAPABILITIES as $capName) { $gwRoutes[$capName] = $gwRouter->route($capName); $gwRoutes[$capName]['context'] = $gwRouter->contextLimit($capName); }
+    try {
+        foreach ($dbh->query("SELECT model, MAX(model_digest) digest, COUNT(*) calls, SUM(success) ok, AVG(latency_ms) avg_ms, SUM(context_dropped > 0) trimmed
+                                FROM tbl_ai_model_calls WHERE created_at >= DATE_SUB(NOW(), INTERVAL 24 HOUR) GROUP BY model ORDER BY calls DESC")->fetchAll(PDO::FETCH_ASSOC) as $mrow) {
+            $gwModelStats[$mrow['model']] = $mrow;
+        }
+    } catch (Throwable $e) { $gwStatsNote = 'No per-model history yet (run php database/migrate.php to create tbl_ai_model_calls).'; }
 }
 
 // Round 35 -- eval run history for the panel below.
@@ -360,7 +438,6 @@ if ($_GET['action'] === 'get_insights') {
 <link href="<?php echo tms_asset_ver('../css/modern-theme.css'); ?>" rel="stylesheet">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&family=Playfair+Display:wght@700;800&display=swap" rel="stylesheet">
 <style>
 body { background:#f0f4f8; }
 .admin-header { background:linear-gradient(135deg,#1a1a2e,#16213e); padding:20px 30px; display:flex; align-items:center; justify-content:space-between; }
@@ -371,9 +448,9 @@ body { background:#f0f4f8; }
 .admin-nav a:hover,.admin-nav a.active { background:rgba(255,255,255,.1); color:#fff; }
 
 .ai-page-header { background:#fff; padding:24px 30px; border-bottom:1px solid #e2e8f0; display:flex; align-items:center; justify-content:space-between; }
-.ai-page-title { font-size:1.3rem; font-weight:800; color:#1a202c; display:flex; align-items:center; gap:10px; }
+.ai-page-title { font-size:1.3rem; font-weight:800; color:var(--text-primary); display:flex; align-items:center; gap:10px; }
 .ai-page-title i { color:#667eea; }
-.ai-status { display:flex; align-items:center; gap:8px; font-size:13px; color:#48bb78; font-weight:600; }
+.ai-status { display:flex; align-items:center; gap:8px; font-size:13px; color:#2F855A; font-weight:600; }
 .ai-status-dot { width:8px; height:8px; background:#48bb78; border-radius:50%; animation:pulse 2s infinite; }
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
 
@@ -383,16 +460,16 @@ body { background:#f0f4f8; }
 .stats-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:16px; margin-bottom:24px; }
 .stat-card { background:#fff; border-radius:16px; padding:20px; box-shadow:0 2px 12px rgba(0,0,0,.06); border:1px solid #f0f0f0; }
 .stat-icon { width:44px; height:44px; border-radius:12px; display:flex; align-items:center; justify-content:center; font-size:20px; margin-bottom:12px; }
-.stat-value { font-size:1.6rem; font-weight:900; color:#1a202c; }
-.stat-label { font-size:12px; color:#718096; margin-top:2px; }
+.stat-value { font-size:1.6rem; font-weight:900; color:var(--text-primary); }
+.stat-label { font-size:12px; color:var(--text-muted); margin-top:2px; }
 .stat-trend { font-size:11px; margin-top:6px; }
-.stat-trend.up { color:#48bb78; }
+.stat-trend.up { color:#2F855A; }
 
 /* Main grid */
 .main-grid { display:grid; grid-template-columns:1fr 1fr; gap:20px; margin-bottom:20px; }
 .panel { background:#fff; border-radius:16px; box-shadow:0 2px 12px rgba(0,0,0,.06); border:1px solid #f0f0f0; overflow:hidden; }
 .panel-header { padding:18px 20px; border-bottom:1px solid #f0f0f0; display:flex; align-items:center; justify-content:space-between; }
-.panel-title { font-size:14px; font-weight:800; color:#1a202c; display:flex; align-items:center; gap:8px; }
+.panel-title { font-size:14px; font-weight:800; color:var(--text-primary); display:flex; align-items:center; gap:8px; }
 .panel-title i { color:#667eea; }
 .panel-body { padding:20px; }
 
@@ -404,11 +481,11 @@ body { background:#f0f4f8; }
 .sentiment-fill.positive { background:linear-gradient(90deg,#48bb78,#38a169); }
 .sentiment-fill.neutral  { background:linear-gradient(90deg,#a0aec0,#718096); }
 .sentiment-fill.negative { background:linear-gradient(90deg,#fc8181,#e53e3e); }
-.sentiment-count { font-size:12px; font-weight:700; color:#1a202c; width:30px; text-align:right; }
+.sentiment-count { font-size:12px; font-weight:700; color:var(--text-primary); width:30px; text-align:right; }
 
 /* Table */
 .ai-table { width:100%; border-collapse:collapse; font-size:13px; }
-.ai-table th { background:#f8fafc; padding:10px 12px; text-align:left; font-size:11px; font-weight:700; color:#718096; text-transform:uppercase; letter-spacing:.5px; }
+.ai-table th { background:#f8fafc; padding:10px 12px; text-align:left; font-size:11px; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:.5px; }
 .ai-table td { padding:10px 12px; border-bottom:1px solid #f8f8f8; color:#2d3748; }
 .ai-table tr:last-child td { border-bottom:none; }
 .ai-table tr:hover td { background:#f8fafc; }
@@ -429,7 +506,7 @@ body { background:#f0f4f8; }
 .btn-admin:hover { opacity:.9; transform:translateY(-1px); }
 
 /* Usage chart placeholder */
-.usage-chart { height:160px; background:linear-gradient(135deg,#f8fafc,#edf2f7); border-radius:12px; display:flex; align-items:center; justify-content:center; color:#a0aec0; font-size:13px; }
+.usage-chart { height:160px; background:linear-gradient(135deg,#f8fafc,#edf2f7); border-radius:12px; display:flex; align-items:center; justify-content:center; color:var(--text-muted); font-size:13px; }
 
 /* Dark mode (this page previously had none — see the bootstrap script right
    after <head> and the toggle button added to .admin-nav). Mirrors the same
@@ -437,6 +514,11 @@ body { background:#f0f4f8; }
    feels like a different theme. */
 .tms-theme-toggle-mini { background:rgba(255,255,255,.1); border:1px solid rgba(255,255,255,.2); color:#fff; width:28px; height:28px; border-radius:50%; cursor:pointer; display:inline-flex; align-items:center; justify-content:center; font-size:13px; margin-left:8px; }
 .tms-theme-toggle-mini:hover { background:rgba(255,255,255,.2); }
+.hp-note{color:#4a5568;}
+.cfg-num{width:80px;padding:4px 8px;border:1px solid #94a3b8;border-radius:6px;background:#fff;color:#1a202c;}
+html[data-theme="dark"] .cfg-num{background:#10151c !important;color:#eef2f7 !important;border-color:#64748b !important;}
+html[data-theme="dark"] .ai-table label{color:#eef2f7 !important;}
+html[data-theme="dark"] .hp-note{color:#cbd5e0 !important;}
 html[data-theme="dark"] body { background:#10151c !important; }
 html[data-theme="dark"] .ai-page-header,
 html[data-theme="dark"] .stat-card,
@@ -447,10 +529,17 @@ html[data-theme="dark"] .stat-value,
 html[data-theme="dark"] .panel-title,
 html[data-theme="dark"] .sentiment-count,
 html[data-theme="dark"] .ai-table td { color:#eef2f7 !important; }
+html[data-theme="dark"] [style*="#0B6B2E"], html[data-theme="dark"] [style*="#047857"], html[data-theme="dark"] [style*="#2F855A"], html[data-theme="dark"] .ai-status { color: #5CC79C !important; }
+html[data-theme="dark"] [style*="#B91C1C"], html[data-theme="dark"] [style*="#C0392B"] { color: #FCA5A5 !important; }
+html[data-theme="dark"] [style*="#0E7490"] { color: #67D5E8 !important; }
+html[data-theme="dark"] [style*="#92400E"], html[data-theme="dark"] [style*="#B45309"] { color: #FBBF77 !important; }
+html[data-theme="dark"] .stat-trend.up { color: #5CC79C !important; } html[data-theme="dark"] .insights-panel strong, html[data-theme="dark"] .insights-panel div { color: var(--text-primary); } html[data-theme="dark"] [style*="color:#b45309"] { color: #FBBF77 !important; }
+html[data-theme="dark"] strong { color: #EAF1EC !important; }
+html[data-theme="dark"] { --text-muted: #AAB8AF; --text-primary: #EAF1EC; }
 html[data-theme="dark"] .stat-label,
-html[data-theme="dark"] .sentiment-label { color:#94a3b8 !important; }
+html[data-theme="dark"] .sentiment-label { color:var(--text-muted) !important; }
 html[data-theme="dark"] .panel-header { border-color:#2b3542 !important; }
-html[data-theme="dark"] .ai-table th { background:#151b24 !important; color:#94a3b8 !important; }
+html[data-theme="dark"] .ai-table th { background:#151b24 !important; color:var(--text-muted) !important; }
 html[data-theme="dark"] .ai-table td { border-color:#232b37 !important; }
 html[data-theme="dark"] .ai-table tr:hover td { background:#232b37 !important; }
 html[data-theme="dark"] .sentiment-bar,
@@ -488,7 +577,7 @@ html[data-theme="dark"] [style*="background:#fff"], html[data-theme="dark"] [sty
     // actually configured -- now that AI_PROVIDER can select a different
     // vendor, a hardcoded label here would make the dashboard lie about
     // which one is live the moment anyone changes it.
-    $activeProviderLabel = $activeProviderName === 'openai' ? 'OpenAI' : 'Google Gemini';
+    $activeProviderLabel = ['openai' => 'OpenAI', 'ollama' => 'Ollama (self-hosted)'][$activeProviderName] ?? 'Google Gemini';
   ?>
   <div class="ai-status">
     <span class="ai-status-dot" style="<?= $activeProviderReady ? '' : 'background:#dc2626;' ?>"></span>
@@ -497,6 +586,174 @@ html[data-theme="dark"] [style*="background:#fff"], html[data-theme="dark"] [sty
 </div>
 
 <div class="content-wrap">
+
+  <div class="panel" style="margin-bottom:20px;" role="status">
+    <div class="panel-header"><div class="panel-title"><i class="fa fa-plug"></i> Which AI is in use</div></div>
+    <div class="panel-body">
+      <p style="margin:0 0 6px;"><strong><?= htmlspecialchars($activeProviderName === 'none' ? 'AI is OFF' : 'Using ' . $activeProviderName . ($activeProviderModel !== '' ? ' (' . $activeProviderModel . ')' : '')) ?></strong>
+        &mdash; <?= htmlspecialchars(AIProviderResolver::explain($tmsAiResolution['reason'], true)) ?></p>
+      <p class="hp-note" style="font-size:12px;margin:0;">Customers never see this: with no AI they get catalogue-based answers. <a href="ai-setup.php">Open AI Setup &amp; Test</a> for the exact fix and a connection test.</p>
+    </div>
+  </div>
+
+  <div class="panel" style="margin-bottom:20px;">
+    <div class="panel-header"><div class="panel-title"><i class="fa fa-heartbeat"></i> Provider health (last 24 hours)</div></div>
+    <div class="panel-body">
+      <table class="ai-table">
+        <caption class="sr-only">Health, success rate and latency per AI provider</caption>
+        <thead><tr><th scope="col">Provider</th><th scope="col">Role</th><th scope="col">Breaker</th><th scope="col">Calls</th><th scope="col">Success</th><th scope="col">Avg / p95 latency</th></tr></thead>
+        <tbody>
+        <?php foreach ($chainNames as $i => $pn): $h = $providerHealth[$pn]; $st = $providerStats[$pn] ?? null; ?>
+          <tr>
+            <td><?= htmlspecialchars($pn) ?></td>
+            <td><?= $i === 0 ? 'Primary' : 'Fallback' ?></td>
+            <td><?= htmlspecialchars($h['status']) ?><?php if ($h['status'] === 'open'): ?> (retry in <?= (int)$h['retry_after_seconds'] ?>s, <?= htmlspecialchars((string)$h['last_failure_kind']) ?>)<?php elseif ($h['status'] === 'degraded'): ?> (<?= (int)$h['consecutive_failures'] ?> recent failure(s))<?php endif; ?></td>
+            <td><?= $st ? (int)$st['calls'] : 0 ?></td>
+            <td><?= $st && (int)$st['calls'] > 0 ? round(100 * (int)$st['ok'] / (int)$st['calls']) . '%' : '—' ?></td>
+            <td><?= $st && $st['avg_ms'] !== null ? (int)$st['avg_ms'] . ' ms / ' . ($st['p95'] !== null ? (int)$st['p95'] . ' ms' : '—') : '—' ?></td>
+          </tr>
+        <?php endforeach; ?>
+        </tbody>
+      </table>
+      <p class="hp-note" style="font-size:12px;margin:10px 0 0;">Fallbacks are off unless <code>AI_FALLBACK_PROVIDERS</code> is set. A cloud fallback needs <code>AI_FALLBACK_ALLOW_EXTERNAL=1</code> (conversation text would be sent to that vendor). "Open" means the provider is being skipped until the retry time.</p>
+    </div>
+  </div>
+
+  <div class="panel" style="margin-bottom:20px;">
+    <div class="panel-header"><div class="panel-title"><i class="fa fa-cubes"></i> Local models and routing</div></div>
+    <div class="panel-body">
+      <?php if (!$gwUsesOllama): ?>
+        <p class="hp-note" style="font-size:13px;margin:0;">The self-hosted Ollama runtime is not in the provider chain (<code>AI_PROVIDER=ollama</code> or <code>AI_FALLBACK_PROVIDERS=ollama</code>), so model routing is not in use.</p>
+      <?php else: ?>
+        <p style="margin:0 0 10px;font-size:13px;font-weight:700;" role="status"><?= $gwReachable ? 'Ollama runtime reachable: ' . count($gwModels) . ' model(s) installed.' : 'Ollama runtime NOT reachable. AI answers fall back to the non-AI path until it is back.' ?></p>
+        <table class="ai-table">
+          <caption class="sr-only">Which model serves each kind of request</caption>
+          <thead><tr><th scope="col">Job</th><th scope="col">Chosen model</th><th scope="col">Configured order</th><th scope="col">Status</th><th scope="col">Context</th></tr></thead>
+          <tbody>
+          <?php foreach ($gwRoutes as $capName => $rt): ?>
+            <tr>
+              <td><?= htmlspecialchars($capName) ?></td>
+              <td><?= $rt['model'] !== null ? htmlspecialchars($rt['model']) : '—' ?></td>
+              <td><?= htmlspecialchars(implode(' → ', $rt['chain']) ?: 'not configured') ?></td>
+              <td><?= htmlspecialchars(['ok' => 'Available', 'fallback_model' => 'Using fallback (first choice not installed)', 'no_model' => 'No usable model: non-AI fallback', 'runtime_unreachable' => 'Runtime unreachable', 'unknown_capability' => 'Unknown'][$rt['reason']] ?? $rt['reason']) ?></td>
+              <td><?= (int)$rt['context'] ?> tokens</td>
+            </tr>
+          <?php endforeach; ?>
+          </tbody>
+        </table>
+        <?php if ($gwModels): ?>
+        <table class="ai-table" style="margin-top:12px;">
+          <caption class="sr-only">Installed models and their results in the last 24 hours</caption>
+          <thead><tr><th scope="col">Installed model</th><th scope="col">Size</th><th scope="col">Version (digest)</th><th scope="col">Calls (24h)</th><th scope="col">Failure rate</th><th scope="col">Avg latency</th><th scope="col">Trimmed prompts</th></tr></thead>
+          <tbody>
+          <?php foreach ($gwModels as $gm): $ms = $gwModelStats[$gm['name']] ?? null; $calls = $ms ? (int)$ms['calls'] : 0; ?>
+            <tr>
+              <td><?= htmlspecialchars($gm['name']) ?></td>
+              <td><?= $gm['size'] > 0 ? round($gm['size'] / 1073741824, 1) . ' GB' : '—' ?><?= $gm['parameter_size'] !== '' ? ' (' . htmlspecialchars($gm['parameter_size']) . ')' : '' ?></td>
+              <td><code><?= htmlspecialchars(substr($gm['digest'], 0, 12)) ?></code></td>
+              <td><?= $calls ?></td>
+              <td><?= $calls > 0 ? round(100 * (1 - (int)$ms['ok'] / $calls), 1) . '%' : '—' ?></td>
+              <td><?= $calls > 0 && $ms['avg_ms'] !== null ? (int)$ms['avg_ms'] . ' ms' : '—' ?></td>
+              <td><?= $calls > 0 ? (int)$ms['trimmed'] : '—' ?></td>
+            </tr>
+          <?php endforeach; ?>
+          </tbody>
+        </table>
+        <?php endif; ?>
+        <?php if ($gwStatsNote !== ''): ?><p class="hp-note" style="font-size:12px;margin:8px 0 0;"><?= htmlspecialchars($gwStatsNote) ?></p><?php endif; ?>
+        <p class="hp-note" style="font-size:12px;margin:10px 0 0;">Set <code>AI_MODEL_FAST</code>, <code>AI_MODEL_CHAT</code> and <code>AI_MODEL_PLAN</code> in <code>.env</code> (comma list = fallback order; default is <code>OLLAMA_MODEL</code>). Choose models from measured quality and speed on your hardware (see <code>tests/ai/live_quality.php</code>), not by size. A changed digest means the model was re-pulled and its answers may differ.</p>
+      <?php endif; ?>
+    </div>
+  </div>
+
+  <div class="panel" style="margin-bottom:20px;">
+    <div class="panel-header"><div class="panel-title"><i class="fa fa-sliders"></i> Engine controls</div></div>
+    <div class="panel-body">
+      <?php if ($cfgFlash !== ''): ?><div role="status" class="hp-note" style="font-size:13px;font-weight:700;margin-bottom:10px;"><?= htmlspecialchars($cfgFlash) ?></div><?php endif; ?>
+      <form method="post" action="ai-dashboard.php">
+        <?php tms_csrf_field(); ?>
+        <input type="hidden" name="ai_cfg_action" value="save">
+        <table class="ai-table">
+          <caption class="sr-only">Runtime settings for the AI assistant</caption>
+          <thead><tr><th scope="col">Setting</th><th scope="col">Value</th><th scope="col">Default</th></tr></thead>
+          <tbody>
+          <?php foreach (AIConfig::SPEC as $cn => $sp): $cv = AIConfig::get($dbh, $cn); ?>
+            <tr>
+              <td><label for="cfg_<?= $cn ?>"><?= htmlspecialchars($sp[4]) ?></label></td>
+              <td><?php if ($sp[0] === 'bool'): ?>
+                    <input type="checkbox" id="cfg_<?= $cn ?>" name="cfg[<?= $cn ?>]" value="1" <?= $cv === 1 ? 'checked' : '' ?>> <?= $cv === 1 ? 'On' : 'Off' ?>
+                  <?php else: ?>
+                    <input type="number" id="cfg_<?= $cn ?>" name="cfg[<?= $cn ?>]" value="<?= (int)$cv ?>" min="<?= (int)$sp[2] ?>" max="<?= (int)$sp[3] ?>" class="cfg-num">
+                  <?php endif; ?></td>
+              <td><?= $sp[0] === 'bool' ? ($sp[1] ? 'On' : 'Off') : (int)$sp[1] . ' (allowed ' . (int)$sp[2] . '–' . (int)$sp[3] . ')' ?></td>
+            </tr>
+          <?php endforeach; ?>
+          </tbody>
+        </table>
+        <div style="margin-top:12px;display:flex;gap:10px;flex-wrap:wrap;">
+          <button type="submit" class="btn btn-primary">Save controls</button>
+          <button type="submit" name="ai_cfg_action" value="reset" class="btn btn-default" onclick="return confirm('Restore every engine control to its default?');">Restore defaults</button>
+        </div>
+      </form>
+      <p class="hp-note" style="font-size:12px;margin:10px 0 0;">Switching the assistant off makes the chat widget show its standard non-AI answers. Failover, provider keys and the cloud-fallback opt-in (<code>AI_FALLBACK_ALLOW_EXTERNAL</code>) are configured in <code>.env</code> only, and price/source verification and the safety guard cannot be switched off. Every change is logged below.</p>
+      <?php $cfgLog = AIConfig::recentChanges($dbh, 8); if ($cfgLog): ?>
+      <table class="ai-table" style="margin-top:12px;">
+        <caption class="sr-only">Recent changes to engine controls</caption>
+        <thead><tr><th scope="col">When</th><th scope="col">Setting</th><th scope="col">Change</th><th scope="col">By</th></tr></thead>
+        <tbody><?php foreach ($cfgLog as $cl): ?><tr><td><?= htmlspecialchars($cl['changed_at']) ?></td><td><?= htmlspecialchars($cl['setting']) ?></td><td><?= htmlspecialchars($cl['old_value']) ?> → <?= htmlspecialchars($cl['new_value']) ?></td><td><?= htmlspecialchars($cl['changed_by']) ?></td></tr><?php endforeach; ?></tbody>
+      </table>
+      <?php endif; ?>
+    </div>
+  </div>
+
+  <div class="panel" style="margin-bottom:20px;">
+    <div class="panel-header"><div class="panel-title"><i class="fa fa-database"></i> Embedding index</div></div>
+    <div class="panel-body">
+      <?php $embRr = EmbeddingReranker::fromEnv(15); $embCov = null; if ($embRr) { try { $embCov = EmbeddingStore::catalogueCoverage($dbh, $embRr); } catch (Throwable $e) { $embCov = null; } } ?>
+      <?php if (!$embRr): ?>
+        <p class="hp-note" style="margin:0;font-size:13px;">No embedding model configured (<code>AI_EMBED_MODEL</code> in <code>.env</code>). Search uses keyword (BM25) retrieval only.</p>
+      <?php elseif ($embCov === null): ?>
+        <p class="hp-note" style="margin:0;font-size:13px;">Index status unavailable.</p>
+      <?php else: $embPct = $embCov['total'] > 0 ? (int)floor(100 * $embCov['indexed'] / $embCov['total']) : 0; ?>
+        <p style="margin:0 0 8px;font-size:13px;"><?= (int)$embCov['indexed'] ?> of <?= (int)$embCov['total'] ?> packages indexed for model <code><?= htmlspecialchars($embRr->modelKey()) ?></code> (<?= $embPct ?>%<?= (int)$embCov['stale'] > 0 ? ', ' . (int)$embCov['stale'] . ' out of date' : '' ?>). Hybrid search is used only at 80% or more; below that, keyword search is used.</p>
+        <form method="post" action="ai-dashboard.php"><?php tms_csrf_field(); ?><input type="hidden" name="ai_embed_action" value="sync"><button type="submit" class="btn btn-default">Index now (up to 40 packages, 20 s)</button></form>
+        <p class="hp-note" style="font-size:12px;margin:10px 0 0;">Uses your configured embedding model. Run again until all packages are indexed, or use <code>php scripts/sync_embeddings.php</code> for the full catalogue.</p>
+      <?php endif; ?>
+    </div>
+  </div>
+
+  <div class="panel" style="margin-bottom:20px;">
+    <div class="panel-header"><div class="panel-title"><i class="fa fa-stethoscope"></i> Assistant quality signals (last 7 days)</div></div>
+    <div class="panel-body">
+      <?php if ($turnStats === null || (int)$turnStats['turns'] === 0): ?>
+        <p class="hp-note" style="margin:0;font-size:13px;">No assistant turns recorded yet<?= $turnStats === null ? ' (turn log unavailable)' : '' ?>. Figures appear after visitors use the chat assistant.</p>
+      <?php else: $T = $turnStats; $n = max(1, (int)$T['answered']); $pc = fn($x, $d) => $d > 0 ? round(100 * $x / $d) . '%' : '—'; ?>
+      <table class="ai-table">
+        <caption class="sr-only">Counts per assistant turn, no message text stored</caption>
+        <thead><tr><th scope="col">Measure</th><th scope="col">Value</th><th scope="col">What it means</th></tr></thead>
+        <tbody>
+          <tr><td>Turns</td><td><?= (int)$T['turns'] ?></td><td>Answered <?= (int)$T['answered'] ?>, blocked by the safety guard <?= (int)$T['blocked'] ?>, memory commands <?= (int)$T['memcmd'] ?>, model errors <?= (int)$T['errors'] ?></td></tr>
+          <tr><td>Answers with an unverified price</td><td><?= (int)$T['unverified'] ?> (<?= $pc($T['unverified'], $n) ?>)</td><td>The model quoted a price not found in the catalogue data; a caution line was shown. Should stay near zero.</td></tr>
+          <tr><td>Multi-step answers</td><td><?= (int)$T['multistep'] ?> (<?= $pc($T['multistep'], $n) ?>)</td><td>Average <?= number_format((float)$T['avg_steps'], 2) ?> tool steps per answer; stopped early by a limit: <?= (int)$T['stopped_early'] ?></td></tr>
+          <tr><td>Turns with a failed tool call</td><td><?= (int)$T['tool_err'] ?></td><td>A tool was unavailable or got invalid input</td></tr>
+          <tr><td>Answers showing sources</td><td><?= (int)$T['with_sources'] ?> (<?= $pc($T['with_sources'], $n) ?>)</td><td>Invented citation markers removed: <?= (int)$T['markers'] ?></td></tr>
+          <tr><td>Bengali turns</td><td><?= (int)$T['bn'] ?> (<?= $pc($T['bn'], $T['turns']) ?>)</td><td>Signed-in <?= $pc($T['signed'], $T['turns']) ?>; used saved memory in <?= (int)$T['used_memory'] ?> turn(s)</td></tr>
+          <tr><td>Tools used</td><td colspan="2"><?php $tl = []; foreach ($T['tools'] as $tn => $c) $tl[] = htmlspecialchars($tn) . ' ' . (int)$c; echo $tl ? implode(' &middot; ', $tl) : '—'; ?></td></tr>
+        </tbody>
+      </table>
+      <p class="hp-note" style="font-size:12px;margin:10px 0 0;">Counts only: no message text, email or user id is stored, and rows are deleted after 90 days. These figures show how the engine behaved, not whether answers were good.</p>
+      <?php $recentTurns = AITurnLog::recent($dbh, 20); if ($recentTurns): ?>
+      <table class="ai-table" style="margin-top:12px;">
+        <caption class="sr-only">Most recent assistant turns, counts only</caption>
+        <thead><tr><th scope="col">Time</th><th scope="col">Outcome</th><th scope="col">Lang</th><th scope="col">Tools run</th><th scope="col">Flags</th></tr></thead>
+        <tbody><?php foreach ($recentTurns as $rt): $fl = []; if ($rt['stopped']) $fl[] = 'stopped: ' . $rt['stopped']; if ((int)$rt['unverified_prices'] > 0) $fl[] = 'unverified price'; if ((int)$rt['removed_markers'] > 0) $fl[] = 'marker removed'; ?>
+          <tr><td><?= htmlspecialchars($rt['created_at']) ?></td><td><?= htmlspecialchars($rt['outcome']) ?></td><td><?= htmlspecialchars($rt['language']) ?></td><td><?= htmlspecialchars($rt['tools'] !== '' ? $rt['tools'] : '—') ?></td><td><?= htmlspecialchars($fl ? implode(', ', $fl) : '—') ?></td></tr>
+        <?php endforeach; ?></tbody>
+      </table>
+      <?php endif; ?>
+      <?php endif; ?>
+    </div>
+  </div>
 
   <?php if ($batchMsg): ?>
   <div style="background:#c6f6d5;border:1px solid #9ae6b4;color:#276749;border-radius:10px;padding:12px 16px;margin-bottom:20px;font-size:13px;">
@@ -539,14 +796,14 @@ html[data-theme="dark"] [style*="background:#fff"], html[data-theme="dark"] [sty
       <div class="stat-icon" style="background:#f0f9ff;">📡</div>
       <div class="stat-value"><?= $telemetrySuccessRate !== null ? $telemetrySuccessRate . '%' : '—' ?></div>
       <div class="stat-label">AI Success Rate (7d, live calls)</div>
-      <div class="stat-trend" style="color:#718096;"><?= $telemetryAvgLatency !== null ? number_format($telemetryAvgLatency) . ' ms avg latency' : 'No calls logged yet' ?></div>
+      <div class="stat-trend" style="color:var(--text-muted);"><?= $telemetryAvgLatency !== null ? number_format($telemetryAvgLatency) . ' ms avg latency' : 'No calls logged yet' ?></div>
     </div>
   </div>
 
   <!-- AI Insights -->
   <div class="insights-panel">
     <div style="display:flex;align-items:center;justify-content:space-between;">
-      <div style="font-size:15px;font-weight:800;color:#1a202c;display:flex;align-items:center;gap:8px;"><i class="fa fa-lightbulb-o" style="color:#667eea;"></i> AI Business Insights</div>
+      <div style="font-size:15px;font-weight:800;color:var(--text-primary);display:flex;align-items:center;gap:8px;"><i class="fa fa-lightbulb-o" style="color:#667eea;"></i> AI Business Insights</div>
       <button class="btn-admin primary" onclick="getInsights()" id="insightsBtn"><i class="fa fa-magic"></i> Generate Insights</button>
     </div>
     <div class="insights-output" id="insightsOutput"></div>
@@ -555,10 +812,10 @@ html[data-theme="dark"] [style*="background:#fff"], html[data-theme="dark"] [sty
   <!-- AI Evaluation Suite (Round 35, item 22) -->
   <div class="insights-panel">
     <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;">
-      <div style="font-size:15px;font-weight:800;color:#1a202c;display:flex;align-items:center;gap:8px;"><i class="fa fa-flask" style="color:#667eea;"></i> AI Evaluation Suite</div>
+      <div style="font-size:15px;font-weight:800;color:var(--text-primary);display:flex;align-items:center;gap:8px;"><i class="fa fa-flask" style="color:#667eea;"></i> AI Evaluation Suite</div>
       <button class="btn-admin primary" onclick="runEvalSuite()" id="evalSuiteBtn"><i class="fa fa-play"></i> Run Eval Suite</button>
     </div>
-    <div style="font-size:12px;color:#718096;margin-top:6px;">
+    <div style="font-size:12px;color:var(--text-muted);margin-top:6px;">
       Runs 9 real calls (recommender, itinerary, sentiment, budget optimizer, packing list, crowd predictor, package generator, site assistant, NL search parser) against the live <?= htmlspecialchars($activeProviderLabel) ?> provider and checks whether each one genuinely succeeded -- not just that a graceful fallback covered for it. Uses real API quota and can take 1-3 minutes (paced with short gaps between calls to avoid tripping a free-tier provider's own per-minute limit); run manually when checking a provider/prompt change, not on a schedule.
     </div>
     <div class="insights-output" id="evalSuiteOutput" style="display:none;white-space:pre-wrap;"></div>
@@ -586,7 +843,7 @@ html[data-theme="dark"] [style*="background:#fff"], html[data-theme="dark"] [sty
           <span class="sentiment-count"><?= $cnt ?></span>
         </div>
         <?php endforeach; ?>
-        <div style="font-size:12px;color:#718096;margin-top:12px;">Total analysed: <?= $totalSent ?> reviews</div>
+        <div style="font-size:12px;color:var(--text-muted);margin-top:12px;">Total analysed: <?= $totalSent ?> reviews</div>
       </div>
     </div>
 
@@ -603,32 +860,32 @@ html[data-theme="dark"] [style*="background:#fff"], html[data-theme="dark"] [sty
         <?php if ($revenueForecast['available']): ?>
         <div style="display:flex;gap:24px;flex-wrap:wrap;margin-bottom:20px;padding-bottom:16px;border-bottom:1px solid #eef1f5;">
           <div>
-            <div style="font-size:11px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.4px;">This Month So Far</div>
-            <div style="font-size:20px;font-weight:800;color:#0f172a;">৳<?= number_format($revenueForecast['so_far_this_month']) ?></div>
+            <div style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.4px;">This Month So Far</div>
+            <div style="font-size:20px;font-weight:800;color:var(--text-primary);">৳<?= number_format($revenueForecast['so_far_this_month']) ?></div>
           </div>
           <div>
-            <div style="font-size:11px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.4px;">Projected Month Total</div>
-            <div style="font-size:20px;font-weight:800;color:#0891b2;">৳<?= number_format($revenueForecast['projected_total_this_month']) ?></div>
+            <div style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.4px;">Projected Month Total</div>
+            <div style="font-size:20px;font-weight:800;color:#0E7490;">৳<?= number_format($revenueForecast['projected_total_this_month']) ?></div>
           </div>
           <div>
-            <div style="font-size:11px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.4px;">Recent Monthly Avg</div>
-            <div style="font-size:20px;font-weight:800;color:#64748b;">৳<?= number_format($revenueForecast['avg_monthly']) ?></div>
+            <div style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.4px;">Recent Monthly Avg</div>
+            <div style="font-size:20px;font-weight:800;color:var(--text-muted);">৳<?= number_format($revenueForecast['avg_monthly']) ?></div>
           </div>
         </div>
         <div style="font-size:11px;color:#c2c9d1;margin-top:-10px;margin-bottom:18px;">Trend-based estimate from the last 3 months of confirmed bookings — not a guarantee.</div>
         <?php else: ?>
-        <div style="font-size:12.5px;color:#a0aec0;margin-bottom:18px;">Not enough booking history yet to project revenue (needs at least 2 full months of confirmed bookings).</div>
+        <div style="font-size:12.5px;color:var(--text-muted);margin-bottom:18px;">Not enough booking history yet to project revenue (needs at least 2 full months of confirmed bookings).</div>
         <?php endif; ?>
 
         <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:18px;">
           <div>
-            <div style="font-size:11.5px;font-weight:700;color:#0891b2;text-transform:uppercase;letter-spacing:.4px;margin-bottom:8px;"><i class="fa fa-shopping-cart"></i> Likely to Book Soon</div>
+            <div style="font-size:11.5px;font-weight:700;color:#0E7490;text-transform:uppercase;letter-spacing:.4px;margin-bottom:8px;"><i class="fa fa-shopping-cart"></i> Likely to Book Soon</div>
             <?php if (empty($likelyNextBookings)): ?>
-              <div style="font-size:12px;color:#a0aec0;">No packages sitting in a cart right now that haven't already been booked.</div>
+              <div style="font-size:12px;color:var(--text-muted);">No packages sitting in a cart right now that haven't already been booked.</div>
             <?php else: foreach ($likelyNextBookings as $lb): ?>
               <div style="font-size:12.5px;padding:7px 0;border-bottom:1px solid #f8fafc;">
                 <strong><?= htmlspecialchars($lb->UserEmail) ?></strong> &middot; <?= htmlspecialchars($lb->PackageName) ?>
-                <div style="color:#94a3b8;font-size:11px;">Added to cart <?= htmlspecialchars($lb->CreatedAt) ?> &middot; est. ৳<?= number_format($lb->EstValue) ?></div>
+                <div style="color:var(--text-muted);font-size:11px;">Added to cart <?= htmlspecialchars($lb->CreatedAt) ?> &middot; est. ৳<?= number_format($lb->EstValue) ?></div>
               </div>
             <?php endforeach; endif; ?>
           </div>
@@ -636,35 +893,35 @@ html[data-theme="dark"] [style*="background:#fff"], html[data-theme="dark"] [sty
           <div>
             <div style="font-size:11.5px;font-weight:700;color:#b45309;text-transform:uppercase;letter-spacing:.4px;margin-bottom:8px;"><i class="fa fa-exclamation-triangle"></i> Packages at Risk</div>
             <?php if (empty($packagesAtRisk)): ?>
-              <div style="font-size:12px;color:#a0aec0;">No previously-popular packages have gone quiet — nothing at risk right now.</div>
+              <div style="font-size:12px;color:var(--text-muted);">No previously-popular packages have gone quiet — nothing at risk right now.</div>
             <?php else: foreach ($packagesAtRisk as $p): ?>
               <div style="font-size:12.5px;padding:7px 0;border-bottom:1px solid #f8fafc;">
                 <strong><?= htmlspecialchars($p->PackageName) ?></strong>
-                <div style="color:#94a3b8;font-size:11px;">No bookings in 30+ days — last was <?= htmlspecialchars($p->last_booking_date) ?> (<?= (int)$p->lifetime_bookings ?> lifetime bookings)</div>
+                <div style="color:var(--text-muted);font-size:11px;">No bookings in 30+ days — last was <?= htmlspecialchars($p->last_booking_date) ?> (<?= (int)$p->lifetime_bookings ?> lifetime bookings)</div>
               </div>
             <?php endforeach; endif; ?>
           </div>
 
           <div>
-            <div style="font-size:11.5px;font-weight:700;color:#dc2626;text-transform:uppercase;letter-spacing:.4px;margin-bottom:8px;"><i class="fa fa-user-times"></i> Cancellation Risk</div>
+            <div style="font-size:11.5px;font-weight:700;color:#B91C1C;text-transform:uppercase;letter-spacing:.4px;margin-bottom:8px;"><i class="fa fa-user-times"></i> Cancellation Risk</div>
             <?php if (empty($customersCancelRisk)): ?>
-              <div style="font-size:12px;color:#a0aec0;">No customers with a high cancellation pattern right now.</div>
+              <div style="font-size:12px;color:var(--text-muted);">No customers with a high cancellation pattern right now.</div>
             <?php else: foreach ($customersCancelRisk as $c): ?>
               <div style="font-size:12.5px;padding:7px 0;border-bottom:1px solid #f8fafc;">
                 <strong><?= htmlspecialchars($c->UserEmail) ?></strong>
-                <div style="color:#94a3b8;font-size:11px;"><?= (int)$c->cancel_rate ?>% cancel rate (<?= (int)$c->cancelled ?> of <?= (int)$c->total ?> bookings)</div>
+                <div style="color:var(--text-muted);font-size:11px;"><?= (int)$c->cancel_rate ?>% cancel rate (<?= (int)$c->cancelled ?> of <?= (int)$c->total ?> bookings)</div>
               </div>
             <?php endforeach; endif; ?>
           </div>
 
           <div>
-            <div style="font-size:11.5px;font-weight:700;color:#16a34a;text-transform:uppercase;letter-spacing:.4px;margin-bottom:8px;"><i class="fa fa-user-plus"></i> Likely to Return</div>
+            <div style="font-size:11.5px;font-weight:700;color:#0B6B2E;text-transform:uppercase;letter-spacing:.4px;margin-bottom:8px;"><i class="fa fa-user-plus"></i> Likely to Return</div>
             <?php if (empty($customersReturning)): ?>
-              <div style="font-size:12px;color:#a0aec0;">No repeat-customer pattern detected yet.</div>
+              <div style="font-size:12px;color:var(--text-muted);">No repeat-customer pattern detected yet.</div>
             <?php else: foreach ($customersReturning as $c): ?>
               <div style="font-size:12.5px;padding:7px 0;border-bottom:1px solid #f8fafc;">
                 <strong><?= htmlspecialchars($c->UserEmail) ?></strong>
-                <div style="color:#94a3b8;font-size:11px;"><?= (int)$c->confirmed_bookings ?> confirmed bookings, last on <?= htmlspecialchars($c->last_booking) ?></div>
+                <div style="color:var(--text-muted);font-size:11px;"><?= (int)$c->confirmed_bookings ?> confirmed bookings, last on <?= htmlspecialchars($c->last_booking) ?></div>
               </div>
             <?php endforeach; endif; ?>
           </div>
@@ -678,9 +935,9 @@ html[data-theme="dark"] [style*="background:#fff"], html[data-theme="dark"] [sty
         <div class="panel-title"><i class="fa fa-list-ul"></i> Most Mentioned in Reviews</div>
       </div>
       <div class="panel-body">
-        <div style="font-size:11.5px;font-weight:700;color:#dc2626;text-transform:uppercase;letter-spacing:.4px;margin-bottom:8px;">Top Issues</div>
+        <div style="font-size:11.5px;font-weight:700;color:#B91C1C;text-transform:uppercase;letter-spacing:.4px;margin-bottom:8px;">Top Issues</div>
         <?php if (empty($topPhrases['issues'])): ?>
-          <div style="font-size:12.5px;color:#a0aec0;margin-bottom:16px;">No recurring issues detected yet.</div>
+          <div style="font-size:12.5px;color:var(--text-muted);margin-bottom:16px;">No recurring issues detected yet.</div>
         <?php else: foreach ($topPhrases['issues'] as $p): ?>
           <div class="sentiment-row" style="margin-bottom:6px;">
             <span style="flex:1;font-size:12.5px;color:#4a5568;"><?= htmlspecialchars($p['phrase']) ?></span>
@@ -688,9 +945,9 @@ html[data-theme="dark"] [style*="background:#fff"], html[data-theme="dark"] [sty
           </div>
         <?php endforeach; endif; ?>
 
-        <div style="font-size:11.5px;font-weight:700;color:#059669;text-transform:uppercase;letter-spacing:.4px;margin:16px 0 8px;">Top Highlights</div>
+        <div style="font-size:11.5px;font-weight:700;color:#047857;text-transform:uppercase;letter-spacing:.4px;margin:16px 0 8px;">Top Highlights</div>
         <?php if (empty($topPhrases['highlights'])): ?>
-          <div style="font-size:12.5px;color:#a0aec0;">No recurring highlights detected yet.</div>
+          <div style="font-size:12.5px;color:var(--text-muted);">No recurring highlights detected yet.</div>
         <?php else: foreach ($topPhrases['highlights'] as $p): ?>
           <div class="sentiment-row" style="margin-bottom:6px;">
             <span style="flex:1;font-size:12.5px;color:#4a5568;"><?= htmlspecialchars($p['phrase']) ?></span>
@@ -703,12 +960,12 @@ html[data-theme="dark"] [style*="background:#fff"], html[data-theme="dark"] [sty
     <!-- Flagged Reviews / Fraud Detection (Phase 2c) -->
     <div class="panel" style="grid-column: 1 / -1;">
       <div class="panel-header">
-        <div class="panel-title"><i class="fa fa-shield" style="color:#dc2626;"></i> Flagged Reviews (Possible Fake/Spam)</div>
-        <span style="font-size:11px;color:#a0aec0;">Heuristic soft-flags — always verify before removing a review</span>
+        <div class="panel-title"><i class="fa fa-shield" style="color:#B91C1C;"></i> Flagged Reviews (Possible Fake/Spam)</div>
+        <span style="font-size:11px;color:var(--text-muted);">Heuristic soft-flags — always verify before removing a review</span>
       </div>
       <div class="panel-body">
         <?php if (empty($suspiciousReviews)): ?>
-          <div style="font-size:12.5px;color:#a0aec0;">No reviews currently flagged.</div>
+          <div style="font-size:12.5px;color:var(--text-muted);">No reviews currently flagged.</div>
         <?php else: ?>
         <div class="table-responsive">
         <table class="tms-table" style="font-size:12.5px;">
@@ -735,11 +992,11 @@ html[data-theme="dark"] [style*="background:#fff"], html[data-theme="dark"] [sty
     <div class="panel" style="grid-column: 1 / -1;">
       <div class="panel-header">
         <div class="panel-title"><i class="fa fa-users" style="color:#d97706;"></i> Possible Duplicate Accounts</div>
-        <span style="font-size:11px;color:#a0aec0;">Shared phone number or Gmail dot/plus-address variants</span>
+        <span style="font-size:11px;color:var(--text-muted);">Shared phone number or Gmail dot/plus-address variants</span>
       </div>
       <div class="panel-body">
         <?php if (empty($duplicateAccounts)): ?>
-          <div style="font-size:12.5px;color:#a0aec0;">No duplicate account patterns detected.</div>
+          <div style="font-size:12.5px;color:var(--text-muted);">No duplicate account patterns detected.</div>
         <?php else: ?>
         <div class="table-responsive"><table class="tms-table" style="font-size:12.5px;">
           <thead><tr><th>Reason</th><th>Accounts</th></tr></thead>
@@ -760,11 +1017,11 @@ html[data-theme="dark"] [style*="background:#fff"], html[data-theme="dark"] [sty
     <div class="panel" style="grid-column: 1 / -1;">
       <div class="panel-header">
         <div class="panel-title"><i class="fa fa-exclamation-triangle" style="color:#d97706;"></i> Suspicious Booking Patterns</div>
-        <span style="font-size:11px;color:#a0aec0;">Coupon abuse clusters, rapid-fire bookings, abnormal cancellation rates</span>
+        <span style="font-size:11px;color:var(--text-muted);">Coupon abuse clusters, rapid-fire bookings, abnormal cancellation rates</span>
       </div>
       <div class="panel-body">
         <?php if (empty($suspiciousBookings)): ?>
-          <div style="font-size:12.5px;color:#a0aec0;">No suspicious booking patterns detected.</div>
+          <div style="font-size:12.5px;color:var(--text-muted);">No suspicious booking patterns detected.</div>
         <?php else: ?>
         <div class="table-responsive"><table class="tms-table" style="font-size:12.5px;">
           <thead><tr><th>Type</th><th>Details</th></tr></thead>
@@ -799,7 +1056,7 @@ html[data-theme="dark"] [style*="background:#fff"], html[data-theme="dark"] [sty
             </tr>
             <?php endforeach; ?>
             <?php if (empty($topUsers)): ?>
-            <tr><td colspan="2" style="text-align:center;color:#a0aec0;padding:20px;">No data yet</td></tr>
+            <tr><td colspan="2" style="text-align:center;color:var(--text-muted);padding:20px;">No data yet</td></tr>
             <?php endif; ?>
           </tbody>
         </table></div>
@@ -821,13 +1078,13 @@ html[data-theme="dark"] [style*="background:#fff"], html[data-theme="dark"] [sty
             <tr>
               <td><?= htmlspecialchars($t->feature) ?></td>
               <td><strong><?= (int)$t->calls ?></strong></td>
-              <td style="color:<?= $rate >= 90 ? '#16a34a' : ($rate >= 60 ? '#d97706' : '#dc2626') ?>;"><?= $rate ?>%</td>
-              <td style="font-size:11px;color:#718096;"><?= $t->avg_latency_ms !== null ? number_format((int)$t->avg_latency_ms) . ' ms' : '—' ?></td>
-              <td style="font-size:11px;color:#718096;"><?= $t->total_tokens > 0 ? number_format((int)$t->total_tokens) : '—' ?></td>
+              <td style="color:<?= $rate >= 90 ? '#0B6B2E' : ($rate >= 60 ? '#92400E' : '#B91C1C') ?>;"><?= $rate ?>%</td>
+              <td style="font-size:11px;color:var(--text-muted);"><?= $t->avg_latency_ms !== null ? number_format((int)$t->avg_latency_ms) . ' ms' : '—' ?></td>
+              <td style="font-size:11px;color:var(--text-muted);"><?= $t->total_tokens > 0 ? number_format((int)$t->total_tokens) : '—' ?></td>
             </tr>
             <?php endforeach; ?>
             <?php if (empty($telemetryByFeature)): ?>
-            <tr><td colspan="5" style="text-align:center;color:#a0aec0;padding:20px;">No telemetry logged yet -- generates as AI features are used</td></tr>
+            <tr><td colspan="5" style="text-align:center;color:var(--text-muted);padding:20px;">No telemetry logged yet -- generates as AI features are used</td></tr>
             <?php endif; ?>
           </tbody>
         </table></div>
@@ -847,14 +1104,14 @@ html[data-theme="dark"] [style*="background:#fff"], html[data-theme="dark"] [sty
                 $runRate = (int)$run->total_cases > 0 ? round(100 * (int)$run->passed_cases / (int)$run->total_cases) : 0;
             ?>
             <tr>
-              <td style="font-size:11px;color:#718096;"><?= date('M j H:i', strtotime($run->created_at)) ?></td>
-              <td style="font-size:11px;color:#718096;"><?= htmlspecialchars($run->provider . ' (' . $run->model . ')') ?></td>
-              <td style="color:<?= $runRate >= 90 ? '#16a34a' : ($runRate >= 60 ? '#d97706' : '#dc2626') ?>;"><strong><?= (int)$run->passed_cases ?>/<?= (int)$run->total_cases ?></strong></td>
-              <td style="font-size:11px;color:#718096;"><?= htmlspecialchars(substr($run->run_by, 0, 20)) ?></td>
+              <td style="font-size:11px;color:var(--text-muted);"><?= date('M j H:i', strtotime($run->created_at)) ?></td>
+              <td style="font-size:11px;color:var(--text-muted);"><?= htmlspecialchars($run->provider . ' (' . $run->model . ')') ?></td>
+              <td style="color:<?= $runRate >= 90 ? '#0B6B2E' : ($runRate >= 60 ? '#92400E' : '#B91C1C') ?>;"><strong><?= (int)$run->passed_cases ?>/<?= (int)$run->total_cases ?></strong></td>
+              <td style="font-size:11px;color:var(--text-muted);"><?= htmlspecialchars(substr($run->run_by, 0, 20)) ?></td>
             </tr>
             <?php endforeach; ?>
             <?php if (empty($recentEvalRuns)): ?>
-            <tr><td colspan="4" style="text-align:center;color:#a0aec0;padding:20px;">No eval runs yet -- use the "Run Eval Suite" button above</td></tr>
+            <tr><td colspan="4" style="text-align:center;color:var(--text-muted);padding:20px;">No eval runs yet -- use the "Run Eval Suite" button above</td></tr>
             <?php endif; ?>
           </tbody>
         </table></div>
@@ -873,12 +1130,12 @@ html[data-theme="dark"] [style*="background:#fff"], html[data-theme="dark"] [sty
             <?php foreach ($recentItineraries as $it): ?>
             <tr>
               <td><?= htmlspecialchars(substr($it->user_email, 0, 22)) ?></td>
-              <td style="font-size:11px;color:#718096;"><?= htmlspecialchars($it->ai_version) ?></td>
-              <td style="font-size:11px;color:#718096;"><?= date('M j H:i', strtotime($it->created_at)) ?></td>
+              <td style="font-size:11px;color:var(--text-muted);"><?= htmlspecialchars($it->ai_version) ?></td>
+              <td style="font-size:11px;color:var(--text-muted);"><?= date('M j H:i', strtotime($it->created_at)) ?></td>
             </tr>
             <?php endforeach; ?>
             <?php if (empty($recentItineraries)): ?>
-            <tr><td colspan="3" style="text-align:center;color:#a0aec0;padding:20px;">No itineraries yet</td></tr>
+            <tr><td colspan="3" style="text-align:center;color:var(--text-muted);padding:20px;">No itineraries yet</td></tr>
             <?php endif; ?>
           </tbody>
         </table></div>
@@ -892,7 +1149,7 @@ html[data-theme="dark"] [style*="background:#fff"], html[data-theme="dark"] [sty
       </div>
       <div class="panel-body">
         <?php if (empty($topQuickReplies)): ?>
-        <div style="text-align:center;color:#a0aec0;padding:20px;">No quick-reply clicks recorded yet</div>
+        <div style="text-align:center;color:var(--text-muted);padding:20px;">No quick-reply clicks recorded yet</div>
         <?php else: foreach ($topQuickReplies as $qr): $pct = $maxQrClicks > 0 ? round(($qr->clicks / $maxQrClicks) * 100) : 0; ?>
         <div style="margin-bottom:10px;">
           <div style="display:flex;justify-content:space-between;font-size:12.5px;color:#334155;margin-bottom:3px;">
@@ -914,7 +1171,7 @@ html[data-theme="dark"] [style*="background:#fff"], html[data-theme="dark"] [sty
         <button class="btn-admin primary" style="font-size:11px;padding:5px 10px;" onclick="addAlert()">+ Add Alert</button>
       </div>
       <?php if ($alertFlashMsg): ?>
-      <div style="padding:10px 16px;background:#eff6ff;color:#1e40af;font-size:12.5px;border-bottom:1px solid #dbeafe;"><i class="fa fa-info-circle"></i> <?= $alertFlashMsg ?></div>
+      <div style="padding:10px 16px;background:#EEF7F1;color:#104B3A;font-size:12.5px;border-bottom:1px solid #DCF1E5;"><i class="fa fa-info-circle"></i> <?= $alertFlashMsg ?></div>
       <?php endif; ?>
       <div class="panel-body" style="padding:0;">
         <div class="table-responsive"><table class="ai-table">
@@ -936,7 +1193,7 @@ html[data-theme="dark"] [style*="background:#fff"], html[data-theme="dark"] [sty
             </tr>
             <?php endforeach; ?>
             <?php if (empty($safetyAlerts)): ?>
-            <tr><td colspan="5" style="text-align:center;color:#48bb78;padding:20px;"><i class="fa fa-check-circle"></i> No active alerts</td></tr>
+            <tr><td colspan="5" style="text-align:center;color:#2F855A;padding:20px;"><i class="fa fa-check-circle"></i> No active alerts</td></tr>
             <?php endif; ?>
           </tbody>
         </table></div>
@@ -947,7 +1204,7 @@ html[data-theme="dark"] [style*="background:#fff"], html[data-theme="dark"] [sty
 
   <!-- Quick actions -->
   <div style="background:#fff;border-radius:16px;padding:20px;box-shadow:0 2px 12px rgba(0,0,0,.06);border:1px solid #f0f0f0;display:flex;flex-wrap:wrap;gap:12px;align-items:center;">
-    <span style="font-size:14px;font-weight:800;color:#1a202c;margin-right:8px;"><i class="fa fa-bolt" style="color:#667eea;"></i> Quick Actions:</span>
+    <span style="font-size:14px;font-weight:800;color:var(--text-primary);margin-right:8px;"><i class="fa fa-bolt" style="color:#667eea;"></i> Quick Actions:</span>
     <a href="?action=analyse_reviews" class="btn-admin success"><i class="fa fa-search"></i> Analyse Reviews</a>
     <a href="manage-packages.php" class="btn-admin primary"><i class="fa fa-box"></i> Manage Packages</a>
     <a href="manage-bookings.php" class="btn-admin primary"><i class="fa fa-calendar"></i> View Bookings</a>

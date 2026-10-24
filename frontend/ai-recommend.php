@@ -1,5 +1,5 @@
 <?php
-session_start();
+require_once __DIR__ . '/../backend/session-boot.php';
 error_reporting(E_ALL); ini_set('display_errors', '0'); ini_set('log_errors', '1');
 include('backend/config.php');
 // LIVE BUG FIX (customer-facing audit): this page is real browsing/
@@ -104,34 +104,38 @@ if (!isset($_POST['recommend']) && !empty($_SESSION['login'])) {
 <html lang="<?php echo htmlspecialchars(tms_active_language(), ENT_QUOTES, 'UTF-8'); ?>">
 <head>
 <link rel="manifest" href="manifest.json">
-<meta name="theme-color" content="#0B2B3C">
+<meta name="theme-color" content="#104B3A">
 <link rel="apple-touch-icon" href="images/icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="TMS">
+<meta name="mobile-web-app-capable" content="yes">
 <title>TMS | AI Smart Tour Recommendation</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
 <link href="css/bootstrap.min2.css" rel='stylesheet' type='text/css' />
-<link href="css/style.min.css" rel='stylesheet' type='text/css' />
+<link href="<?php echo tms_asset_ver('css/style.min.css'); ?>" rel='stylesheet' type='text/css' />
 <link href="css/font-awesome.min2.css" rel="stylesheet">
 <link href="<?php echo tms_asset_ver('css/modern-theme.css'); ?>" rel="stylesheet">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700;9..144,800&family=Manrope:wght@400;500;600;700;800&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
 <link href="css/animate.css" rel="stylesheet">
 <script src="js/jquery-1.12.0.min.js" defer></script>
 <script src="js/bootstrap.min.js" defer></script>
 <script src="js/wow.min.js" defer></script>
+<script src="<?php echo tms_asset_ver('js/ai-feedback.js'); ?>" defer></script>
 <style>
-.ai-hero { background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%); padding: 60px 0; text-align:center; color:#fff; }
+.ai-hero { background: linear-gradient(135deg, #0E2A21 0%, #104B3A 55%, #176B50 100%); padding: 60px 0; text-align:center; color:#fff; }
 .ai-hero h1 { font-size: 2.5em; margin-bottom:10px; }
 .ai-hero p { font-size: 1.1em; opacity:0.85; }
-.ai-badge { background: linear-gradient(135deg,#667eea,#764ba2); color:#fff; padding:4px 12px; border-radius:20px; font-size:12px; font-weight:700; display:inline-block; margin-bottom:20px; }
+.ai-badge { background: linear-gradient(135deg,#176B50,#104B3A); color:#fff; padding:4px 12px; border-radius:20px; font-size:12px; font-weight:700; display:inline-block; margin-bottom:20px; }
 .filter-card { background:var(--white); border-radius:12px; box-shadow:0 8px 30px rgba(0,0,0,0.1); padding:35px; margin: -30px auto 40px; max-width:900px; position:relative; z-index:10; }
 .filter-card h3 { color:#333; margin-bottom:25px; font-size:1.4em; }
 .form-group label { font-weight:600; color:#555; margin-bottom:6px; display:block; }
 .form-control { border:2px solid #e8ecf0; border-radius:8px; padding:10px 14px; font-size:14px; transition:0.3s; }
-.form-control:focus { border-color:#667eea; box-shadow:0 0 0 3px rgba(102,126,234,0.1); outline:none; }
-.btn-ai { background: linear-gradient(135deg,#667eea,#764ba2); color:#fff; border:none; border-radius:8px; padding:12px 35px; font-size:15px; font-weight:700; cursor:pointer; width:100%; margin-top:10px; transition:0.3s; }
-.btn-ai:hover { transform:translateY(-2px); box-shadow:0 8px 25px rgba(102,126,234,0.4); color:#fff; }
+.form-control:focus { border-color:#176B50; box-shadow:0 0 0 3px rgba(23,107,80,0.1); outline:none; }
+.btn-ai { background: linear-gradient(135deg,#176B50,#104B3A); color:#fff; border:none; border-radius:8px; padding:12px 35px; font-size:15px; font-weight:700; cursor:pointer; width:100%; margin-top:10px; transition:0.3s; }
+.btn-ai:hover { transform:translateY(-2px); box-shadow:0 8px 25px rgba(23,107,80,0.4); color:#fff; }
 .result-section { padding:20px 0 50px; }
 .pkg-card { background:var(--white); border-radius:12px; box-shadow:0 4px 20px rgba(0,0,0,0.08); overflow:hidden; margin-bottom:25px; transition:0.3s; border:1px solid #f0f0f0; }
 .pkg-card:hover { transform:translateY(-4px); box-shadow:0 12px 35px rgba(0,0,0,0.15); }
@@ -142,19 +146,19 @@ if (!isset($_POST['recommend']) && !empty($_SESSION['login'])) {
 .match-med { background:#fff3cd; color:#856404; }
 .match-low { background:#f8d7da; color:#721c24; }
 .pkg-card-body h4 { font-size:1em; font-weight:700; color:#333; margin-bottom:5px; }
-.pkg-card-body p { font-size:13px; color:#777; margin-bottom:4px; }
-.price-tag { font-size:1.3em; font-weight:700; color:#667eea; }
+.pkg-card-body p { font-size:13px; color:var(--text-muted); margin-bottom:4px; }
+.price-tag { font-size:1.3em; font-weight:700; color:#176B50; }
 .stars { color:#f0ad4e; font-size:13px; }
 .match-bar-wrap { background:#eee; border-radius:10px; height:6px; margin:10px 0; }
-.match-bar { height:6px; border-radius:10px; background: linear-gradient(90deg,#667eea,#764ba2); transition:width 1s ease; }
-.btn-view { background:#667eea; color:#fff; border-radius:6px; padding:8px 20px; font-size:13px; font-weight:600; display:inline-block; margin-top:10px; }
+.match-bar { height:6px; border-radius:10px; background: linear-gradient(90deg,#176B50,#104B3A); transition:width 1s ease; }
+.btn-view { background:#176B50; color:#fff; border-radius:6px; padding:8px 20px; font-size:13px; font-weight:600; display:inline-block; margin-top:10px; }
 .btn-view:hover { background:#5a6fd6; color:#fff; }
-.ai-tip { background: linear-gradient(135deg,#e8f4fd,#f0e8fd); border-radius:10px; padding:18px; margin-bottom:25px; border-left:4px solid #667eea; }
-.ai-tip i { color:#667eea; margin-right:8px; }
+.ai-tip { background: linear-gradient(135deg,#e8f4fd,#f0e8fd); border-radius:10px; padding:18px; margin-bottom:25px; border-left:4px solid #176B50; }
+.ai-tip i { color:#176B50; margin-right:8px; }
 .no-results { text-align:center; padding:60px 20px; }
 .no-results i { font-size:60px; color:#ddd; display:block; margin-bottom:20px; }
 .input-group-icon { position:relative; }
-.input-group-icon .fa { position:absolute; left:12px; top:50%; transform:translateY(-50%); color:#aaa; z-index:5; }
+.input-group-icon .fa { position:absolute; left:12px; top:50%; transform:translateY(-50%); color:var(--text-muted); z-index:5; }
 html[data-theme="dark"] .filter-card h3,
 html[data-theme="dark"] .pkg-card-body h4 { color: var(--text) !important; }
 html[data-theme="dark"] .form-group label,
@@ -176,31 +180,31 @@ html[data-theme="dark"] .input-group-icon .fa { color: var(--text-muted) !import
 
 <div class="container">
     <div class="filter-card wow fadeInUp">
-        <h3><i class="fa fa-sliders" style="color:#667eea"></i> Your Travel Preferences</h3>
+        <h3><i class="fa fa-sliders" style="color:#176B50"></i> Your Travel Preferences</h3>
         <form method="post">
         <?php tms_csrf_field(); ?>
             <div class="row">
                 <div class="col-md-4">
                     <div class="form-group">
-                        <label><i class="fa fa-money"></i> Total Budget (৳)</label>
+                        <label for="fld_budget"><i class="fa fa-money"></i> Total Budget (৳)</label>
                         <div class="input-group-icon">
                             <span class="fa" style="font-weight:700;font-style:normal;font-family:Arial,sans-serif;">৳</span>
-                            <input type="number" name="budget" class="form-control" placeholder="e.g. 5000" min="100" value="<?php echo isset($_POST['budget'])?htmlentities($_POST['budget']):''; ?>" required>
+                            <input type="number" id="fld_budget" name="budget" class="form-control" placeholder="e.g. 5000" min="100" value="<?php echo isset($_POST['budget'])?htmlentities($_POST['budget']):''; ?>" required>
                         </div>
                     </div>
                 </div>
                 <div class="col-md-4">
                     <div class="form-group">
-                        <label><i class="fa fa-users"></i> Number of Travelers</label>
-                        <select name="travelers" class="form-control">
+                        <label for="fld_travelers"><i class="fa fa-users"></i> Number of Travelers</label>
+                        <select name="travelers" class="form-control" id="fld_travelers">
                             <?php for($i=1;$i<=10;$i++) echo "<option value='$i' ".((isset($_POST['travelers'])&&$_POST['travelers']==$i)?'selected':'').">$i Person".($i>1?'s':'')."</option>"; ?>
                         </select>
                     </div>
                 </div>
                 <div class="col-md-4">
                     <div class="form-group">
-                        <label><i class="fa fa-calendar"></i> Trip Duration (days)</label>
-                        <select name="duration" class="form-control">
+                        <label for="fld_duration"><i class="fa fa-calendar"></i> Trip Duration (days)</label>
+                        <select name="duration" class="form-control" id="fld_duration">
                             <option value="3" <?php echo (isset($_POST['duration'])&&$_POST['duration']==3)?'selected':''; ?>>3–5 days</option>
                             <option value="7" <?php echo (isset($_POST['duration'])&&$_POST['duration']==7)?'selected':''; ?>>5–7 days</option>
                             <option value="10" <?php echo (isset($_POST['duration'])&&$_POST['duration']==10)?'selected':''; ?>>7–10 days</option>
@@ -210,13 +214,13 @@ html[data-theme="dark"] .input-group-icon .fa { color: var(--text-muted) !import
                 </div>
                 <div class="col-md-6">
                     <div class="form-group">
-                        <label><i class="fa fa-heart"></i> Travel Style</label>
+                        <label for="fld_traveltype"><i class="fa fa-heart"></i> Travel Style</label>
                         <?php
                         // Pre-select from: this submission > the user's saved
                         // profile preference > the original 'family' default.
                         $selectedMode = $_POST['traveltype'] ?? ($savedProfile['travel_mode'] ?? '') ?: 'family';
                         ?>
-                        <select name="traveltype" class="form-control">
+                        <select name="traveltype" class="form-control" id="fld_traveltype">
                             <option value="family" <?php echo ($selectedMode=='family')?'selected':''; ?>>Family Vacation</option>
                             <option value="couple" <?php echo ($selectedMode=='couple')?'selected':''; ?>>Couple / Honeymoon</option>
                             <option value="group" <?php echo ($selectedMode=='group')?'selected':''; ?>>Group Tour</option>
@@ -229,9 +233,9 @@ html[data-theme="dark"] .input-group-icon .fa { color: var(--text-muted) !import
                 </div>
                 <div class="col-md-6">
                     <div class="form-group">
-                        <label><i class="fa fa-sun-o"></i> Preferred Climate</label>
+                        <label for="fld_climate"><i class="fa fa-sun-o"></i> Preferred Climate</label>
                         <?php $selectedClimate = $_POST['climate'] ?? ($savedProfile['preferred_climate'] ?? 'any'); ?>
-                        <select name="climate" class="form-control">
+                        <select name="climate" class="form-control" id="fld_climate">
                             <option value="any" <?php echo ($selectedClimate=='any')?'selected':''; ?>>Any Climate</option>
                             <option value="hot" <?php echo ($selectedClimate=='hot')?'selected':''; ?>>Warm / Tropical</option>
                             <option value="cold" <?php echo ($selectedClimate=='cold')?'selected':''; ?>>Cold / Snow</option>
@@ -242,8 +246,8 @@ html[data-theme="dark"] .input-group-icon .fa { color: var(--text-muted) !import
                 </div>
                 <div class="col-md-6">
                     <div class="form-group">
-                        <label><i class="fa fa-bed"></i> Accommodation Preference</label>
-                        <select name="accommodation" class="form-control">
+                        <label for="fld_accommodation"><i class="fa fa-bed"></i> Accommodation Preference</label>
+                        <select name="accommodation" class="form-control" id="fld_accommodation">
                             <option value="any">No preference</option>
                             <option value="budget" <?php echo (isset($_POST['accommodation'])&&$_POST['accommodation']=='budget')?'selected':''; ?>>Budget</option>
                             <option value="mid-range" <?php echo (isset($_POST['accommodation'])&&$_POST['accommodation']=='mid-range')?'selected':''; ?>>Mid-range</option>
@@ -253,20 +257,20 @@ html[data-theme="dark"] .input-group-icon .fa { color: var(--text-muted) !import
                 </div>
                 <div class="col-md-6">
                     <div class="form-group">
-                        <label><i class="fa fa-star-o"></i> Activities You Enjoy (optional)</label>
-                        <input type="text" name="activities" class="form-control" placeholder="e.g. hiking, museums, beach relaxation" value="<?php echo isset($_POST['activities'])?htmlentities($_POST['activities']):''; ?>">
+                        <label for="fld_activities"><i class="fa fa-star-o"></i> Activities You Enjoy (optional)</label>
+                        <input id="fld_activities" type="text" name="activities" class="form-control" placeholder="e.g. hiking, museums, beach relaxation" value="<?php echo isset($_POST['activities'])?htmlentities($_POST['activities']):''; ?>">
                     </div>
                 </div>
                 <div class="col-md-6">
                     <div class="form-group">
-                        <label><i class="fa fa-cutlery"></i> Dietary / Food Preference (optional)</label>
+                        <label for="fld_food"><i class="fa fa-cutlery"></i> Dietary / Food Preference (optional)</label>
                         <?php
                         // NEW (Round 77, master prompt item 23 -- Personalization): prefills
                         // from the saved profile like Travel Type/Climate above, still fully
                         // editable per request -- same pattern, not a new one.
                         $selectedFood = $_POST['food_preference'] ?? ($savedProfile['food_preference'] ?? '') ?: '';
                         ?>
-                        <select name="food_preference" class="form-control">
+                        <select name="food_preference" class="form-control" id="fld_food">
                             <option value="">No preference</option>
                             <option value="no_restriction" <?php echo ($selectedFood=='no_restriction')?'selected':''; ?>>No restriction</option>
                             <option value="vegetarian" <?php echo ($selectedFood=='vegetarian')?'selected':''; ?>>Vegetarian</option>
@@ -323,6 +327,17 @@ html[data-theme="dark"] .input-group-icon .fa { color: var(--text-muted) !import
                     <p><i class="fa fa-map-marker" style="color:#e74c3c"></i> <?php echo htmlentities($pkg['destination'] ?? ''); ?></p>
                     <?php if (!empty($pkg['why_recommended'])): ?>
                     <p style="font-size:13px;color:#555;font-style:italic;">"<?php echo htmlentities($pkg['why_recommended']); ?>"</p>
+                    <?php
+                    // Round 115, master prompt item 14 ("AI Feedback Loop"): a
+                    // thumbs up/down on the recommendation itself, right next to
+                    // the "why" text it's rating. See js/ai-feedback.js.
+                    $pkgIdForFeedback = (int)($pkg['package_id'] ?? 0);
+                    ?>
+                    <div class="tms-ai-feedback" style="margin:2px 0 8px;font-size:12px;color:var(--text-muted);">
+                        Helpful?
+                        <button type="button" onclick="tmsSendAiFeedback('recommend', <?php echo $pkgIdForFeedback; ?>, 1, this)" style="border:none;background:none;color:#27ae60;cursor:pointer;padding:2px 6px;" title="Yes, helpful"><i class="fa fa-thumbs-up"></i></button>
+                        <button type="button" onclick="tmsSendAiFeedback('recommend', <?php echo $pkgIdForFeedback; ?>, -1, this)" style="border:none;background:none;color:#c0392b;cursor:pointer;padding:2px 6px;" title="No, not helpful"><i class="fa fa-thumbs-down"></i></button>
+                    </div>
                     <?php endif; ?>
                     <?php if ($scores): ?>
                     <ul style="list-style:none;padding:0;margin:8px 0;font-size:12px;">
@@ -338,10 +353,10 @@ html[data-theme="dark"] .input-group-icon .fa { color: var(--text-muted) !import
                     <?php if (!empty($pkg['warnings']) && is_array($pkg['warnings'])): foreach ($pkg['warnings'] as $w): ?>
                     <p style="font-size:12px;color:#c0392b;"><i class="fa fa-exclamation-triangle"></i> <?php echo htmlentities($w); ?></p>
                     <?php endforeach; endif; ?>
-                    <p class="price-tag"><?php echo tms_currency($pkg['price'] ?? 0); ?> <small style="font-size:12px;color:#999">/ person</small></p>
+                    <p class="price-tag"><?php echo tms_currency($pkg['price'] ?? 0); ?> <small style="font-size:12px;color:var(--text-muted)">/ person</small></p>
                     <p style="font-size:12px;color:#27ae60;font-weight:600">Total for <?php echo (int)$travelers; ?> traveler(s): <?php echo tms_currency($pkg['estimated_total_cost'] ?? (($pkg['price'] ?? 0) * $travelers)); ?></p>
                     <?php if (!empty($pkg['cost_savings_tip'])): ?>
-                    <p style="font-size:12px;color:#888;"><i class="fa fa-piggy-bank"></i> <?php echo htmlentities($pkg['cost_savings_tip']); ?></p>
+                    <p style="font-size:12px;color:var(--text-muted);"><i class="fa fa-piggy-bank"></i> <?php echo htmlentities($pkg['cost_savings_tip']); ?></p>
                     <?php endif; ?>
                     <a href="<?php echo htmlentities($pkg['package_url'] ?? ('package-details.php?pkgid=' . (int)($pkg['package_id'] ?? 0))); ?>" class="btn-view">View & Book <i class="fa fa-arrow-right"></i></a>
                 </div>

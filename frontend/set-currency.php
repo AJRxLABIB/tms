@@ -7,7 +7,7 @@
  * planner...) reads it from there and converts+formats accordingly. Mirrors
  * the pattern already used by language.php for the language switcher.
  */
-session_start();
+require_once __DIR__ . '/../backend/session-boot.php';
 error_reporting(E_ALL); ini_set('display_errors', '0'); ini_set('log_errors', '1');
 include('backend/config.php');
 header('Content-Type: application/json');

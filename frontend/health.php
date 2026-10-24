@@ -74,5 +74,15 @@ $status['checks']['payment_provider'] = [
     'mode' => tms_env('PAYMENT_PROVIDER', 'sandbox'),
 ];
 
+// Public callers (uptime monitors, anyone on the internet) get only up/down. The per-service breakdown, latency and
+// payment mode are shown only with the shared secret HEALTH_TOKEN (sent in the X-Health-Token header, never in a URL).
+$healthToken = (string)tms_env('HEALTH_TOKEN', '');
+$given       = (string)($_SERVER['HTTP_X_HEALTH_TOKEN'] ?? '');
+$detailed    = $healthToken !== '' && strlen($healthToken) >= 16 && $given !== '' && hash_equals($healthToken, $given);
+if (!$detailed) {
+    $status = ['status' => $status['status']];
+}
+
+header('Cache-Control: no-store');
 http_response_code($httpCode);
 echo json_encode($status, JSON_PRETTY_PRINT);

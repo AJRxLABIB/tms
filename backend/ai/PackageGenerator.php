@@ -11,6 +11,7 @@
  */
 
 require_once __DIR__ . '/AIClient.php';
+require_once __DIR__ . '/PackageDraft.php';
 
 class PackageGenerator {
 
@@ -44,20 +45,25 @@ Rules:
 5. Return ONLY valid JSON — no markdown, no extra text
 SYSTEM;
 
-        $budget    = $prefs['budget'] ?? 30000;
-        $travelers = $prefs['travelers'] ?? 2;
-        $days      = $prefs['duration'] ?? 5;
-        $style     = $prefs['travel_type'] ?? 'leisure';
-        $start     = $prefs['start_date'] ?? date('Y-m-d', strtotime('+7 days'));
-        $climate   = $prefs['climate'] ?? 'warm';
-        $activities = is_array($prefs['activities']) ? implode(', ', $prefs['activities']) : ($prefs['activities'] ?? 'sightseeing');
-        $accommodation = $prefs['accommodation'] ?? 'hotel';
+        // Numbers are cast and bounded; free text is stripped of markup/control characters and length-capped before it
+        // reaches the prompt (PackageDraft::text), so a pasted instruction cannot ride along in a field.
+        $budget    = max(0, (int)($prefs['budget'] ?? 30000));
+        $travelers = max(1, min(50, (int)($prefs['travelers'] ?? 2)));
+        $days      = max(1, min(30, (int)($prefs['duration'] ?? 5)));
+        $style     = PackageDraft::text($prefs['travel_type'] ?? 'leisure', 40) ?: 'leisure';
+        $start     = (isset($prefs['start_date']) && preg_match('/^\d{4}-\d{2}-\d{2}$/', (string)$prefs['start_date']) && strtotime((string)$prefs['start_date']))
+                        ? (string)$prefs['start_date'] : date('Y-m-d', strtotime('+7 days'));
+        $climate   = PackageDraft::text($prefs['climate'] ?? 'warm', 30) ?: 'warm';
+        $activities = PackageDraft::text(is_array($prefs['activities'] ?? null) ? implode(', ', $prefs['activities']) : ($prefs['activities'] ?? 'sightseeing'), 200) ?: 'sightseeing';
+        $accommodation = PackageDraft::text($prefs['accommodation'] ?? 'hotel', 60) ?: 'hotel';
+        $prefs = ['budget' => $budget, 'travelers' => $travelers, 'duration' => $days, 'start_date' => $start, 'travel_type' => $style,
+                  'destination' => PackageDraft::text($prefs['destination'] ?? '', 100)] + $prefs;
         // FIX (Round 113, F9 -- same undefined-array-key bug class fixed in
         // ItineraryPlanner/BudgetOptimizer/TravelRecommender this round):
         // 'special_requests' is an optional field on every caller of
         // generate() -- unlike every other $prefs key just above, it was
         // interpolated directly into the heredoc below with no fallback.
-        $specialRequests = $prefs['special_requests'] ?? 'None';
+        $specialRequests = PackageDraft::text($prefs['special_requests'] ?? 'None', 500) ?: 'None';
 
         $perPerson = intdiv($budget, max(1, (int)$travelers));
 
@@ -141,21 +147,13 @@ MSG;
         }
 
         $package = $this->ai->parseJson($result['content']);
-        // FIX (Round 113, F12): previously any truthy parsed JSON was
-        // accepted as-is, even if the model returned valid-but-wrong-shaped
-        // JSON (e.g. an error object, or a package missing its name/price).
-        // savePackage() and every known caller of generate() assume
-        // 'package_name' and a numeric 'pricing.total' exist -- require both
-        // before trusting the AI's output, same "validate before use"
-        // pattern already added to BudgetOptimizer::optimizeBudget() this
-        // round (F11).
-        if (!$package
-            || empty($package['package_name'])
-            || !isset($package['pricing']['total'])
-            || !is_numeric($package['pricing']['total'])
-        ) {
+        // Validate and normalise in code (PackageDraft): shape, request-owned fields (days/travellers/start date), totals recomputed
+        // from the cost lines, plain-text fields, capped lists. The result is always labelled an AI draft, not bookable, price = suggestion.
+        $checked = is_array($package) ? PackageDraft::validate($package, $prefs) : ['ok' => false];
+        if (empty($checked['ok'])) {
             return $this->fallbackPackage($prefs);
         }
+        $package = $checked['package'];
 
         // Save the generated package to database
         $packageId = $this->savePackage($package, $email);
@@ -217,37 +215,7 @@ MSG;
     }
 
     private function fallbackPackage(array $prefs): array {
-        $budget    = $prefs['budget'] ?? 30000;
-        $travelers = max(1, (int)($prefs['travelers'] ?? 2));
-        $days      = $prefs['duration'] ?? 5;
-
-        // FIX (Round 108, AI-upgrade audit): this hardcoded placeholder used to
-        // claim 'is_ai_generated' => true — the exact same flag the REAL
-        // Gemini-generated package sets on success (see generate() above,
-        // line ~140). That's a Rule 3/7 honesty bug: a static template with
-        // three generic bullet points was being labeled as AI output. No
-        // frontend page currently reads this field (grepped the full
-        // codebase — zero call sites), so flipping it to false changes no
-        // visible behavior today, but it makes the field trustworthy the
-        // moment a UI does start showing an "AI Generated" badge from it.
-        return [
-            'package_name'           => 'Custom Travel Package',
-            'tagline'                => 'A personalized journey just for you',
-            'destination'            => $prefs['destination'] ?? 'Bangladesh',
-            'secondary_destinations' => [],
-            'duration'               => $days,
-            'travelers'              => $travelers,
-            'travel_style'           => $prefs['travel_type'] ?? 'leisure',
-            'pricing' => [
-                'total'      => $budget,
-                'per_person' => intdiv($budget, $travelers),
-            ],
-            'highlights' => ['Explore local culture', 'Enjoy scenic views', 'Taste local cuisine'],
-            'best_for'   => 'All travelers',
-            'ai_reasoning' => 'AI package generation temporarily unavailable. This is a placeholder package.',
-            'eco_score'  => 70,
-            'is_ai_generated' => false,
-            'ai_package_id'   => 0,
-        ];
+        // No invented package or price: an honest, clearly-labelled placeholder (see PackageDraft::placeholder).
+        return PackageDraft::placeholder($prefs);
     }
 }

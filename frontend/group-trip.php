@@ -106,11 +106,16 @@ $itinerary = tms_get_group_itinerary($dbh, $groupId);
 ?>
 <!DOCTYPE HTML><html lang="<?php echo htmlspecialchars(tms_active_language(), ENT_QUOTES, 'UTF-8'); ?>"><head>
 <link rel="manifest" href="manifest.json">
-<meta name="theme-color" content="#0B2B3C">
+<meta name="theme-color" content="#104B3A">
+<link rel="apple-touch-icon" href="images/icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="TMS">
+<meta name="mobile-web-app-capable" content="yes">
 <title>TMS | <?php echo htmlspecialchars($group->Name, ENT_QUOTES, 'UTF-8'); ?></title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <link href="css/bootstrap.min2.css" rel='stylesheet'/>
-<link href="css/style.min.css" rel='stylesheet'/>
+<link href="<?php echo tms_asset_ver('css/style.min.css'); ?>" rel='stylesheet'/>
 <link href="css/font-awesome.min2.css" rel="stylesheet">
 <link href="<?php echo tms_asset_ver('css/modern-theme.css'); ?>" rel="stylesheet">
 <script src="js/jquery-1.12.0.min.js" defer></script>
@@ -123,7 +128,7 @@ $itinerary = tms_get_group_itinerary($dbh, $groupId);
 .balance-neg{color:#e74c3c;font-weight:700;}
 .gt-comment{padding:10px 0;border-bottom:1px solid #eef1f6;font-size:14px;}
 .gt-comment:last-child{border-bottom:none;}
-.gt-comment-meta{color:#94a3b8;font-size:12px;margin-bottom:2px;}
+.gt-comment-meta{color:var(--text-muted);font-size:12px;margin-bottom:2px;}
 .gt-comment-text{white-space:pre-wrap;word-break:break-word;}
 .gt-poll{padding:14px 0;border-bottom:1px solid #eef1f6;}
 .gt-poll:last-child{border-bottom:none;}
@@ -133,12 +138,12 @@ $itinerary = tms_get_group_itinerary($dbh, $groupId);
 .gt-poll-bar-bg{background:#eef1f6;border-radius:6px;height:8px;overflow:hidden;}
 .gt-poll-bar-fill{background:var(--primary);height:100%;}
 .gt-poll-mine{outline:2px solid var(--primary);outline-offset:2px;border-radius:6px;}
-.gt-poll-meta{color:#94a3b8;font-size:12px;margin-top:6px;}
+.gt-poll-meta{color:var(--text-muted);font-size:12px;margin-top:6px;}
 .gt-itin{padding:10px 0;border-bottom:1px solid #eef1f6;font-size:14px;display:flex;gap:10px;align-items:baseline;}
 .gt-itin:last-child{border-bottom:none;}
 .gt-itin-day{flex-shrink:0;font-weight:700;color:var(--primary);min-width:70px;}
 .gt-itin-activity{flex-grow:1;}
-.gt-itin-meta{color:#94a3b8;font-size:12px;}
+.gt-itin-meta{color:var(--text-muted);font-size:12px;}
 </style>
 </head><body>
 <?php include('backend/header.php'); ?>
@@ -161,14 +166,14 @@ $itinerary = tms_get_group_itinerary($dbh, $groupId);
       <input type="email" id="member_email" name="member_email" class="form-control" placeholder="friend@email.com" required style="width:240px;">
       <button type="submit" class="btn btn-primary"><i class="fa fa-user-plus"></i> Add Member</button>
     </form>
-    <p style="font-size:12px;color:#888;">They must already have a TMS account.</p>
+    <p style="font-size:12px;color:var(--text-muted);">They must already have a TMS account.</p>
     <?php endif; ?>
   </div>
 
   <div class="gt-box">
     <h4>Itinerary</h4>
-    <p style="font-size:12px;color:#888;margin-top:-6px;">Anyone in the group can add a planned activity. Kept simple and chronological -- no fixed dates required.</p>
-    <?php if (empty($itinerary)): ?><p style="color:#888;">No itinerary items yet — add the first one below.</p><?php endif; ?>
+    <p style="font-size:12px;color:var(--text-muted);margin-top:-6px;">Anyone in the group can add a planned activity. Kept simple and chronological -- no fixed dates required.</p>
+    <?php if (empty($itinerary)): ?><p style="color:var(--text-muted);">No itinerary items yet — add the first one below.</p><?php endif; ?>
     <?php foreach ($itinerary as $item): ?>
       <div class="gt-itin">
         <?php if ($item['day_label']): ?><span class="gt-itin-day"><?php echo htmlspecialchars($item['day_label'], ENT_QUOTES, 'UTF-8'); ?></span><?php endif; ?>
@@ -199,16 +204,16 @@ $itinerary = tms_get_group_itinerary($dbh, $groupId);
       <input type="number" step="0.01" min="0.01" id="expense_amount" name="amount" class="form-control" placeholder="Amount" required style="width:120px;">
       <button type="submit" class="btn btn-primary"><i class="fa fa-plus"></i> Add Expense</button>
     </form>
-    <?php if (empty($expenses)): ?><p style="color:#888;">No shared expenses logged yet.</p><?php endif; ?>
+    <?php if (empty($expenses)): ?><p style="color:var(--text-muted);">No shared expenses logged yet.</p><?php endif; ?>
     <?php foreach ($expenses as $e): ?>
-      <div class="gt-row"><span><?php echo htmlspecialchars($e->Description, ENT_QUOTES, 'UTF-8'); ?> <small style="color:#aaa;">paid by <?php echo htmlspecialchars($e->PaidByEmail, ENT_QUOTES, 'UTF-8'); ?></small></span><span><?php echo tms_currency($e->AmountMinor / 100); ?></span></div>
+      <div class="gt-row"><span><?php echo htmlspecialchars($e->Description, ENT_QUOTES, 'UTF-8'); ?> <small style="color:var(--text-muted);">paid by <?php echo htmlspecialchars($e->PaidByEmail, ENT_QUOTES, 'UTF-8'); ?></small></span><span><?php echo tms_currency($e->AmountMinor / 100); ?></span></div>
     <?php endforeach; ?>
     <div class="gt-row" style="font-weight:800;"><span>Total spent</span><span><?php echo tms_currency($settlement['total_minor'] / 100); ?></span></div>
   </div>
 
   <div class="gt-box">
     <h4>Who owes whom</h4>
-    <p style="color:#888;font-size:13px;">Split evenly across <?php echo count($settlement['members']); ?> member(s). Every amount below is exact — no rounding drift, any odd cent is assigned to specific members rather than lost.</p>
+    <p style="color:var(--text-muted);font-size:13px;">Split evenly across <?php echo count($settlement['members']); ?> member(s). Every amount below is exact — no rounding drift, any odd cent is assigned to specific members rather than lost.</p>
     <?php foreach ($settlement['balance'] as $memberEmail => $bal): ?>
       <div class="gt-row">
         <span><?php echo htmlspecialchars($memberEmail, ENT_QUOTES, 'UTF-8'); ?></span>
@@ -227,8 +232,8 @@ $itinerary = tms_get_group_itinerary($dbh, $groupId);
 
   <div class="gt-box">
     <h4>Polls</h4>
-    <p style="font-size:12px;color:#888;margin-top:-6px;">Anyone in the group can start a poll (e.g. "which date works?"). One vote per person -- voting again just moves your vote.</p>
-    <?php if (empty($polls)): ?><p style="color:#888;">No polls yet — create one below.</p><?php endif; ?>
+    <p style="font-size:12px;color:var(--text-muted);margin-top:-6px;">Anyone in the group can start a poll (e.g. "which date works?"). One vote per person -- voting again just moves your vote.</p>
+    <?php if (empty($polls)): ?><p style="color:var(--text-muted);">No polls yet — create one below.</p><?php endif; ?>
     <?php foreach ($polls as $poll): ?>
       <div class="gt-poll">
         <div class="gt-poll-q"><?php echo htmlspecialchars($poll['question'], ENT_QUOTES, 'UTF-8'); ?></div>
@@ -270,8 +275,8 @@ $itinerary = tms_get_group_itinerary($dbh, $groupId);
 
   <div class="gt-box">
     <h4>Discussion</h4>
-    <p style="font-size:12px;color:#888;margin-top:-6px;">Visible to everyone in this group -- general discussion, separate from the itinerary and polls above.</p>
-    <?php if (empty($comments)): ?><p style="color:#888;">No comments yet — start the discussion below.</p><?php endif; ?>
+    <p style="font-size:12px;color:var(--text-muted);margin-top:-6px;">Visible to everyone in this group -- general discussion, separate from the itinerary and polls above.</p>
+    <?php if (empty($comments)): ?><p style="color:var(--text-muted);">No comments yet — start the discussion below.</p><?php endif; ?>
     <?php foreach ($comments as $c): ?>
       <div class="gt-comment">
         <div class="gt-comment-meta"><strong><?php echo htmlspecialchars($c->UserEmail, ENT_QUOTES, 'UTF-8'); ?></strong> &middot; <?php echo htmlspecialchars(date('d M Y, g:i A', strtotime($c->CreatedAt)), ENT_QUOTES, 'UTF-8'); ?></div>

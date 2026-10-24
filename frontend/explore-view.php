@@ -1,5 +1,5 @@
 <?php
-session_start();
+require_once __DIR__ . '/../backend/session-boot.php';
 error_reporting(E_ALL); ini_set('display_errors', '0'); ini_set('log_errors', '1');
 include('backend/config.php');
 // LIVE BUG FIX (customer-facing audit): this page is real browsing/
@@ -25,24 +25,28 @@ if ($destName === '' || $lat === null || $lng === null) {
 <html lang="<?php echo htmlspecialchars(tms_active_language(), ENT_QUOTES, 'UTF-8'); ?>">
 <head>
 <link rel="manifest" href="manifest.json">
-<meta name="theme-color" content="#0B2B3C">
+<meta name="theme-color" content="#104B3A">
 <link rel="apple-touch-icon" href="images/icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="TMS">
+<meta name="mobile-web-app-capable" content="yes">
 <title>TMS | Explore — <?php echo htmlspecialchars($destName); ?></title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <link href="css/bootstrap.min2.css" rel='stylesheet' type='text/css' />
-<link href="css/style.min.css" rel='stylesheet' type='text/css' />
+<link href="<?php echo tms_asset_ver('css/style.min.css'); ?>" rel='stylesheet' type='text/css' />
 <link href="css/font-awesome.min2.css" rel="stylesheet">
 <link href="<?php echo tms_asset_ver('css/modern-theme.css'); ?>" rel="stylesheet">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700;9..144,800&family=Manrope:wght@400;500;600;700;800&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
 <link href="css/animate.css" rel="stylesheet">
-<link href="css/explore.css" rel="stylesheet">
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<link href="<?php echo tms_asset_ver('css/explore.css'); ?>" rel="stylesheet">
+<link rel="stylesheet" href="js/vendor/leaflet/leaflet.css" />
 <script src="js/jquery-1.12.0.min.js" defer></script>
 <script src="js/bootstrap.min.js" defer></script>
 <script src="js/wow.min.js" defer></script>
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="js/vendor/leaflet/leaflet.js"></script>
+<script src="<?php echo tms_asset_ver('js/tms-map.js'); ?>"></script>
 </head>
 <body data-explore-dest="<?php echo htmlspecialchars($destName, ENT_QUOTES); ?>">
 <?php include('backend/header.php'); ?>
@@ -71,6 +75,25 @@ if ($destName === '' || $lat === null || $lng === null) {
 
         <!-- Overview Panel -->
         <div class="explore-panel active" id="panel-overview">
+            <!-- NEW (Round 118, master prompt item 6 -- Destination System /
+                 Rule 3 honesty): the overview/history/best-time-to-visit/
+                 local-culture/estimated-costs content below is generated
+                 per-destination by an AI call (ExploreService::
+                 getDestinationInfo()), cached for 14 days -- it was
+                 previously shown with no indication of this at all, unlike
+                 bd-guide.php's own researched-content disclosure banner for
+                 its 12 curated Bangladesh destinations. Reusing that same
+                 .tms-sample-banner convention here rather than inventing a
+                 new one. Real, live data (weather, nearby places, local
+                 package/hotel/activity inventory) on the other tabs is
+                 unaffected -- this banner only covers this Overview tab. -->
+            <div class="tms-sample-banner" style="margin-bottom:16px;">
+                <i class="fa fa-robot"></i>
+                When an AI summary is shown it is generated for quick orientation, not sourced from a licensed travel database
+                (a note says so when only verified catalogue information is available) --
+                treat costs, culture notes, and history as estimates and verify anything time-sensitive (prices,
+                customs, safety) with an official source before relying on it.
+            </div>
             <div id="overviewContent">
                 <div class="explore-loading"><i class="fa fa-spinner fa-spin spin"></i>Our AI travel researcher is gathering information about <?php echo htmlspecialchars($destName); ?>...</div>
             </div>
@@ -127,7 +150,8 @@ if ($destName === '' || $lat === null || $lng === null) {
                     <button class="map-cat-btn" data-cat="shopping_mall" onclick="exploreLoadMapCategory('shopping_mall')"><i class="fa fa-shopping-bag"></i> Malls</button>
                     <button class="map-cat-btn" data-cat="tourist_info" onclick="exploreLoadMapCategory('tourist_info')"><i class="fa fa-info-circle"></i> Tourist Info</button>
                 </div>
-                <div id="exploreMap"></div>
+                <div id="mapStatus" class="explore-source" role="status" aria-live="polite"></div>
+                <div id="exploreMap" aria-label="Interactive map"></div>
                 <div class="route-summary" id="routeSummary"></div>
                 <p style="font-size:12px;color:var(--text-muted);margin-top:10px;">
                     <i class="fa fa-map-pin"></i> Colored pins show real nearby places for the category selected above, from live map data. Click "Locate Me" for distance &amp; ETA to <?php echo htmlspecialchars($destName); ?>.
@@ -175,7 +199,7 @@ if ($destName === '' || $lat === null || $lng === null) {
 <?php include('backend/footer.php'); ?>
 <?php include('backend/signin.php'); ?>
 <?php include('backend/write-us.php'); ?>
-<script src="js/explore.js"></script>
+<script src="<?php echo tms_asset_ver('js/explore.js'); ?>"></script>
 <script>window.addEventListener("load",function(){if(typeof WOW!=="undefined")new WOW().init()});</script>
 </body>
 </html>

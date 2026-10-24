@@ -1,5 +1,5 @@
 <?php
-session_start();
+require_once __DIR__ . '/../backend/session-boot.php';
 error_reporting(E_ALL);
 ini_set('display_errors', 0);
 ini_set('log_errors', 1);
@@ -12,7 +12,6 @@ tms_admin_require_role($dbh, ['superadmin', 'finance']);
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>TMS | TMS Admin | Export Reports</title>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Plus+Jakarta+Sans:wght@600;700;800&display=swap" rel="stylesheet">
 <link href="css/font-awesome.min2.css" rel="stylesheet">
 <link href="css/bootstrap.min.css" rel="stylesheet">
 <link href="<?php echo tms_asset_ver('css/admin-v6.css'); ?>" rel="stylesheet">
@@ -37,7 +36,7 @@ tms_admin_require_role($dbh, ['superadmin', 'finance']);
     $reports = [
       ['bookings','list-alt','Bookings Report','All booking records with status and dates','#3F84B1'],
       ['users','user','Users Report','All registered users and their details','#9b59b6'],
-      ['enquiries','envelope','Enquiries Report','All enquiries submitted by visitors','#e67e22'],
+      ['enquiries','envelope','Enquiries Report','All enquiries submitted by visitors','#B45309'],
       ['packages','briefcase','Packages Report','All tour packages with pricing','#27ae60'],
     ];
     foreach ($reports as [$type,$icon,$title,$desc,$color]):

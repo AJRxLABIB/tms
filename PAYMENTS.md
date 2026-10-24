@@ -203,3 +203,13 @@ unexpected.
    `verifyWebhook()`/`normalizeStatus()` need real logic.
 6. Test end-to-end in the provider's own sandbox mode before ever setting
    `*_LIVE=true`.
+
+## Sandbox gating (added in the security pass)
+
+The sandbox "Pay" button marks a booking paid without money moving, so it is
+only honoured when `TMS_ALLOW_SANDBOX_PAYMENTS=true` in `.env`, or the request
+comes from the server itself (loopback `REMOTE_ADDR`, no `X-Forwarded-For`).
+On a public site customers see "online payment is not available yet" and the
+booking stays Pending for manual confirmation. A cancelled booking can no
+longer be set back to confirmed by paying it. Tests: `php tests/payments/run.php`
+(needs your database; creates and removes its own rows).

@@ -1,5 +1,5 @@
 <?php
-session_start();
+require_once __DIR__ . '/../backend/session-boot.php';
 error_reporting(E_ALL);
 ini_set('display_errors', 0);
 ini_set('log_errors', 1);
@@ -13,18 +13,17 @@ tms_admin_require_role($dbh, ['support', 'manager']); // Round 20 RBAC (item 46)
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>TMS | Support Issues</title>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Plus+Jakarta+Sans:wght@600;700;800&display=swap" rel="stylesheet">
 <link href="css/font-awesome.css" rel="stylesheet">
 <link href="css/bootstrap.min.css" rel="stylesheet">
 <link href="<?php echo tms_asset_ver('css/admin-v6.css'); ?>" rel="stylesheet">
 <style>
 .page-title-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;flex-wrap:wrap;gap:12px;}
-.page-title-row h2{font-family:'Plus Jakarta Sans',sans-serif;font-size:22px;font-weight:800;color:#0f172a;margin:0;}
+.page-title-row h2{font-family:'Inter',sans-serif;font-size:22px;font-weight:800;color:var(--text-primary);margin:0;}
 .alert-msg{padding:12px 16px;border-radius:10px;font-size:13.5px;margin-bottom:18px;display:flex;align-items:center;gap:8px;}
 .alert-success{background:#d1fae5;color:#065f46;border:1px solid #a7f3d0;}
 .alert-error{background:#fee2e2;color:#991b1b;border:1px solid #fca5a5;}
 .action-btn{display:inline-flex;align-items:center;gap:5px;padding:5px 10px;border-radius:6px;font-size:12px;font-weight:500;border:none;cursor:pointer;text-decoration:none;transition:all .15s;}
-.btn-edit{background:#dbeafe;color:#1e40af;}.btn-edit:hover{background:#bfdbfe;}
+.btn-edit{background:#DCF1E5;color:#104B3A;}.btn-edit:hover{background:#B8E4C9;}
 .btn-delete{background:#fee2e2;color:#991b1b;}.btn-delete:hover{background:#fecaca;}
 .btn-approve{background:#d1fae5;color:#065f46;}.btn-approve:hover{background:#a7f3d0;}
 </style>
@@ -36,7 +35,7 @@ tms_admin_require_role($dbh, ['support', 'manager']); // Round 20 RBAC (item 46)
 <?php include('includes/header.php'); ?>
 <div class="tms-content">
 <div class="page-title-row">
-  <h2><i class="fa fa-exclamation-triangle" style="color:#1d4ed8;margin-right:10px;"></i>Support Issues</h2>
+  <h2><i class="fa fa-exclamation-triangle" style="color:#176B50;margin-right:10px;"></i>Support Issues</h2>
 </div>
 
 
@@ -86,7 +85,7 @@ try{
   <thead><tr><th>#</th><th>User</th><th>Issue</th><th>Message</th><th>Status</th><th>Date</th><th>Actions</th></tr></thead>
   <tbody>
   <?php if(empty($issues)): ?>
-  <tr><td colspan="7" style="text-align:center;padding:40px;color:#94a3b8;">No support issues reported.</td></tr>
+  <tr><td colspan="7" style="text-align:center;padding:40px;color:var(--text-muted);">No support issues reported.</td></tr>
   <?php else: $i=1; foreach($issues as $is): ?>
   <?php $answered = !empty($is->AdminRemark); ?>
   <tr>
@@ -95,7 +94,7 @@ try{
     <td><?=htmlspecialchars($is->Issue??'—')?></td>
     <td style="max-width:220px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="<?=htmlspecialchars($is->Description??'')?>"><?=htmlspecialchars(substr($is->Description??'',0,80))?></td>
     <td><span style="padding:3px 10px;border-radius:20px;font-size:12px;font-weight:600;background:<?=$answered?'#d1fae5':'#fef3c7'?>;color:<?=$answered?'#065f46':'#92400e'?>"><?=$answered?'Answered':'Open'?></span>
-      <?php if($answered): ?><div style="font-size:11px;color:#94a3b8;margin-top:4px;max-width:200px;">"<?=htmlspecialchars(substr($is->AdminRemark,0,60))?><?=strlen($is->AdminRemark)>60?'…':''?>"</div><?php endif; ?>
+      <?php if($answered): ?><div style="font-size:11px;color:var(--text-muted);margin-top:4px;max-width:200px;">"<?=htmlspecialchars(substr($is->AdminRemark,0,60))?><?=strlen($is->AdminRemark)>60?'…':''?>"</div><?php endif; ?>
     </td>
     <td><?=htmlspecialchars($is->PostingDate??'—')?></td>
     <td style="display:flex;gap:5px;">

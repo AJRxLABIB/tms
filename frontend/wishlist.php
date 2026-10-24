@@ -1,5 +1,5 @@
 <?php
-session_start();
+require_once __DIR__ . '/../backend/session-boot.php';
 error_reporting(E_ALL); ini_set('display_errors', '0'); ini_set('log_errors', '1');
 include('backend/config.php');
 tms_require_user();
@@ -44,17 +44,20 @@ $wishes = $q->fetchAll(PDO::FETCH_OBJ);
 ?>
 <!DOCTYPE HTML><html lang="<?php echo htmlspecialchars(tms_active_language(), ENT_QUOTES, 'UTF-8'); ?>"><head>
 <link rel="manifest" href="manifest.json">
-<meta name="theme-color" content="#0B2B3C">
+<meta name="theme-color" content="#104B3A">
 <link rel="apple-touch-icon" href="images/icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="TMS">
+<meta name="mobile-web-app-capable" content="yes">
 <title>TMS | My Wishlist</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <link href="css/bootstrap.min2.css" rel='stylesheet'/>
-<link href="css/style.min.css" rel='stylesheet'/>
+<link href="<?php echo tms_asset_ver('css/style.min.css'); ?>" rel='stylesheet'/>
 <link href="css/font-awesome.min2.css" rel="stylesheet">
 <link href="<?php echo tms_asset_ver('css/modern-theme.css'); ?>" rel="stylesheet">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700;9..144,800&family=Manrope:wght@400;500;600;700;800&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
 <script src="js/jquery-1.12.0.min.js" defer></script>
 <script src="js/bootstrap.min.js" defer></script>
 <style>
@@ -63,7 +66,7 @@ $wishes = $q->fetchAll(PDO::FETCH_OBJ);
 .wish-card img{width:100%;height:180px;object-fit:cover;}
 .wish-card-body{padding:16px;}
 .wish-card-body h4{margin:0 0 6px;font-size:16px;font-weight:700;color:#333;}
-.wish-card-body .loc{color:#888;font-size:13px;margin-bottom:8px;}
+.wish-card-body .loc{color:var(--text-muted);font-size:13px;margin-bottom:8px;}
 html[data-theme="dark"] .wish-card-body h4 { color: var(--text) !important; }
 html[data-theme="dark"] .wish-card-body .loc { color: var(--text-muted) !important; }
 .wish-card-body .price{color:var(--secondary);font-weight:700;font-size:18px;}
@@ -86,7 +89,7 @@ html[data-theme="dark"] .wish-card-body .loc { color: var(--text-muted) !importa
 <div class="empty-state">
   <i class="fa fa-heart-o"></i>
   <h3>Your wishlist is empty</h3>
-  <p style="color:#888;">Browse tour packages and click the heart icon to save them here.</p>
+  <p style="color:var(--text-muted);">Browse tour packages and click the heart icon to save them here.</p>
   <a href="package-list.php" class="btn btn-primary btn-lg" style="margin-top:10px;">Browse Packages</a>
 </div>
 <?php else: ?>
@@ -101,7 +104,7 @@ html[data-theme="dark"] .wish-card-body .loc { color: var(--text-muted) !importa
     <div class="wish-card-body">
       <h4><?= htmlspecialchars($p->PackageName,ENT_QUOTES,'UTF-8') ?></h4>
       <div class="loc"><i class="fa fa-map-marker"></i> <?= htmlspecialchars($p->PackageLocation,ENT_QUOTES,'UTF-8') ?></div>
-      <div class="price"><?= tms_currency((float)$p->PackagePrice) ?> <small style="color:#aaa;font-weight:400;font-size:13px;">/ person</small></div>
+      <div class="price"><?= tms_currency((float)$p->PackagePrice) ?> <small style="color:var(--text-muted);font-weight:400;font-size:13px;">/ person</small></div>
       <?php if (!empty($p->PriceAtAdd) && (float)$p->PackagePrice < (float)$p->PriceAtAdd): ?>
         <?php $dropPct = round((($p->PriceAtAdd - $p->PackagePrice) / $p->PriceAtAdd) * 100); ?>
         <div class="price-drop-badge">

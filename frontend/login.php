@@ -13,6 +13,7 @@
  * and the same field names, so either form works correctly.
  */
 require_once 'backend/config.php';
+require_once 'backend/auth/GoogleAuth.php';
 
 // Already logged in
 if (!empty($_SESSION['login'])) {
@@ -20,9 +21,77 @@ if (!empty($_SESSION['login'])) {
     exit;
 }
 
-$error = '';
+if (isset($_GET['cancel_2fa'])) {
+    unset($_SESSION['u2fa_pending'], $_SESSION['u2fa_pending_redirect']);
+    header('location:login.php');
+    exit;
+}
 
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+$error = '';
+if (!empty($_SESSION['login_error'])) { $error = (string)$_SESSION['login_error']; unset($_SESSION['login_error']); }
+
+/**
+ * FEATURE (Round 115 continuation, master prompt item 8 -- Auth & Security
+ * Center): customer-facing 2FA, mirroring the admin login's exact Phase 1c
+ * pattern (admin/index.php) -- a correct password no longer logs the
+ * customer in directly if TwoFAEnabled is set on their account; it stores
+ * their email in $_SESSION['u2fa_pending'] and re-renders this same page
+ * with a TOTP code prompt instead (see the password handler further down,
+ * and the HTML template's $showingTwoFactorPrompt switch). Separate
+ * session key and lockout-bucket prefix from admin's own
+ * ($_SESSION['a2fa_pending'] / 'admin:'+'2fa:') so a customer 2FA attempt
+ * can never collide with or be confused for an admin one.
+ */
+if (isset($_POST['btn-verify-2fa'])) {
+    tms_csrf_validate();
+    $pendingEmail = $_SESSION['u2fa_pending'] ?? '';
+    $code = trim($_POST['totp_code'] ?? '');
+    $ip   = $_SERVER['REMOTE_ADDR'] ?? 'unknown';
+
+    if (!$pendingEmail) {
+        header('location:login.php');
+        exit;
+    }
+
+    $lockoutKey = '2fa-user:' . strtolower($pendingEmail);
+    $waitMinutes = tms_login_lockout_minutes_remaining($dbh, $lockoutKey, $ip);
+    if ($waitMinutes > 0) {
+        $error = "Too many failed attempts. Please try again in {$waitMinutes} minute"
+               . ($waitMinutes === 1 ? '' : 's') . '.';
+    } else {
+        $q = $dbh->prepare("SELECT id, FullName, TwoFASecret FROM tblusers WHERE EmailId=:e AND TwoFAEnabled=1 LIMIT 1");
+        $q->execute([':e' => $pendingEmail]);
+        $row = $q->fetch(PDO::FETCH_OBJ);
+
+        // An authenticator code, or (if the phone is lost) one single-use recovery code. Both share the same lockout bucket.
+        require_once __DIR__ . '/../backend/TwoFactorRecovery.php';
+        $viaRecovery = false;
+        $codeOk = $row && $row->TwoFASecret && tms_totp_verify($row->TwoFASecret, $code);
+        if (!$codeOk && $row && TwoFactorRecovery::looksLikeRecovery($code) && TwoFactorRecovery::consume($dbh, (int)$row->id, $code)) {
+            $codeOk = true; $viaRecovery = true;
+        }
+        if ($codeOk) {
+            if ($viaRecovery) tms_log_system_event($dbh, 'auth', '2fa_recovery_code_used', true, $pendingEmail);
+            tms_clear_login_attempts($dbh, $lockoutKey, $ip);
+            $safeRedirect = $_SESSION['u2fa_pending_redirect'] ?? 'index.php';
+            unset($_SESSION['u2fa_pending'], $_SESSION['u2fa_pending_redirect']);
+            session_regenerate_id(true);
+            $_SESSION['login']    = $pendingEmail;
+            $_SESSION['userid']   = $row->id;
+            $_SESSION['username'] = $row->FullName;
+            header('Location: ' . $safeRedirect);
+            exit;
+        } else {
+            tms_record_failed_login($dbh, $lockoutKey, $ip);
+            $error = 'Invalid or expired code. Please try again.';
+        }
+    }
+}
+
+// Same top-level POST check as before this feature -- just excluding the
+// 2FA-verify submission above, which is also a POST but already fully
+// handled by that block (including its own CSRF check).
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && !isset($_POST['btn-verify-2fa'])) {
     tms_csrf_validate();
 
     // Accept both the standalone page's field names (EmailId/Password) and
@@ -45,7 +114,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                    . ($waitMinutes === 1 ? '' : 's') . '.';
             $user = null;
         } else {
-            $stmt = $dbh->prepare("SELECT id, FullName, Password FROM tblusers WHERE EmailId = ? LIMIT 1");
+            // Defensive (Rule 8): migration 014 may not have run yet on this
+            // deployment -- never let a pending migration break ordinary
+            // password login for every customer.
+            $hasCustomer2fa = tms_customer_2fa_columns_exist($dbh);
+            $userCols = $hasCustomer2fa ? 'id, FullName, Password, TwoFAEnabled, TwoFASecret' : 'id, FullName, Password';
+            $stmt = $dbh->prepare("SELECT {$userCols} FROM tblusers WHERE EmailId = ? LIMIT 1");
             $stmt->execute([$email]);
             $user = $stmt->fetch(PDO::FETCH_OBJ);
         }
@@ -58,17 +132,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         // which accepts a legacy hash and transparently upgrades it to bcrypt.
         if ($user && tms_verify_password($password, $user->Password, (int)$user->id, $dbh)) {
             tms_clear_login_attempts($dbh, $email, $ip);
-            // SECURITY FIX (Section 13 audit): admin/index.php already
-            // regenerates the session ID on successful login to prevent
-            // session fixation (an attacker who gets a victim to use a
-            // session ID the attacker already knows — e.g. via a link
-            // with a pre-set session cookie — can otherwise just wait
-            // for the victim to log in and inherit their authenticated
-            // session). Customer login never did this at all.
-            session_regenerate_id(true);
-            $_SESSION['login']    = $email;
-            $_SESSION['userid']   = $user->id;
-            $_SESSION['username'] = $user->FullName;
             $redirect = $_POST['redirect'] ?? '';
             if (!empty($_SESSION['post_login_redirect'])) {
                 $redirect = $_SESSION['post_login_redirect'];
@@ -78,24 +141,52 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             // app is hosted under) but block open-redirect vectors: a
             // protocol-relative URL ("//evil.com") or any absolute URL
             // ("https://evil.com").
-            $safeRedirect = (is_string($redirect) && $redirect !== ''
-                    && !str_starts_with($redirect, '//') && !str_contains($redirect, '://'))
-                ? $redirect : 'index.php';
-            header('Location: ' . $safeRedirect);
-            exit;
+            $safeRedirect = tms_safe_redirect($redirect);
+
+            if ($hasCustomer2fa && !empty($user->TwoFAEnabled) && !empty($user->TwoFASecret)) {
+                // Password correct, but this account requires a TOTP code
+                // too -- same Phase 1c pattern as admin/index.php. Regenerate
+                // the session ID now (before granting any privileged state)
+                // to close the session-fixation window across the 2FA step,
+                // stash the email + intended redirect, and re-render this
+                // same page with the code prompt instead.
+                session_regenerate_id(true);
+                $_SESSION['u2fa_pending'] = $email;
+                $_SESSION['u2fa_pending_redirect'] = $safeRedirect;
+            } else {
+                // SECURITY FIX (Section 13 audit): admin/index.php already
+                // regenerates the session ID on successful login to prevent
+                // session fixation (an attacker who gets a victim to use a
+                // session ID the attacker already knows — e.g. via a link
+                // with a pre-set session cookie — can otherwise just wait
+                // for the victim to log in and inherit their authenticated
+                // session). Customer login never did this at all.
+                session_regenerate_id(true);
+                $_SESSION['login']    = $email;
+                $_SESSION['userid']   = $user->id;
+                $_SESSION['username'] = $user->FullName;
+                header('Location: ' . $safeRedirect);
+                exit;
+            }
         } else {
             tms_record_failed_login($dbh, $email, $ip);
             $error = 'Invalid email or password. Please try again.';
         }
     }
 }
+
+$showingTwoFactorPrompt = !empty($_SESSION['u2fa_pending']);
 ?>
 <!DOCTYPE html>
 <html lang="<?php echo htmlspecialchars(tms_active_language(), ENT_QUOTES, 'UTF-8'); ?>">
 <head>
 <link rel="manifest" href="manifest.json">
-<meta name="theme-color" content="#0B2B3C">
+<meta name="theme-color" content="#104B3A">
 <link rel="apple-touch-icon" href="images/icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="TMS">
+<meta name="mobile-web-app-capable" content="yes">
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Sign In — TMS AI Travel Copilot</title>
@@ -105,13 +196,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   <link rel="stylesheet" href="<?php echo tms_asset_ver('css/modern-theme.css'); ?>">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700;9..144,800&family=Manrope:wght@400;500;600;700;800&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
   <?php endif; ?>
   <style>
-    body{background:linear-gradient(135deg,rgba(15,32,39,0.82),rgba(32,58,67,0.82),rgba(44,83,100,0.82)),url('images/c1.jpg');background-size:cover;background-position:center;min-height:100vh;display:flex;align-items:center;justify-content:center;font-family:'Segoe UI',sans-serif;padding:20px 0;}
+    body{background:linear-gradient(135deg,#0E3B2D,#104B3A 55%,#176B50);min-height:100vh;display:flex;align-items:center;justify-content:center;font-family:var(--font-body,'Inter',sans-serif);padding:20px 0;}
     .login-wrap{width:100%;max-width:420px;padding:16px;}
     .login-card{background:#fff;border-radius:16px;box-shadow:0 24px 60px rgba(0,0,0,.4);overflow:hidden;}
-    .login-header{background:linear-gradient(135deg,#667eea,#764ba2);padding:28px 32px 22px;text-align:center;color:#fff;}
+    .login-header{background:linear-gradient(135deg,#176B50,#104B3A);padding:28px 32px 22px;text-align:center;color:#fff;}
     .login-header .logo{font-size:26px;font-weight:800;letter-spacing:-1px;}
     .login-header .logo span{opacity:.7;font-size:12px;font-weight:400;display:block;margin-top:2px;}
     .login-header h2{font-size:17px;font-weight:600;margin:10px 0 0;opacity:.9;}
@@ -119,19 +209,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     .form-group{margin-bottom:15px;}
     .form-group label{font-size:11px;font-weight:700;color:#4a5568;text-transform:uppercase;letter-spacing:.5px;margin-bottom:5px;display:block;}
     .input-icon{position:relative;}
-    .input-icon .fi{position:absolute;left:12px;top:50%;transform:translateY(-50%);color:#a0aec0;font-size:13px;pointer-events:none;}
+    .input-icon .fi{position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--text-muted);font-size:13px;pointer-events:none;}
     .input-icon input{padding-left:34px;}
-    .input-icon .eye-btn{position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:none;color:#a0aec0;cursor:pointer;padding:0;font-size:13px;}
-    .form-control{border:2px solid #e2e8f0;border-radius:8px;height:44px;font-size:14px;transition:.2s;}
-    .form-control:focus{border-color:#667eea;box-shadow:0 0 0 3px rgba(102,126,234,.15);outline:none;}
-    .btn-login{background:linear-gradient(135deg,#667eea,#764ba2);color:#fff;border:none;border-radius:8px;height:46px;font-size:15px;font-weight:700;width:100%;transition:.2s;cursor:pointer;}
-    .btn-login:hover{transform:translateY(-1px);box-shadow:0 6px 20px rgba(102,126,234,.4);}
+    .input-icon .eye-btn{position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:none;color:var(--text-muted);cursor:pointer;padding:0;font-size:13px;}
+    .form-control{width:100%;border:2px solid #e2e8f0;border-radius:8px;height:44px;font-size:14px;transition:.2s;}
+    .form-control:focus{border-color:#176B50;box-shadow:0 0 0 3px rgba(23,107,80,.15);outline:none;}
+    .btn-login{background:linear-gradient(135deg,#176B50,#104B3A);color:#fff;border:none;border-radius:8px;height:46px;font-size:15px;font-weight:700;width:100%;transition:.2s;cursor:pointer;}
+    .btn-login:hover{transform:translateY(-1px);box-shadow:0 6px 20px rgba(23,107,80,.4);}
     .btn-login:disabled{opacity:.7;transform:none;}
     .alert{border-radius:8px;font-size:13px;padding:11px 14px;border:none;margin-bottom:16px;}
     .alert-danger{background:#fff5f5;color:#c53030;}
-    .bottom-links{text-align:center;margin-top:18px;font-size:13px;color:#718096;}
-    .bottom-links a{color:#667eea;font-weight:700;text-decoration:none;}
-    .divider{display:flex;align-items:center;gap:12px;margin:18px 0;color:#cbd5e0;font-size:12px;}
+    .bottom-links{text-align:center;margin-top:18px;font-size:13px;color:var(--text-muted);}
+    .bottom-links a{color:#176B50;font-weight:700;text-decoration:none;}
+    .divider{display:flex;align-items:center;gap:12px;margin:18px 0;color:#5F6D65;font-size:12px;}
     .divider::before,.divider::after{content:'';flex:1;height:1px;background:#e2e8f0;}
   </style>
 </head>
@@ -151,6 +241,33 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         <div class="alert alert-danger"><i class="fa fa-exclamation-circle"></i> <?= htmlspecialchars($error) ?></div>
       <?php endif; ?>
 
+      <?php if ($showingTwoFactorPrompt): ?>
+      <!-- FEATURE (Round 115 continuation, master prompt item 8): the
+           customer's password was already correct -- this second form only
+           ever appears after that, per u2fa_pending being set server-side.
+           Mirrors admin/index.php's own 2FA-prompt template. -->
+      <form method="POST" action="login.php" id="twoFactorForm">
+        <?php tms_csrf_field(); ?>
+        <p style="font-size:13px;color:var(--text-muted);margin-bottom:16px;">
+          <i class="fa fa-shield"></i> Enter the 6-digit code from your authenticator app, or one of your recovery codes.
+        </p>
+        <div class="form-group">
+          <label for="totpCodeField">Authentication Code</label>
+          <div class="input-icon">
+            <i class="fa fa-key fi"></i>
+            <input type="text" name="totp_code" id="totpCodeField" class="form-control"
+                   inputmode="text" maxlength="12" autocapitalize="characters" spellcheck="false"
+                   placeholder="123456 or XXXXX-XXXXX" required autofocus autocomplete="one-time-code">
+          </div>
+        </div>
+        <button type="submit" name="btn-verify-2fa" class="btn-login mt-1">
+          <i class="fa fa-check"></i> Verify &amp; Sign In
+        </button>
+      </form>
+      <div class="bottom-links" style="margin-top:8px;">
+        <a href="login.php?cancel_2fa=1"><i class="fa fa-arrow-left"></i> Back to sign in</a>
+      </div>
+      <?php else: ?>
       <form method="POST" action="login.php" id="loginForm">
         <?php tms_csrf_field(); ?>
 
@@ -183,14 +300,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         </button>
       </form>
 
+      <?php echo GoogleAuth::button((string)($_GET['redirect'] ?? ($_SESSION['post_login_redirect'] ?? ''))); ?>
       <div class="divider">or</div>
 
       <div class="bottom-links">
         Don't have an account? <a href="register.php">Create Account</a>
       </div>
       <div class="bottom-links" style="margin-top:8px;">
-        <a href="admin/index.php"><i class="fa fa-shield"></i> Admin Login</a>
       </div>
+      <?php endif; ?>
 
     </div>
   </div>
@@ -209,11 +327,17 @@ function togglePass() {
   // kept in sync with what the button actually does next.
   if (btn) btn.setAttribute('aria-label', f.type === 'password' ? 'Show password' : 'Hide password');
 }
-document.getElementById('loginForm').addEventListener('submit', function() {
-  var btn = document.getElementById('loginBtn');
-  btn.disabled = true;
-  btn.innerHTML = '<i class="fa fa-spinner fa-spin"></i> Signing in…';
-});
+// FEATURE (Round 115 continuation): the 2FA code form doesn't have
+// #loginForm/#loginBtn at all when it's the one shown -- guard rather
+// than assume the password form is always in the DOM.
+var tmsLoginForm = document.getElementById('loginForm');
+if (tmsLoginForm) {
+  tmsLoginForm.addEventListener('submit', function() {
+    var btn = document.getElementById('loginBtn');
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fa fa-spinner fa-spin"></i> Signing in…';
+  });
+}
 </script>
 
 </body>

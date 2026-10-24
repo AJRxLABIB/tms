@@ -1,0 +1,11 @@
+# Defense in depth: package images must never run as scripts, even if a bad file got through validation.
+<FilesMatch "(?i)\.(php[0-9s]?|phtml|phar|pl|py|cgi|sh|exe)$">
+    <IfModule mod_authz_core.c>
+        Require all denied
+    </IfModule>
+    <IfModule !mod_authz_core.c>
+        Order allow,deny
+        Deny from all
+    </IfModule>
+</FilesMatch>
+Options -ExecCGI

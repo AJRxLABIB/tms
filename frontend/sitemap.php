@@ -20,9 +20,12 @@ $scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' :
 $host   = $_SERVER['HTTP_HOST'] ?? 'localhost';
 $base   = $scheme . '://' . $host . rtrim(dirname($_SERVER['SCRIPT_NAME']), '/');
 
-function tms_sitemap_url(string $loc, string $changefreq = 'weekly', float $priority = 0.6): string {
+function tms_sitemap_url(string $loc, string $changefreq = 'weekly', float $priority = 0.6, ?string $lastmod = null): string {
+    // lastmod only from a real stored timestamp (W3C date); never "now".
+    $lm = ($lastmod !== null && preg_match('/^(\d{4}-\d{2}-\d{2})/', $lastmod, $m) && $m[1] !== '0000-00-00') ? "    <lastmod>{$m[1]}</lastmod>\n" : '';
     return "  <url>\n"
         . "    <loc>" . htmlspecialchars($loc, ENT_QUOTES, 'UTF-8') . "</loc>\n"
+        . $lm
         . "    <changefreq>$changefreq</changefreq>\n"
         . "    <priority>" . number_format($priority, 1) . "</priority>\n"
         . "  </url>\n";
@@ -42,6 +45,7 @@ $staticPages = [
     ['blog.php', 'daily', 0.7],
     ['budget-planner.php', 'weekly', 0.5],
     ['transport-compare.php', 'weekly', 0.5],
+    ['bd-guide.php', 'monthly', 0.6],
     ['custom-trip.php', 'weekly', 0.5],
     ['ai-recommend.php', 'weekly', 0.6],
     ['ai-planner.php', 'weekly', 0.6],
@@ -67,17 +71,25 @@ try {
 
 // Tour packages
 try {
-    $pkgs = $dbh->query("SELECT PackageId FROM tbltourpackages ORDER BY PackageId DESC")->fetchAll(PDO::FETCH_COLUMN);
-    foreach ($pkgs as $pid) {
-        echo tms_sitemap_url("$base/package-details.php?pkgid=" . (int)$pid, 'weekly', 0.8);
+    try {
+        $pkgs = $dbh->query("SELECT PackageId, COALESCE(UpdationDate, Creationdate) AS lm FROM tbltourpackages WHERE " . TMS_PKG_PUBLIC_SQL . " ORDER BY PackageId DESC")->fetchAll(PDO::FETCH_NUM);
+    } catch (Exception $e) { // older schema without the date columns: ids only
+        $pkgs = array_map(fn($i) => [$i, null], $dbh->query("SELECT PackageId FROM tbltourpackages WHERE " . TMS_PKG_PUBLIC_SQL . " ORDER BY PackageId DESC")->fetchAll(PDO::FETCH_COLUMN));
+    }
+    foreach ($pkgs as [$pid, $lm]) {
+        echo tms_sitemap_url("$base/package-details.php?pkgid=" . (int)$pid, 'weekly', 0.8, $lm);
     }
 } catch (Exception $e) { /* skip quietly */ }
 
 // Blog posts
 try {
-    $posts = $dbh->query("SELECT id FROM tblblog ORDER BY id DESC")->fetchAll(PDO::FETCH_COLUMN);
-    foreach ($posts as $bid) {
-        echo tms_sitemap_url("$base/blog-post.php?id=" . (int)$bid, 'monthly', 0.6);
+    try {
+        $posts = $dbh->query("SELECT id, COALESCE(UpdatedAt, CreatedAt) FROM tblblog ORDER BY id DESC")->fetchAll(PDO::FETCH_NUM);
+    } catch (Exception $e) { // table without the date columns: ids only
+        $posts = array_map(fn($i) => [$i, null], $dbh->query("SELECT id FROM tblblog ORDER BY id DESC")->fetchAll(PDO::FETCH_COLUMN));
+    }
+    foreach ($posts as [$bid, $lm]) {
+        echo tms_sitemap_url("$base/blog-post.php?id=" . (int)$bid, 'monthly', 0.6, $lm);
     }
 } catch (Exception $e) { /* skip quietly */ }
 

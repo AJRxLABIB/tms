@@ -1,0 +1,9 @@
+# Command-line / developer material: never served over HTTP. (Most scripts also check PHP_SAPI, but the manual
+# diagnostics under tests/ do not, so the web server must refuse them outright.)
+<IfModule mod_authz_core.c>
+    Require all denied
+</IfModule>
+<IfModule !mod_authz_core.c>
+    Order allow,deny
+    Deny from all
+</IfModule>

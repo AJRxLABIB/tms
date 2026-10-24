@@ -46,7 +46,7 @@ label{
     font-family: 'Oswald', sans-serif;
 }
 .logo span {
-    color:#34ad00;
+    color:#176B50;
 }
 i.fa.fa-home {
     font-size: 24px;
@@ -153,7 +153,7 @@ i.fa.fa-lock {
 .bann-info h2 {
     font-size: 26px;
     margin-bottom: 30px;
-    color: #34ad00;
+    color: #176B50;
     font-weight: 700;
 }
 .bann-info {
@@ -211,7 +211,7 @@ button.seabtn {
 	 text-indent: 0;
     padding: 6px 20px;
     color: #fff;
-    background-color:#34ad00;
+    background-color:#176B50;
     border: 0;
     border-radius: 2px;
     -webkit-transition: all .2s;
@@ -230,7 +230,7 @@ button.seabtn:focus,button.seabtn:hover{
 .bann-info1 h3 {
     font-size: 2.1em;
     font-weight: 700;
-    color: #34ad00;
+    color: #176B50;
     text-align: center;
     margin-top: 25px;
 }
@@ -267,7 +267,7 @@ i.fa.fa-mobile  {
 }
 .rupes h3 {
     font-size: 20px;
-    color: #34ad00;
+    color: #176B50;
 	 font-weight: 700;
 }
 .rupes h4 {
@@ -279,7 +279,7 @@ i.fa.fa-mobile  {
     color: #000000;
 }
 .rupes h4 a:hover{
-    color:#34ad00;
+    color:#176B50;
 }
 .rupes p{
     font-size: 15px;
@@ -295,7 +295,7 @@ a.learn{
     text-indent: 0;
     padding: 6px 20px;
     color: #fff;
-    background-color: #34ad00;
+    background-color: #176B50;
     border: 0;
     border-radius: 2px;
     -webkit-transition: all .2s;
@@ -329,7 +329,7 @@ a.learn:focus,a.learn:hover {
 }
 i.fa.fa-map-marker {
     font-size: 3em;
-    color: #34ad00;
+    color: #176B50;
 }
 .rup-left a {
     display: inline-block;
@@ -357,7 +357,7 @@ i.fa.fa-truck,i.fa.fa-user,i.fa.fa-ticket {
 .routes h3 {
     font-size: 2em;
     font-weight: 700;
-    color: #34ad00;
+    color: #176B50;
 }
 .routes p {
     font-size: 1.2em;
@@ -372,7 +372,7 @@ i.fa.fa-truck,i.fa.fa-user,i.fa.fa-ticket {
 .holiday h3 {
     font-size: 2em;
     font-weight: 700;
-    color: #34ad00;
+    color: #176B50;
 }
 .holiday p {
     font-size: 1.2em;
@@ -398,7 +398,7 @@ i.fa.fa-truck,i.fa.fa-user,i.fa.fa-ticket {
 }
 .footer-top h3 {
     font-size: 1.7em;
-    color: #34ad00;
+    color: #176B50;
     margin-bottom: 1em;
     font-weight: 700;
 }
@@ -438,7 +438,7 @@ i.fa.fa-truck,i.fa.fa-user,i.fa.fa-ticket {
     color:#000000;
 }
 .copy-right {
-    background:#34ad00;
+    background:#176B50;
     text-align: center;
     padding: 0.5em 0;
 }
@@ -473,7 +473,7 @@ i.fa.fa-truck,i.fa.fa-user,i.fa.fa-ticket {
 }
 .bus-tp {
     padding: 0.5em;
-    background: #34ad00;
+    background: #176B50;
 }
 .bus-btm li {
     float: left;
@@ -552,13 +552,13 @@ li.fare {
 .bus-midd h5 {
     font-weight: 700;
     font-size: 20px;
-    color: #34ad00;
+    color: #176B50;
 }
 a.view {
     padding: 6px 18px;
     font-weight: 700;
     color: #fff;
-    background-color: #34ad00;
+    background-color: #176B50;
     border: 0;
     font-size: 13px;
     border-radius: 2px;
@@ -590,13 +590,13 @@ ul.first {
 }
 .about h2 {
     font-size: 2.5em;
-    color: #34ad00;
+    color: #176B50;
     margin-bottom: 1em;
     font-weight: 700;
 }
 .about h3 {
     font-size: 2.2em;
-    color: #34ad00;
+    color: #176B50;
     margin-bottom: 1em;
     font-weight: 700;
 }
@@ -617,7 +617,7 @@ ul.first {
 }
 .about h6 {
     font-size: 1em;
-    color: #34ad00;
+    color: #176B50;
     text-align:right;
 }
 .ab-tp {
@@ -633,7 +633,7 @@ ul.first {
     margin: 0em 0em 0.5em 0em;
 }
 .ab-rt ul li a:hover{
-  color: #34ad00;
+  color: #176B50;
   text-decoration:none;
 }
 .ab-rt li{
@@ -647,7 +647,7 @@ ul.first {
 .travel h3 {
     font-size: 1.7em;
     font-weight: 700;
-    color: #34ad00;
+    color: #176B50;
 }
 .travel p {
     font-size: 15px;
@@ -683,7 +683,7 @@ li.dat {
     font-size: 19px;
     margin-bottom: 10px;
     font-weight: 700;
-    color: #34ad00;
+    color: #176B50;
 }
 ul.rou-secnd p {
     margin: 0;
@@ -696,7 +696,7 @@ a.det {
     padding: 6px 18px;
     font-weight: 700;
     color: #fff;
-    background-color: #34ad00;
+    background-color: #176B50;
     border: 0;
     font-size: 13px;
     border-radius: 2px;
@@ -706,7 +706,7 @@ a.det {
     display: inline-block;
 }
 .tra-top h6 a {
-    color: #34ad00;
+    color: #176B50;
     font-size: 16px;
     font-weight: 700;
     text-decoration: underline;
@@ -744,7 +744,7 @@ a.off{
     font-size: 14px;
     padding: 8px 18px;
     text-decoration: none;
-	background:#34ad00;
+	background:#176B50;
 }
 a.off:hover{
 	background:#1f8dd6;
@@ -804,7 +804,7 @@ i.fa.fa-gift{
 .hotels-top h3{
     font-size: 26px;
     margin-bottom: 50px;
-    color: #34ad00;
+    color: #176B50;
     font-weight: 700;
 	text-align:center;
 }
@@ -924,7 +924,7 @@ i.fa.fa-gift{
 /*-- terms --*/
 .terms h3 {
     font-size: 1.5em;
-    color: #34ad00;
+    color: #176B50;
     font-weight: 700;
 }
 .terms h6 {
@@ -975,7 +975,7 @@ i.fa.fa-gift{
 a.regist {
     padding: 10px 32px!important;
     color: #fff;
-    background-color: #34ad00;
+    background-color: #176B50;
     border: 0;
     border-radius: 2px;
     -webkit-transition: all .2s;
@@ -1002,7 +1002,7 @@ a.regist:hover{
 }
 .agent-left input[type="submit"] {
     outline: none;
-    background: #34ad00;
+    background: #176B50;
     transition: 0.5s all;
     -webkit-transition: 0.5s all;
     -moz-transition: 0.5s all;
@@ -1036,7 +1036,7 @@ select {
 }
 .agent h3 {
     font-size: 1.5em;
-    color: #34ad00;
+    color: #176B50;
     font-weight: 700;
     margin-top: 1em;
 }
@@ -1053,7 +1053,7 @@ select {
 }
 .contact h3 {
     font-size: 2em;
-    color: #34ad00;
+    color: #176B50;
     margin-bottom: 1.5em;
     font-weight: 700;
 }
@@ -1109,7 +1109,7 @@ span.glyphicon.glyphicon-eye-open, span.glyphicon.glyphicon-thumbs-up {
     text-align: center;
 }
 .details-middle h3 a {
-    color: #34ad00;
+    color: #176B50;
     text-decoration: none;
 }
 .details-middle {
@@ -1167,7 +1167,7 @@ span.glyphicon.glyphicon-eye-open, span.glyphicon.glyphicon-thumbs-up {
 .room-bottom h3 {
     font-size: 1.8em;
     font-weight: 700;
-    color: #34ad00;
+    color: #176B50;
 }
 .room-bottom {
     padding: 2em 0;
@@ -1175,7 +1175,7 @@ span.glyphicon.glyphicon-eye-open, span.glyphicon.glyphicon-thumbs-up {
 .rom-btm h4 {
     font-size: 1.5em;
     font-weight: 700;
-    color: #34ad00;
+    color: #176B50;
 }
 .rom-btm p {
     font-size: 15px;
@@ -1247,7 +1247,7 @@ h4.sing {
     font-size: 1.5em;
     font-weight: 700;
     margin-bottom: 1em;
-    color: #34ad00;
+    color: #176B50;
 }
 .hotel-police p {
     font-size: 15px;
@@ -1279,7 +1279,7 @@ ul.off-mo li {
     margin-bottom: 1em;
 }
 ul.off-mo span {
-    color:#34ad00;
+    color:#176B50;
     font-weight: 700;
     font-size: 1.3em;
 }
@@ -1309,7 +1309,7 @@ ul.off-mo span {
 .selectroom_right h3 {
     font-size: 1.7em;
     font-weight: 600;
-	color:#34ad00;
+	color:#176B50;
 }
 p.dow {
     font-size: 15px;
@@ -1334,7 +1334,7 @@ p.dow {
 }
 .selectroom_right h4 {
     font-size: 1.2em;
-    color: #34ad00;
+    color: #176B50;
     line-height: 1.8em;
 	font-weight:600;
 }
@@ -1437,7 +1437,7 @@ button.subbtn {
     text-indent: 0;
     padding: 6px 20px;
     color: #fff;
-    background-color: #34ad00;
+    background-color: #176B50;
     border: 0;
     border-radius: 2px;
     -webkit-transition: all .2s;
@@ -1475,7 +1475,7 @@ button.subbtn:focus, button.subbtn:hover {
 .tracking h3 {
     font-size: 1.7em;
     font-weight: 600;
-    color: #34ad00;
+    color: #176B50;
     margin-bottom: 1em;
 }
 .tracking-midle {
@@ -1627,12 +1627,12 @@ button.subbtn:focus, button.subbtn:hover {
 .faq h2 {
     font-size: 2em;
     font-weight: 700;
-    color:#34ad00;
+    color:#176B50;
     line-height: 1.8em;
 }
 .faq h3 {
     font-size: 1.7em;
-    color:#34ad00;
+    color:#176B50;
     font-weight: 600;
     margin-bottom: 0.5em;
     line-height: 1.8em;
@@ -1660,7 +1660,7 @@ button.subbtn:focus, button.subbtn:hover {
 }
 .app-right h3 {
     font-size: 28px;
-     color: #34ad00;
+     color: #176B50;
     line-height: 35px;
 }
 .app-right h3 span {
@@ -1690,7 +1690,7 @@ button.subbtn:focus, button.subbtn:hover {
 	text-align: center;
 }
 .banner-text h3{
-  color: #34ad00;
+  color: #176B50;
   font-size: 3em;
   font-weight: 400;
   margin: 0;
@@ -1709,7 +1709,7 @@ button.subbtn:focus, button.subbtn:hover {
 	text-align:center;
 }
 .banner-bottom-grid h4 {
-    color: #34ad00;
+    color: #176B50;
     margin: 2em 0 1em 0;
     font-size: 1.6em;
     font-weight: 700;
@@ -1750,10 +1750,10 @@ button.subbtn:focus, button.subbtn:hover {
   top: 5px;
 }
 .red h4{
-	 color: #34ad00;
+	 color: #176B50;
 }
 .green h4{
-	 color: #34ad00;
+	 color: #176B50;
 }
 ul.callbacks_tabs.callbacks2_tabs a:after{
 	border:2px solid #505b6f;
@@ -1855,7 +1855,7 @@ ul.paging{
 	text-transform:capitalize;
 }
 .popular-right h5 a:hover{
-	 color: #34ad00;
+	 color: #176B50;
 }
 .popular-right p{
 	font-size:14px;
@@ -2486,7 +2486,7 @@ ul.nav.navbar-nav li a {
 .bann-info1 h3 {
     font-size: 1.5em;
     font-weight: 700;
-    color: #34ad00;
+    color: #176B50;
     text-align: center;
     margin-top: 25px;
 }
@@ -4172,7 +4172,7 @@ ul.rout {
 }
 .bus-tp {
     padding: 0.5em 0;
-    background: #34ad00;
+    background: #176B50;
 }
 .bus-tp P {
     font-size: 13px;

@@ -1,5 +1,5 @@
 <?php
-session_start();
+require_once __DIR__ . '/../backend/session-boot.php';
 error_reporting(E_ALL); ini_set('display_errors', '0'); ini_set('log_errors', '1');
 include('backend/config.php');
 // LIVE BUG FIX (customer-facing audit): this page is real browsing/
@@ -13,6 +13,14 @@ include('backend/config.php');
 
 $error = '';
 $msg   = '';
+
+// Round 115 continuation (master prompt item 10 -- Booking Engine "support"
+// sub-requirement): tour-history.php/my-trip.php link here with a
+// pre-filled subject (e.g. "Booking #BK123") so a support enquiry about a
+// specific booking doesn't start from a blank form. GET-only, never trusted
+// as-is for the DB write -- the POST handler above still re-validates
+// $_POST['subject'] independently, this only seeds the visible field value.
+$prefillSubject = tms_clean($_GET['subject'] ?? '');
 
 if (isset($_POST['submit1'])) {
     tms_csrf_validate();
@@ -31,8 +39,8 @@ if (isset($_POST['submit1'])) {
         $error = 'Please enter a valid email address.';
     } elseif (!preg_match('/^\+?[0-9]{7,15}$/', $mobile)) {
         $error = 'Please enter a valid mobile number.';
-    } elseif (strlen($subject) > 200) {
-        $error = 'Subject is too long (max 200 characters).';
+    } elseif (mb_strlen($subject) > 100) {
+        $error = 'Subject is too long (max 100 characters).';
     } else {
         $sql = "INSERT INTO tblenquiry(FullName,EmailId,MobileNumber,Subject,Description)
                 VALUES(:fname,:email,:mobile,:subject,:description)";
@@ -42,7 +50,7 @@ if (isset($_POST['submit1'])) {
         $query->bindParam(':mobile',      $mobile,      PDO::PARAM_STR);
         $query->bindParam(':subject',     $subject,     PDO::PARAM_STR);
         $query->bindParam(':description', $description, PDO::PARAM_STR);
-        $query->execute();
+        try { $query->execute(); } catch (PDOException $e) { error_log('[TMS enquiry] ' . $e->getMessage()); }
 
         if ($dbh->lastInsertId()) {
             $msg = 'Your enquiry has been submitted successfully. We will get back to you soon!';
@@ -56,18 +64,21 @@ if (isset($_POST['submit1'])) {
 <html lang="<?php echo htmlspecialchars(tms_active_language(), ENT_QUOTES, 'UTF-8'); ?>">
 <head>
 <link rel="manifest" href="manifest.json">
-<meta name="theme-color" content="#0B2B3C">
+<meta name="theme-color" content="#104B3A">
 <link rel="apple-touch-icon" href="images/icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="TMS">
+<meta name="mobile-web-app-capable" content="yes">
 <title>TMS | Enquiry</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
 <link href="css/bootstrap.min2.css" rel='stylesheet' type='text/css' />
-<link href="css/style.min.css" rel='stylesheet' type='text/css' />
+<link href="<?php echo tms_asset_ver('css/style.min.css'); ?>" rel='stylesheet' type='text/css' />
 <link href="css/font-awesome.min2.css" rel="stylesheet">
 <link href="<?php echo tms_asset_ver('css/modern-theme.css'); ?>" rel="stylesheet">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700;9..144,800&family=Manrope:wght@400;500;600;700;800&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
 <script src="js/jquery-1.12.0.min.js" defer></script>
 <script src="js/bootstrap.min.js" defer></script>
 <link href="css/animate.css" rel="stylesheet" type="text/css" media="all">
@@ -82,7 +93,7 @@ if (isset($_POST['submit1'])) {
 .enquiry-card .form-control:focus{border-color:var(--secondary);box-shadow:none;outline:none;}
 .btn-enquiry{background:var(--secondary);color:#fff;border:none;border-radius:7px;padding:12px 32px;font-weight:700;font-size:15px;cursor:pointer;transition:.2s;width:100%;margin-top:6px;}
 .btn-enquiry:hover{background:#2d6a97;}
-.char-counter{font-size:12px;color:#aaa;float:right;margin-top:2px;}
+.char-counter{font-size:12px;color:var(--text-muted);float:right;margin-top:2px;}
 html[data-theme="dark"] .enquiry-card .form-group label { color: var(--text-muted) !important; }
 html[data-theme="dark"] .char-counter { color: var(--text-light) !important; }
 </style>
@@ -133,7 +144,7 @@ html[data-theme="dark"] .char-counter { color: var(--text-light) !important; }
                     <label for="enquirySubjectField">Subject *</label>
                     <input type="text" name="subject" id="enquirySubjectField" class="form-control" placeholder="Brief subject"
                            required maxlength="200"
-                           value="<?php echo htmlspecialchars($_POST['subject'] ?? '', ENT_QUOTES,'UTF-8'); ?>">
+                           value="<?php echo htmlspecialchars($_POST['subject'] ?? $prefillSubject, ENT_QUOTES,'UTF-8'); ?>">
                 </div>
                 <div class="form-group">
                     <label for="descField">

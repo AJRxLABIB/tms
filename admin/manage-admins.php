@@ -33,7 +33,7 @@
  *   - Passwords are bcrypt-hashed with tms_hash_password(), same as every
  *     other password in this app
  */
-session_start();
+require_once __DIR__ . '/../backend/session-boot.php';
 error_reporting(E_ALL);
 ini_set('display_errors', 0);
 ini_set('log_errors', 1);
@@ -152,13 +152,12 @@ $admins = $dbh->query("SELECT id, UserName, Role, updationDate FROM admin ORDER 
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>TMS | Manage Admins</title>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Plus+Jakarta+Sans:wght@600;700;800&display=swap" rel="stylesheet">
 <link href="css/font-awesome.css" rel="stylesheet">
 <link href="css/bootstrap.min.css" rel="stylesheet">
 <link href="<?php echo tms_asset_ver('css/admin-v6.css'); ?>" rel="stylesheet">
 <style>
 .page-title-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;flex-wrap:wrap;gap:12px;}
-.page-title-row h2{font-family:'Plus Jakarta Sans',sans-serif;font-size:22px;font-weight:800;color:#0f172a;margin:0;}
+.page-title-row h2{font-family:'Inter',sans-serif;font-size:22px;font-weight:800;color:var(--text-primary);margin:0;}
 .alert-msg{padding:12px 16px;border-radius:10px;font-size:13.5px;margin-bottom:18px;display:flex;align-items:center;gap:8px;}
 .alert-success{background:#d1fae5;color:#065f46;border:1px solid #a7f3d0;}
 .alert-error{background:#fee2e2;color:#991b1b;border:1px solid #fca5a5;}
@@ -166,8 +165,8 @@ $admins = $dbh->query("SELECT id, UserName, Role, updationDate FROM admin ORDER 
 .btn-delete{background:#fee2e2;color:#991b1b;}.btn-delete:hover{background:#fecaca;}
 .role-badge{display:inline-block;padding:3px 10px;border-radius:20px;font-size:11.5px;font-weight:700;letter-spacing:.3px;}
 .role-superadmin{background:#ede9fe;color:#5b21b6;}
-.role-manager{background:#dbeafe;color:#1e40af;}
-.role-booking_manager{background:#dbeafe;color:#1e40af;}
+.role-manager{background:#DCF1E5;color:#104B3A;}
+.role-booking_manager{background:#DCF1E5;color:#104B3A;}
 .role-package_manager{background:#cffafe;color:#0e7490;}
 .role-finance{background:#fef3c7;color:#92400e;}
 .role-support{background:#dcfce7;color:#166534;}
@@ -175,17 +174,17 @@ $admins = $dbh->query("SELECT id, UserName, Role, updationDate FROM admin ORDER 
 .role-ai_manager{background:#ede9fe;color:#6d28d9;}
 .role-operations{background:#e0e7ff;color:#3730a3;}
 .create-card{background:#fff;border:1px solid #e2e8f0;border-radius:14px;padding:22px 24px;margin-bottom:24px;max-width:520px;}
-.create-card h4{font-size:15px;font-weight:700;margin:0 0 16px;color:#0f172a;}
+.create-card h4{font-size:15px;font-weight:700;margin:0 0 16px;color:var(--text-primary);}
 .form-row{margin-bottom:13px;}
 .form-row label{display:block;font-size:11.5px;font-weight:700;color:#4a5568;text-transform:uppercase;letter-spacing:.4px;margin-bottom:5px;}
 .form-row input,.form-row select{width:100%;padding:9px 12px;border:2px solid #e2e8f0;border-radius:8px;font-size:13.5px;outline:none;}
-.form-row input:focus,.form-row select:focus{border-color:#1d4ed8;}
-.btn-primary-sm{background:#1d4ed8;color:#fff;border:none;padding:9px 18px;border-radius:8px;font-size:13.5px;font-weight:600;cursor:pointer;}
-.btn-primary-sm:hover{background:#1e40af;}
+.form-row input:focus,.form-row select:focus{border-color:#176B50;}
+.btn-primary-sm{background:#176B50;color:#fff;border:none;padding:9px 18px;border-radius:8px;font-size:13.5px;font-weight:600;cursor:pointer;}
+.btn-primary-sm:hover{background:#104B3A;}
 .role-select-inline{padding:4px 8px;border-radius:6px;border:1px solid #cbd5e1;font-size:12px;}
 html[data-theme="dark"] .create-card { background:#1b222c !important; border-color:#2b3542 !important; }
 html[data-theme="dark"] .create-card h4 { color:#eef2f7 !important; }
-html[data-theme="dark"] .form-row label { color:#94a3b8 !important; }
+html[data-theme="dark"] .form-row label { color:var(--text-muted) !important; }
 </style>
 </head>
 <body>
@@ -195,7 +194,7 @@ html[data-theme="dark"] .form-row label { color:#94a3b8 !important; }
 <?php include('includes/header.php'); ?>
 <div class="tms-content">
 <div class="page-title-row">
-  <h2><i class="fa fa-user-shield" style="color:#1d4ed8;margin-right:10px;"></i>Manage Admins</h2>
+  <h2><i class="fa fa-user-shield" style="color:#176B50;margin-right:10px;"></i>Manage Admins</h2>
 </div>
 
 <?php if ($msg): ?><div class="alert-msg alert-<?= $msgType ?>"><i class="fa fa-<?= $msgType==='success'?'check-circle':'exclamation-circle' ?>"></i> <?= htmlspecialchars($msg) ?></div><?php endif; ?>
@@ -232,7 +231,7 @@ html[data-theme="dark"] .form-row label { color:#94a3b8 !important; }
   <?php foreach ($admins as $a): ?>
   <tr>
     <td><?= (int)$a->id ?></td>
-    <td><?= htmlspecialchars($a->UserName) ?><?php if ($a->UserName === $_SESSION['alogin']): ?> <span style="color:#94a3b8;font-size:11px;">(you)</span><?php endif; ?></td>
+    <td><?= htmlspecialchars($a->UserName) ?><?php if ($a->UserName === $_SESSION['alogin']): ?> <span style="color:var(--text-muted);font-size:11px;">(you)</span><?php endif; ?></td>
     <td><span class="role-badge role-<?= htmlspecialchars($a->Role ?: 'superadmin') ?>"><?= htmlspecialchars(tms_admin_role_labels()[$a->Role] ?? $a->Role) ?></span></td>
     <td><?= htmlspecialchars($a->updationDate ?? '—') ?></td>
     <td style="display:flex;gap:8px;align-items:center;">
@@ -244,7 +243,7 @@ html[data-theme="dark"] .form-row label { color:#94a3b8 !important; }
             <option value="<?= htmlspecialchars($roleSlug) ?>" <?= $a->Role === $roleSlug ? 'selected' : '' ?>><?= htmlspecialchars($roleLabel) ?></option>
           <?php endforeach; ?>
         </select>
-        <button type="submit" name="change_role" class="action-btn btn-edit" style="background:#dbeafe;color:#1e40af;"><i class="fa fa-check"></i></button>
+        <button type="submit" name="change_role" class="action-btn btn-edit" style="background:#DCF1E5;color:#104B3A;"><i class="fa fa-check"></i></button>
       </form>
       <?php if ($a->UserName !== $_SESSION['alogin']): ?>
       <form method="post" style="display:contents"><input type="hidden" name="action" value="delete"><input type="hidden" name="id" value="<?= (int)$a->id ?>"><?php tms_csrf_field(); ?><button type="submit" class="action-btn btn-delete" onclick="return confirm('Delete admin \'<?= htmlspecialchars($a->UserName, ENT_QUOTES) ?>\'?')"><i class="fa fa-trash"></i></button></form>

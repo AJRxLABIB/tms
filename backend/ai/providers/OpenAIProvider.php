@@ -94,7 +94,7 @@ class OpenAIProvider implements AIProviderInterface {
 
     public function parseResponse(int $httpCode, string $rawBody, ?string $curlError): array {
         if ($curlError) {
-            return ['success' => false, 'error' => 'The AI assistant could not be reached. Please try again in a moment.', 'retriable' => true];
+            return ['success' => false, 'error' => 'The AI assistant could not be reached. Please try again in a moment.', 'kind' => 'unavailable', 'retriable' => true];
         }
 
         $data = json_decode($rawBody, true);
@@ -106,7 +106,7 @@ class OpenAIProvider implements AIProviderInterface {
             error_log('[TMS AI OpenAI] API error: HTTP ' . $httpCode . ': ' . $detail);
 
             if ($httpCode === 401 || $httpCode === 403) {
-                return ['success' => false, 'error' => 'The AI assistant is not configured correctly on this site.', 'retriable' => false];
+                return ['success' => false, 'error' => 'The AI assistant is not configured correctly on this site.', 'kind' => 'config', 'retriable' => false];
             }
             if ($httpCode === 429) {
                 // OpenAI distinguishes an exhausted billing quota (permanent
@@ -117,14 +117,14 @@ class OpenAIProvider implements AIProviderInterface {
                 // GeminiProvider reads Gemini's own wording for the same
                 // distinction.
                 if ($errCode === 'insufficient_quota' || $errType === 'insufficient_quota') {
-                    return ['success' => false, 'error' => 'The AI assistant has reached its usage limit. Please try again later.', 'retriable' => false];
+                    return ['success' => false, 'error' => 'The AI assistant has reached its usage limit. Please try again later.', 'kind' => 'quota', 'retriable' => false];
                 }
-                return ['success' => false, 'error' => 'The AI assistant is busy right now. Please try again in a minute.', 'retriable' => true];
+                return ['success' => false, 'error' => 'The AI assistant is busy right now. Please try again in a minute.', 'kind' => 'unavailable', 'retriable' => true];
             }
             if (in_array($httpCode, [500, 502, 503, 504], true)) {
-                return ['success' => false, 'error' => 'The AI assistant had a problem answering that. Please try again.', 'retriable' => true];
+                return ['success' => false, 'error' => 'The AI assistant had a problem answering that. Please try again.', 'kind' => 'unavailable', 'retriable' => true];
             }
-            return ['success' => false, 'error' => 'The AI assistant had a problem answering that. Please try again.', 'retriable' => false];
+            return ['success' => false, 'error' => 'The AI assistant had a problem answering that. Please try again.', 'kind' => 'content', 'retriable' => false];
         }
 
         $choice       = $data['choices'][0] ?? null;
@@ -133,13 +133,13 @@ class OpenAIProvider implements AIProviderInterface {
 
         if ($content === '' || $content === null) {
             if ($finishReason === 'content_filter') {
-                return ['success' => false, 'error' => 'The answer was blocked by a safety filter. Try rephrasing your question.', 'retriable' => false];
+                return ['success' => false, 'error' => 'The answer was blocked by a safety filter. Try rephrasing your question.', 'kind' => 'content', 'retriable' => false];
             }
             if ($finishReason === 'length') {
-                return ['success' => false, 'error' => 'That answer was too long to finish. Try asking something more specific.', 'retriable' => false];
+                return ['success' => false, 'error' => 'That answer was too long to finish. Try asking something more specific.', 'kind' => 'content', 'retriable' => false];
             }
             error_log('[TMS AI OpenAI] empty response (finish_reason=' . $finishReason . ')');
-            return ['success' => false, 'error' => 'The AI assistant returned an empty answer. Please try again.', 'retriable' => false];
+            return ['success' => false, 'error' => 'The AI assistant returned an empty answer. Please try again.', 'kind' => 'content', 'retriable' => false];
         }
 
         $usage = $data['usage'] ?? [];

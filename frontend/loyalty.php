@@ -1,5 +1,5 @@
 <?php
-session_start();
+require_once __DIR__ . '/../backend/session-boot.php';
 error_reporting(E_ALL); ini_set('display_errors', '0'); ini_set('log_errors', '1');
 include('backend/config.php');
 tms_require_user();
@@ -18,24 +18,46 @@ if (!$loyalty) {
 
 // Redeem coupon
 $msg = ''; $error = '';
-if (isset($_POST['redeem']) && $loyalty->Points >= 500) {
-    tms_csrf_validate();
-    $coupon = 'TMS-' . strtoupper(bin2hex(random_bytes(4)));
-    // FIX (Round 14): this was uncapped — 5,000 points minted a 100%-off coupon
-    // (a free booking) and 6,000 points produced DiscountPercent = 120. Points
-    // are farmable (20 per review, one review per package, 400+ packages), so
-    // this was reachable in minutes. Capped at a sane maximum.
-    $discount = min(TMS_MAX_LOYALTY_DISCOUNT, floor($loyalty->Points / 500) * 10);
-    $dbh->prepare("UPDATE tblloyalty SET Points=Points-:used WHERE UserEmail=:e")
-        ->execute([':used'=>floor($loyalty->Points/500)*500, ':e'=>$email]);
-    $dbh->prepare("INSERT INTO tblcoupons(Code,DiscountPercent,UserEmail,ExpiryDate,IsUsed) VALUES(:c,:d,:e,DATE_ADD(NOW(),INTERVAL 30 DAY),0)")
-        ->execute([':c'=>$coupon,':d'=>$discount,':e'=>$email]);
-    // The message used to say "use it at checkout" — but checkout.php has no
-    // coupon field at all; the only place a code can be entered is a package's
-    // own booking form. Point people where the feature actually is.
-    $msg = "Coupon <strong>$coupon</strong> generated! {$discount}% off — valid for 30 days. "
-         . "Enter it in the <em>Coupon code</em> box on any package's booking form.";
-    $q->execute([':e'=>$email]);
+if (isset($_POST['redeem'])) {
+    tms_csrf_validate(); // before anything is read or changed
+    // FIX: the balance was read first and deducted later without a lock, so two parallel requests could both pass the check
+    // (two coupons, balance negative), and the deduction ignored the 40% cap (5,000 points paid for what 2,000 buy).
+    // Now: lock the row, compute the discount from the CURRENT balance, deduct only the points that discount needs, and do the
+    // deduction, the coupon and the history entry in one transaction.
+    try {
+        $dbh->beginTransaction();
+        $bal = $dbh->prepare("SELECT Points FROM tblloyalty WHERE UserEmail=:e FOR UPDATE");
+        $bal->execute([':e' => $email]);
+        $points = (int)$bal->fetchColumn();
+        if ($points < 500) {
+            $dbh->rollBack();
+            $error = 'You need at least 500 points to redeem a coupon.';
+        } else {
+            $discount = (int)min(TMS_MAX_LOYALTY_DISCOUNT, intdiv($points, 500) * 10);
+            $used     = (int)(ceil($discount / 10) * 500);          // only what this discount actually costs
+            $upd = $dbh->prepare("UPDATE tblloyalty SET Points=Points-:used WHERE UserEmail=:e AND Points>=:used2");
+            $upd->execute([':used' => $used, ':used2' => $used, ':e' => $email]);
+            if ($upd->rowCount() !== 1) { $dbh->rollBack(); $error = 'Could not redeem right now. Please try again.'; }
+            else {
+                $coupon = 'TMS-' . strtoupper(bin2hex(random_bytes(4)));
+                $dbh->prepare("INSERT INTO tblcoupons(Code,DiscountPercent,UserEmail,ExpiryDate,IsUsed) VALUES(:c,:d,:e,DATE_ADD(NOW(),INTERVAL 30 DAY),0)")
+                    ->execute([':c' => $coupon, ':d' => $discount, ':e' => $email]);
+                $dbh->prepare("INSERT INTO tblloyalty_log(UserEmail,Points,Description) VALUES(:e,:p,:d)")
+                    ->execute([':e' => $email, ':p' => -$used, ':d' => "Redeemed {$used} points for coupon {$coupon} ({$discount}% off)"]);
+                $dbh->commit();
+                // The message used to say "use it at checkout" — but checkout.php has no
+                // coupon field at all; the only place a code can be entered is a package's
+                // own booking form. Point people where the feature actually is.
+                $msg = "Coupon <strong>$coupon</strong> generated! {$discount}% off — valid for 30 days ({$used} points used). "
+                     . "Enter it in the <em>Coupon code</em> box on any package's booking form.";
+            }
+        }
+    } catch (Throwable $e) {
+        if ($dbh->inTransaction()) $dbh->rollBack();
+        error_log('[TMS Loyalty] redeem failed: ' . $e->getMessage());
+        $error = 'Could not redeem right now. Please try again.';
+    }
+    $q->execute([':e' => $email]);
     $loyalty = $q->fetch(PDO::FETCH_OBJ);
 }
 
@@ -65,20 +87,23 @@ $leaderboard = $achievementEngine->getLeaderboard(10);
 ?>
 <!DOCTYPE HTML><html lang="<?php echo htmlspecialchars(tms_active_language(), ENT_QUOTES, 'UTF-8'); ?>"><head>
 <link rel="manifest" href="manifest.json">
-<meta name="theme-color" content="#0B2B3C">
+<meta name="theme-color" content="#104B3A">
 <link rel="apple-touch-icon" href="images/icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="TMS">
+<meta name="mobile-web-app-capable" content="yes">
 <title>TMS | Loyalty Points</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <link href="css/bootstrap.min2.css" rel='stylesheet'/>
-<link href="css/style.min.css" rel='stylesheet'/>
+<link href="<?php echo tms_asset_ver('css/style.min.css'); ?>" rel='stylesheet'/>
 <link href="css/font-awesome.min2.css" rel="stylesheet">
 <link href="<?php echo tms_asset_ver('css/modern-theme.css'); ?>" rel="stylesheet">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700;9..144,800&family=Manrope:wght@400;500;600;700;800&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
 <script src="js/jquery-1.12.0.min.js" defer></script>
 <style>
-.page-title{background:linear-gradient(135deg,#f5c518,#e8a000);color:#fff;padding:40px 0;margin-bottom:30px;}
+.page-title{background:linear-gradient(135deg,#104B3A,#176B50);color:#fff;padding:40px 0;margin-bottom:30px;}
 .points-card{background:linear-gradient(135deg,<?= $tierColors[$tier] ?>,<?= $tierColors[$tier] ?>aa);color:#fff;border-radius:16px;padding:30px;text-align:center;margin-bottom:24px;}
 .points-card h1{font-size:64px;font-weight:900;margin:10px 0;}
 .tier-badge{display:inline-block;background:rgba(255,255,255,0.3);padding:6px 18px;border-radius:20px;font-size:16px;font-weight:700;margin-bottom:10px;}
@@ -134,7 +159,7 @@ $leaderboard = $achievementEngine->getLeaderboard(10);
         <div class="progress" style="margin-top:8px;">
           <div class="progress-bar-loyalty" style="width:<?= min(100, $loyalty->Points/5) ?>%"></div>
         </div>
-        <small style="color:#888;">Need <?= 500 - $loyalty->Points ?> more points to redeem</small>
+        <small style="color:var(--text-muted);">Need <?= 500 - $loyalty->Points ?> more points to redeem</small>
       <?php endif; ?>
     </div>
   </div>
@@ -160,16 +185,16 @@ $leaderboard = $achievementEngine->getLeaderboard(10);
         <a href="loyalty-history.php" style="font-size:12.5px;font-weight:600;color:var(--secondary);">View Full History →</a>
       </h5>
       <?php if (count($history) === 0): ?>
-        <p style="color:#999;text-align:center;padding:20px;">No points activity yet. Book a tour to start earning!</p>
+        <p style="color:var(--text-muted);text-align:center;padding:20px;">No points activity yet. Book a tour to start earning!</p>
       <?php else: ?>
-      <div class="table-responsive"><table class="table table-striped" style="margin-top:10px;">
+      <div class="table-responsive" tabindex="0" role="region" aria-label="Table, scrollable"><table class="table table-striped" style="margin-top:10px;">
         <thead><tr><th>Date</th><th>Description</th><th>Points</th></tr></thead>
         <tbody>
         <?php foreach ($history as $h): ?>
         <tr>
           <td><?= date('d M Y', strtotime($h->CreatedAt)) ?></td>
           <td><?= htmlspecialchars($h->Description) ?></td>
-          <td><span style="color:<?= $h->Points > 0 ? 'green' : 'red' ?>;font-weight:700;"><?= ($h->Points > 0 ? '+' : '') . $h->Points ?> pts</span></td>
+          <td><span style="color:<?= $h->Points > 0 ? '#0B6B2E' : '#B3302B' ?>;font-weight:700;"><?= ($h->Points > 0 ? '+' : '') . $h->Points ?> pts</span></td>
         </tr>
         <?php endforeach; ?>
         </tbody>
@@ -184,14 +209,14 @@ $leaderboard = $achievementEngine->getLeaderboard(10);
   <h5><i class="fa fa-trophy"></i> Achievements</h5>
   <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:14px;margin-top:14px;">
     <?php foreach ($myAchievements as $a): ?>
-    <div style="text-align:center;padding:16px 10px;border-radius:10px;background:<?= $a['unlocked'] ? '#f8fafc' : '#f1f5f9' ?>;opacity:<?= $a['unlocked'] ? '1' : '0.45' ?>;">
+    <div style="text-align:center;padding:16px 10px;border-radius:10px;background:var(--white);border:1px solid <?= $a['unlocked'] ? 'var(--primary)' : 'var(--border,#d7e0db)' ?>;">
       <div style="width:44px;height:44px;border-radius:50%;background:<?= $a['unlocked'] ? $a['color'] : '#94a3b8' ?>;color:#fff;display:flex;align-items:center;justify-content:center;margin:0 auto 8px;font-size:18px;">
         <i class="fa fa-<?= $a['icon'] ?>"></i>
       </div>
-      <div style="font-size:12.5px;font-weight:700;color:#1f2937;"><?= htmlspecialchars($a['name']) ?></div>
-      <div style="font-size:11px;color:#94a3b8;margin-top:3px;"><?= htmlspecialchars($a['description']) ?></div>
+      <div style="font-size:12.5px;font-weight:700;color:var(--text);"><?= htmlspecialchars($a['name']) ?></div>
+      <div style="font-size:11px;color:var(--text-muted);margin-top:3px;"><?= htmlspecialchars($a['description']) ?></div>
       <?php if ($a['unlocked']): ?>
-        <div style="font-size:10px;color:#059669;margin-top:4px;"><i class="fa fa-check"></i> <?= date('d M Y', strtotime($a['unlocked_at'])) ?></div>
+        <div style="font-size:10px;color:var(--text);margin-top:4px;"><i class="fa fa-check"></i> <?= date('d M Y', strtotime($a['unlocked_at'])) ?></div>
       <?php endif; ?>
     </div>
     <?php endforeach; ?>
@@ -202,7 +227,7 @@ $leaderboard = $achievementEngine->getLeaderboard(10);
 <?php if (!empty($leaderboard)): ?>
 <div class="info-card" style="margin-top:20px;">
   <h5><i class="fa fa-list-ol"></i> Top Achievers</h5>
-  <div class="table-responsive"><table class="table table-striped" style="margin-top:10px;">
+  <div class="table-responsive" tabindex="0" role="region" aria-label="Table, scrollable"><table class="table table-striped" style="margin-top:10px;">
     <thead><tr><th>#</th><th>Traveler</th><th>Achievements</th></tr></thead>
     <tbody>
     <?php foreach ($leaderboard as $i => $l): ?>

@@ -5,7 +5,7 @@
 # 1. Never serve secrets, dumps, or internal notes over HTTP.
 #    .env sits inside the document root, so without this rule anyone could read
 #    the API keys at http://<host>/tms/.env
-<FilesMatch "^\.env|\.(env|sql|md|log|ini|bak|old|orig)$">
+<FilesMatch "^\.env|\.(env|sql|md|log|ini|bak|old|orig|py|sh|yml|yaml)$">
     <IfModule mod_authz_core.c>
         Require all denied
     </IfModule>
@@ -22,6 +22,8 @@
     RewriteEngine On
     RewriteCond %{HTTP:Authorization} .
     RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
+    # robots.txt is generated so its paths and absolute Sitemap URL match wherever the site is installed (/ or /tms/).
+    RewriteRule ^robots\.txt$ robots.php [L]
 </IfModule>
 
 # 3. Don't advertise the directory listing of folders without an index file.
@@ -71,5 +73,47 @@ Options -Indexes
     # the Swagger API docs page) with the browser console watched for
     # violations before shipping -- not literally every one of the ~70
     # files this touches, which would be its own disproportionate sweep.
-    Header always set Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://code.jquery.com https://unpkg.com; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://fonts.googleapis.com https://stackpath.bootstrapcdn.com https://unpkg.com; font-src 'self' data: https://fonts.gstatic.com https://cdnjs.cloudflare.com; img-src 'self' data: https:; connect-src 'self'; frame-src https://www.google.com; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'self'"
+    Header always set Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://code.jquery.com https://unpkg.com; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://fonts.googleapis.com https://stackpath.bootstrapcdn.com https://unpkg.com; font-src 'self' data: https://fonts.gstatic.com https://cdnjs.cloudflare.com; img-src 'self' data: blob: https:; connect-src 'self' https://tiles.openfreemap.org; frame-src https://www.google.com; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'self'"
 </IfModule>
+
+
+# 5. Performance: compress text responses and let browsers cache static assets.
+#    (Both blocks are inert if the Apache module is not enabled.) CSS/JS URLs
+#    that change get a ?v=<mtime> query from tms_asset_ver(), so a 30-day
+#    lifetime does not strand users on stale files. PHP pages are not cached.
+<IfModule mod_deflate.c>
+    AddOutputFilterByType DEFLATE text/html text/plain text/css text/javascript application/javascript application/json application/manifest+json application/xml text/xml image/svg+xml image/x-icon font/ttf application/x-font-ttf
+</IfModule>
+<IfModule mod_expires.c>
+    ExpiresActive On
+    ExpiresByType text/css "access plus 30 days"
+    ExpiresByType application/javascript "access plus 30 days"
+    ExpiresByType text/javascript "access plus 30 days"
+    ExpiresByType font/woff2 "access plus 1 year"
+    ExpiresByType image/jpeg "access plus 30 days"
+    ExpiresByType image/png "access plus 30 days"
+    ExpiresByType image/webp "access plus 30 days"
+    ExpiresByType image/svg+xml "access plus 30 days"
+    ExpiresByType image/gif "access plus 30 days"
+    ExpiresByType image/avif "access plus 30 days"
+    ExpiresByType image/x-icon "access plus 30 days"
+    ExpiresByType image/vnd.microsoft.icon "access plus 30 days"
+    ExpiresByType font/woff "access plus 1 year"
+    ExpiresByType font/ttf "access plus 1 year"
+    ExpiresByType application/font-woff "access plus 1 year"
+    ExpiresByType application/font-woff2 "access plus 1 year"
+    ExpiresByType application/x-font-ttf "access plus 1 year"
+</IfModule>
+
+# The service worker and the web manifest must always be revalidated, otherwise a 30-day script cache could keep
+# users on an old worker (it also holds the offline-cache rules). Everything else above stays as is.
+<IfModule mod_headers.c>
+    <FilesMatch "^(sw\.js|manifest\.json|offline\.html)$">
+        Header set Cache-Control "no-cache, max-age=0"
+    </FilesMatch>
+</IfModule>
+
+# 6. Friendly error pages. Inline text responses on purpose: an ErrorDocument file path must be an absolute URL path
+#    ("/tms/404.html"), which breaks when the site is installed at another path; a quoted message works anywhere.
+ErrorDocument 404 "<!doctype html><html lang='en'><head><meta charset='utf-8'><meta name='viewport' content='width=device-width,initial-scale=1'><meta name='robots' content='noindex'><title>Page not found | TMS</title><style>body{font-family:system-ui,Arial,sans-serif;background:#f7f5f0;color:#22302a;margin:0;display:flex;min-height:100vh;align-items:center;justify-content:center;text-align:center;padding:24px}main{max-width:460px}h1{font-size:64px;margin:0;color:#104B3A}a,button{display:inline-block;margin-top:18px;padding:12px 22px;border-radius:8px;background:#104B3A;color:#fff;text-decoration:none;border:0;font-size:16px;cursor:pointer}a:focus-visible,button:focus-visible{outline:3px solid #7fd6b2;outline-offset:2px}</style></head><body><main><h1>404</h1><h2>We could not find that page</h2><p>The link may be old or mistyped.</p><button type='button' onclick='history.back()'>Go back</button></main></body></html>"
+ErrorDocument 500 "<!doctype html><html lang='en'><head><meta charset='utf-8'><meta name='viewport' content='width=device-width,initial-scale=1'><meta name='robots' content='noindex'><title>Something went wrong | TMS</title><style>body{font-family:system-ui,Arial,sans-serif;background:#f7f5f0;color:#22302a;margin:0;display:flex;min-height:100vh;align-items:center;justify-content:center;text-align:center;padding:24px}main{max-width:460px}h1{font-size:64px;margin:0;color:#104B3A}button{margin-top:18px;padding:12px 22px;border-radius:8px;background:#104B3A;color:#fff;border:0;font-size:16px;cursor:pointer}button:focus-visible{outline:3px solid #7fd6b2;outline-offset:2px}</style></head><body><main><h1>500</h1><h2>Something went wrong on our side</h2><p>Please try again in a moment. Your booking and payment data have not been changed by this error page.</p><button type='button' onclick='location.reload()'>Try again</button></main></body></html>"

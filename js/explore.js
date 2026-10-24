@@ -19,9 +19,38 @@ function exploreDebounce(fn, delay) {
     };
 }
 
-function exploreGet(action, params) {
+function exploreGet(action, params, timeoutMs) {
     var qs = new URLSearchParams(Object.assign({ action: action }, params || {})).toString();
-    return fetch(EXPLORE_API + '?' + qs).then(function (r) { return r.json(); });
+    var url = EXPLORE_API + '?' + qs;
+    // Hard timeout: a hung request used to leave "Finding hotels nearby..." spinning forever.
+    if (window.TmsMap && window.TmsMap.fetchJson) return window.TmsMap.fetchJson(url, { timeout: timeoutMs || 14000 });
+    return fetch(url).then(function (r) { return r.json(); });
+}
+
+// Shared text for failed/slow requests (timeout vs. server vs. offline).
+function exploreErrText(err, what) {
+    if (typeof navigator !== 'undefined' && navigator.onLine === false) return 'You appear to be offline. Check your connection and try again.';
+    if (err && err.message === 'timeout') return 'Loading ' + what + ' took too long. The map data servers may be busy.';
+    return 'Could not load ' + what + '. Please try again.';
+}
+function exploreErrorBox(msg, retryJs) {
+    return '<div class="explore-error" role="alert"><i class="fa fa-exclamation-triangle"></i> <span>' + escapeHtml(msg) + '</span>' +
+        (retryJs ? '<button type="button" class="explore-retry-btn" onclick="' + retryJs + '"><i class="fa fa-redo"></i> Try again</button>' : '') + '</div>';
+}
+// One line telling the visitor where the list came from: live, saved earlier, or our own catalogue.
+function exploreSourceNote(res) {
+    var origin = res.origin || (res.data && res.data.origin) || 'live';
+    var notice = res.notice || (res.data && res.data.notice) || '';
+    if (origin === 'live') return '';
+    var txt = origin === 'cached' ? 'Saved results (refreshed periodically).'
+            : origin === 'stale'  ? (notice || 'Live data is unavailable right now. Showing results saved earlier; they may be out of date.')
+            : origin === 'local'  ? (notice || 'Live map data is unavailable right now. Showing places from our own catalogue.')
+            : '';
+    return txt ? '<p class="explore-source' + (origin === 'cached' ? '' : ' is-warn') + '" role="status"><i class="fa fa-info-circle"></i> ' + escapeHtml(txt) + '</p>' : '';
+}
+function exploreSkeleton(n) {
+    var h = ''; for (var i = 0; i < (n || 6); i++) h += '<div class="sk"></div>';
+    return '<div class="explore-skeleton" aria-hidden="true">' + h + '</div>';
 }
 
 function explorePost(action, formData) {
@@ -253,6 +282,14 @@ function goToDestination(name, lat, lng, country) {
 
     function renderOverview(info) {
         var el = document.getElementById('overviewContent');
+        // Catalogue-only overview (no AI provider answered): hide cards that have no verified content instead of showing
+        // empty or "undefined" boxes, and say plainly where the information comes from.
+        var offline = info && info.source === 'catalogue';
+        var noteHtml = offline ? '<div class="tms-sample-banner" style="margin-bottom:12px;"><i class="fa fa-info-circle"></i> ' +
+            escapeHtml(info.ai_note || 'AI summary unavailable — showing verified catalogue information.') + '</div>' : '';
+        function card(icon, title, inner, skip) {
+            return skip ? '' : '<div class="explore-card"><h4><i class="fa fa-' + icon + '"></i> ' + title + '</h4>' + inner + '</div>';
+        }
         var attractions = (info.attractions || []).map(function (a) {
             return '<div class="attraction-item"><div class="attraction-icon"><i class="fa fa-map-pin"></i></div>' +
                 '<div><strong>' + escapeHtml(a.name) + '</strong><span>' + escapeHtml(a.description) + '</span></div></div>';
@@ -280,13 +317,15 @@ function goToDestination(name, lat, lng, country) {
                 '</div>';
         }
 
-        el.innerHTML =
+        el.innerHTML = noteHtml +
             '<div class="explore-card"><h4><i class="fa fa-info-circle"></i> Overview</h4><p>' + escapeHtml(info.overview) + '</p></div>' +
-            '<div class="explore-card"><h4><i class="fa fa-landmark"></i> Popular Attractions</h4>' + attractions + '</div>' +
-            '<div class="explore-card"><h4><i class="fa fa-scroll"></i> Historical Background</h4><p>' + escapeHtml(info.history) + '</p></div>' +
-            '<div class="explore-card"><h4><i class="fa fa-calendar-check"></i> Best Time to Visit</h4><p>' + escapeHtml(info.best_time_to_visit) + '</p></div>' +
-            '<div class="explore-card"><h4><i class="fa fa-users"></i> Local Culture</h4><p>' + escapeHtml(info.local_culture) + '</p></div>' +
-            '<div class="explore-card"><h4><i class="fa fa-utensils"></i> Famous Foods</h4>' + foods + '</div>' +
+            card('landmark', 'Popular Attractions', attractions, offline && !(info.attractions || []).length) +
+            card('scroll', 'Historical Background', '<p>' + escapeHtml(info.history) + '</p>', !info.history) +
+            card('calendar-check', 'Best Time to Visit', '<p>' + escapeHtml(info.best_time_to_visit) + '</p>', !info.best_time_to_visit) +
+            card('route', 'Getting There', '<p>' + escapeHtml(info.how_to_get_there) + '</p>', !info.how_to_get_there) +
+            card('users', 'Local Culture', '<p>' + escapeHtml(info.local_culture) + '</p>', !info.local_culture) +
+            card('utensils', 'Famous Foods', foods, offline && !(info.famous_foods || []).length) +
+            (info.estimated_costs ? (
             '<div class="explore-card"><h4><i class="fa fa-wallet"></i> Estimated Travel Costs (per day)</h4>' +
                 '<div class="cost-grid">' +
                     // DATA-ACCURACY FIX: these three fields are named
@@ -298,17 +337,17 @@ function goToDestination(name, lat, lng, country) {
                     '<div class="cost-box"><div class="lbl">Budget</div><div class="val">$' + escapeHtml(costs.budget_per_day_usd) + '<span class="cost-unit">/day USD</span></div></div>' +
                     '<div class="cost-box"><div class="lbl">Mid-range</div><div class="val">$' + escapeHtml(costs.midrange_per_day_usd) + '<span class="cost-unit">/day USD</span></div></div>' +
                     '<div class="cost-box"><div class="lbl">Luxury</div><div class="val">$' + escapeHtml(costs.luxury_per_day_usd) + '<span class="cost-unit">/day USD</span></div></div>' +
-                '</div><p style="font-size:12px;color:var(--text-muted);margin-top:10px;">' + escapeHtml(costs.currency_note || '') + ' Figures are approximate, in US dollars.</p></div>' +
-            '<div class="explore-card"><h4><i class="fa fa-shield-alt"></i> Safety Tips</h4>' + tips + '</div>' +
-            '<div class="explore-card"><h4><i class="fa fa-phone-alt"></i> Emergency Contacts</h4>' + emgHtml + '</div>';
+                '</div><p style="font-size:12px;color:var(--text-muted);margin-top:10px;">' + escapeHtml(costs.currency_note || '') + ' Figures are approximate, in US dollars.</p></div>'
+            ) : '') +
+            card('shield-alt', 'Safety Tips', tips, offline && !tips) +
+            card('phone-alt', 'Emergency Contacts', emgHtml, offline && !emg);
     }
 
     // ── Map & Navigation tab ─────────────────────────────────
     function initMap() {
         state.map = L.map('exploreMap').setView([DEST.lat, DEST.lng], 13);
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            attribution: '&copy; OpenStreetMap contributors', maxZoom: 19
-        }).addTo(state.map);
+        if (window.TmsMap) { TmsMap.addTiles(state.map, { maxZoom: 19 }); TmsMap.fixSize(state.map); }
+        else L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '&copy; OpenStreetMap contributors', maxZoom: 19 }).addTo(state.map);
 
         L.marker([DEST.lat, DEST.lng], { icon: destIcon() }).addTo(state.map)
             .bindPopup('<strong>' + escapeHtml(DEST.name) + '</strong><br>Your destination').openPopup();
@@ -352,7 +391,7 @@ function goToDestination(name, lat, lng, country) {
     window.exploreLoadMapCategory = function (category) {
         if (!state.map) return;
         state.mapCategory = category;
-        document.querySelectorAll('.map-cat-btn').forEach(function (b) { b.classList.toggle('active', b.dataset.cat === category); });
+        document.querySelectorAll('.map-cat-btn').forEach(function (b) { b.classList.toggle('active', b.dataset.cat === category); b.setAttribute('aria-pressed', b.dataset.cat === category ? 'true' : 'false'); });
 
         // Clear the previous category's pins only -- destination/user/route
         // markers are never pushed into state.markers, so this can't remove them.
@@ -389,9 +428,29 @@ function goToDestination(name, lat, lng, country) {
             plot(state.currentPlaces);
             return;
         }
+        var status = document.getElementById('mapStatus');
+        var token = state.mapToken = (state.mapToken || 0) + 1;
+        if (status) { status.className = 'explore-source'; status.innerHTML = '<i class="fa fa-spinner fa-spin"></i> Loading ' + escapeHtml((PLACE_LABELS[category] || [category])[0].toLowerCase()) + ' on the map...'; }
         exploreGet('places', { lat: DEST.lat, lng: DEST.lng, category: category, radius: 5000 }).then(function (res) {
-            if (res.success) plot(res.data.places);
-        }).catch(function () {});
+            if (token !== state.mapToken) return;   // the visitor already picked another category
+            if (!res.success) {
+                if (status) { status.className = 'explore-source is-warn'; status.innerHTML = '<i class="fa fa-exclamation-triangle"></i> ' + escapeHtml(res.error || 'Places are unavailable right now.') +
+                    ' <button type="button" class="explore-retry-btn" onclick="exploreLoadMapCategory(\'' + category + '\')">Try again</button>'; }
+                return;
+            }
+            var list = (res.data && (res.data.places || res.data.items)) || [];
+            plot(list);
+            var plotted = list.filter(function (p) { return p.lat && p.lng; }).length;
+            if (status) {
+                var note = exploreSourceNote(res);
+                if (!list.length) { status.className = 'explore-source'; status.innerHTML = '<i class="fa fa-info-circle"></i> No ' + escapeHtml((PLACE_LABELS[category] || [category])[0].toLowerCase()) + ' found within 5 km.'; }
+                else { status.className = 'explore-source' + (note && res.data.origin !== 'cached' ? ' is-warn' : ''); status.innerHTML = '<i class="fa fa-map-pin"></i> ' + plotted + ' of ' + list.length + ' shown on the map.' + (note ? ' ' + note.replace(/<[^>]+>/g, '') : ''); }
+            }
+        }).catch(function (err) {
+            if (token !== state.mapToken) return;
+            if (status) { status.className = 'explore-source is-warn'; status.innerHTML = '<i class="fa fa-exclamation-triangle"></i> ' + escapeHtml(exploreErrText(err, 'places')) +
+                ' <button type="button" class="explore-retry-btn" onclick="exploreLoadMapCategory(\'' + category + '\')">Try again</button>'; }
+        });
     };
 
     function destIcon() {
@@ -450,9 +509,9 @@ function goToDestination(name, lat, lng, country) {
         exploreGet('route', {
             from_lat: state.userLoc.lat, from_lng: state.userLoc.lng,
             to_lat: target.lat, to_lng: target.lng, mode: mode
-        }).then(function (res) {
+        }, 16000).then(function (res) {
             if (!res.success) {
-                summary.innerHTML = '<span class="item" style="color:#c0392b;"><i class="fa fa-exclamation-triangle"></i> ' + escapeHtml(res.error) + '</span>';
+                routeFallbackLine(target, summary, res.error);
                 return;
             }
             var route = res.data.route;
@@ -471,10 +530,24 @@ function goToDestination(name, lat, lng, country) {
                 state.routeLayer = L.polyline(route.geometry, { color: '#00A8A8', weight: 5, opacity: .85 }).addTo(state.map);
                 state.map.fitBounds(state.routeLayer.getBounds(), { padding: [40, 40] });
             }
-        }).catch(function () {
-            summary.innerHTML = '<span class="item" style="color:#c0392b;"><i class="fa fa-exclamation-triangle"></i> Routing service unavailable right now.</span>';
+        }).catch(function (err) {
+            routeFallbackLine(target, summary, exploreErrText(err, 'the route'));
         });
     };
+
+    // Routing server down or slow: still show a dashed straight line and the straight-line distance, clearly labelled.
+    function routeFallbackLine(target, summary, msg) {
+        var from = state.userLoc, a = from.lat * Math.PI / 180, b = target.lat * Math.PI / 180;
+        var dLat = (target.lat - from.lat) * Math.PI / 180, dLng = (target.lng - from.lng) * Math.PI / 180;
+        var h = Math.sin(dLat / 2) * Math.sin(dLat / 2) + Math.cos(a) * Math.cos(b) * Math.sin(dLng / 2) * Math.sin(dLng / 2);
+        var km = 2 * 6371 * Math.asin(Math.sqrt(h));
+        if (state.routeLayer) state.map.removeLayer(state.routeLayer);
+        state.routeLayer = L.polyline([[from.lat, from.lng], [target.lat, target.lng]], { color: '#94a3b8', weight: 4, dashArray: '8 8' }).addTo(state.map);
+        state.map.fitBounds(state.routeLayer.getBounds(), { padding: [40, 40] });
+        summary.innerHTML = '<span class="item" style="color:#b45309;"><i class="fa fa-exclamation-triangle"></i> ' + escapeHtml(msg || 'Routing is unavailable right now.') + '</span>' +
+            '<span class="item"><i class="fa fa-ruler"></i> About ' + km.toFixed(1) + ' km in a straight line</span>' +
+            '<span class="item"><a href="#" onclick="exploreDrawRoute(document.querySelector(\'.map-mode-btn.active\') ? document.querySelector(\'.map-mode-btn.active\').dataset.mode : \'driving\');return false;"><i class="fa fa-redo"></i> Try again</a></span>';
+    }
 
     // ROOT-CAUSE FIX: "Get Directions" on a nearby-place card used to open
     // https://www.openstreetmap.org/directions in a new tab, taking visitors
@@ -521,24 +594,32 @@ function goToDestination(name, lat, lng, country) {
     window.loadPlaces = function (category) {
         state.placesLoaded = true;
         state.currentCategory = category;
-        document.querySelectorAll('.place-cat-btn').forEach(function (b) { b.classList.toggle('active', b.dataset.cat === category); });
+        document.querySelectorAll('.place-cat-btn').forEach(function (b) { b.classList.toggle('active', b.dataset.cat === category); b.setAttribute('aria-pressed', b.dataset.cat === category ? 'true' : 'false'); });
         var grid = document.getElementById('placesGrid');
-        grid.innerHTML = '<div class="explore-loading"><i class="fa fa-spinner fa-spin spin"></i>Finding ' + (PLACE_LABELS[category] ? PLACE_LABELS[category][0].toLowerCase() : 'places') + ' nearby...</div>';
+        var label = PLACE_LABELS[category] ? PLACE_LABELS[category][0].toLowerCase() : 'places';
+        var token = state.placesToken = (state.placesToken || 0) + 1;
+        grid.setAttribute('aria-busy', 'true');
+        grid.innerHTML = '<p class="explore-loading" style="padding:8px 0 14px;" role="status"><i class="fa fa-spinner fa-spin"></i> Finding ' + label + ' nearby...</p>' + exploreSkeleton(6);
+        var retry = "loadPlaces('" + category + "')";
 
         exploreGet('places', { lat: DEST.lat, lng: DEST.lng, category: category }).then(function (res) {
+            if (token !== state.placesToken) return;   // a newer category was chosen while this one was loading
+            grid.removeAttribute('aria-busy');
             if (!res.success) {
-                grid.innerHTML = '<div class="explore-error"><i class="fa fa-exclamation-triangle"></i> ' + escapeHtml(res.error) + '</div>';
+                grid.innerHTML = exploreErrorBox(res.error || 'Nearby places are unavailable right now.', retry);
                 return;
             }
-            var places = res.data.places || [];
+            var places = (res.data && (res.data.places || res.data.items)) || [];
             state.currentPlaces = places;
             if (!places.length) {
-                grid.innerHTML = '<p class="text-muted">No results found nearby. Try a different category or check back later.</p>';
+                grid.innerHTML = exploreSourceNote(res) + '<div class="explore-empty"><i class="fa fa-search"></i> No ' + escapeHtml(label) + ' found within 4 km. Try another category or <a href="#" onclick="' + retry + ';return false;">search again</a>.</div>';
                 return;
             }
-            grid.innerHTML = '<div class="place-grid">' + places.map(renderPlaceCard).join('') + '</div>';
-        }).catch(function () {
-            grid.innerHTML = '<div class="explore-error"><i class="fa fa-exclamation-triangle"></i> Could not load nearby places. Please try again.</div>';
+            grid.innerHTML = exploreSourceNote(res) + '<div class="place-grid">' + places.map(renderPlaceCard).join('') + '</div>';
+        }).catch(function (err) {
+            if (token !== state.placesToken) return;
+            grid.removeAttribute('aria-busy');
+            grid.innerHTML = exploreErrorBox(exploreErrText(err, label), retry);
         });
     };
 
@@ -562,7 +643,7 @@ function goToDestination(name, lat, lng, country) {
         var distKm = (typeof p.distance_m === 'number') ? (p.distance_m / 1000).toFixed(1) + ' km away' : '';
         return '<div class="place-card">' +
             '<a href="#" class="place-card-open" data-idx="' + idx + '">' +
-            (p.photo ? '<img class="photo" src="' + p.photo + '" alt="' + escapeHtml(p.name) + '">' : '') +
+            (p.photo ? '<img class="photo" src="' + p.photo + '" alt="' + escapeHtml(p.name) + '" loading="lazy" onerror="this.style.display=\'none\'">' : '') +
             // PROVENANCE (Round 73, master prompt item 65): Google's Places API
             // terms require showing each photo's attribution whenever the photo
             // itself is shown. This is Google's own html_attributions string
@@ -587,9 +668,12 @@ function goToDestination(name, lat, lng, country) {
             (p.phone ? '<div class="meta"><i class="fa fa-phone"></i> ' + escapeHtml(p.phone) + '</div>' : '') +
             (p.opening_hours ? '<div class="meta"><i class="fa fa-clock"></i> ' + escapeHtml(p.opening_hours) + '</div>' : '') +
             (distKm ? '<div class="meta"><i class="fa fa-route"></i> ' + distKm + '</div>' : '') +
+            (p.source === 'local' ? '<div class="meta"><i class="fa fa-database"></i> From our catalogue' + (p.is_sample ? ' (sample listing)' : '') + '</div>' : '') +
             '<div class="place-card-actions">' +
-            '<a class="nav-link place-card-details-link" href="#" data-idx="' + idx + '"><i class="fa fa-circle-info"></i> View Details</a>' +
-            '<a class="nav-link" href="#" data-idx="' + idx + '"><i class="fa fa-directions"></i> Get Directions</a>' +
+            (p.source === 'local' && p.local_url
+                ? '<a class="nav-link" href="' + escapeHtml(p.local_url) + '"><i class="fa fa-arrow-right"></i> View on TMS</a>'
+                : '<a class="nav-link place-card-details-link" href="#" data-idx="' + idx + '"><i class="fa fa-circle-info"></i> View Details</a>') +
+            (p.lat && p.lng ? '<a class="nav-link" href="#" data-idx="' + idx + '"><i class="fa fa-directions"></i> Get Directions</a>' : '') +
             '</div>' +
             '</div>';
     }
@@ -747,16 +831,21 @@ function goToDestination(name, lat, lng, country) {
         var panel = document.getElementById('weatherContent');
         exploreGet('weather', { lat: DEST.lat, lng: DEST.lng }).then(function (res) {
             if (!res.success) {
-                panel.innerHTML = '<div class="explore-error"><i class="fa fa-exclamation-triangle"></i> ' + escapeHtml(res.error) + '</div>';
+                panel.innerHTML = exploreErrorBox(res.error || 'Weather is unavailable right now.', 'exploreRetryWeather()');
                 return;
             }
             state.weather = res.data.weather;
             renderWeather(state.weather);
             updateExploreContext();
-        }).catch(function () {
-            panel.innerHTML = '<div class="explore-error"><i class="fa fa-exclamation-triangle"></i> Weather service is currently unavailable.</div>';
+        }).catch(function (err) {
+            panel.innerHTML = exploreErrorBox(exploreErrText(err, 'the weather'), 'exploreRetryWeather()');
         });
     }
+    window.exploreRetryWeather = function () {
+        var panel = document.getElementById('weatherContent');
+        panel.innerHTML = '<div class="explore-loading"><i class="fa fa-spinner fa-spin spin"></i>Fetching live weather...</div>';
+        loadWeather();
+    };
 
     function renderWeather(w) {
         var c = w.current;

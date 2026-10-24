@@ -1,5 +1,5 @@
 <?php
-session_start();
+require_once __DIR__ . '/../backend/session-boot.php';
 error_reporting(E_ALL);
 ini_set('display_errors', 0);
 ini_set('log_errors', 1);
@@ -15,7 +15,7 @@ $cnt1    = safe_count($dbh, "SELECT COUNT(*) FROM tblbooking");
 $cnt2    = safe_count($dbh, "SELECT COUNT(*) FROM tblenquiry");
 $cnt3    = safe_count($dbh, "SELECT COUNT(*) FROM tbltourpackages");
 $cnt5    = safe_count($dbh, "SELECT COUNT(*) FROM tblissues");
-$rev     = safe_count($dbh, "SELECT COALESCE(SUM(p.PackagePrice),0) FROM tblbooking b JOIN tbltourpackages p ON p.PackageId=b.PackageId WHERE b.status=1");
+$rev     = safe_count($dbh, "SELECT COALESCE(SUM(COALESCE(b.TotalCost, p.PackagePrice * COALESCE(b.NoOfPersons,1))),0) FROM tblbooking b JOIN tbltourpackages p ON p.PackageId=b.PackageId WHERE b.status=1" /* what was actually charged (net of coupons, x travellers); list price only for legacy rows without TotalCost */);
 $pending = safe_count($dbh, "SELECT COUNT(*) FROM tblbooking WHERE status=0");
 // ACCESSIBILITY FIX (Round 68, master prompt item 32): the booking-status
 // donut below (#statusChart) had no accessible name at all -- a screen
@@ -46,8 +46,6 @@ $pageTitle = 'Dashboard';
 <title>TMS | Dashboard</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Plus+Jakarta+Sans:wght@600;700;800&display=swap" onload="this.onload=null;this.rel='stylesheet'">
-<noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Plus+Jakarta+Sans:wght@600;700;800&display=swap" rel="stylesheet"></noscript>
 <link href="css/font-awesome.min2.css" rel="stylesheet">
 <link href="css/bootstrap.min.css" rel="stylesheet">
 <link href="<?php echo tms_asset_ver('css/admin-v6.css'); ?>" rel="stylesheet">
@@ -151,7 +149,7 @@ $pageTitle = 'Dashboard';
     <!-- Recent Bookings Table -->
     <div class="card">
       <div class="card-header">
-        <h3><i class="fa fa-clock-o" style="color:#1d4ed8;margin-right:8px;"></i> Recent Bookings</h3>
+        <h3><i class="fa fa-clock-o" style="color:#176B50;margin-right:8px;"></i> Recent Bookings</h3>
         <a href="manage-bookings.php" class="btn-v6 ghost sm">View all</a>
       </div>
       <div style="overflow-x:auto;">
@@ -167,14 +165,14 @@ $pageTitle = 'Dashboard';
           </thead>
           <tbody>
           <?php if(count($recent)===0): ?>
-            <tr><td colspan="5" style="text-align:center;color:#94a3b8;padding:32px;">No bookings yet.</td></tr>
+            <tr><td colspan="5" style="text-align:center;color:var(--text-muted);padding:32px;">No bookings yet.</td></tr>
           <?php else: ?>
           <?php foreach($recent as $b): ?>
           <tr>
-            <td><span style="font-weight:600;color:#1d4ed8;">#BK<?= str_pad($b->BookingId,3,'0',STR_PAD_LEFT) ?></span></td>
+            <td><span style="font-weight:600;color:#176B50;">#BK<?= str_pad($b->BookingId,3,'0',STR_PAD_LEFT) ?></span></td>
             <td style="max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"><?= htmlentities($b->UserEmail) ?></td>
             <td style="max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"><?= htmlentities($b->PackageName) ?></td>
-            <td style="color:#64748b;"><?= date('d M Y', strtotime($b->RegDate)) ?></td>
+            <td style="color:var(--text-muted);"><?= date('d M Y', strtotime($b->RegDate)) ?></td>
             <td>
               <?php if($b->status==1): ?>
                 <span class="badge-pill success">Confirmed</span>
@@ -219,14 +217,14 @@ $pageTitle = 'Dashboard';
 
       <!-- Booking status donut -->
       <div class="card">
-        <div class="card-header"><h3><i class="fa fa-pie-chart" style="color:#7c3aed;margin-right:8px;"></i> Booking Status</h3></h3></div>
+        <div class="card-header"><h3><i class="fa fa-pie-chart" style="color:#1F8A66;margin-right:8px;"></i> Booking Status</h3></h3></div>
         <div class="card-body" style="padding:16px;">
           <canvas id="statusChart" height="180" style="display:none;" role="img" aria-label="Booking status: <?= $confirmedCount ?> confirmed, <?= $pending ?> pending, <?= $cancelledCount ?> cancelled"></canvas>
-          <div id="statusChartEmpty" style="text-align:center;padding:40px;color:#94a3b8;display:none;">
+          <div id="statusChartEmpty" style="text-align:center;padding:40px;color:var(--text-muted);display:none;">
             <i class="fa fa-pie-chart" style="font-size:32px;display:block;margin-bottom:10px;"></i>
             No bookings yet.
           </div>
-          <div id="statusChartUnavailable" style="text-align:center;padding:40px;color:#94a3b8;display:none;">
+          <div id="statusChartUnavailable" style="text-align:center;padding:40px;color:var(--text-muted);display:none;">
             <i class="fa fa-exclamation-triangle" style="font-size:32px;display:block;margin-bottom:10px;"></i>
             Chart couldn't load (offline or blocked script). Booking status is still shown in the summary cards above.
           </div>
@@ -267,7 +265,7 @@ if (typeof Chart === 'undefined') {
     type:'doughnut',
     data:{
       labels:['Confirmed','Pending','Cancelled'],
-      datasets:[{data:[confirmed,pending2,cancelled],backgroundColor:['#059669','#d97706','#dc2626'],borderWidth:0,borderRadius:4}]
+      datasets:[{data:[confirmed,pending2,cancelled],backgroundColor:['#047857','#92400E','#B91C1C'],borderWidth:0,borderRadius:4}]
     },
     options:{responsive:true,cutout:'68%',plugins:{legend:{position:'bottom',labels:{font:{size:12},padding:12,usePointStyle:true}}}}
   });

@@ -310,9 +310,9 @@ mkdir -p admin/blogimages &amp;&amp; chmod 777 admin/blogimages/
         <h3>Log In to Admin Panel</h3>
         <p>Go to <code>http://localhost/tms/admin/</code> and sign in.</p>
         <div class="code">
-<span class="cm">Default credentials (from database/legacy-sql/tms.sql):</span><br>
-<span class="ck">Username:</span> <span class="cv">admin</span><br>
-<span class="ck">Password:</span> <span class="cv">Test@12345</span>
+<span class="cm">Create an admin account (no default password ships with this project):</span><br>
+<span class="ck">Command:</span> <span class="cv">php tools/create-admin.php</span><br>
+<span class="ck">Password:</span> <span class="cv">printed once by the command</span>
         </div>
         <div class="warn">⚠️ Change the admin password immediately after first login. Go to <strong>Admin Panel → Change Password</strong>.</div>
         <div class="info">ℹ️ If you're not sure of the password, open phpMyAdmin → tms database → tbladmin table → edit the row and set a new bcrypt hash, or run: <code>UPDATE tbladmin SET AdminPassword = MD5('yournewpassword') WHERE AdminUserName = 'admin';</code></div>
@@ -329,7 +329,7 @@ mkdir -p admin/blogimages &amp;&amp; chmod 777 admin/blogimages/
   <table>
     <thead><tr><th>Panel</th><th>URL</th><th>Username</th><th>Password</th></tr></thead>
     <tbody>
-      <tr><td>🔧 Admin Panel</td><td><code>localhost/tms/admin/</code></td><td>admin</td><td>Test@12345</td></tr>
+      <tr><td>🔧 Admin Panel</td><td><code>localhost/tms/admin/</code></td><td>admin</td><td>(set via tools/create-admin.php)</td></tr>
       <tr><td>🌐 User Register</td><td><code>localhost/tms/register.php</code></td><td colspan="2">Create your own account</td></tr>
       <tr><td>🗄 phpMyAdmin</td><td><code>localhost/phpmyadmin</code></td><td>root</td><td>(empty)</td></tr>
     </tbody>

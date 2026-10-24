@@ -3,7 +3,7 @@
  * virtual-guide.php — AI Virtual Tour Guide
  * Users can ask any question about any destination and get expert local knowledge.
  */
-session_start();
+require_once __DIR__ . '/../backend/session-boot.php';
 error_reporting(E_ALL); ini_set('display_errors', '0'); ini_set('log_errors', '1');
 include('backend/config.php');
 // LIVE BUG FIX (customer-facing audit): this page is real browsing/
@@ -22,8 +22,12 @@ $preloadDest = tms_clean($_GET['dest'] ?? '');
 <html lang="<?php echo htmlspecialchars(tms_active_language(), ENT_QUOTES, 'UTF-8'); ?>">
 <head>
 <link rel="manifest" href="manifest.json">
-<meta name="theme-color" content="#0B2B3C">
+<meta name="theme-color" content="#104B3A">
 <link rel="apple-touch-icon" href="images/icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="TMS">
+<meta name="mobile-web-app-capable" content="yes">
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>AI Virtual Guide | TMS</title>
@@ -32,45 +36,44 @@ $preloadDest = tms_clean($_GET['dest'] ?? '');
 <link href="<?php echo tms_asset_ver('css/modern-theme.css'); ?>" rel="stylesheet">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700;9..144,800&family=Manrope:wght@400;500;600;700;800&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
 <style>
 .guide-layout { display:grid; grid-template-columns:280px 1fr; gap:24px; max-width:1100px; margin:30px auto; padding:0 20px 60px; }
 @media(max-width:768px){ .guide-layout{grid-template-columns:1fr;} }
 
 /* Sidebar */
-.guide-sidebar { background:#fff; border-radius:20px; padding:24px; box-shadow:0 4px 20px rgba(0,0,0,.08); align-self:start; position:sticky; top:20px; }
-.guide-avatar { width:72px; height:72px; border-radius:20px; background:linear-gradient(135deg,#f6d365,#fda085); display:flex; align-items:center; justify-content:center; font-size:32px; margin:0 auto 16px; }
-.guide-name { text-align:center; font-size:1rem; font-weight:800; color:#1a202c; margin-bottom:4px; }
-.guide-role { text-align:center; font-size:12px; color:#718096; margin-bottom:20px; }
+.guide-sidebar { background:var(--white); border-radius:20px; padding:24px; box-shadow:0 4px 20px rgba(0,0,0,.08); align-self:start; position:sticky; top:20px; }
+.guide-avatar { width:72px; height:72px; border-radius:20px; background:linear-gradient(135deg,#176B50,#104B3A); display:flex; align-items:center; justify-content:center; font-size:32px; margin:0 auto 16px; }
+.guide-name { text-align:center; font-size:1rem; font-weight:800; color:var(--text); margin-bottom:4px; }
+.guide-role { text-align:center; font-size:12px; color:var(--text-muted); margin-bottom:20px; }
 
 .dest-input-wrap { margin-bottom:20px; }
 .dest-input { width:100%; padding:10px 14px; border:2px solid #e2e8f0; border-radius:10px; font-size:14px; outline:none; transition:.2s; }
-.dest-input:focus { border-color:#f6ad55; box-shadow:0 0 0 3px rgba(246,173,85,.1); }
-.btn-set-dest { width:100%; background:linear-gradient(135deg,#f6d365,#fda085); border:none; border-radius:10px; padding:10px; font-size:13px; font-weight:700; color:#1a202c; cursor:pointer; transition:.2s; }
+.dest-input:focus { border-color:#176B50; box-shadow:0 0 0 3px rgba(23,107,80,.12); }
+.btn-set-dest { width:100%; background:linear-gradient(135deg,#176B50,#104B3A); border:none; border-radius:10px; padding:10px; font-size:13px; font-weight:700; color:#fff; cursor:pointer; transition:.2s; }
 .btn-set-dest:hover { transform:translateY(-1px); box-shadow:0 4px 12px rgba(246,173,85,.4); }
 
-.guide-sidebar h6 { font-size:11px; font-weight:700; color:#a0aec0; text-transform:uppercase; letter-spacing:.8px; margin-bottom:10px; }
-.topic-btn { width:100%; text-align:left; background:#f8fafc; border:1px solid #f0f0f0; border-radius:8px; padding:8px 12px; font-size:13px; color:#4a5568; cursor:pointer; margin-bottom:6px; transition:.2s; display:flex; align-items:center; gap:8px; }
-.topic-btn:hover { background:#fffbeb; border-color:#f6ad55; color:#744210; }
+.guide-sidebar h6 { font-size:11px; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:.8px; margin-bottom:10px; }
+.topic-btn { width:100%; text-align:left; background:var(--bg); border:1px solid var(--border); border-radius:8px; padding:8px 12px; font-size:13px; color:var(--text); cursor:pointer; margin-bottom:6px; transition:.2s; display:flex; align-items:center; gap:8px; }
+.topic-btn:hover { background:#E7F5EE; border-color:#176B50; color:#0E3B2D; }
 
 /* Chat area */
-.guide-chat { background:#fff; border-radius:20px; overflow:hidden; box-shadow:0 4px 20px rgba(0,0,0,.08); display:flex; flex-direction:column; min-height:600px; }
-.guide-chat-header { background:linear-gradient(135deg,#f6d365,#fda085); padding:20px 24px; }
-.guide-chat-header h4 { font-size:1.1rem; font-weight:800; color:#1a202c; margin:0 0 4px; }
-.guide-chat-header p  { font-size:13px; color:rgba(26,32,44,.7); margin:0; }
+.guide-chat { background:var(--white); border-radius:20px; overflow:hidden; box-shadow:0 4px 20px rgba(0,0,0,.08); display:flex; flex-direction:column; min-height:600px; }
+.guide-chat-header { background:linear-gradient(135deg,#176B50,#104B3A); padding:20px 24px; }
+.guide-chat-header h4 { font-size:1.1rem; font-weight:800; color:#fff; margin:0 0 4px; }
+.guide-chat-header p  { font-size:13px; color:rgba(255,255,255,.88); margin:0; }
 
-.guide-messages { flex:1; overflow-y:auto; padding:20px; background:#fafafa; display:flex; flex-direction:column; gap:14px; min-height:400px; }
+.guide-messages { flex:1; overflow-y:auto; padding:20px; background:var(--bg); display:flex; flex-direction:column; gap:14px; min-height:400px; }
 
 .gmsg { max-width:80%; }
 .gmsg-guide { align-self:flex-start; }
 .gmsg-user  { align-self:flex-end; }
 .gmsg-bubble { padding:12px 16px; border-radius:14px; font-size:14px; line-height:1.6; }
-.gmsg-guide .gmsg-bubble { background:#fff; box-shadow:0 2px 8px rgba(0,0,0,.07); border-radius:4px 14px 14px 14px; color:#1a202c; }
-.gmsg-user  .gmsg-bubble { background:linear-gradient(135deg,#f6d365,#fda085); color:#1a202c; border-radius:14px 4px 14px 14px; }
-.gmsg-name { font-size:11px; color:#f6ad55; font-weight:700; margin-bottom:4px; }
+.gmsg-guide .gmsg-bubble { background:var(--white); color:var(--text); box-shadow:0 2px 8px rgba(0,0,0,.07); border-radius:4px 14px 14px 14px; color:var(--text); }
+.gmsg-user  .gmsg-bubble { background:linear-gradient(135deg,#176B50,#104B3A); color:#fff; border-radius:14px 4px 14px 14px; }
+.gmsg-name { font-size:11px; color:var(--secondary); font-weight:700; margin-bottom:4px; }
 
 .typing { display:none; align-self:flex-start; }
-.typing-bub { background:#fff; box-shadow:0 2px 8px rgba(0,0,0,.07); border-radius:4px 14px 14px 14px; padding:12px 16px; display:inline-flex; gap:4px; }
+.typing-bub { background:var(--white); box-shadow:0 2px 8px rgba(0,0,0,.07); border-radius:4px 14px 14px 14px; padding:12px 16px; display:inline-flex; gap:4px; }
 .t-dot { width:7px; height:7px; border-radius:50%; background:#ccc; animation:tb 1.2s infinite; }
 .t-dot:nth-child(2){ animation-delay:.2s; }
 .t-dot:nth-child(3){ animation-delay:.4s; }
@@ -78,8 +81,8 @@ $preloadDest = tms_clean($_GET['dest'] ?? '');
 
 .guide-input-area { padding:14px 20px; border-top:1px solid #f0f0f0; display:flex; gap:10px; align-items:flex-end; }
 .guide-input { flex:1; border:2px solid #e2e8f0; border-radius:12px; padding:10px 16px; font-size:14px; outline:none; resize:none; min-height:44px; max-height:120px; font-family:inherit; transition:.2s; }
-.guide-input:focus { border-color:#f6ad55; box-shadow:0 0 0 3px rgba(246,173,85,.1); }
-.guide-send { width:44px; height:44px; border-radius:12px; background:linear-gradient(135deg,#f6d365,#fda085); border:none; cursor:pointer; display:flex; align-items:center; justify-content:center; color:#1a202c; font-size:16px; flex-shrink:0; transition:.2s; }
+.guide-input:focus { border-color:#176B50; box-shadow:0 0 0 3px rgba(23,107,80,.12); }
+.guide-send { width:44px; height:44px; border-radius:12px; background:linear-gradient(135deg,#176B50,#104B3A); border:none; cursor:pointer; display:flex; align-items:center; justify-content:center; color:#fff; font-size:16px; flex-shrink:0; transition:.2s; }
 .guide-send:hover { transform:scale(1.05); }
 
 .no-dest { flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:40px; }
@@ -89,7 +92,7 @@ $preloadDest = tms_clean($_GET['dest'] ?? '');
 <body>
 <?php include('backend/header.php'); ?>
 
-<div style="background:linear-gradient(135deg,#1a1a2e,#16213e);padding:50px 0 30px;text-align:center;color:#fff;margin-bottom:0;">
+<div style="background:linear-gradient(135deg,#0E2A21,#104B3A);padding:50px 0 30px;text-align:center;color:#fff;margin-bottom:0;">
     <h1 style="font-size:2rem;font-weight:800;margin-bottom:8px;">🗺️ AI Virtual Tour Guide</h1>
     <p style="color:rgba(255,255,255,.7);">Ask a local expert AI anything about your destination</p>
 </div>
@@ -130,8 +133,8 @@ $preloadDest = tms_clean($_GET['dest'] ?? '');
         <div class="guide-messages" id="guideMessages">
             <div class="no-dest" id="noDestState">
                 <div class="no-dest-icon">🗺️</div>
-                <h5 style="font-weight:800;color:#1a202c;">Where are you going?</h5>
-                <p style="color:#718096;font-size:14px;">Enter a destination in the sidebar and I'll become your personal local expert guide.</p>
+                <h5 style="font-weight:800;color:var(--text);">Where are you going?</h5>
+                <p style="color:var(--text-muted);font-size:14px;">Enter a destination in the sidebar and I'll become your personal local expert guide.</p>
             </div>
             <div class="typing" id="guideTyping">
                 <div class="typing-bub">
@@ -193,6 +196,7 @@ async function askGuide() {
 
     const fd = new FormData();
     fd.append('action', 'virtual_guide');
+    fd.append('csrf_token', <?php echo json_encode(tms_csrf_token()); ?>);
     fd.append('destination', currentDest);
     fd.append('question', q);
 
@@ -221,7 +225,7 @@ function addGuideMessage(html) {
     <div class="gmsg gmsg-guide">
         <div class="gmsg-name">🧭 AI Guide</div>
         <div class="gmsg-bubble">${html}</div>
-        <div style="font-size:10px;color:#a0aec0;margin-top:3px;">${now}</div>
+        <div style="font-size:10px;color:var(--text-muted);margin-top:3px;">${now}</div>
     </div>`);
     msgs.scrollTop = msgs.scrollHeight;
 }
@@ -233,7 +237,7 @@ function addUserMessage(text) {
     typing.insertAdjacentHTML('beforebegin', `
     <div class="gmsg gmsg-user">
         <div class="gmsg-bubble">${esc(text)}</div>
-        <div style="font-size:10px;color:rgba(26,32,44,.5);margin-top:3px;text-align:right;">${now}</div>
+        <div style="font-size:10px;color:var(--text-muted);margin-top:3px;text-align:right;">${now}</div>
     </div>`);
     msgs.scrollTop = msgs.scrollHeight;
 }

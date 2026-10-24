@@ -1,5 +1,5 @@
 <?php
-session_start();
+require_once __DIR__ . '/../backend/session-boot.php';
 error_reporting(E_ALL); ini_set('display_errors', '0'); ini_set('log_errors', '1');
 include('backend/config.php');
 
@@ -18,10 +18,30 @@ if (empty($_SESSION['login'])) {
 // once the catalog grew to 400+ packages; replaced with an indexed pool + PHP shuffle)
 $featuredPkgs = [];
 try {
-    $pool = $dbh->query("SELECT * FROM tbltourpackages WHERE Status=1 ORDER BY PackageId DESC LIMIT 60")->fetchAll(PDO::FETCH_OBJ);
+    $pool = $dbh->query("SELECT PackageId, PackageName, PackageImage, PackagePrice, PackageLocation, PackageType, PackageDuration, AvgRating FROM tbltourpackages WHERE " . TMS_PKG_PUBLIC_SQL . " ORDER BY PackageId DESC LIMIT 60")->fetchAll(PDO::FETCH_OBJ);
     shuffle($pool);
     $featuredPkgs = array_slice($pool, 0, 8);
 } catch(Exception $e) {}
+
+// PERSONALIZATION (Round 115 continuation, "TMS V2" prompt -- confirmed
+// real gap: this homepage always showed the same random pool to every
+// logged-in user, with zero use of the booking-history/wishlist/
+// recently-viewed signal already tracked elsewhere in the app). Purely
+// additive -- $featuredPkgs above and its section below are completely
+// unchanged, still rendered for every user; this only adds a second,
+// personalized section that appears ABOVE it when real signal exists.
+// See backend/services/PersonalizedHomepage.php for why this is
+// deterministic SQL, not an AI call, on every homepage pageview.
+require_once 'backend/services/PersonalizedHomepage.php';
+$recommended = ['packages' => [], 'reason' => 'none'];
+try {
+    $recommended = PersonalizedHomepage::forUser($dbh, $_SESSION['login'], 8);
+} catch (Exception $e) {}
+$recommendedReasonLabel = [
+    'booking_history'  => tms_t('home_sub_recommended_booking', 'Because you\'ve booked trips like this before'),
+    'wishlist'         => tms_t('home_sub_recommended_wishlist', 'Based on packages in your wishlist'),
+    'recently_viewed'  => tms_t('home_sub_recommended_viewed', 'Based on packages you recently viewed'),
+][$recommended['reason']] ?? '';
 
 // Fetch blog posts
 $blogPosts = [];
@@ -48,6 +68,11 @@ try {
 <meta name="description" content="Discover the world with TMS - your premium travel partner. Book tour packages, explore destinations, and plan your perfect trip.">
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#0F4C81">
+<link rel="apple-touch-icon" href="images/icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="TMS">
+<meta name="mobile-web-app-capable" content="yes">
 
 <!-- Bootstrap -->
 <link href="css/bootstrap.min2.css" rel="stylesheet">
@@ -59,7 +84,6 @@ try {
 <link href="<?php echo tms_asset_ver('css/modern-theme.css'); ?>" rel="stylesheet">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700;9..144,800&family=Manrope:wght@400;500;600;700;800&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
 
 <!-- Scripts -->
 <script src="js/jquery-1.12.0.min.js" defer></script>
@@ -81,12 +105,24 @@ try {
 <!-- ══════════════════════════════════════════════════════════════
      HERO SECTION
 ══════════════════════════════════════════════════════════════ -->
+<?php
+require_once dirname(__DIR__) . '/backend/SiteStats.php';
+$siteStats = isset($dbh) && $dbh instanceof PDO ? tms_site_stats($dbh) : ['packages'=>0,'destinations'=>0,'hotels'=>0,'activities'=>0,'reviews'=>0,'avg_rating'=>null];
+// Only figures that are actually > 0 are shown, in a fixed order.
+$siteStatItems = array_filter([
+    'Tour packages' => $siteStats['packages'],
+    'Destinations'  => $siteStats['destinations'],
+    'Hotels'        => $siteStats['hotels'],
+    'Activities'    => $siteStats['activities'],
+    'Reviews'       => $siteStats['reviews'],
+], static function ($n) { return $n > 0; });
+?>
 <section class="tms-hero">
     <div class="tms-hero-bg"></div>
     <div class="tms-hero-overlay"></div>
     <div class="tms-hero-content">
         <div class="tms-hero-badge wow fadeInDown" data-wow-delay=".1s">
-            <i class="fa fa-star"></i> Trusted by 1.9K+ Travelers Worldwide
+            <i class="fa fa-star"></i> <?php echo $siteStats['packages'] > 0 ? (int)$siteStats['packages'] . ' tour packages across ' . (int)$siteStats['destinations'] . ' destinations' : 'Smart AI-based travel marketplace'; ?>
         </div>
         <h1 class="wow fadeInUp" data-wow-delay=".2s">
             Discover Your<br>Next <span class="highlight">Adventure</span>
@@ -125,24 +161,17 @@ try {
             </a>
         </div>
 
-        <!-- Stats -->
+        <!-- Stats (real counts from the database) -->
+        <?php if ($siteStatItems): ?>
         <div class="tms-hero-stats wow fadeInUp" data-wow-delay=".6s">
+            <?php foreach (array_slice($siteStatItems, 0, 4, true) as $lbl => $n): ?>
             <div class="tms-hero-stat">
-                <div class="num" data-counter="3200">0</div>
-                <div class="lbl">Bookings</div>
+                <div class="num" data-counter="<?php echo (int)$n; ?>">0</div>
+                <div class="lbl"><?php echo htmlspecialchars($lbl, ENT_QUOTES, 'UTF-8'); ?></div>
             </div>
-            <div class="tms-hero-stat">
-                <div class="num" data-counter="1900">0</div>
-                <div class="lbl">Users</div>
-            </div>
-            <div class="tms-hero-stat">
-                <div class="num" data-counter="4500">0</div>
-                <div class="lbl">Enquiries</div>
-            </div>
-            <div class="tms-hero-stat">
-                <div class="num" data-counter="50">0</div>
-                <div class="lbl">Countries</div>
-            </div>
+            <?php endforeach; ?>
+        </div>
+        <?php endif; ?>
         </div>
     </div>
     <!-- Scroll Indicator -->
@@ -187,29 +216,106 @@ try {
 ══════════════════════════════════════════════════════════════ -->
 <div class="tms-promo-strip">
     <div class="tms-promo-inner">
-        <div class="tms-promo-item wow fadeInLeft" data-wow-delay=".1s">
-            <div class="tms-promo-icon" style="font-weight:800;font-size:22px;">৳</div>
+        <div class="tms-promo-item">
+            <div class="tms-promo-icon"><i class="fa fa-magic" aria-hidden="true"></i></div>
             <div class="tms-promo-text">
-                <strong>Up to ৳5,000 OFF</strong>
-                <span>Travel Smart with exclusive deals</span>
+                <strong>AI trip planner</strong>
+                <span>Draft an itinerary from your budget and interests</span>
             </div>
         </div>
-        <div class="tms-promo-item wow fadeInUp" data-wow-delay=".2s">
-            <div class="tms-promo-icon"><i class="fa fa-hotel"></i></div>
+        <div class="tms-promo-item">
+            <div class="tms-promo-icon"><i class="fa fa-columns" aria-hidden="true"></i></div>
             <div class="tms-promo-text">
-                <strong>Up to 70% OFF Hotels</strong>
-                <span>Best rates across the world</span>
+                <strong>Compare up to 3 packages</strong>
+                <span>Side by side, before you book</span>
             </div>
         </div>
-        <div class="tms-promo-item wow fadeInRight" data-wow-delay=".3s">
-            <div class="tms-promo-icon"><i class="fa fa-mobile"></i></div>
+        <div class="tms-promo-item">
+            <div class="tms-promo-icon" style="font-weight:800;font-size:22px;">&#2547;</div>
             <div class="tms-promo-text">
-                <strong>Flat ৳5,000 App Offer</strong>
-                <span>Book through our mobile platform</span>
+                <strong>Prices in <?php echo (int)count(TMS_CURRENCIES); ?> currencies</strong>
+                <span>Switch currency anytime; checkout is confirmed server-side</span>
             </div>
         </div>
     </div>
 </div>
+
+<?php if (!empty($recommended['packages'])): ?>
+<!-- ══════════════════════════════════════════════════════════════
+     RECOMMENDED FOR YOU (Round 115 continuation -- real signal only,
+     see backend/services/PersonalizedHomepage.php; never shown unless
+     $recommended['packages'] is genuinely non-empty)
+══════════════════════════════════════════════════════════════ -->
+<section class="tms-section">
+    <div class="tms-container">
+        <div class="tms-section-header wow fadeInUp" data-wow-delay=".1s">
+            <div class="tms-section-tag"><i class="fa fa-magic"></i> <?php echo tms_t('home_tag_recommended', 'For You'); ?></div>
+            <h2 class="tms-section-title"><?php echo tms_t('home_title_recommended', 'Recommended for You'); ?></h2>
+            <p class="tms-section-sub"><?php echo htmlspecialchars($recommendedReasonLabel); ?></p>
+        </div>
+        <div class="tms-pkg-grid">
+        <?php $recIdx = 0; foreach ($recommended['packages'] as $pkg):
+            $fallback = tms_destination_image(
+                (string)($pkg->PackageName ?? ''),
+                (string)($pkg->PackageLocation ?? ''),
+                (string)($pkg->PackageType ?? ''),
+                (int)$pkg->PackageId
+            );
+            $recIdx++;
+        ?>
+        <div class="tms-pkg-card wow fadeInUp" data-wow-delay="<?php echo (.1 + ($recIdx * 0.05)); ?>s">
+            <div class="tms-pkg-img">
+                <img loading="lazy"
+                     src="<?php echo htmlspecialchars(tms_package_image_src($pkg->PackageImage)); ?>"
+                     <?php echo tms_responsive_img_attrs(tms_package_image_src($pkg->PackageImage)); ?>
+                     onerror="this.src='<?php echo $fallback; ?>'"
+                     alt="<?php echo htmlspecialchars($pkg->PackageName); ?>">
+                <?php if(!empty($pkg->PackageType)): ?>
+                <span class="tms-pkg-badge"><?php echo htmlspecialchars($pkg->PackageType); ?></span>
+                <?php endif; ?>
+                <div class="tms-pkg-wishlist" onclick="addToWishlist(<?php echo $pkg->PackageId; ?>, this)" title="Add to Wishlist">
+                    <i class="fa fa-heart-o"></i>
+                </div>
+                <?php if(!empty($pkg->PackageDuration) || (!empty($pkg->AvgRating) && $pkg->AvgRating > 0)): ?>
+                <div class="tms-pkg-quickglance">
+                    <?php if(!empty($pkg->PackageDuration)): ?>
+                    <span><i class="fa fa-clock-o"></i><?php echo htmlspecialchars($pkg->PackageDuration); ?></span>
+                    <?php endif; ?>
+                    <?php if(!empty($pkg->AvgRating) && $pkg->AvgRating > 0): ?>
+                    <span><i class="fa fa-star"></i><?php echo number_format($pkg->AvgRating,1); ?> rating</span>
+                    <?php endif; ?>
+                </div>
+                <?php endif; ?>
+            </div>
+            <div class="tms-pkg-body">
+                <div class="tms-pkg-location">
+                    <i class="fa fa-map-marker"></i>
+                    <?php echo htmlspecialchars($pkg->PackageLocation ?? 'Various Locations'); ?>
+                </div>
+                <h4><?php echo htmlspecialchars($pkg->PackageName); ?></h4>
+                <div class="tms-pkg-meta">
+                    <?php if(!empty($pkg->PackageDuration)): ?>
+                    <span><i class="fa fa-clock-o"></i> <?php echo htmlspecialchars($pkg->PackageDuration); ?></span>
+                    <?php endif; ?>
+                    <?php if(!empty($pkg->AvgRating) && $pkg->AvgRating > 0): ?>
+                    <span><i class="fa fa-star" style="color:var(--accent)"></i> <?php echo number_format($pkg->AvgRating,1); ?></span>
+                    <?php endif; ?>
+                </div>
+                <div class="tms-pkg-footer">
+                    <div class="tms-pkg-price">
+                        <small>From </small><?php echo tms_currency($pkg->PackagePrice); ?>
+                    </div>
+                    <a href="package-details.php?pkgid=<?php echo $pkg->PackageId; ?>" class="btn-pkg">
+                        View Details
+                    </a>
+                </div>
+            </div>
+        </div>
+        <?php endforeach; ?>
+        </div>
+    </div>
+</section>
+<?php endif; ?>
 
 <!-- ══════════════════════════════════════════════════════════════
      FEATURED PACKAGES
@@ -217,9 +323,9 @@ try {
 <section class="tms-section">
     <div class="tms-container">
         <div class="tms-section-header wow fadeInUp" data-wow-delay=".1s">
-            <div class="tms-section-tag"><i class="fa fa-star"></i> Featured</div>
-            <h2 class="tms-section-title">Popular Tour Packages</h2>
-            <p class="tms-section-sub">Handpicked travel experiences crafted for every kind of adventurer</p>
+            <div class="tms-section-tag"><i class="fa fa-star"></i> <?php echo tms_t('home_tag_featured', 'Featured'); ?></div>
+            <h2 class="tms-section-title"><?php echo tms_t('home_title_featured', 'Popular Tour Packages'); ?></h2>
+            <p class="tms-section-sub"><?php echo tms_t('home_sub_featured', 'Handpicked travel experiences crafted for every kind of adventurer'); ?></p>
         </div>
         <div class="tms-pkg-grid">
         <?php
@@ -321,9 +427,9 @@ try {
 <section class="tms-section tms-section-alt">
     <div class="tms-container">
         <div class="tms-section-header wow fadeInUp" data-wow-delay=".1s">
-            <div class="tms-section-tag"><i class="fa fa-globe"></i> Explore</div>
-            <h2 class="tms-section-title">Popular Destinations</h2>
-            <p class="tms-section-sub">From tropical beaches to mountain peaks — find your perfect escape</p>
+            <div class="tms-section-tag"><i class="fa fa-globe"></i> <?php echo tms_t('nav_explore', 'Explore'); ?></div>
+            <h2 class="tms-section-title"><?php echo tms_t('heading_popular_destinations', 'Popular Destinations'); ?></h2>
+            <p class="tms-section-sub"><?php echo tms_t('home_sub_destinations', 'From tropical beaches to mountain peaks — find your perfect escape'); ?></p>
         </div>
         <div class="tms-dest-grid">
             <a href="package-list.php?location=paris" class="tms-dest-card wow fadeInLeft" data-wow-delay=".1s">
@@ -382,28 +488,20 @@ try {
 <!-- ══════════════════════════════════════════════════════════════
      STATS BANNER
 ══════════════════════════════════════════════════════════════ -->
+<?php if ($siteStatItems): ?>
 <section class="tms-stats">
     <div class="tms-container">
         <div class="tms-stats-grid">
-            <div class="tms-stat-item wow zoomIn" data-wow-delay=".1s">
-                <div class="tms-stat-num">700<span>M+</span></div>
-                <div class="tms-stat-lbl">Total Bookings</div>
+            <?php foreach (array_slice($siteStatItems, 0, 4, true) as $lbl => $n): ?>
+            <div class="tms-stat-item">
+                <div class="tms-stat-num"><?php echo number_format((int)$n); ?></div>
+                <div class="tms-stat-lbl"><?php echo htmlspecialchars($lbl, ENT_QUOTES, 'UTF-8'); ?></div>
             </div>
-            <div class="tms-stat-item wow zoomIn" data-wow-delay=".2s">
-                <div class="tms-stat-num">1,900<span>+</span></div>
-                <div class="tms-stat-lbl">Registered Users</div>
-            </div>
-            <div class="tms-stat-item wow zoomIn" data-wow-delay=".3s">
-                <div class="tms-stat-num">80<span>K+</span></div>
-                <div class="tms-stat-lbl">Enquiries Handled</div>
-            </div>
-            <div class="tms-stat-item wow zoomIn" data-wow-delay=".4s">
-                <div class="tms-stat-num">50<span>+</span></div>
-                <div class="tms-stat-lbl">Countries Covered</div>
-            </div>
+            <?php endforeach; ?>
         </div>
     </div>
 </section>
+<?php endif; ?>
 
 <!-- ══════════════════════════════════════════════════════════════
      AI FEATURES
@@ -411,9 +509,9 @@ try {
 <section class="tms-section">
     <div class="tms-container">
         <div class="tms-section-header wow fadeInUp" data-wow-delay=".1s">
-            <div class="tms-section-tag"><i class="fa fa-magic"></i> AI-Powered</div>
-            <h2 class="tms-section-title">Smart Travel Features</h2>
-            <p class="tms-section-sub">Cutting-edge tools to make your travel planning effortless and intelligent</p>
+            <div class="tms-section-tag"><i class="fa fa-magic"></i> <?php echo tms_t('home_tag_ai', 'AI-Powered'); ?></div>
+            <h2 class="tms-section-title"><?php echo tms_t('home_title_ai', 'Smart Travel Features'); ?></h2>
+            <p class="tms-section-sub"><?php echo tms_t('home_sub_ai', 'Cutting-edge tools to make your travel planning effortless and intelligent'); ?></p>
         </div>
         <div class="tms-features-grid">
             <a href="ai-recommend.php" class="tms-feature-card wow fadeInUp" data-wow-delay=".1s" style="text-decoration:none;">
@@ -458,6 +556,13 @@ try {
                 <p>Design your perfect trip from scratch. Choose destinations, dates, activities, and accommodation your way.</p>
                 <span>Build Trip <i class="fa fa-arrow-right"></i></span>
             </a>
+            <!-- Round 115, Phase G (Bangladesh Travel Intelligence) -->
+            <a href="bd-guide.php" class="tms-feature-card wow fadeInUp" data-wow-delay=".4s" style="text-decoration:none;">
+                <div class="tms-feature-card-icon icon-bd"><i class="fa fa-map-marker"></i></div>
+                <h4>Bangladesh Travel Guide</h4>
+                <p>A researched guide to 12 Bangladesh destinations -- Cox's Bazar, Sundarbans, Sajek Valley and more -- with how to get there and live weather.</p>
+                <span>See the Guide <i class="fa fa-arrow-right"></i></span>
+            </a>
         </div>
     </div>
 </section>
@@ -465,67 +570,50 @@ try {
 <!-- ══════════════════════════════════════════════════════════════
      CUSTOMER REVIEWS
 ══════════════════════════════════════════════════════════════ -->
+<?php if (!empty($reviews)): ?>
 <section class="tms-section tms-section-alt">
     <div class="tms-container">
         <div class="tms-section-header wow fadeInUp" data-wow-delay=".1s">
-            <div class="tms-section-tag"><i class="fa fa-star"></i> Testimonials</div>
-            <h2 class="tms-section-title">What Travelers Say</h2>
-            <p class="tms-section-sub">Real experiences from real adventurers who explored the world with TMS</p>
+            <div class="tms-section-tag"><i class="fa fa-star"></i> <?php echo tms_t('home_tag_testimonials', 'Testimonials'); ?></div>
+            <h2 class="tms-section-title"><?php echo tms_t('home_title_testimonials', 'What Travelers Say'); ?></h2>
+            <p class="tms-section-sub"><?php echo tms_t('home_sub_testimonials', 'Recent reviews from travelers who booked with TMS'); ?></p>
         </div>
         <div class="tms-reviews-grid">
-        <?php if(!empty($reviews)): foreach($reviews as $rev): ?>
+        <?php foreach($reviews as $rev): ?>
         <div class="tms-review-card wow fadeInUp" data-wow-delay=".1s">
             <div class="tms-review-stars">
                 <?php for($s=1;$s<=5;$s++) echo ($s<=$rev->Rating)?'<i class="fa fa-star"></i>':'<i class="fa fa-star-o"></i>'; ?>
             </div>
-            <p class="tms-review-text"><?php echo htmlspecialchars(substr($rev->ReviewText,0,160)); ?>...</p>
+            <p class="tms-review-text"><?php echo htmlspecialchars(mb_strimwidth((string)$rev->ReviewText, 0, 160, '…', 'UTF-8'), ENT_QUOTES, 'UTF-8'); ?></p>
             <div class="tms-review-author">
                 <div style="width:44px;height:44px;border-radius:50%;background:linear-gradient(135deg,var(--primary),var(--secondary));display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:16px;flex-shrink:0;">
                     <?php echo strtoupper(substr($rev->UserName,0,1)); ?>
                 </div>
                 <div>
                     <div class="tms-review-name"><?php echo htmlspecialchars($rev->UserName); ?></div>
-                    <div class="tms-review-dest"><i class="fa fa-map-marker"></i> Verified Traveler</div>
+                    <div class="tms-review-dest"><i class="fa fa-user"></i> Traveler</div>
                 </div>
             </div>
         </div>
-        <?php endforeach; else: ?>
-        <!-- Placeholder reviews -->
-        <?php $placeholderReviews = [
-            ['name'=>'Sarah Mitchell','rating'=>5,'text'=>'Absolutely incredible experience! TMS made planning our honeymoon in Bali effortless. The AI recommendations were spot-on and our tour guide was fantastic.'],
-            ['name'=>'James Rodriguez','rating'=>5,'text'=>'Booked the Rajasthan Heritage tour and it exceeded all expectations. Professional staff, stunning hotels, and seamless logistics throughout.'],
-            ['name'=>'Aisha Patel','rating'=>4,'text'=>'The budget planner helped us save 30% on our Europe trip. Great customer support and the custom trip builder is genuinely useful.'],
-        ]; foreach($placeholderReviews as $rev): ?>
-        <div class="tms-review-card wow fadeInUp" data-wow-delay=".1s">
-            <div class="tms-review-stars"><?php for($s=0;$s<$rev['rating'];$s++) echo '<i class="fa fa-star"></i>'; ?></div>
-            <p class="tms-review-text"><?php echo $rev['text']; ?></p>
-            <div class="tms-review-author">
-                <div style="width:44px;height:44px;border-radius:50%;background:linear-gradient(135deg,var(--primary),var(--secondary));display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:16px;flex-shrink:0;">
-                    <?php echo strtoupper(substr($rev['name'],0,1)); ?>
-                </div>
-                <div>
-                    <div class="tms-review-name"><?php echo $rev['name']; ?></div>
-                    <div class="tms-review-dest"><i class="fa fa-map-marker"></i> Verified Traveler</div>
-                </div>
-            </div>
-        </div>
-        <?php endforeach; endif; ?>
+        <?php endforeach; ?>
         </div>
         <div class="text-center mt-40 wow fadeInUp" data-wow-delay=".2s">
             <a href="reviews.php" class="btn-outline-tms"><i class="fa fa-star"></i> Read All Reviews</a>
         </div>
     </div>
 </section>
+<?php endif; ?>
 
 <!-- ══════════════════════════════════════════════════════════════
      TRAVEL BLOG
 ══════════════════════════════════════════════════════════════ -->
+<?php if (!empty($blogPosts)): ?>
 <section class="tms-section">
     <div class="tms-container">
         <div class="tms-section-header wow fadeInUp" data-wow-delay=".1s">
-            <div class="tms-section-tag"><i class="fa fa-rss"></i> Blog</div>
-            <h2 class="tms-section-title">Travel Inspiration</h2>
-            <p class="tms-section-sub">Tips, guides, and stories from our travel experts and community</p>
+            <div class="tms-section-tag"><i class="fa fa-rss"></i> <?php echo tms_t('nav_blog', 'Blog'); ?></div>
+            <h2 class="tms-section-title"><?php echo tms_t('home_title_blog', 'Travel Inspiration'); ?></h2>
+            <p class="tms-section-sub"><?php echo tms_t('home_sub_blog', 'Tips, guides, and stories from our travel experts and community'); ?></p>
         </div>
         <div class="tms-blog-grid">
         <?php
@@ -549,26 +637,6 @@ try {
                 </div>
             </div>
         </div>
-        <?php endforeach; else:
-        $placeholderBlogs = [
-            ['title'=>'Top 10 Tips for First-Time International Travelers','tag'=>'Travel Tips','img'=>'images/h3.jpg','excerpt'=>'Planning your first international adventure? We cover everything from passport prep to packing light.'],
-            ['title'=>'Hidden Gems of Southeast Asia You Must Visit','tag'=>'Destinations','img'=>'images/h4.jpg','excerpt'=>'Beyond the tourist trail lie incredible hidden destinations. Kampot, Halong Bay corners, and Koh Lanta.'],
-            ['title'=>'How to Plan an Epic Trip on a Tight Budget','tag'=>'Budget Travel','img'=>'images/h5.jpg','excerpt'=>'Smart strategies using budget airlines, local guesthouses, street food, and shoulder-season savings.'],
-        ];
-        foreach($placeholderBlogs as $b):
-        ?>
-        <div class="tms-blog-card wow fadeInUp" data-wow-delay=".1s">
-            <div class="tms-blog-img"><img loading="lazy" src="<?php echo $b['img']; ?>" onerror="this.src='images/1.jpg'" alt="<?php echo htmlspecialchars($b['title'], ENT_QUOTES, 'UTF-8'); ?>"></div>
-            <div class="tms-blog-body">
-                <span class="tms-blog-tag"><?php echo $b['tag']; ?></span>
-                <h4><?php echo $b['title']; ?></h4>
-                <p><?php echo $b['excerpt']; ?></p>
-                <div class="tms-blog-footer">
-                    <span class="tms-blog-date"><i class="fa fa-calendar"></i> Jun 2026</span>
-                    <a href="blog.php" class="tms-blog-read">Read More <i class="fa fa-arrow-right"></i></a>
-                </div>
-            </div>
-        </div>
         <?php endforeach; endif; ?>
         </div>
         <div class="text-center mt-40 wow fadeInUp">
@@ -576,6 +644,7 @@ try {
         </div>
     </div>
 </section>
+<?php endif; ?>
 
 <!-- ══════════════════════════════════════════════════════════════
      CTA SECTION
@@ -584,7 +653,7 @@ try {
     <div class="tms-container">
         <div class="tms-cta wow zoomIn" data-wow-delay=".1s">
             <h2>Ready to Start Your Adventure?</h2>
-            <p>Join 1,900+ travelers who trust TMS for unforgettable journeys. Sign up free and get ৳5,000 off your first booking.</p>
+            <p>Create a free account to save packages, plan trips with the AI assistant and manage your bookings in one place.</p>
             <div class="tms-cta-btns">
                 <a href="javascript:void(0)" onclick="openModal('signupModal')" class="btn-cta-white">
                     <i class="fa fa-user-plus"></i> Create Free Account

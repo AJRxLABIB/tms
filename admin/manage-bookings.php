@@ -1,5 +1,5 @@
 <?php
-session_start();
+require_once __DIR__ . '/../backend/session-boot.php';
 error_reporting(E_ALL);
 ini_set('display_errors', 0);
 ini_set('log_errors', 1);
@@ -7,6 +7,7 @@ include('includes/config.php');
 require_once(__DIR__ . '/../backend/payments/PaymentProviderInterface.php');
 require_once(__DIR__ . '/../backend/payments/SandboxProvider.php');
 require_once(__DIR__ . '/../backend/payments/PaymentService.php');
+require_once(__DIR__ . '/../backend/services/BookingStateMachine.php');
 tms_require_admin();
 // SECURITY FIX (Round 75, master prompt item 46 -- RBAC): this page performs
 // real state-changing actions (confirm/cancel/delete a booking, approve/
@@ -31,7 +32,6 @@ $paymentService = new PaymentService($dbh);
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>TMS | Manage Bookings</title>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Plus+Jakarta+Sans:wght@600;700;800&display=swap" rel="stylesheet">
 <link href="css/font-awesome.css" rel="stylesheet">
 <link href="css/bootstrap.min.css" rel="stylesheet">
 <link href="<?php echo tms_asset_ver('css/admin-v6.css'); ?>" rel="stylesheet">
@@ -41,28 +41,28 @@ $paymentService = new PaymentService($dbh);
 .status-confirmed{ background:#d1fae5; color:#065f46; }
 .status-cancelled{ background:#fee2e2; color:#991b1b; }
 .filter-bar { display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin-bottom:20px; }
-.filter-bar select, .filter-bar input { padding:8px 12px; border:1.5px solid #e2e8f0; border-radius:8px; font-size:13px; font-family:inherit; color:#0f172a; outline:none; background:#f8fafc; }
-.filter-bar select:focus, .filter-bar input:focus { border-color:#1d4ed8; }
+.filter-bar select, .filter-bar input { padding:8px 12px; border:1.5px solid #e2e8f0; border-radius:8px; font-size:13px; font-family:inherit; color:var(--text-primary); outline:none; background:#f8fafc; }
+.filter-bar select:focus, .filter-bar input:focus { border-color:#176B50; }
 .stat-strip { display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:14px; margin-bottom:24px; }
 .mini-stat { background:#fff; border:1px solid #e2e8f0; border-radius:12px; padding:16px 20px; }
-.mini-stat .val { font-size:24px; font-weight:700; color:#0f172a; }
-.mini-stat .lbl { font-size:12px; color:#64748b; margin-top:2px; }
+.mini-stat .val { font-size:24px; font-weight:700; color:var(--text-primary); }
+.mini-stat .lbl { font-size:12px; color:var(--text-muted); margin-top:2px; }
 .action-btn { display:inline-flex; align-items:center; gap:5px; padding:5px 10px; border-radius:6px; font-size:12px; font-weight:500; border:none; cursor:pointer; text-decoration:none; transition:all .15s; }
 .btn-confirm  { background:#d1fae5; color:#065f46; }
 .btn-confirm:hover  { background:#a7f3d0; }
 .btn-cancel   { background:#fee2e2; color:#991b1b; }
 .btn-cancel:hover   { background:#fecaca; }
-.btn-delete   { background:#f1f5f9; color:#64748b; }
+.btn-delete   { background:#f1f5f9; color:var(--text-muted); }
 .btn-delete:hover   { background:#e2e8f0; }
 .page-title-row { display:flex; align-items:center; justify-content:space-between; margin-bottom:24px; flex-wrap:wrap; gap:12px; }
-.page-title-row h2 { font-family:'Plus Jakarta Sans',sans-serif; font-size:22px; font-weight:800; color:#0f172a; margin:0; }
+.page-title-row h2 { font-family:'Inter',sans-serif; font-size:22px; font-weight:800; color:var(--text-primary); margin:0; }
 .alert-msg { padding:12px 16px; border-radius:10px; font-size:13.5px; margin-bottom:18px; display:flex; align-items:center; gap:8px; }
 .alert-success { background:#d1fae5; color:#065f46; border:1px solid #a7f3d0; }
 .alert-error   { background:#fee2e2; color:#991b1b; border:1px solid #fca5a5; }
 html[data-theme="dark"] .mini-stat { background:#1b222c !important; border-color:#2b3542 !important; }
 html[data-theme="dark"] .mini-stat .val,
 html[data-theme="dark"] .page-title-row h2 { color:#eef2f7 !important; }
-html[data-theme="dark"] .mini-stat .lbl { color:#94a3b8 !important; }
+html[data-theme="dark"] .mini-stat .lbl { color:var(--text-muted) !important; }
 </style>
 </head>
 <body>
@@ -82,21 +82,43 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'], $_POST['id'
     $bid = (int)$_POST['id'];
     switch ($_POST['action']) {
         case 'confirm':
-            $dbh->prepare("UPDATE tblbooking SET status=1 WHERE BookingId=:id")->execute([':id'=>$bid]);
-            $ref = 'BK'.str_pad($bid,3,'0',STR_PAD_LEFT);
-            tms_notify_booking_owner(
-                $dbh, $bid, "Great news! Your booking #$ref has been confirmed.",
-                "Your booking #$ref is confirmed! ✈",
-                "<p>Great news — your booking <strong>#$ref</strong> has been confirmed by our team.</p>
-                 <p>You can view your itinerary and download your e-ticket anytime from <strong>My Bookings</strong>.</p>"
-            );
-            $msg = "Booking #BK".str_pad($bid,3,'0',STR_PAD_LEFT)." confirmed.";
-            $msgType = 'success';
-            // Audit log coverage (Round 52).
-            tms_log_activity($dbh, $_SESSION['alogin'], 'Booking Confirmed', "BookingId=$bid");
+            // GUARD (new "TMS V2" prompt -- booking state machine): nothing
+            // previously stopped this action from "confirming" an
+            // already-cancelled booking, silently resurrecting it (status
+            // 2 -> 1) with no trace -- a real bug class, not a hypothetical
+            // one, since this switch has never checked a booking's current
+            // status before acting. BookingStateMachine::canTransitionStatus
+            // encodes exactly the same 0->1 / 1->2 lifecycle every other
+            // real write site in this codebase already follows (see
+            // backend/services/BookingStateMachine.php), so this only ever
+            // rejects a transition nothing here has ever legitimately made.
+            $curStatusStmt = $dbh->prepare("SELECT status FROM tblbooking WHERE BookingId=:id");
+            $curStatusStmt->execute([':id'=>$bid]);
+            $curStatus = $curStatusStmt->fetchColumn();
+            if ($curStatus === false) {
+                $msg = "Booking #BK$bid not found.";
+                $msgType = 'error';
+            } elseif (!BookingStateMachine::canTransitionStatus((int)$curStatus, 1)) {
+                $msg = "Booking #BK$bid is cancelled and can no longer be confirmed.";
+                $msgType = 'error';
+            } else {
+                $dbh->prepare("UPDATE tblbooking SET status=1 WHERE BookingId=:id")->execute([':id'=>$bid]);
+                $ref = 'BK'.str_pad($bid,3,'0',STR_PAD_LEFT);
+                tms_notify_booking_owner(
+                    $dbh, $bid, "Great news! Your booking #$ref has been confirmed.",
+                    "Your booking #$ref is confirmed! ✈",
+                    "<p>Great news — your booking <strong>#$ref</strong> has been confirmed by our team.</p>
+                     <p>You can view your itinerary and download your e-ticket anytime from <strong>My Bookings</strong>.</p>"
+                );
+                $msg = "Booking #BK".str_pad($bid,3,'0',STR_PAD_LEFT)." confirmed.";
+                $msgType = 'success';
+                // Audit log coverage (Round 52).
+                tms_log_activity($dbh, $_SESSION['alogin'], 'Booking Confirmed', "BookingId=$bid");
+            }
             break;
         case 'cancel':
             $dbh->prepare("UPDATE tblbooking SET status=2 WHERE BookingId=:id")->execute([':id'=>$bid]);
+            tms_loyalty_reverse_booking($dbh, (int)$bid);   // take back the points this booking earned
             $ref = 'BK'.str_pad($bid,3,'0',STR_PAD_LEFT);
             tms_notify_booking_owner(
                 $dbh, $bid, "Your booking #$ref has been cancelled by our team. Please contact support if you have questions.",
@@ -173,6 +195,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'], $_POST['id'
             $prevRefundStmt = $dbh->prepare("SELECT RefundStatus FROM tblbooking WHERE BookingId=:id");
             $prevRefundStmt->execute([':id'=>$bid]);
             $prevRefundStatus = (string)$prevRefundStmt->fetchColumn();
+            // GUARD (new "TMS V2" prompt -- booking state machine): this
+            // action had no check that a refund was ever actually
+            // requested, so a stray/duplicate click could mark
+            // RefundStatus='processed' on a booking with no refund
+            // request on file at all, corrupting the same audit trail the
+            // Round 96 fix just above this was written to protect.
+            if (!BookingStateMachine::canTransitionRefundStatus($prevRefundStatus, 'processed')) {
+                $msg = "Booking #BK$bid has no pending refund request to process.";
+                $msgType = 'error';
+                break;
+            }
             $dbh->prepare("UPDATE tblbooking SET RefundStatus='processed' WHERE BookingId=:id")->execute([':id'=>$bid]);
             // Keeps tblpayments/tblpayment_refunds truthful when this booking
             // was actually paid through payment.php's sandbox flow; a no-op
@@ -194,6 +227,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'], $_POST['id'
             $prevRefundStmt = $dbh->prepare("SELECT RefundStatus FROM tblbooking WHERE BookingId=:id");
             $prevRefundStmt->execute([':id'=>$bid]);
             $prevRefundStatus = (string)$prevRefundStmt->fetchColumn();
+            // GUARD (new "TMS V2" prompt -- booking state machine): same
+            // reasoning as refund_processed above -- don't let this mark a
+            // refund 'rejected' when none was ever requested.
+            if (!BookingStateMachine::canTransitionRefundStatus($prevRefundStatus, 'rejected')) {
+                $msg = "Booking #BK$bid has no pending refund request to decline.";
+                $msgType = 'error';
+                break;
+            }
             $dbh->prepare("UPDATE tblbooking SET RefundStatus='rejected', RefundNote=:n WHERE BookingId=:id")->execute([':n'=>$note, ':id'=>$bid]);
             $paymentService->markRefundRejected($bid, $note);
             $ref = 'BK'.str_pad($bid,3,'0',STR_PAD_LEFT);
@@ -313,8 +354,8 @@ $statusIcon  = [0=>'fa-clock-o', 1=>'fa-check-circle', 2=>'fa-times-circle'];
 ?>
 
 <div class="page-title-row">
-  <h2><i class="fa fa-calendar-check-o" style="color:#1d4ed8;margin-right:10px;"></i>Manage Bookings</h2>
-  <span style="font-size:13px;color:#64748b;"><?= count($bookings) ?> booking(s) found</span>
+  <h2><i class="fa fa-calendar-check-o" style="color:#176B50;margin-right:10px;"></i>Manage Bookings</h2>
+  <span style="font-size:13px;color:var(--text-muted);"><?= count($bookings) ?> booking(s) found</span>
 </div>
 
 <?php if ($msg): ?>
@@ -377,7 +418,7 @@ $statusIcon  = [0=>'fa-clock-o', 1=>'fa-check-circle', 2=>'fa-times-circle'];
   </thead>
   <tbody>
   <?php if (empty($bookings)): ?>
-    <tr><td colspan="9" style="text-align:center;padding:40px;color:#94a3b8;">
+    <tr><td colspan="9" style="text-align:center;padding:40px;color:var(--text-muted);">
       <i class="fa fa-calendar-o" style="font-size:32px;display:block;margin-bottom:10px;"></i>
       No bookings found.
     </td></tr>
@@ -390,7 +431,7 @@ $statusIcon  = [0=>'fa-clock-o', 1=>'fa-check-circle', 2=>'fa-times-circle'];
     ?>
     <tr>
       <td><?= $i++ ?></td>
-      <td><strong style="color:#1d4ed8;"><?= $bcode ?></strong></td>
+      <td><strong style="color:#176B50;"><?= $bcode ?></strong></td>
       <td><?= htmlspecialchars($b->UserEmail ?? '—') ?></td>
       <td><?= htmlspecialchars($b->PackageName ?? '—') ?></td>
       <td><?= $b->PackagePrice ? tms_currency($b->PackagePrice) : '—' ?></td>
@@ -403,7 +444,7 @@ $statusIcon  = [0=>'fa-clock-o', 1=>'fa-check-circle', 2=>'fa-times-circle'];
       </td>
       <td>
         <?php if ($b->ModificationStatus === 'pending'): ?>
-          <div style="font-size:11.5px;color:#1e40af;margin-bottom:4px;">
+          <div style="font-size:11.5px;color:#104B3A;margin-bottom:4px;">
             <i class="fa fa-exchange"></i> &rarr; <?= htmlspecialchars($b->RequestedFromDate) ?> / <?= htmlspecialchars($b->RequestedToDate) ?>
           </div>
           <div style="display:flex;gap:4px;">
@@ -417,7 +458,7 @@ $statusIcon  = [0=>'fa-clock-o', 1=>'fa-check-circle', 2=>'fa-times-circle'];
             <form method="post" style="display:contents" onsubmit="return rejectRefund(this)"><input type="hidden" name="action" value="refund_rejected"><input type="hidden" name="id" value="<?= $bid ?>"><input type="hidden" name="note"><?php tms_csrf_field(); ?><button type="submit" class="action-btn btn-cancel">Reject</button></form>
           </div>
         <?php elseif ($b->RefundStatus): ?>
-          <span style="font-size:11.5px;color:#64748b;"><?= ucfirst($b->RefundStatus) ?></span>
+          <span style="font-size:11.5px;color:var(--text-muted);"><?= ucfirst($b->RefundStatus) ?></span>
         <?php else: ?>
           <span style="font-size:11.5px;color:#cbd5e1;">—</span>
         <?php endif; ?>
@@ -461,13 +502,13 @@ $statusIcon  = [0=>'fa-clock-o', 1=>'fa-check-circle', 2=>'fa-times-circle'];
 </table>
 </div>
 
-<div style="font-size:12.5px;color:#94a3b8;margin:10px 0;"><?php echo $bookingTotal; ?> booking<?php echo $bookingTotal!==1?'s':''; ?> total &nbsp;·&nbsp; page <?php echo $bookingPage; ?> of <?php echo $bookingTotalPages; ?></div>
+<div style="font-size:12.5px;color:var(--text-muted);margin:10px 0;"><?php echo $bookingTotal; ?> booking<?php echo $bookingTotal!==1?'s':''; ?> total &nbsp;·&nbsp; page <?php echo $bookingPage; ?> of <?php echo $bookingTotalPages; ?></div>
 <?php if ($bookingTotalPages > 1): ?>
 <div style="display:flex;justify-content:center;gap:6px;margin-top:16px;flex-wrap:wrap;">
     <?php for ($pn = 1; $pn <= $bookingTotalPages; $pn++):
         $qs = http_build_query(array_merge($_GET, ['p' => $pn])); ?>
     <a href="?<?php echo $qs; ?>" style="padding:6px 12px;border-radius:6px;font-size:13px;text-decoration:none;
-        <?php echo $pn === $bookingPage ? 'background:#1d4ed8;color:#fff;' : 'background:#f1f5f9;color:#334155;'; ?>"><?php echo $pn; ?></a>
+        <?php echo $pn === $bookingPage ? 'background:#176B50;color:#fff;' : 'background:#f1f5f9;color:#334155;'; ?>"><?php echo $pn; ?></a>
     <?php endfor; ?>
 </div>
 <?php endif; ?>

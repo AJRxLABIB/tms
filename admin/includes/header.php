@@ -27,12 +27,14 @@ $currentLabel = $pageLabels[$currentPage] ?? ucfirst(str_replace(['-','.php'],['
 $adminName = htmlentities($_SESSION['alogin']);
 $initials = strtoupper(substr($adminName,0,2));
 ?>
+<link rel="stylesheet" href="../css/tms-a11y.css">
+<a href="#tmsMain" class="tms-skip-link">Skip to main content</a>
 <!-- TOP BAR -->
 <header class="tms-topbar">
   <button class="topbar-toggle" id="sidebarToggle" aria-label="Toggle sidebar">
     <i class="fa fa-bars"></i>
   </button>
-  <nav class="topbar-breadcrumb">
+  <nav class="topbar-breadcrumb" aria-label="Breadcrumb">
     <a href="dashboard.php">Home</a>
     <span class="bc-sep"><i class="fa fa-chevron-right" style="font-size:10px;"></i></span>
     <span class="bc-current"><?= $currentLabel ?></span>
@@ -115,11 +117,11 @@ html[data-theme="dark"] textarea {
 }
 html[data-theme="dark"] [style*="color:#555"], html[data-theme="dark"] [style*="color: #555"],
 html[data-theme="dark"] [style*="color:#666"], html[data-theme="dark"] [style*="color: #666"],
-html[data-theme="dark"] [style*="color:#777"], html[data-theme="dark"] [style*="color: #777"],
-html[data-theme="dark"] [style*="color:#888"], html[data-theme="dark"] [style*="color: #888"],
-html[data-theme="dark"] [style*="color:#999"], html[data-theme="dark"] [style*="color: #999"],
-html[data-theme="dark"] [style*="color:#aaa"], html[data-theme="dark"] [style*="color: #aaa"],
-html[data-theme="dark"] [style*="color:#bbb"], html[data-theme="dark"] [style*="color: #bbb"],
+html[data-theme="dark"] [style*="color:var(--text-muted)"], html[data-theme="dark"] [style*="color:var(--text-muted)"],
+html[data-theme="dark"] [style*="color:var(--text-muted)"], html[data-theme="dark"] [style*="color:var(--text-muted)"],
+html[data-theme="dark"] [style*="color:var(--text-muted)"], html[data-theme="dark"] [style*="color:var(--text-muted)"],
+html[data-theme="dark"] [style*="color:var(--text-muted)"], html[data-theme="dark"] [style*="color:var(--text-muted)"],
+html[data-theme="dark"] [style*="color:var(--text-muted)"], html[data-theme="dark"] [style*="color:var(--text-muted)"],
 html[data-theme="dark"] [style*="color:#ccc"], html[data-theme="dark"] [style*="color: #ccc"],
 html[data-theme="dark"] [style*="color:#333"], html[data-theme="dark"] [style*="color: #333"],
 html[data-theme="dark"] [style*="color:#444"], html[data-theme="dark"] [style*="color: #444"],

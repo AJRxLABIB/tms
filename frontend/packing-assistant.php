@@ -2,7 +2,7 @@
 /**
  * packing-assistant.php — AI Smart Packing Checklist
  */
-session_start();
+require_once __DIR__ . '/../backend/session-boot.php';
 error_reporting(E_ALL); ini_set('display_errors', '0'); ini_set('log_errors', '1');
 include('backend/config.php');
 tms_require_user(); // Batch 1 (landing/auth gating): whole app now requires login
@@ -11,8 +11,12 @@ tms_require_user(); // Batch 1 (landing/auth gating): whole app now requires log
 <html lang="<?php echo htmlspecialchars(tms_active_language(), ENT_QUOTES, 'UTF-8'); ?>">
 <head>
 <link rel="manifest" href="manifest.json">
-<meta name="theme-color" content="#0B2B3C">
+<meta name="theme-color" content="#104B3A">
 <link rel="apple-touch-icon" href="images/icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="TMS">
+<meta name="mobile-web-app-capable" content="yes">
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>AI Packing Assistant | TMS</title>
@@ -21,7 +25,6 @@ tms_require_user(); // Batch 1 (landing/auth gating): whole app now requires log
 <link href="<?php echo tms_asset_ver('css/modern-theme.css'); ?>" rel="stylesheet">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700;9..144,800&family=Manrope:wght@400;500;600;700;800&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
 <style>
 .pack-hero { background: linear-gradient(135deg,#134e5e,#71b280); padding:60px 0 40px; text-align:center; color:#fff; }
 .pack-hero h1 { font-size:2.2rem; font-weight:800; margin-bottom:10px; }
@@ -59,13 +62,13 @@ tms_require_user(); // Batch 1 (landing/auth gating): whole app now requires log
 }
 .pack-item:hover { border-color:#134e5e; background:#f0faf5; }
 .pack-item.checked { background:#f0fff4; border-color:#48bb78; }
-.pack-item.checked .item-name { text-decoration:line-through; color:#a0aec0; }
+.pack-item.checked .item-name { text-decoration:line-through; color:var(--text-muted); }
 .item-checkbox { width:18px; height:18px; border:2px solid #cbd5e0; border-radius:4px; flex-shrink:0; display:flex; align-items:center; justify-content:center; transition:.2s; }
 .pack-item.checked .item-checkbox { background:#48bb78; border-color:#48bb78; }
 .pack-item.checked .item-checkbox::after { content:'✓'; color:#fff; font-size:11px; font-weight:800; }
 .item-info { flex:1; }
 .item-name { font-size:13px; font-weight:600; color:#2d3748; }
-.item-qty  { font-size:11px; color:#718096; }
+.item-qty  { font-size:11px; color:var(--text-muted); }
 .priority-badge { font-size:10px; padding:2px 6px; border-radius:10px; flex-shrink:0; }
 .priority-badge.must   { background:#fed7d7; color:#c53030; }
 .priority-badge.should { background:#fefcbf; color:#744210; }
@@ -81,7 +84,7 @@ tms_require_user(); // Batch 1 (landing/auth gating): whole app now requires log
 .btn-action { padding:10px 22px; border-radius:10px; font-size:13px; font-weight:700; cursor:pointer; transition:.2s; border:none; display:flex; align-items:center; gap:8px; }
 .btn-action.print   { background:#f8fafc; border:2px solid #e2e8f0; color:#4a5568; }
 .btn-action.print:hover { background:#edf2f7; }
-.btn-action.save    { background:linear-gradient(135deg,#667eea,#764ba2); color:#fff; }
+.btn-action.save    { background:linear-gradient(135deg,#176B50,#104B3A); color:#fff; }
 .btn-action.save:hover { opacity:.9; }
 
 /* Spinner */
@@ -148,14 +151,14 @@ tms_require_user(); // Batch 1 (landing/auth gating): whole app now requires log
     <div class="loading-wrap" id="loadingWrap">
         <div class="loading-spin"></div>
         <h5 style="font-weight:800;color:#1a202c;">Building your packing list…</h5>
-        <p style="color:#718096;" id="loadMsg">Checking destination weather and activities</p>
+        <p style="color:var(--text-muted);" id="loadMsg">Checking destination weather and activities</p>
     </div>
 
     <!-- Checklist -->
     <div class="checklist-wrap" id="checklistWrap">
         <div class="checklist-header">
             <h2 id="checklistTitle">Your AI Packing List</h2>
-            <p style="color:#718096;" id="checklistSubtitle"></p>
+            <p style="color:var(--text-muted);" id="checklistSubtitle"></p>
         </div>
 
         <!-- Progress -->
@@ -201,6 +204,7 @@ async function generatePacking() {
 
     const fd = new FormData();
     fd.append('action', 'packing_list');
+    fd.append('csrf_token', <?php echo json_encode(tms_csrf_token()); ?>);
     fd.append('destination', dest);
     fd.append('duration', document.getElementById('p_days').value);
     fd.append('climate', document.getElementById('p_climate').value);
@@ -258,7 +262,7 @@ function renderChecklist(data, dest) {
             const p   = item.priority || 'should';
             const pLabel = { must:'Must Have', should:'Recommended', nice:'Nice to Have' }[p] || p;
             // Destination-specific may have 'reason'
-            const reasonHtml = item.reason ? `<div style="font-size:11px;color:#718096;margin-top:2px;">${esc(item.reason)}</div>` : '';
+            const reasonHtml = item.reason ? `<div style="font-size:11px;color:var(--text-muted);margin-top:2px;">${esc(item.reason)}</div>` : '';
             return `<div class="pack-item" id="item_${id}" onclick="toggleItem('${id}')">
                 <div class="item-checkbox" id="chk_${id}"></div>
                 <div class="item-info">
@@ -275,7 +279,7 @@ function renderChecklist(data, dest) {
             <div class="cat-title">
                 <div class="cat-icon ${cfg.cls}">${cfg.icon}</div>
                 ${cfg.label}
-                <span style="margin-left:auto;font-size:12px;font-weight:400;color:#718096;">${items.length} items</span>
+                <span style="margin-left:auto;font-size:12px;font-weight:400;color:var(--text-muted);">${items.length} items</span>
             </div>
             <div class="item-grid">${itemsHtml}</div>
         </div>`);

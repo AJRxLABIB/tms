@@ -17,7 +17,7 @@
  *   GET  ?action=threads                     (admin only — list all customer threads)
  */
 
-session_start();
+require_once __DIR__ . '/../backend/session-boot.php';
 require_once dirname(__DIR__) . '/backend/config.php';
 
 header('Content-Type: application/json; charset=utf-8');
@@ -40,6 +40,11 @@ if (!$isAdmin && !$isCustomer) {
     chatError(401, 'Please sign in to use chat.');
 }
 
+// Admin access to customer conversations follows the same roles as admin/live-chat.php (support, manager; superadmin always).
+// A customer session wins when both exist so a shared browser never grants the admin view by accident.
+if ($isAdmin && !$isCustomer && !tms_admin_can($dbh, ['support', 'manager'])) {
+    chatError(403, 'Your admin role cannot read customer chats.');
+}
 // Resolve which thread (which customer's conversation) this request is for.
 if ($isAdmin) {
     $thread = tms_clean($_GET['thread'] ?? $_POST['thread'] ?? '');
@@ -85,6 +90,7 @@ switch ($action) {
         $message = trim((string)($_POST['message'] ?? ''));
         if ($message === '') chatError(400, 'Message cannot be empty.');
         if (mb_strlen($message) > 2000) chatError(400, 'Message is too long.');
+        if (!tms_rate_limit($dbh, 'chat-send', strtolower($isAdmin ? 'admin:' . $_SESSION['alogin'] : $_SESSION['login']), 120)) chatError(429, 'You are sending messages too quickly. Please wait a little.');
 
         $senderRole = $isAdmin ? 'admin' : 'customer';
         $senderName = $isAdmin ? 'Support Team' : ($_SESSION['login'] ?? 'Guest');

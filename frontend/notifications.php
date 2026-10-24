@@ -65,11 +65,16 @@ try {
 ?>
 <!DOCTYPE HTML><html lang="<?php echo htmlspecialchars(tms_active_language(), ENT_QUOTES, 'UTF-8'); ?>"><head>
 <link rel="manifest" href="manifest.json">
-<meta name="theme-color" content="#0B2B3C">
+<meta name="theme-color" content="#104B3A">
+<link rel="apple-touch-icon" href="images/icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="TMS">
+<meta name="mobile-web-app-capable" content="yes">
 <title>TMS | Notifications</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <link href="css/bootstrap.min2.css" rel='stylesheet'/>
-<link href="css/style.min.css" rel='stylesheet'/>
+<link href="<?php echo tms_asset_ver('css/style.min.css'); ?>" rel='stylesheet'/>
 <link href="css/font-awesome.min2.css" rel="stylesheet">
 <link href="<?php echo tms_asset_ver('css/modern-theme.css'); ?>" rel="stylesheet">
 <script src="js/jquery-1.12.0.min.js" defer></script>
@@ -94,7 +99,7 @@ try {
 <div class="container" style="margin-bottom:20px;">
   <div class="notif-box">
     <?php if (empty($items)): ?>
-      <p style="color:#888;padding:20px 0;">You're all caught up — no notifications yet.</p>
+      <p style="color:var(--text-muted);padding:20px 0;">You're all caught up — no notifications yet.</p>
     <?php else: foreach ($items as $n): ?>
       <a class="notif-row<?php echo $n->IsRead ? '' : ' was-unread'; ?>" href="<?php echo htmlspecialchars($n->Link ?: '#', ENT_QUOTES, 'UTF-8'); ?>">
         <div class="notif-msg"><?php echo htmlspecialchars($n->Message, ENT_QUOTES, 'UTF-8'); ?></div>

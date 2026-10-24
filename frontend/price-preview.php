@@ -8,7 +8,7 @@
  * the price shown on screen match the price charged — both paths call the
  * same code, this endpoint just lets the page show it before submission.
  */
-session_start();
+require_once __DIR__ . '/../backend/session-boot.php';
 error_reporting(E_ALL); ini_set('display_errors', '0'); ini_set('log_errors', '1');
 include('backend/config.php');
 header('Content-Type: application/json');
@@ -37,6 +37,20 @@ if ($from !== '') {
 
 $pricing = tms_dynamic_price($dbh, $pid, (float)$rawPrice, $fromDateNormalized);
 
+// TMS V2 Phase 8 (Dynamic Pricing Engine transparency): tms_dynamic_price()
+// has always computed these per-component percentages internally (see
+// backend/PricingEngine.php) but this endpoint only ever exposed the
+// collapsed $pricing['label'] string -- so the customer could see THAT
+// the price moved, never WHY. Purely additive: every key that already
+// existed in this response is unchanged, so any existing caller (the
+// live preview on package-details.php) keeps working exactly as before
+// even if it ignores the new 'breakdown' key entirely.
+$breakdown = [];
+if (!empty($pricing['demand_pct']))  $breakdown[] = ['label' => 'High demand',        'pct' => (int)$pricing['demand_pct']];
+if (!empty($pricing['date_pct']))    $breakdown[] = ['label' => 'Travel date timing',  'pct' => (int)$pricing['date_pct']];
+if (!empty($pricing['weekend_pct'])) $breakdown[] = ['label' => 'Weekend departure',   'pct' => (int)$pricing['weekend_pct']];
+if (!empty($pricing['seats_pct']))   $breakdown[] = ['label' => 'Limited seats left',  'pct' => (int)$pricing['seats_pct']];
+
 echo json_encode([
     'success'      => true,
     'unit_price'   => $pricing['final'],
@@ -45,4 +59,5 @@ echo json_encode([
     'is_adjusted'  => $pricing['label'] !== 'Standard pricing',
     'formatted_unit'  => tms_currency((float)$pricing['final']),
     'formatted_total' => tms_currency((float)($pricing['final'] * $persons)),
+    'breakdown'    => $breakdown,
 ]);

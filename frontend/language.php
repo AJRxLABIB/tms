@@ -1,5 +1,5 @@
 <?php
-session_start();
+require_once __DIR__ . '/../backend/session-boot.php';
 error_reporting(E_ALL); ini_set('display_errors', '0'); ini_set('log_errors', '1');
 include('backend/config.php');
 
@@ -37,8 +37,7 @@ if (isset($_GET['lang'])) {
         // visitor straight off-site from a trusted page. login.php already had
         // the correct guard; this reuses it.
         $redirect = isset($_GET['redirect']) ? (string)$_GET['redirect'] : 'index.php';
-        $safeRedirect = ($redirect !== '' && !str_starts_with($redirect, '//') && !str_contains($redirect, '://'))
-            ? $redirect : 'index.php';
+        $safeRedirect = tms_safe_redirect($redirect);
         header('location: ' . $safeRedirect);
         exit;
     }
@@ -48,17 +47,20 @@ if (isset($_GET['lang'])) {
 <html lang="<?php echo htmlspecialchars(tms_active_language(), ENT_QUOTES, 'UTF-8'); ?>">
 <head>
 <link rel="manifest" href="manifest.json">
-<meta name="theme-color" content="#0B2B3C">
+<meta name="theme-color" content="#104B3A">
 <link rel="apple-touch-icon" href="images/icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="TMS">
+<meta name="mobile-web-app-capable" content="yes">
 <title>TMS | Language Settings</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <link href="css/bootstrap.min2.css" rel='stylesheet' type='text/css' />
-<link href="css/style.min.css" rel='stylesheet' type='text/css' />
+<link href="<?php echo tms_asset_ver('css/style.min.css'); ?>" rel='stylesheet' type='text/css' />
 <link href="css/font-awesome.min2.css" rel="stylesheet">
 <link href="<?php echo tms_asset_ver('css/modern-theme.css'); ?>" rel="stylesheet">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700;9..144,800&family=Manrope:wght@400;500;600;700;800&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
 <link href="css/animate.css" rel="stylesheet">
 <script src="js/jquery-1.12.0.min.js" defer></script>
 <script src="js/bootstrap.min.js" defer></script>
@@ -72,7 +74,7 @@ if (isset($_GET['lang'])) {
 .lang-card.current { border-color:#4568dc; background: linear-gradient(135deg,#f0f4ff,#f8f0ff); }
 .lang-flag { font-size:48px; display:block; margin-bottom:10px; }
 .lang-name { font-size:1.1em; font-weight:700; color:#333; display:block; }
-.lang-native { font-size:0.9em; color:#777; display:block; margin-top:3px; }
+.lang-native { font-size:0.9em; color:var(--text-muted); display:block; margin-top:3px; }
 html[data-theme="dark"] .lang-name { color: var(--text) !important; }
 html[data-theme="dark"] .lang-native { color: var(--text-muted) !important; }
 .lang-badge { display:inline-block; padding:3px 10px; border-radius:20px; font-size:11px; font-weight:700; margin-top:8px; background:#e8f0ff; color:#4568dc; }
@@ -128,7 +130,7 @@ html[data-theme="dark"] .lang-native { color: var(--text-muted) !important; }
     <!-- Translation Preview -->
     <div class="preview-section wow fadeInUp">
         <h4><i class="fa fa-eye" style="color:#4568dc"></i> Translation Preview</h4>
-        <p style="color:#777;font-size:14px;">Here's how key phrases appear in the selected language:</p>
+        <p style="color:var(--text-muted);font-size:14px;">Here's how key phrases appear in the selected language:</p>
         <div class="table-responsive"><table class="table table-bordered" style="font-size:14px;" id="previewTable">
             <thead style="background:#4568dc;color:#fff;">
                 <tr><th>English</th><th id="langHeader">Selected Language</th></tr>

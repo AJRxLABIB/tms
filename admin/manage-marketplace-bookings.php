@@ -1,5 +1,5 @@
 <?php
-session_start();
+require_once __DIR__ . '/../backend/session-boot.php';
 error_reporting(E_ALL);
 ini_set('display_errors', 0);
 ini_set('log_errors', 1);
@@ -59,6 +59,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'], $_POST['id'
             break;
         case 'cancel':
             $dbh->prepare("UPDATE $table SET status=2 WHERE BookingId=:id")->execute([':id' => $bid]);
+            // Release slot inventory held by this booking (idempotent: a repeat cancel releases nothing more).
+            require_once __DIR__ . '/../backend/services/InventoryService.php';
+            InventoryService::releaseBooking($dbh, $type, $bid);
             tms_notify_marketplace_booking_owner(
                 $dbh, $type, $bid,
                 "Your $label booking #$code has been cancelled by our team. Please contact support if you have questions.",
@@ -70,6 +73,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'], $_POST['id'
             tms_log_activity($dbh, $_SESSION['alogin'], "Marketplace $label Booking Cancelled", "BookingId=$bid");
             break;
         case 'delete':
+            // A deleted booking must not keep its slot units: release first (idempotent, no-op if already released/unmanaged).
+            require_once __DIR__ . '/../backend/services/InventoryService.php';
+            InventoryService::releaseBooking($dbh, $type, $bid);
             $dbh->prepare("DELETE FROM $table WHERE BookingId=:id")->execute([':id' => $bid]);
             $msg = "$label booking #$code deleted."; $msgType = 'success';
             tms_log_activity($dbh, $_SESSION['alogin'], "Marketplace $label Booking Deleted", "BookingId=$bid");
@@ -175,7 +181,6 @@ $statusIcon  = [0 => 'fa-clock-o', 1 => 'fa-check-circle', 2 => 'fa-times-circle
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>TMS | Manage Marketplace Bookings</title>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Plus+Jakarta+Sans:wght@600;700;800&display=swap" rel="stylesheet">
 <link href="css/font-awesome.css" rel="stylesheet">
 <link href="css/bootstrap.min.css" rel="stylesheet">
 <link href="<?php echo tms_asset_ver('css/admin-v6.css'); ?>" rel="stylesheet">
@@ -188,21 +193,21 @@ $statusIcon  = [0 => 'fa-clock-o', 1 => 'fa-check-circle', 2 => 'fa-times-circle
 .type-hotel    { background:#e0f2fe; color:#075985; }
 .type-activity { background:#ede9fe; color:#5b21b6; }
 .filter-bar { display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin-bottom:20px; }
-.filter-bar select, .filter-bar input { padding:8px 12px; border:1.5px solid #e2e8f0; border-radius:8px; font-size:13px; font-family:inherit; color:#0f172a; outline:none; background:#f8fafc; }
-.filter-bar select:focus, .filter-bar input:focus { border-color:#1d4ed8; }
+.filter-bar select, .filter-bar input { padding:8px 12px; border:1.5px solid #e2e8f0; border-radius:8px; font-size:13px; font-family:inherit; color:var(--text-primary); outline:none; background:#f8fafc; }
+.filter-bar select:focus, .filter-bar input:focus { border-color:#176B50; }
 .stat-strip { display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:14px; margin-bottom:24px; }
 .mini-stat { background:#fff; border:1px solid #e2e8f0; border-radius:12px; padding:16px 20px; }
-.mini-stat .val { font-size:24px; font-weight:700; color:#0f172a; }
-.mini-stat .lbl { font-size:12px; color:#64748b; margin-top:2px; }
+.mini-stat .val { font-size:24px; font-weight:700; color:var(--text-primary); }
+.mini-stat .lbl { font-size:12px; color:var(--text-muted); margin-top:2px; }
 .action-btn { display:inline-flex; align-items:center; gap:5px; padding:5px 10px; border-radius:6px; font-size:12px; font-weight:500; border:none; cursor:pointer; text-decoration:none; transition:all .15s; }
 .btn-confirm  { background:#d1fae5; color:#065f46; }
 .btn-confirm:hover  { background:#a7f3d0; }
 .btn-cancel   { background:#fee2e2; color:#991b1b; }
 .btn-cancel:hover   { background:#fecaca; }
-.btn-delete   { background:#f1f5f9; color:#64748b; }
+.btn-delete   { background:#f1f5f9; color:var(--text-muted); }
 .btn-delete:hover   { background:#e2e8f0; }
 .page-title-row { display:flex; align-items:center; justify-content:space-between; margin-bottom:24px; flex-wrap:wrap; gap:12px; }
-.page-title-row h2 { font-family:'Plus Jakarta Sans',sans-serif; font-size:22px; font-weight:800; color:#0f172a; margin:0; }
+.page-title-row h2 { font-family:'Inter',sans-serif; font-size:22px; font-weight:800; color:var(--text-primary); margin:0; }
 .alert-msg { padding:12px 16px; border-radius:10px; font-size:13.5px; margin-bottom:18px; display:flex; align-items:center; gap:8px; }
 .alert-success { background:#d1fae5; color:#065f46; border:1px solid #a7f3d0; }
 .alert-error   { background:#fee2e2; color:#991b1b; border:1px solid #fca5a5; }
@@ -210,7 +215,7 @@ $statusIcon  = [0 => 'fa-clock-o', 1 => 'fa-check-circle', 2 => 'fa-times-circle
 html[data-theme="dark"] .mini-stat { background:#1b222c !important; border-color:#2b3542 !important; }
 html[data-theme="dark"] .mini-stat .val,
 html[data-theme="dark"] .page-title-row h2 { color:#eef2f7 !important; }
-html[data-theme="dark"] .mini-stat .lbl { color:#94a3b8 !important; }
+html[data-theme="dark"] .mini-stat .lbl { color:var(--text-muted) !important; }
 </style>
 </head>
 <body>
@@ -221,8 +226,8 @@ html[data-theme="dark"] .mini-stat .lbl { color:#94a3b8 !important; }
 <div class="tms-content">
 
 <div class="page-title-row">
-  <h2><i class="fa fa-suitcase" style="color:#1d4ed8;margin-right:10px;"></i>Manage Marketplace Bookings</h2>
-  <span style="font-size:13px;color:#64748b;"><?= count($rows) ?> booking(s) on this page</span>
+  <h2><i class="fa fa-suitcase" style="color:#176B50;margin-right:10px;"></i>Manage Marketplace Bookings</h2>
+  <span style="font-size:13px;color:var(--text-muted);"><?= count($rows) ?> booking(s) on this page</span>
 </div>
 
 <div class="sample-note"><i class="fa fa-flask"></i> These are Round 37's hotel/activity marketplace bookings — sample/demo catalog, real customer bookings against it. No payment gateway or refund workflow exists for this feature (see DATABASE.md), so only Confirm / Cancel / Delete are available here.</div>
@@ -269,7 +274,7 @@ html[data-theme="dark"] .mini-stat .lbl { color:#94a3b8 !important; }
   </thead>
   <tbody>
   <?php if (empty($rows)): ?>
-    <tr><td colspan="9" style="text-align:center;padding:40px;color:#94a3b8;">
+    <tr><td colspan="9" style="text-align:center;padding:40px;color:var(--text-muted);">
       <i class="fa fa-suitcase" style="font-size:32px;display:block;margin-bottom:10px;"></i>
       No marketplace bookings found.
     </td></tr>
@@ -286,7 +291,7 @@ html[data-theme="dark"] .mini-stat .lbl { color:#94a3b8 !important; }
     <tr>
       <td><?= $i++ ?></td>
       <td><span class="type-badge <?= $isActivity ? 'type-activity' : 'type-hotel' ?>"><i class="fa <?= $isActivity ? 'fa-map-signs' : 'fa-hotel' ?>"></i> <?= $isActivity ? 'Activity' : 'Hotel' ?></span></td>
-      <td><strong style="color:#1d4ed8;">#<?= $code ?></strong></td>
+      <td><strong style="color:#176B50;">#<?= $code ?></strong></td>
       <td><?= htmlspecialchars($r->UserEmail ?? '—') ?></td>
       <td><?= htmlspecialchars($r->ItemName ?? '—') ?></td>
       <td><?= $r->TotalCost !== null ? tms_currency((float)$r->TotalCost) : '—' ?></td>
@@ -332,13 +337,13 @@ html[data-theme="dark"] .mini-stat .lbl { color:#94a3b8 !important; }
 </table>
 </div>
 
-<div style="font-size:12.5px;color:#94a3b8;margin:10px 0;"><?php echo $bookingTotal; ?> booking<?php echo $bookingTotal !== 1 ? 's' : ''; ?> total &nbsp;·&nbsp; page <?php echo $page; ?> of <?php echo $totalPages; ?></div>
+<div style="font-size:12.5px;color:var(--text-muted);margin:10px 0;"><?php echo $bookingTotal; ?> booking<?php echo $bookingTotal !== 1 ? 's' : ''; ?> total &nbsp;·&nbsp; page <?php echo $page; ?> of <?php echo $totalPages; ?></div>
 <?php if ($totalPages > 1): ?>
 <div style="display:flex;justify-content:center;gap:6px;margin-top:16px;flex-wrap:wrap;">
     <?php for ($pn = 1; $pn <= $totalPages; $pn++):
         $qs = http_build_query(array_merge($_GET, ['p' => $pn])); ?>
     <a href="?<?php echo $qs; ?>" style="padding:6px 12px;border-radius:6px;font-size:13px;text-decoration:none;
-        <?php echo $pn === $page ? 'background:#1d4ed8;color:#fff;' : 'background:#f1f5f9;color:#334155;'; ?>"><?php echo $pn; ?></a>
+        <?php echo $pn === $page ? 'background:#176B50;color:#fff;' : 'background:#f1f5f9;color:#334155;'; ?>"><?php echo $pn; ?></a>
     <?php endfor; ?>
 </div>
 <?php endif; ?>

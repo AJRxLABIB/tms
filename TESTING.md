@@ -34,7 +34,9 @@ highest financial-risk logic first:
 - **(Round 39)** RBAC fail-open behavior (`tms_admin_role()` /
   `tms_admin_can()`) — an unrecognized admin session resolves to
   `superadmin` rather than silently locking an admin out, pinning down the
-  documented fail-open contract in `includes/config.php`.
+  documented fail-open contract in `backend/config.php` (the file this
+  note originally pointed at, `includes/config.php`, was retired in
+  Round 115's architecture cleanup -- see ARCHITECTURE.md).
 
 Run it:
 ```
@@ -51,6 +53,68 @@ of `php tests/run.php` directly — all 4 passed against the live DB. That
 throwaway script was disabled (404 stub) immediately after, per this
 project's usual cleanup convention. If you run `php tests/run.php` from a
 real shell and see a different result, trust that over this note.)*
+
+## Structure ("TMS V2" prompt, Phase 4 -- unit/integration/e2e/fixtures/legacy)
+
+This project now has the standard `tests/unit/`, `tests/integration/`,
+`tests/e2e/`, `tests/fixtures/`, `tests/legacy/` folders, each with its
+own `README.md` stating current reality rather than pretending the
+taxonomy is fully populated:
+
+- **`tests/integration/`** points at `tests/run.php` (kept at its
+  current path -- see below for why it wasn't moved).
+- **`tests/unit/`** is empty today: `tests/run.php` mixes pure-unit-style
+  tests (money math, pricing/availability bounds) with real integration
+  tests in one file, and splitting them out is a real future item, not
+  done in this pass.
+- **`tests/e2e/`** now has a real suite: `run_e2e.php` (Round 115
+  continuation) makes actual HTTP requests -- via curl, not in-process --
+  against a running instance of the app: registration through the real
+  CSRF-protected `/register.php` handler, login, a booking through the
+  public REST API, the `trip_readiness`/`budget_status` endpoints,
+  cancellation, logout, and a revoked-token rejection check. Self-cleans
+  its one throwaway test account afterward. `item 58` in
+  `MASTER_PROMPT_STATUS.md` moved from "confirmed gap" to a scoped first
+  slice -- see `tests/e2e/README.md` for exactly what it does and
+  doesn't cover, and why it's curl-based rather than a browser-automation
+  tool (no Node/npm dependency exists in this project today, and adding
+  one just for this would be its own Rule 73 tradeoff to make
+  deliberately later, not default into now).
+- **`tests/fixtures/`** is empty -- this project has no mocking/fixture
+  layer by design (see "WHY NOT PHPUNIT" below).
+- **`tests/legacy/`** is a documentation bucket, not a physical move:
+  `tests/manual/` (90+ already-disabled diagnostic scripts, each with
+  its own depth-dependent relative paths) stays exactly where it is --
+  see `tests/legacy/README.md` for the full reasoning.
+
+`tests/run.php` itself was **not** renamed or moved as part of this, to
+avoid a path change rippling through `.github/workflows/ci.yml`,
+`ARCHITECTURE.md`, `DATABASE.md`, `SECURITY.md`, and this file, all for
+a reorganization with zero behavior change (Rule 73).
+
+## Throwaway QA/diagnostic scripts (Round 115, Phase 4 cleanup)
+
+Convention, established informally over many earlier rounds and made
+explicit here: verifying a live fix against the real, running app
+sometimes needs a small one-off script (simulate a session, seed a test
+booking, check a migration ran) that a static assertion in
+`tests/run.php` can't express. Every one of these is disabled with a
+`http_response_code(404);` stub the moment its one-time job is done —
+never left live, and never deleted either (Rule 2/77: the history of what
+was checked, and how, stays visible rather than disappearing).
+
+These accumulated at the project root and in `admin/` for a long time
+(100 of them, as of Round 115) rather than living anywhere organized.
+Round 115 consolidated all of them — confirming first, file by file, that
+each was already either a full 404 stub or a bare
+`http_response_code(404);` with no further code, and that nothing else
+in the codebase `include`s/`require`s or links to any of them — into
+`tests/manual/round-diagnostics/` (root-level ones) and
+`tests/manual/round-diagnostics/admin/` (the `admin/`-level ones),
+alongside the already-organized, still-live helpers in `tests/manual/`
+itself (unchanged, not touched by this cleanup). New throwaway scripts
+should be created directly in one of those two folders rather than at the
+project root going forward.
 
 ## What is NOT covered yet (honest gap list, Rule 77)
 

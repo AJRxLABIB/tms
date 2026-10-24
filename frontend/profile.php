@@ -1,5 +1,5 @@
 <?php
-session_start();
+require_once __DIR__ . '/../backend/session-boot.php';
 error_reporting(E_ALL); ini_set('display_errors', '0'); ini_set('log_errors', '1');
 include('backend/config.php');
 tms_require_user();
@@ -128,18 +128,21 @@ foreach ($bkQ->fetchAll(PDO::FETCH_OBJ) as $bk) {
 <html lang="<?php echo htmlspecialchars(tms_active_language(), ENT_QUOTES, 'UTF-8'); ?>">
 <head>
 <link rel="manifest" href="manifest.json">
-<meta name="theme-color" content="#0B2B3C">
+<meta name="theme-color" content="#104B3A">
 <link rel="apple-touch-icon" href="images/icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="TMS">
+<meta name="mobile-web-app-capable" content="yes">
 <title>TMS | My Profile</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
 <link href="css/bootstrap.min2.css" rel='stylesheet' type='text/css' />
-<link href="css/style.min.css" rel='stylesheet' type='text/css' />
+<link href="<?php echo tms_asset_ver('css/style.min.css'); ?>" rel='stylesheet' type='text/css' />
 <link href="css/font-awesome.min2.css" rel="stylesheet">
 <link href="<?php echo tms_asset_ver('css/modern-theme.css'); ?>" rel="stylesheet">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700;9..144,800&family=Manrope:wght@400;500;600;700;800&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
 <script src="js/jquery-1.12.0.min.js" defer></script>
 <script src="js/bootstrap.min.js" defer></script>
 <link href="css/animate.css" rel="stylesheet" type="text/css" media="all">
@@ -156,7 +159,7 @@ foreach ($bkQ->fetchAll(PDO::FETCH_OBJ) as $bk) {
 .stat-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:16px;}
 .stat-cell{background:var(--white);border-radius:10px;padding:14px 10px;text-align:center;box-shadow:0 2px 10px rgba(0,0,0,.07);}
 .stat-cell .num{font-size:1.6em;font-weight:700;color:var(--secondary);}
-.stat-cell .lbl{font-size:11px;color:#aaa;margin-top:2px;}
+.stat-cell .lbl{font-size:11px;color:var(--text-muted);margin-top:2px;}
 .profile-main{flex:1;min-width:0;}
 .profile-card{background:var(--white);border-radius:12px;box-shadow:0 3px 16px rgba(0,0,0,.08);padding:28px;}
 .profile-card label{font-weight:600;color:#555;font-size:13px;display:block;margin-bottom:4px;}
@@ -194,8 +197,8 @@ html[data-theme="dark"] .quick-links a { color: var(--text-muted) !important; }
                         <?php echo strtoupper(substr($user->FullName ?? 'U', 0, 1)); ?>
                     </div>
                     <h5 style="font-weight:700;color:#333;margin:0 0 4px;"><?php echo htmlspecialchars($user->FullName ?? '', ENT_QUOTES,'UTF-8'); ?></h5>
-                    <p style="font-size:12px;color:#aaa;margin:0;"><?php echo htmlspecialchars($user->EmailId ?? '', ENT_QUOTES,'UTF-8'); ?></p>
-                    <p style="font-size:11px;color:#ccc;margin-top:6px;">
+                    <p style="font-size:12px;color:var(--text-muted);margin:0;"><?php echo htmlspecialchars($user->EmailId ?? '', ENT_QUOTES,'UTF-8'); ?></p>
+                    <p style="font-size:11px;color:var(--text-muted);margin-top:6px;">
                         Member since <?php echo date('M Y', strtotime($user->RegDate ?? 'now')); ?>
                     </p>
                 </div>
@@ -220,6 +223,13 @@ html[data-theme="dark"] .quick-links a { color: var(--text-muted) !important; }
                 <div class="quick-links" style="margin-top:16px;">
                     <a href="tour-history.php"><i class="fa fa-history"></i> My Bookings</a>
                     <a href="change-password.php"><i class="fa fa-lock"></i> Change Password</a>
+                    <!-- FEATURE (Round 115 continuation, master prompt item 8 --
+                         Auth & Security Center): customer-facing 2FA's natural
+                         home is this existing account hub, next to Change
+                         Password, rather than a separate "Security Center"
+                         page duplicating what profile.php already is. -->
+                    <a href="two-factor-setup.php"><i class="fa fa-shield"></i> Two-Factor Authentication</a>
+                    <a href="appeal.php"><i class="fa fa-balance-scale"></i> Account review &amp; appeals</a>
                     <a href="ai-recommend.php"><i class="fa fa-magic"></i> Get Recommendations</a>
                     <a href="package-list.php"><i class="fa fa-search"></i> Browse Packages</a>
                 </div>
@@ -241,24 +251,24 @@ html[data-theme="dark"] .quick-links a { color: var(--text-muted) !important; }
                     <form method="post">
                         <?php tms_csrf_field(); ?>
                         <div class="form-group">
-                            <label>Full Name *</label>
-                            <input type="text" name="name" class="form-control" required maxlength="100"
+                            <label for="fld_name">Full Name *</label>
+                            <input id="fld_name" type="text" name="name" class="form-control" required maxlength="100"
                                    value="<?php echo htmlspecialchars($user->FullName ?? '', ENT_QUOTES,'UTF-8'); ?>">
                         </div>
                         <div class="form-group">
-                            <label>Mobile Number</label>
-                            <input type="text" name="mobileno" class="form-control" maxlength="15"
+                            <label for="fld_mobileno">Mobile Number</label>
+                            <input id="fld_mobileno" type="text" name="mobileno" class="form-control" maxlength="15"
                                    pattern="[\+0-9]{7,15}"
                                    value="<?php echo htmlspecialchars($user->MobileNumber ?? '', ENT_QUOTES,'UTF-8'); ?>">
                         </div>
                         <div class="form-group">
-                            <label>Email Address <small style="color:#aaa;">(cannot be changed)</small></label>
-                            <input type="email" class="form-control" readonly
+                            <label for="pf_email">Email Address <small style="color:var(--text-muted);">(cannot be changed)</small></label>
+                            <input type="email" id="pf_email" class="form-control" readonly
                                    value="<?php echo htmlspecialchars($user->EmailId ?? '', ENT_QUOTES,'UTF-8'); ?>">
                         </div>
                         <div class="form-group">
-                            <label>Registration Date</label>
-                            <input type="text" class="form-control" readonly
+                            <label for="pf_regdate">Registration Date</label>
+                            <input type="text" id="pf_regdate" class="form-control" readonly
                                    value="<?php echo htmlspecialchars($user->RegDate ?? '', ENT_QUOTES,'UTF-8'); ?>">
                         </div>
                         <button type="submit" name="submit6" class="btn-save">
@@ -271,7 +281,7 @@ html[data-theme="dark"] .quick-links a { color: var(--text-muted) !important; }
                     <h4 style="font-size:1.05em;font-weight:700;color:#333;border-bottom:2px solid #f0f0f0;padding-bottom:12px;margin-bottom:22px;">
                         <i class="fa fa-compass" style="color:var(--secondary)"></i> Travel Preferences
                     </h4>
-                    <p style="font-size:12.5px;color:#999;margin-top:-14px;margin-bottom:18px;">
+                    <p style="font-size:12.5px;color:var(--text-muted);margin-top:-14px;margin-bottom:18px;">
                         Used to personalize your <a href="ai-recommend.php">AI recommendations</a> — entirely optional, and only used if you have personalization enabled in
                         <a href="privacy.php">Privacy settings</a>.
                     </p>
@@ -285,8 +295,8 @@ html[data-theme="dark"] .quick-links a { color: var(--text-muted) !important; }
                     <form method="post">
                         <?php tms_csrf_field(); ?>
                         <div class="form-group">
-                            <label>Travel Mode</label>
-                            <select name="travel_mode" class="form-control">
+                            <label for="fld_travel_mode">Travel Mode</label>
+                            <select name="travel_mode" class="form-control" id="fld_travel_mode">
                                 <?php $tm = $travelPrefs['travel_mode']; $modeOpts = [
                                     '' => 'No preference', 'family' => 'Family', 'couple' => 'Couple / Honeymoon',
                                     'solo' => 'Solo', 'business' => 'Business', 'accessible' => 'Accessible Travel',
@@ -298,8 +308,8 @@ html[data-theme="dark"] .quick-links a { color: var(--text-muted) !important; }
                             </select>
                         </div>
                         <div class="form-group">
-                            <label>Typical Budget</label>
-                            <select name="budget_range" class="form-control">
+                            <label for="fld_budget_range">Typical Budget</label>
+                            <select name="budget_range" class="form-control" id="fld_budget_range">
                                 <?php $br = $travelPrefs['budget_range']; $budgetOpts = [
                                     '' => 'No preference', 'budget' => 'Budget', 'mid-range' => 'Mid-range', 'luxury' => 'Luxury',
                                 ];
@@ -309,8 +319,8 @@ html[data-theme="dark"] .quick-links a { color: var(--text-muted) !important; }
                             </select>
                         </div>
                         <div class="form-group">
-                            <label>Preferred Climate</label>
-                            <select name="preferred_climate" class="form-control">
+                            <label for="fld_preferred_climate">Preferred Climate</label>
+                            <select name="preferred_climate" class="form-control" id="fld_preferred_climate">
                                 <?php $pc = $travelPrefs['preferred_climate']; $climateOpts = [
                                     '' => 'No preference', 'any' => 'Any Climate', 'hot' => 'Warm / Tropical',
                                     'cold' => 'Cold / Snow', 'beach' => 'Beach / Coastal', 'mountain' => 'Mountains / Hills',
@@ -321,13 +331,13 @@ html[data-theme="dark"] .quick-links a { color: var(--text-muted) !important; }
                             </select>
                         </div>
                         <div class="form-group">
-                            <label>Interests <small style="color:#aaa;">(comma-separated, e.g. hiking, museums, beach)</small></label>
-                            <input type="text" name="interests" class="form-control" maxlength="500"
+                            <label for="fld_interests">Interests <small style="color:var(--text-muted);">(comma-separated, e.g. hiking, museums, beach)</small></label>
+                            <input id="fld_interests" type="text" name="interests" class="form-control" maxlength="500"
                                    value="<?php echo htmlspecialchars(implode(', ', $travelPrefs['interests']), ENT_QUOTES,'UTF-8'); ?>">
                         </div>
                         <div class="form-group">
-                            <label>Dietary / Food Preference</label>
-                            <select name="food_preference" class="form-control">
+                            <label for="fld_food_preference">Dietary / Food Preference</label>
+                            <select name="food_preference" class="form-control" id="fld_food_preference">
                                 <?php $fp = $travelPrefs['food_preference']; $foodOpts = [
                                     '' => 'No preference', 'no_restriction' => 'No restriction', 'vegetarian' => 'Vegetarian',
                                     'vegan' => 'Vegan', 'halal' => 'Halal', 'kosher' => 'Kosher',

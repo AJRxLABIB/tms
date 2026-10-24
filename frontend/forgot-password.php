@@ -1,5 +1,5 @@
 <?php
-session_start();
+require_once __DIR__ . '/../backend/session-boot.php';
 error_reporting(E_ALL); ini_set('display_errors', '0'); ini_set('log_errors', '1');
 include('backend/config.php');
 
@@ -95,9 +95,7 @@ if (isset($_POST['submit_request'])) {
                                VALUES(:e, :h, DATE_ADD(NOW(), INTERVAL :ttl MINUTE))")
                     ->execute([':e' => $user->EmailId, ':h' => $tokenHash, ':ttl' => TMS_PWRESET_TOKEN_TTL_MINUTES]);
 
-                $scheme       = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
-                $host         = $_SERVER['HTTP_HOST'] ?? 'localhost';
-                $base         = $scheme . '://' . $host . rtrim(dirname($_SERVER['SCRIPT_NAME']), '/');
+                $base         = tms_public_base_url(); // never built from a raw Host header (reset-link poisoning)
                 $resetLink    = "$base/forgot-password.php?token=" . urlencode($rawToken);
 
                 tms_send_email($user->EmailId, $user->FullName, 'Reset your TMS password',
@@ -106,7 +104,7 @@ if (isset($_POST['submit_request'])) {
                         . TMS_PWRESET_TOKEN_TTL_MINUTES . ' minutes and can only be used once:</p>
                         <p><a href="' . htmlspecialchars($resetLink, ENT_QUOTES, 'UTF-8') . '"
                               style="display:inline-block;background:#3F84B1;color:#fff;padding:10px 22px;border-radius:6px;text-decoration:none;font-weight:700;">Reset Password</a></p>
-                        <p style="font-size:12px;color:#94a3b8;">If you did not request this, you can safely ignore this email -- your password will not change.</p>')
+                        <p style="font-size:12px;color:var(--text-muted);">If you did not request this, you can safely ignore this email -- your password will not change.</p>')
                 );
                 tms_log_system_event($dbh, 'auth', 'password_reset_requested', true, $user->EmailId);
             } else {
@@ -140,8 +138,8 @@ if (isset($_POST['submit_reset'])) {
     } elseif (empty($newPass) || empty($confirmPass)) {
         $error = 'Please enter and confirm your new password.';
         $token = $postedToken;
-    } elseif (strlen($newPass) < 6) {
-        $error = 'New password must be at least 6 characters.';
+    } elseif (($pwErr = tms_password_error($newPass)) !== null) {
+        $error = $pwErr;
         $token = $postedToken;
     } elseif ($newPass !== $confirmPass) {
         $error = 'New password and confirm password do not match.';
@@ -150,6 +148,7 @@ if (isset($_POST['submit_reset'])) {
         $newHash = tms_hash_password($newPass);
         $dbh->prepare("UPDATE tblusers SET Password = :pwd WHERE EmailId = :email")
             ->execute([':pwd' => $newHash, ':email' => $row->UserEmail]);
+        tms_revoke_user_sessions($dbh, (string)$row->UserEmail);   // a reset ends every other session and API token
 
         // This token, and any other outstanding reset links for the same
         // account, are now spent -- an old email link can't be replayed
@@ -177,13 +176,17 @@ if (isset($_POST['submit_reset'])) {
 <html lang="<?php echo htmlspecialchars(tms_active_language(), ENT_QUOTES, 'UTF-8'); ?>">
 <head>
 <link rel="manifest" href="manifest.json">
-<meta name="theme-color" content="#0B2B3C">
+<meta name="theme-color" content="#104B3A">
 <link rel="apple-touch-icon" href="images/icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="TMS">
+<meta name="mobile-web-app-capable" content="yes">
 <title>TMS | Recover Password</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
 <link href="css/bootstrap.min2.css" rel='stylesheet' type='text/css' />
-<link href="css/style.min.css" rel='stylesheet' type='text/css' />
+<link href="<?php echo tms_asset_ver('css/style.min.css'); ?>" rel='stylesheet' type='text/css' />
 <link href="css/font-awesome.min2.css" rel="stylesheet">
 <script src="js/jquery-1.12.0.min.js" defer></script>
 <script src="js/bootstrap.min.js" defer></script>
@@ -191,22 +194,21 @@ if (isset($_POST['submit_reset'])) {
 <link href="<?php echo tms_asset_ver('css/modern-theme.css'); ?>" rel="stylesheet">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700;9..144,800&family=Manrope:wght@400;500;600;700;800&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
 <script src="js/wow.min.js" defer></script>
 <script>window.addEventListener("load",function(){if(typeof WOW!=="undefined")new WOW().init()});</script>
 <style>
 .errorWrap{padding:10px;margin:0 0 20px;background:var(--white);border-left:4px solid #dd3d36;box-shadow:0 1px 1px rgba(0,0,0,.1);}
 .succWrap {padding:10px;margin:0 0 20px;background:var(--white);border-left:4px solid #5cb85c;box-shadow:0 1px 1px rgba(0,0,0,.1);}
 .recover-box{max-width:440px;background:var(--white);border-radius:12px;box-shadow:0 4px 20px rgba(0,0,0,.09);padding:32px;margin:0 auto;}
-.recover-box h4{font-size:1.05em;font-weight:700;color:#444;margin-bottom:20px;}
+.recover-box h4{font-size:1.05em;font-weight:700;color:var(--text);margin-bottom:20px;}
 .recover-box .form-group{margin-bottom:16px;}
-.recover-box label{font-weight:600;color:#555;font-size:13px;margin-bottom:4px;display:block;}
+.recover-box label{font-weight:600;color:var(--text-muted);font-size:13px;margin-bottom:4px;display:block;}
 .recover-box .form-control{border:2px solid #e0e0e0;border-radius:7px;height:42px;font-size:14px;}
 .recover-box .form-control:focus{border-color:var(--secondary);box-shadow:none;outline:none;}
 .btn-recover{background:var(--secondary);color:#fff;border:none;border-radius:7px;padding:11px 30px;font-weight:700;font-size:14px;cursor:pointer;transition:.2s;}
-.btn-recover:hover{background:#2d6a97;}
+.btn-recover:hover{background:var(--primary-dark);}
 .tms-page-hero{position:relative;min-height:220px;display:flex;align-items:center;justify-content:center;overflow:hidden;
-  background:radial-gradient(ellipse 80% 60% at 30% 0%, rgba(15,163,163,0.35), transparent 60%),
+  background:radial-gradient(ellipse 80% 60% at 30% 0%, rgba(23,107,80,0.35), transparent 60%),
   linear-gradient(160deg, var(--primary-dark) 0%, var(--primary) 55%, #0C3A4A 100%);}
 .tms-page-hero h1{position:relative;z-index:2;color:#fff;font-family:var(--font-display);font-size:clamp(28px,4vw,42px);font-weight:600;margin:0;}
 .recover-box{background:rgba(255,255,255,0.7);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);
@@ -225,7 +227,7 @@ if (isset($_POST['submit_reset'])) {
 
             <?php if ($resetRow && !$msg): ?>
                 <h4><i class="fa fa-lock" style="color:var(--secondary)"></i> Choose a New Password</h4>
-                <p style="font-size:13px;color:#888;margin-bottom:20px;">
+                <p style="font-size:13px;color:var(--text-muted);margin-bottom:20px;">
                     Resetting the password for <strong><?php echo htmlspecialchars($resetRow->UserEmail, ENT_QUOTES, 'UTF-8'); ?></strong>.
                 </p>
 
@@ -237,14 +239,14 @@ if (isset($_POST['submit_reset'])) {
                     <?php tms_csrf_field(); ?>
                     <input type="hidden" name="token" value="<?php echo htmlspecialchars($token, ENT_QUOTES, 'UTF-8'); ?>">
                     <div class="form-group">
-                        <label>New Password * <small class="text-muted">(min 6 characters)</small></label>
+                        <label for="fld_newpassword">New Password * <small class="text-muted">(min 8 characters)</small></label>
                         <input type="password" name="newpassword" class="form-control"
-                               placeholder="New Password" required minlength="6" autocomplete="new-password">
+                               placeholder="New Password" required minlength="8" autocomplete="new-password" id="fld_newpassword">
                     </div>
                     <div class="form-group">
-                        <label>Confirm New Password *</label>
+                        <label for="fld_confirmpassword">Confirm New Password *</label>
                         <input type="password" name="confirmpassword" class="form-control"
-                               placeholder="Repeat new password" required autocomplete="new-password">
+                               placeholder="Repeat new password" required autocomplete="new-password" id="fld_confirmpassword">
                     </div>
                     <button type="submit" name="submit_reset" class="btn-recover">
                         <i class="fa fa-key"></i> Set New Password
@@ -253,7 +255,7 @@ if (isset($_POST['submit_reset'])) {
 
             <?php else: ?>
                 <h4><i class="fa fa-lock" style="color:var(--secondary)"></i> Reset Password</h4>
-                <p style="font-size:13px;color:#888;margin-bottom:20px;">
+                <p style="font-size:13px;color:var(--text-muted);margin-bottom:20px;">
                     Enter your registered email and we'll send you a link to reset your password.
                 </p>
 
@@ -269,8 +271,8 @@ if (isset($_POST['submit_reset'])) {
                 <form method="post">
                     <?php tms_csrf_field(); ?>
                     <div class="form-group">
-                        <label>Registered Email *</label>
-                        <input type="email" name="email" class="form-control"
+                        <label for="fld_email">Registered Email *</label>
+                        <input id="fld_email" type="email" name="email" class="form-control"
                                placeholder="your@email.com" required autocomplete="email"
                                value="<?php echo htmlspecialchars($_POST['email'] ?? '', ENT_QUOTES,'UTF-8'); ?>">
                     </div>
@@ -281,7 +283,7 @@ if (isset($_POST['submit_reset'])) {
                 <?php endif; ?>
             <?php endif; ?>
 
-            <p style="margin-top:18px;font-size:13px;color:#aaa;">
+            <p style="margin-top:18px;font-size:13px;color:var(--text-muted);">
                 Remember your password?
                 <a href="#" data-toggle="modal" data-target="#myModal4" style="color:var(--secondary);font-weight:600;">Sign In</a>
             </p>

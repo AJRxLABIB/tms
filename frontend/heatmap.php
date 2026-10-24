@@ -1,5 +1,5 @@
 <?php
-session_start();
+require_once __DIR__ . '/../backend/session-boot.php';
 error_reporting(E_ALL); ini_set('display_errors', '0'); ini_set('log_errors', '1');
 include('backend/config.php');
 tms_require_user(); // Batch 1 (landing/auth gating): whole app now requires login
@@ -67,20 +67,24 @@ unset($p);
 <html lang="<?php echo htmlspecialchars(tms_active_language(), ENT_QUOTES, 'UTF-8'); ?>">
 <head>
 <link rel="manifest" href="manifest.json">
-<meta name="theme-color" content="#0B2B3C">
+<meta name="theme-color" content="#104B3A">
 <link rel="apple-touch-icon" href="images/icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="TMS">
+<meta name="mobile-web-app-capable" content="yes">
 <title>TMS | Travel Popularity Heat Map</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <link href="css/bootstrap.min2.css" rel='stylesheet' type='text/css' />
-<link href="css/style.min.css" rel='stylesheet' type='text/css' />
+<link href="<?php echo tms_asset_ver('css/style.min.css'); ?>" rel='stylesheet' type='text/css' />
 <link href="css/font-awesome.min2.css" rel="stylesheet">
 <link href="<?php echo tms_asset_ver('css/modern-theme.css'); ?>" rel="stylesheet">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700;9..144,800&family=Manrope:wght@400;500;600;700;800&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script src="https://unpkg.com/leaflet.heat@0.2.0/dist/leaflet-heat.js"></script>
+<link rel="stylesheet" href="js/vendor/leaflet/leaflet.css" />
+<script src="js/vendor/leaflet/leaflet.js"></script>
+<script src="js/tms-map.js"></script>
+<script src="js/vendor/leaflet/leaflet-heat.js"></script>
 <script src="js/jquery-1.12.0.min.js" defer></script>
 <script src="js/bootstrap.min.js" defer></script>
 <style>
@@ -90,17 +94,17 @@ unset($p);
 .heat-hero p { opacity:0.85; font-size:1.1em; }
 #heatMap { height: 520px; border-radius:12px; box-shadow:0 8px 30px rgba(0,0,0,0.2); margin:25px 0; }
 .heat-sidebar { background:var(--white); border-radius:12px; box-shadow:0 4px 20px rgba(0,0,0,0.08); padding:20px; height:520px; overflow-y:auto; margin:25px 0; }
-.heat-sidebar h4 { color:#333; font-size:1em; border-bottom:2px solid #eee; padding-bottom:10px; margin-bottom:15px; }
-.heat-rank-item { display:flex; align-items:center; gap:12px; padding:10px; border-radius:8px; margin-bottom:8px; border:1px solid #f0f0f0; text-decoration:none; color:inherit; transition:0.2s; }
-.heat-rank-item:hover { background: linear-gradient(135deg,#667eea11,#764ba211); border-color:#667eea; color:inherit; text-decoration:none; }
-.heat-rank-num { flex-shrink:0; width:26px; height:26px; border-radius:50%; background:#ff6b35; color:#fff; font-size:12px; font-weight:700; display:flex; align-items:center; justify-content:center; }
+.heat-sidebar h4 { color:var(--text); font-size:1em; border-bottom:2px solid #eee; padding-bottom:10px; margin-bottom:15px; }
+.heat-rank-item { display:flex; align-items:center; gap:12px; padding:10px; border-radius:8px; margin-bottom:8px; border:1px solid var(--border); text-decoration:none; color:inherit; transition:0.2s; }
+.heat-rank-item:hover { background: linear-gradient(135deg,#176B5011,#104B3A11); border-color:#176B50; color:inherit; text-decoration:none; }
+.heat-rank-num { flex-shrink:0; width:26px; height:26px; border-radius:50%; background:#C2410C; color:#fff; font-size:12px; font-weight:700; display:flex; align-items:center; justify-content:center; }
 /* Round 14: these were :nth-child(1..3), but the sidebar's first child is the
    <h4> heading — so ranks 1 and 2 got the highlight and rank 3 did not.
    :nth-of-type counts only the rank rows. */
-.heat-rank-item:nth-of-type(1) .heat-rank-num, .heat-rank-item:nth-of-type(2) .heat-rank-num, .heat-rank-item:nth-of-type(3) .heat-rank-num { background:#667eea; }
-.heat-rank-name { font-size:13px; font-weight:700; margin:0 0 2px; color:#333; }
-.heat-rank-meta { font-size:11px; color:#888; }
-.heat-legend { display:flex; gap:16px; flex-wrap:wrap; align-items:center; margin:0 0 15px; font-size:12.5px; color:#555; }
+.heat-rank-item:nth-of-type(1) .heat-rank-num, .heat-rank-item:nth-of-type(2) .heat-rank-num, .heat-rank-item:nth-of-type(3) .heat-rank-num { background:#176B50; }
+.heat-rank-name { font-size:13px; font-weight:700; margin:0 0 2px; color:var(--text); }
+.heat-rank-meta { font-size:11px; color:var(--text-muted); }
+.heat-legend { display:flex; gap:16px; flex-wrap:wrap; align-items:center; margin:0 0 15px; font-size:12.5px; color:var(--text); }
 html[data-theme="dark"] .heat-sidebar h4,
 html[data-theme="dark"] .heat-rank-name { color: var(--text) !important; }
 html[data-theme="dark"] .heat-rank-meta,
@@ -125,7 +129,7 @@ html[data-theme="dark"] .heat-legend { color: var(--text-muted) !important; }
     <div class="heat-empty">
         <i class="fa fa-map-o"></i>
         <h3>Not enough location data yet</h3>
-        <p style="color:#94a3b8;">Packages need map coordinates before they can appear here. Check back once more destinations have been geocoded.</p>
+        <p style="color:var(--text-muted);">Packages need map coordinates before they can appear here. Check back once more destinations have been geocoded.</p>
     </div>
     <?php else: ?>
 
@@ -133,7 +137,7 @@ html[data-theme="dark"] .heat-legend { color: var(--text-muted) !important; }
         <span>Low demand</span>
         <span class="bar"></span>
         <span>High demand</span>
-        <span style="margin-left:auto;color:#94a3b8;">Based on page views + confirmed bookings, updated live</span>
+        <span style="margin-left:auto;color:var(--text-muted);">Based on page views + confirmed bookings, updated live</span>
     </div>
 
     <div class="row">
@@ -144,7 +148,7 @@ html[data-theme="dark"] .heat-legend { color: var(--text-muted) !important; }
             <div class="heat-sidebar">
                 <h4><i class="fa fa-trophy" style="color:#ff6b35"></i> Top 10 Destinations</h4>
                 <?php if (empty($topDestinations)): ?>
-                <p style="color:#94a3b8;font-size:13px;">No demand data yet.</p>
+                <p style="color:var(--text-muted);font-size:13px;">No demand data yet.</p>
                 <?php else: foreach ($topDestinations as $i => $d): ?>
                 <a href="package-details.php?pkgid=<?php echo $d->PackageId; ?>" class="heat-rank-item">
                     <span class="heat-rank-num"><?php echo $i + 1; ?></span>
@@ -167,9 +171,8 @@ html[data-theme="dark"] .heat-legend { color: var(--text-muted) !important; }
 <?php if (!empty($points)): ?>
 <script>
 var heatMap = L.map('heatMap').setView([20, 70], 3);
-L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    attribution: '&copy; OpenStreetMap contributors', maxZoom: 18
-}).addTo(heatMap);
+if (window.TmsMap) { TmsMap.addTiles(heatMap, { maxZoom: 18 }); TmsMap.fixSize(heatMap); }
+else L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '&copy; OpenStreetMap contributors', maxZoom: 18 }).addTo(heatMap);
 
 var heatPoints = <?php echo json_encode($points); ?>;
 

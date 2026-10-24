@@ -25,6 +25,14 @@ require_once __DIR__ . '/../CacheService.php';
 require_once __DIR__ . '/providers/AIProviderInterface.php';
 require_once __DIR__ . '/providers/GeminiProvider.php';
 require_once __DIR__ . '/providers/OpenAIProvider.php';
+require_once __DIR__ . '/providers/OllamaProvider.php';
+require_once __DIR__ . '/providers/NoneProvider.php';
+require_once __DIR__ . '/AIProviderResolver.php';
+require_once __DIR__ . '/AIConfig.php';
+require_once __DIR__ . '/ProviderHealth.php';
+require_once __DIR__ . '/ModelRegistry.php';
+require_once __DIR__ . '/ModelRouter.php';
+require_once __DIR__ . '/StructuredOutput.php';
 
 class AIClient {
 
@@ -33,6 +41,14 @@ class AIClient {
     private PDO    $db;
     private CacheService $cache;
     private AIProviderInterface $provider;
+    /** @var AIProviderInterface[] providers tried AFTER the primary, in order (see makeFallbackProviders). */
+    private array $fallbacks = [];
+    /** @var callable|null test seam: fn(array $request, AIProviderInterface $p, int $timeoutSec): array{0:int,1:string,2:?string} */
+    private $transport = null;
+    private string $lastProviderName = '';
+    private ?ModelRouter $router = null;
+    /** Model that answered the last gateway call (capability routing), for callers that want to show/log it. */
+    private string $lastModelName = '';
 
     /**
      * @param PDO $db
@@ -54,8 +70,65 @@ class AIClient {
         $this->cache     = $cache ?? new CacheService($db, false);
         $this->maxTokens = defined('AI_MAX_TOKENS') ? AI_MAX_TOKENS : 2000;
         $this->cacheTtl  = defined('AI_CACHE_TTL')  ? AI_CACHE_TTL  : 3600;
-        $this->provider  = $provider ?? self::makeConfiguredProvider();
+        $this->provider  = $provider ?? self::makeConfiguredProvider($db);
+        // Fallback providers only for the normal configured path; an explicitly injected provider (tests/diagnostics) stands alone.
+        if ($provider === null) { $this->fallbacks = self::makeFallbackProviders($this->provider); }
     }
+
+    /** Replace the provider chain (primary first). For tests and diagnostics. */
+    public function setProviderChain(array $providers): void {
+        $this->provider  = array_shift($providers);
+        $this->fallbacks = array_values($providers);
+    }
+
+    /** Test seam: replace the HTTP transport. Production never calls this. */
+    public function setTransport(?callable $t): void { $this->transport = $t; }
+
+    /**
+     * AI_FALLBACK_PROVIDERS="ollama,openai" (comma list, tried in order after AI_PROVIDER). Off by default.
+     * Privacy rule: a fallback is used only if it is the local 'ollama' runtime, or the same vendor, or
+     * AI_FALLBACK_ALLOW_EXTERNAL=1 explicitly says conversation text may go to that other cloud vendor.
+     * Only providers that are actually configured are included.
+     */
+    public static function makeFallbackProviders(AIProviderInterface $primary): array {
+        $raw = defined('AI_FALLBACK_PROVIDERS') ? (string)AI_FALLBACK_PROVIDERS : '';
+        $allowExternal = defined('AI_FALLBACK_ALLOW_EXTERNAL') && AI_FALLBACK_ALLOW_EXTERNAL;
+        $out = [];
+        foreach (array_filter(array_map(fn($x) => strtolower(trim($x)), explode(',', $raw))) as $name) {
+            if ($name === $primary->name() || isset($out[$name])) continue;
+            if ($name !== 'ollama' && !$allowExternal) {
+                error_log("[TMS AI] fallback provider '{$name}' ignored: sending data to a second cloud vendor needs AI_FALLBACK_ALLOW_EXTERNAL=1.");
+                continue;
+            }
+            $p = match ($name) {
+                'openai' => new OpenAIProvider(defined('OPENAI_API_KEY') ? OPENAI_API_KEY : '', defined('OPENAI_MODEL') ? OPENAI_MODEL : 'gpt-4o-mini', defined('OPENAI_BASE_URL') ? OPENAI_BASE_URL : 'https://api.openai.com/v1'),
+                'ollama' => new OllamaProvider(defined('OLLAMA_MODEL') ? OLLAMA_MODEL : '', defined('OLLAMA_BASE_URL') ? OLLAMA_BASE_URL : 'http://127.0.0.1:11434'),
+                'gemini' => new GeminiProvider(defined('GEMINI_API_KEY') ? GEMINI_API_KEY : '', defined('GEMINI_MODEL') ? GEMINI_MODEL : 'gemini-2.5-flash'),
+                default  => null,
+            };
+            if ($p === null) { error_log("[TMS AI] unknown fallback provider '{$name}' ignored."); continue; }
+            if (!$p->isConfigured()) { error_log("[TMS AI] fallback provider '{$name}' is not configured; skipped."); continue; }
+            $out[$name] = $p;
+        }
+        return array_values($out);
+    }
+
+    /** Test seam / explicit wiring for capability routing. */
+    public function setModelRouter(?ModelRouter $r): void { $this->router = $r; }
+
+    /** Router used when a call names a capability. Built lazily from OLLAMA_BASE_URL so plain calls never touch it. */
+    public function modelRouter(): ModelRouter {
+        if ($this->router === null) {
+            $base = defined('OLLAMA_BASE_URL') ? (string)OLLAMA_BASE_URL : 'http://127.0.0.1:11434';
+            $this->router = new ModelRouter(new ModelRegistry($base, null, $this->db));
+        }
+        return $this->router;
+    }
+
+    public function lastModel(): string { return $this->lastModelName; }
+
+    /** Provider that produced the most recent successful answer ('' if none). */
+    public function lastProvider(): string { return $this->lastProviderName; }
 
     /**
      * Picks the provider named by AI_PROVIDER (default 'gemini' -- the only
@@ -63,8 +136,46 @@ class AIClient {
      * changes nothing for an existing deployment). An unrecognized value
      * logs a warning and falls back to Gemini rather than fataling.
      */
-    private static function makeConfiguredProvider(): AIProviderInterface {
-        $wanted = defined('AI_PROVIDER') ? strtolower(trim((string)AI_PROVIDER)) : 'gemini';
+    /** @var array<string,array>|null resolved once per request */
+    private static ?array $resolved = null;
+
+    /**
+     * What AI_PROVIDER means for THIS request. 'auto' (the default when unset) probes the local Ollama runtime
+     * (ModelRegistry: 2 s budget, shared 30 s cache) and only then considers a plausible Gemini key; see AIProviderResolver.
+     * @return array{provider:string,model:string,reason:string,detail:string}
+     */
+    public static function resolution(?PDO $db = null): array {
+        if (self::$resolved !== null) return self::$resolved;
+        $base = defined('OLLAMA_BASE_URL') ? (string)OLLAMA_BASE_URL : 'http://127.0.0.1:11434';
+        $envModel = function_exists('tms_env') ? (string)tms_env('OLLAMA_MODEL', '') : '';
+        $reg = new ModelRegistry($base, null, $db, 30, 10);
+        self::$resolved = AIProviderResolver::resolve([
+            'provider'     => defined('AI_PROVIDER') ? (string)AI_PROVIDER : 'auto',
+            'gemini_key'   => defined('GEMINI_API_KEY') ? (string)GEMINI_API_KEY : '',
+            'ollama_model' => $envModel !== '' ? $envModel : (defined('OLLAMA_MODEL') ? (string)OLLAMA_MODEL : ''),
+        ], function () use ($reg) { return $reg->reachable() ? array_map(fn($m) => (string)$m['name'], array_values($reg->list())) : null; });
+        return self::$resolved;
+    }
+
+    /** Test seam: forget the per-request resolution. */
+    public static function resetResolution(): void { self::$resolved = null; }
+
+    private static function makeConfiguredProvider(?PDO $db = null): AIProviderInterface {
+        $wanted = defined('AI_PROVIDER') ? strtolower(trim((string)AI_PROVIDER)) : 'auto';
+
+        if (!in_array($wanted, ['openai', 'ollama', 'gemini'], true)) {
+            $r = self::resolution($db);
+            if ($wanted !== '' && $wanted !== 'auto' && !in_array($wanted, ['none', 'off', 'disabled'], true)) {
+                error_log("[TMS AI] AI_PROVIDER='{$wanted}' is not recognized (expected auto, ollama, gemini, openai or none) -- treating as auto.");
+            }
+            if ($r['provider'] === 'ollama') {
+                return new OllamaProvider($r['model'], defined('OLLAMA_BASE_URL') ? OLLAMA_BASE_URL : 'http://127.0.0.1:11434');
+            }
+            if ($r['provider'] === 'gemini') {
+                return new GeminiProvider(defined('GEMINI_API_KEY') ? GEMINI_API_KEY : '', defined('GEMINI_MODEL') ? GEMINI_MODEL : 'gemini-2.5-flash');
+            }
+            return new NoneProvider($r['reason'], $r['detail']);
+        }
 
         if ($wanted === 'openai') {
             return new OpenAIProvider(
@@ -74,8 +185,11 @@ class AIClient {
             );
         }
 
-        if ($wanted !== 'gemini' && $wanted !== '') {
-            error_log("[TMS AI] AI_PROVIDER='{$wanted}' is not recognized (expected 'gemini' or 'openai') -- using Gemini.");
+        if ($wanted === 'ollama') {
+            return new OllamaProvider(
+                defined('OLLAMA_MODEL')    ? OLLAMA_MODEL    : '',
+                defined('OLLAMA_BASE_URL') ? OLLAMA_BASE_URL : 'http://127.0.0.1:11434'
+            );
         }
 
         // Round 113: dropped a fallback to ANTHROPIC_API_KEY that lived here --
@@ -112,8 +226,18 @@ class AIClient {
         int    $totalBudgetSec = 22,
         int    $perAttemptSec  = 12,
         string $feature = '',
-        ?int   $cacheTtlSeconds = null
+        ?int   $cacheTtlSeconds = null,
+        ?string $capability = null
     ): array {
+
+        // Gateway capability (optional): picks the locally installed model for this kind of job, applies that job's
+        // time budget and keeps the prompt inside the context window. Callers that pass none behave exactly as before.
+        if ($capability !== null && !in_array($capability, ModelRouter::CAPABILITIES, true)) { $capability = null; }
+        if ($capability !== null) {
+            if ($totalBudgetSec === 22) $totalBudgetSec = ModelRouter::BUDGETS[$capability][0];
+            if ($perAttemptSec  === 12) $perAttemptSec  = ModelRouter::BUDGETS[$capability][1];
+        }
+        $this->lastModelName = '';
 
         // Round 95 FIX (severity: critical, live, previously undetected):
         // this whole method -- along with askWithImage() and httpPost() right
@@ -135,8 +259,9 @@ class AIClient {
         // JSON shape -- exactly the gap that suite was built to catch.
         // Fixed by actually routing through $this->provider, as the Round 34
         // docblock always claimed this method did.
-        if (!$this->provider->isConfigured()) {
-            error_log('[TMS AI] Provider "' . $this->provider->name() . '" is not configured -- set its API key in .env (see .env.example).');
+        $chain = AIConfig::failoverEnabled($this->db) ? array_merge([$this->provider], $this->fallbacks) : [$this->provider];
+        if (!array_filter($chain, fn($p) => $p->isConfigured())) {
+            if ($this->provider->name() !== 'none') { error_log('[TMS AI] Provider "' . $this->provider->name() . '" is not configured -- set its API key in .env (see .env.example).'); }  // 'none' is a normal auto-mode state: no log flood
             return $this->fallback('The AI assistant is not switched on for this site yet.');
         }
 
@@ -161,25 +286,67 @@ class AIClient {
             return $m;
         }, $messages);
 
-        // ── Build the provider-specific request (vendor payload shape lives
-        // in the provider class now, not here) ────────────────────────────
-        try {
-            $request = $this->provider->buildTextRequest($system, $messages, ['maxTokens' => $this->maxTokens]);
-        } catch (\RuntimeException $e) {
-            return $this->fallback($e->getMessage());
+        // ── Try the primary, then each fallback, within ONE overall deadline ──────
+        $deadline = microtime(true) + $totalBudgetSec;
+        $result = ['success' => false, 'error' => 'The AI assistant could not be reached. Please try again in a moment.'];
+        $latencyMs = 0; $used = null; $tried = 0;
+        foreach ($chain as $i => $prov) {
+            if (!$prov->isConfigured()) continue;
+            if (ProviderHealth::isOpen($this->db, $prov->name())) {
+                $this->recordTelemetry($feature, $userEmail, false, false, 0, null, null, null, 'circuit_open', $prov);
+                continue;
+            }
+            $remaining = (int)floor($deadline - microtime(true));
+            if ($remaining < 3) break;
+            $moreAfter = count(array_filter(array_slice($chain, $i + 1), fn($p) => $p->isConfigured() && !ProviderHealth::isOpen($this->db, $p->name())));
+            $slice = $moreAfter > 0 ? max(3, (int)ceil($remaining / 2)) : $remaining; // leave time for the next provider
+            $provMessages = $messages;
+            $reqOptions   = ['maxTokens' => $this->maxTokens];
+            $routeInfo    = ['reason' => '', 'dropped' => 0];
+            if ($capability !== null && $prov instanceof OllamaProvider) {
+                $routed = $this->routeOllama($prov, $capability, $system, $messages);
+                if (isset($routed['error'])) {
+                    $this->recordModelCall($capability, $feature, $prov, false, $routed['kind'], 0, null, null, $routed['reason'], 0);
+                    $result = ['success' => false, 'error' => $routed['error'], 'kind' => $routed['kind'] === 'context' ? 'content' : 'unavailable'];
+                    continue;
+                }
+                $prov = $routed['provider']; $provMessages = $routed['messages']; $reqOptions = $routed['options']; $routeInfo = $routed['info'];
+            }
+            try {
+                $request = $prov->buildTextRequest($system, $provMessages, $reqOptions);
+            } catch (\RuntimeException $e) {
+                $result = ['success' => false, 'error' => $e->getMessage(), 'kind' => 'content'];
+                continue;
+            }
+            $tried++;
+            $t0 = microtime(true);
+            $result = $this->httpPost($request, $slice, $perAttemptSec, $prov);
+            $latencyMs = (int)round((microtime(true) - $t0) * 1000);
+            $kind = ProviderHealth::classify($result);
+            if ($capability !== null && $prov instanceof OllamaProvider) {
+                $this->recordModelCall($capability, $feature, $prov, !empty($result['success']), $result['success'] ? null : $kind, $latencyMs,
+                    $result['promptTokens'] ?? null, $result['completionTokens'] ?? null, $routeInfo['reason'], (int)$routeInfo['dropped']);
+            }
+            if ($result['success']) {
+                ProviderHealth::recordSuccess($this->db, $prov->name());
+                $used = $prov;
+                break;
+            }
+            error_log('[TMS AI ' . $prov->name() . '] call failed (' . $kind . '): ' . ($result['error'] ?? 'unknown error'));
+            $this->recordTelemetry($feature, $userEmail, false, false, $latencyMs, null, null, null, ($result['error'] ?? 'unknown error') . ' [' . $kind . ']', $prov);
+            ProviderHealth::recordFailure($this->db, $prov->name(), $kind);
+            if (!ProviderHealth::shouldFailover($kind)) break; // content/safety refusals: another model must not be shopped for
         }
 
-        // ── API call (generic retry/backoff; vendor-specific parsing via
-        // the provider's own parseResponse()) ──────────────────────────────
-        $startedAt = microtime(true);
-        $result    = $this->httpPost($request, $totalBudgetSec, $perAttemptSec);
-        $latencyMs = (int)round((microtime(true) - $startedAt) * 1000);
-
-        if (!$result['success']) {
-            error_log('[TMS AI ' . $this->provider->name() . '] call failed: ' . ($result['error'] ?? 'unknown error'));
-            $this->recordTelemetry($feature, $userEmail, false, false, $latencyMs, null, null, null, $result['error'] ?? 'unknown error');
+        if ($used === null) {
+            if ($tried === 0 && !isset($result['kind'])) {
+                $this->recordTelemetry($feature, $userEmail, false, false, 0, null, null, null, 'all_providers_unavailable');
+                return $this->fallback('The AI assistant is temporarily unavailable. Please try again in a few minutes.');
+            }
             return $this->fallback($result['error'] ?? 'The AI assistant had a problem answering that. Please try again.');
         }
+        $this->lastProviderName = $used->name();
+        $this->lastModelName = $used->model();
 
         $content = $result['content'] ?? '';
 
@@ -197,10 +364,10 @@ class AIClient {
         $this->logUsage($userEmail);
         $this->recordTelemetry(
             $feature, $userEmail, true, false, $latencyMs,
-            $result['promptTokens'] ?? null, $result['completionTokens'] ?? null, $result['totalTokens'] ?? null, null
+            $result['promptTokens'] ?? null, $result['completionTokens'] ?? null, $result['totalTokens'] ?? null, null, $used
         );
 
-        return ['success' => true, 'content' => $content, 'cached' => false];
+        return ['success' => true, 'content' => $content, 'cached' => false, 'provider' => $used->name(), 'model' => $used->model(), 'fallback_used' => $used->name() !== $this->provider->name()];
     }
 
     /**
@@ -227,7 +394,7 @@ class AIClient {
         // self::GEMINI_BASE meant this always silently fell back, never
         // actually reaching the real API).
         if (!$this->provider->isConfigured()) {
-            error_log('[TMS AI] Provider "' . $this->provider->name() . '" is not configured -- set its API key in .env (see .env.example).');
+            if ($this->provider->name() !== 'none') { error_log('[TMS AI] Provider "' . $this->provider->name() . '" is not configured -- set its API key in .env (see .env.example).'); }  // 'none' is a normal auto-mode state: no log flood
             return $this->fallback('The AI assistant is not switched on for this site yet.');
         }
         if ($this->isRateLimited($userEmail)) {
@@ -269,8 +436,33 @@ class AIClient {
      * Convenience: single-turn user message.
      * Same signature as original AIClient::ask(), plus optional $feature.
      */
-    public function ask(string $system, string $userMessage, string $cacheKey = '', string $userEmail = 'guest', int $totalBudgetSec = 22, int $perAttemptSec = 12, string $feature = '', ?int $cacheTtlSeconds = null): array {
-        return $this->call($system, [['role' => 'user', 'content' => $userMessage]], $cacheKey, $userEmail, $totalBudgetSec, $perAttemptSec, $feature, $cacheTtlSeconds);
+    public function ask(string $system, string $userMessage, string $cacheKey = '', string $userEmail = 'guest', int $totalBudgetSec = 22, int $perAttemptSec = 12, string $feature = '', ?int $cacheTtlSeconds = null, ?string $capability = null): array {
+        return $this->call($system, [['role' => 'user', 'content' => $userMessage]], $cacheKey, $userEmail, $totalBudgetSec, $perAttemptSec, $feature, $cacheTtlSeconds, $capability);
+    }
+
+    /**
+     * Gateway call that must return structured data. Calls the model for the given capability, extracts the JSON,
+     * validates it against $schema and, if it is invalid, asks the model ONCE to fix its own output. Never throws.
+     * Callers should use their deterministic fallback when ok=false.
+     *
+     * @return array{ok:bool,data:mixed,errors:string[],repaired:bool,attempts:int,error:string,model:string}
+     */
+    public function callStructured(string $system, array $messages, array $schema, string $capability, string $userEmail = 'guest', string $feature = '', string $cacheKey = ''): array {
+        $first = $this->call($system, $messages, $cacheKey, $userEmail, 22, 12, $feature, null, $capability);
+        if (empty($first['success'])) {
+            return ['ok' => false, 'data' => null, 'errors' => [], 'repaired' => false, 'attempts' => 0, 'error' => (string)($first['error'] ?? 'AI unavailable'), 'model' => ''];
+        }
+        $model = $this->lastModelName;
+        $repair = function (string $errorSummary, string $original) use ($system, $userEmail, $feature, $capability): ?string {
+            $fixSystem = 'You repair JSON. Reply with ONLY the corrected JSON value, no commentary, no code fences. Do not add facts that were not in the original.';
+            $fixUser = "The JSON below failed validation: " . $errorSummary . "\n\nOriginal:\n" . $original;
+            $r = $this->call($fixSystem, [['role' => 'user', 'content' => $fixUser]], '', $userEmail, 22, 12, $feature === '' ? 'json_repair' : $feature . '_repair', null, $capability);
+            return !empty($r['success']) ? (string)$r['content'] : null;
+        };
+        $parsed = StructuredOutput::parse((string)$first['content'], $schema, $repair);
+        $parsed['error'] = $parsed['ok'] ? '' : 'The AI answer was not in the expected format.';
+        $parsed['model'] = $model;
+        return $parsed;
     }
 
     /**
@@ -328,7 +520,8 @@ class AIClient {
      * so this loop is genuinely vendor-agnostic and works for Gemini,
      * OpenAI, or any future provider without changes here.
      */
-    private function httpPost(array $request, int $totalBudgetSec = 22, int $perAttemptSec = 12): array {
+    private function httpPost(array $request, int $totalBudgetSec = 22, int $perAttemptSec = 12, ?AIProviderInterface $prov = null): array {
+        $prov = $prov ?? $this->provider;
         // FIX (Round 14): CURLOPT_TIMEOUT was 30s with no connect timeout, inside
         // a 3-attempt retry loop — a worst case of ~91 seconds for an
         // INTERACTIVE chat request. XAMPP's default max_execution_time is 30-60s,
@@ -345,36 +538,40 @@ class AIClient {
             $remaining = $totalBudgetSec - (int)(microtime(true) - $startedAt);
             if ($remaining < 3) break;
 
-            $ch = curl_init($request['url']);
-            curl_setopt_array($ch, [
-                CURLOPT_RETURNTRANSFER => true,
-                CURLOPT_POST           => true,
-                CURLOPT_POSTFIELDS     => $request['body'],
-                CURLOPT_HTTPHEADER     => $request['headers'],
-                CURLOPT_CONNECTTIMEOUT => 5,
-                CURLOPT_TIMEOUT        => min($perAttemptSec, max($remaining, 3)),
-                CURLOPT_SSL_VERIFYPEER => true,
-            ]);
+            $timeout = min($perAttemptSec, max($remaining, 3));
+            if ($this->transport !== null) {
+                [$httpCode, $response, $curlErr] = ($this->transport)($request, $prov, $timeout);
+            } else {
+                $ch = curl_init($request['url']);
+                curl_setopt_array($ch, [
+                    CURLOPT_RETURNTRANSFER => true,
+                    CURLOPT_POST           => true,
+                    CURLOPT_POSTFIELDS     => $request['body'],
+                    CURLOPT_HTTPHEADER     => $request['headers'],
+                    CURLOPT_CONNECTTIMEOUT => 5,
+                    CURLOPT_TIMEOUT        => $timeout,
+                    CURLOPT_SSL_VERIFYPEER => true,
+                ]);
+                $response = curl_exec($ch);
+                $httpCode = (int)curl_getinfo($ch, CURLINFO_HTTP_CODE);
+                $curlErr  = curl_error($ch) ?: null;
+                curl_close($ch);
+            }
 
-            $response = curl_exec($ch);
-            $httpCode = (int)curl_getinfo($ch, CURLINFO_HTTP_CODE);
-            $curlErr  = curl_error($ch) ?: null;
-            curl_close($ch);
-
-            $lastResult = $this->provider->parseResponse($httpCode, (string)$response, $curlErr);
+            $lastResult = $prov->parseResponse((int)$httpCode, (string)$response, $curlErr);
 
             if ($lastResult['success'] || empty($lastResult['retriable'])) {
                 return $lastResult; // clean success, or a definitive failure retrying won't fix
             }
 
             if ($attempt < $maxAttempts) {
-                usleep($backoffMs * 1000);
+                usleep(($backoffMs + random_int(0, 150)) * 1000); // exponential backoff with jitter
                 $backoffMs *= 2;
             }
         }
 
         if (!$lastResult['success']) {
-            error_log('[TMS AI ' . $this->provider->name() . '] call failed after ' . $maxAttempts . ' attempt(s): ' . ($lastResult['error'] ?? 'unknown error'));
+            error_log('[TMS AI ' . $prov->name() . '] call failed after ' . $maxAttempts . ' attempt(s): ' . ($lastResult['error'] ?? 'unknown error'));
         }
 
         return $lastResult;
@@ -400,8 +597,54 @@ class AIClient {
             $stmt->execute([$userEmail, $window]);
             return (int)$stmt->fetchColumn() >= $limit;
         } catch (Exception $e) {
-            return false;
+            // Fail closed: if the limiter cannot count, refuse AI calls rather than allow unlimited use.
+            // Exception: the usage table not existing yet (42S02, migration not run) must not take AI down.
+            $missingTable = $e instanceof PDOException && (string)$e->getCode() === '42S02';
+            error_log('[TMS AI] rate-limit check failed (' . ($missingTable ? 'table missing, allowing' : 'blocking') . '): ' . $e->getMessage());
+            return !$missingTable;
         }
+    }
+
+    /**
+     * Picks the installed model for $capability and fits the conversation into its context window.
+     * @return array{error:string,kind:string,reason:string}|array{provider:OllamaProvider,messages:array,options:array,info:array}
+     */
+    private function routeOllama(OllamaProvider $prov, string $capability, string $system, array $messages): array {
+        $router = $this->modelRouter();
+        $route = $router->route($capability);
+        if ($route['model'] === null) {
+            error_log('[TMS AI] no usable local model for "' . $capability . '" (' . $route['reason'] . '); caller falls back to its non-AI path.');
+            return ['error' => 'The AI assistant is not available right now.', 'kind' => 'unavailable', 'reason' => $route['reason']];
+        }
+        $limit = $router->contextLimit($capability);
+        $fit = $router->fit($system, $messages, $limit, min($this->maxTokens, intdiv($limit, 2)));
+        if (!$fit['ok']) {
+            return ['error' => 'That request is too long for the AI assistant. Please shorten it and try again.', 'kind' => 'context', 'reason' => 'context_too_large'];
+        }
+        return [
+            'provider' => $prov->withModel($route['model']),
+            'messages' => $fit['messages'],
+            'options'  => ['maxTokens' => $this->maxTokens, 'numCtx' => $limit],
+            'info'     => ['reason' => $route['reason'], 'dropped' => $fit['dropped'] + $fit['shortened']],
+        ];
+    }
+
+    /** One row per gateway call in tbl_ai_model_calls: model name, digest and size, never prompt or answer text. Best effort. */
+    private function recordModelCall(string $capability, string $feature, AIProviderInterface $prov, bool $success, ?string $errorKind, int $latencyMs, ?int $promptTokens, ?int $completionTokens, string $routeReason, int $dropped): void {
+        try {
+            $info = null;
+            if ($prov instanceof OllamaProvider) {
+                $info = $this->modelRouter()->registryInfo($prov->model());
+            }
+            $this->db->prepare(
+                "INSERT INTO tbl_ai_model_calls (capability, feature, provider, model, model_digest, model_size, route_reason, success, error_kind, latency_ms, prompt_tokens, completion_tokens, context_dropped)
+                 VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)"
+            )->execute([
+                $capability, mb_substr($feature, 0, 60), $prov->name(), mb_substr($prov->model(), 0, 120),
+                $info['digest'] ?? null, $info['size'] ?? null, mb_substr($routeReason, 0, 30), $success ? 1 : 0,
+                $errorKind !== null ? mb_substr($errorKind, 0, 20) : null, $latencyMs, $promptTokens, $completionTokens, min(32000, $dropped),
+            ]);
+        } catch (\Throwable $e) { /* table not migrated yet, or DB busy: telemetry must never break an answer */ }
     }
 
     private function logUsage(string $userEmail): void {
@@ -426,16 +669,17 @@ class AIClient {
      */
     private function recordTelemetry(
         string $feature, string $userEmail, bool $success, bool $cached, int $latencyMs,
-        ?int $promptTokens, ?int $completionTokens, ?int $totalTokens, ?string $error
+        ?int $promptTokens, ?int $completionTokens, ?int $totalTokens, ?string $error, ?AIProviderInterface $prov = null
     ): void {
+        $prov = $prov ?? $this->provider;
         try {
             $this->db->prepare(
                 "INSERT INTO tbl_ai_telemetry
                     (provider, model, feature, user_email, success, cached, latency_ms, prompt_tokens, completion_tokens, total_tokens, error_message, created_at)
                  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())"
             )->execute([
-                $this->provider->name(),
-                $this->provider->model(),
+                $prov->name(),
+                $prov->model(),
                 $feature !== '' ? $feature : 'unspecified',
                 $userEmail !== '' ? $userEmail : 'guest',
                 $success ? 1 : 0,
@@ -483,7 +727,9 @@ class AIClient {
     private function sanitizePromptInput(string $input, string $role = 'user'): string {
         $input = trim($input);
         if ($role !== 'assistant') {
-            $input = strip_tags($input);
+            // Remove real markup only. strip_tags() also ate text after a bare
+            // "<" ("budget < 20000 and 3 days" lost everything after the "<").
+            $input = preg_replace('/<\s*\/?\s*[a-z][^>]*>/i', '', $input) ?? $input;
         }
         return mb_substr($input, 0, 4000);
     }

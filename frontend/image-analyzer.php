@@ -6,7 +6,7 @@
  * against real packages in the catalog (PackageType/Fetures/Location/Name),
  * not a hardcoded lookup table.
  */
-session_start();
+require_once __DIR__ . '/../backend/session-boot.php';
 error_reporting(E_ALL); ini_set('display_errors', '0'); ini_set('log_errors', '1');
 include('backend/config.php');
 // LIVE BUG FIX (customer-facing audit): this page is real browsing/
@@ -22,8 +22,12 @@ include('backend/config.php');
 <html lang="<?php echo htmlspecialchars(tms_active_language(), ENT_QUOTES, 'UTF-8'); ?>">
 <head>
 <link rel="manifest" href="manifest.json">
-<meta name="theme-color" content="#0B2B3C">
+<meta name="theme-color" content="#104B3A">
 <link rel="apple-touch-icon" href="images/icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="TMS">
+<meta name="mobile-web-app-capable" content="yes">
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>AI Image Analyzer | TMS</title>
@@ -32,7 +36,6 @@ include('backend/config.php');
 <link href="<?php echo tms_asset_ver('css/modern-theme.css'); ?>" rel="stylesheet">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700;9..144,800&family=Manrope:wght@400;500;600;700;800&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
 <style>
 .ia-hero{background:linear-gradient(135deg,var(--primary-dark),var(--primary));padding:60px 0 40px;text-align:center;color:#fff;}
 .ia-hero h1{font-family:var(--font-display);font-size:2.1rem;font-weight:700;margin-bottom:8px;}
@@ -40,7 +43,7 @@ include('backend/config.php');
 
 .ia-card{background:#fff;border-radius:20px;padding:32px;box-shadow:var(--shadow-lg);margin:-30px auto 40px;max-width:640px;}
 .ia-drop{border:2.5px dashed #cbd5e1;border-radius:16px;padding:36px 20px;text-align:center;cursor:pointer;transition:var(--transition);background:var(--bg);}
-.ia-drop.dragover{border-color:var(--secondary);background:rgba(15,163,163,.06);}
+.ia-drop.dragover{border-color:var(--secondary);background:rgba(23,107,80,.06);}
 .ia-drop i{font-size:38px;color:var(--secondary);margin-bottom:10px;display:block;}
 .ia-drop p{color:var(--text-muted);font-size:13.5px;margin:0;}
 .ia-preview{max-width:100%;max-height:280px;border-radius:12px;display:none;margin:0 auto 16px;box-shadow:var(--shadow-sm);}
@@ -189,6 +192,7 @@ document.getElementById('iaForm').addEventListener('submit', function(e){
 
     var fd = new FormData();
     fd.append('photo', selectedFile);
+    fd.append('csrf_token', <?php echo json_encode(tms_csrf_token()); ?>);
 
     fetch('api/ai.php?action=image_analyze', { method: 'POST', body: fd })
         .then(function(r){ return r.json(); })

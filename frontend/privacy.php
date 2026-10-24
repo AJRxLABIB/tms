@@ -1,5 +1,5 @@
 <?php
-session_start();
+require_once __DIR__ . '/../backend/session-boot.php';
 error_reporting(E_ALL); ini_set('display_errors', '0'); ini_set('log_errors', '1');
 include('backend/config.php');
 tms_require_user();
@@ -65,7 +65,7 @@ if (isset($_POST['clear_ai_history'])) {
     // tbl_ai_telemetry (Round 34) added alongside tbl_ai_usage_log -- same
     // kind of operational per-call log, not user-facing "history" content,
     // but keyed by user_email so it belongs in the same clear-on-request set.
-    $aiTables = ['tbl_copilot_sessions', 'tbl_ai_itineraries', 'tbl_travel_memories', 'tbl_ai_packages', 'tbl_ai_usage_log', 'tbl_ai_telemetry', 'tbl_explore_history', 'tbl_explore_chat'];
+    $aiTables = ['tbl_copilot_sessions', 'tbl_ai_itineraries', 'tbl_travel_memories', 'tbl_ai_packages', 'tbl_ai_usage_log', 'tbl_ai_telemetry', 'tbl_explore_history', 'tbl_explore_chat', 'tbl_ai_user_memory'];
     $cleared = 0;
     foreach ($aiTables as $t) {
         try {
@@ -114,31 +114,35 @@ $exportUrl = 'export-my-data.php';
 <html lang="<?php echo htmlspecialchars(tms_active_language(), ENT_QUOTES, 'UTF-8'); ?>">
 <head>
 <link rel="manifest" href="manifest.json">
-<meta name="theme-color" content="#0B2B3C">
+<meta name="theme-color" content="#104B3A">
 <link rel="apple-touch-icon" href="images/icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="TMS">
+<meta name="mobile-web-app-capable" content="yes">
 <title>TMS | Privacy &amp; My Data</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
 <link href="css/bootstrap.min2.css" rel='stylesheet' type='text/css' />
-<link href="css/style.min.css" rel='stylesheet' type='text/css' />
+<link href="<?php echo tms_asset_ver('css/style.min.css'); ?>" rel='stylesheet' type='text/css' />
 <link href="css/font-awesome.min2.css" rel="stylesheet">
 <link href="<?php echo tms_asset_ver('css/modern-theme.css'); ?>" rel="stylesheet">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700;9..144,800&family=Manrope:wght@400;500;600;700;800&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
 <script src="js/jquery-1.12.0.min.js" defer></script>
 <script src="js/bootstrap.min.js" defer></script>
 <style>
 .errorWrap{padding:10px;margin:0 0 20px;background:var(--white);border-left:4px solid #dd3d36;box-shadow:0 1px 1px rgba(0,0,0,.1);border-radius:8px;}
 .succWrap{padding:10px;margin:0 0 20px;background:var(--white);border-left:4px solid #5cb85c;box-shadow:0 1px 1px rgba(0,0,0,.1);border-radius:8px;}
 .tms-page-hero{position:relative;min-height:200px;display:flex;align-items:center;justify-content:center;overflow:hidden;
-  background:radial-gradient(ellipse 80% 60% at 30% 0%, rgba(15,163,163,0.35), transparent 60%),
+  background:radial-gradient(ellipse 80% 60% at 30% 0%, rgba(23,107,80,0.35), transparent 60%),
   linear-gradient(160deg, var(--primary-dark) 0%, var(--primary) 55%, #0C3A4A 100%);}
 .tms-page-hero h1{position:relative;z-index:2;color:#fff;font-family:var(--font-display);font-size:clamp(26px,4vw,38px);font-weight:600;margin:0;}
 .priv-card{background:var(--white);border-radius:var(--radius-md);box-shadow:var(--shadow-sm);border:1px solid #eef2f4;padding:26px;max-width:680px;margin:0 auto 24px;}
 .priv-card h3{margin:0 0 6px;font-size:18px;font-weight:700;color:var(--text);}
 .priv-card p.desc{color:var(--text-muted);font-size:14px;margin:0 0 16px;}
 .priv-card.danger{border:1px solid var(--danger-bg);}
+html[data-theme="dark"] .priv-card .btn-danger{color:#3A1414;}
 .priv-card.danger h3{color:var(--danger);}
 .priv-toggle{display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid #f0f0f0;}
 .priv-toggle:last-child{border-bottom:none;}
@@ -176,14 +180,14 @@ $exportUrl = 'export-my-data.php';
                     <b>Booking status email notifications</b>
                     <small>When off, we'll still show in-app notifications and never skip password-reset or security emails -- this only turns off status-update emails.</small>
                 </div>
-                <input type="checkbox" name="notifications_enabled" <?php echo $user->NotificationsEnabled ? 'checked' : ''; ?> style="width:20px;height:20px;">
+                <input type="checkbox" aria-label="Booking status email notifications" name="notifications_enabled" <?php echo $user->NotificationsEnabled ? 'checked' : ''; ?> style="width:20px;height:20px;">
             </div>
             <div class="priv-toggle">
                 <div>
                     <b>Personalized recommendations</b>
                     <small>When off, the AI Recommender won't factor your past bookings into future suggestions.</small>
                 </div>
-                <input type="checkbox" name="personalization_enabled" <?php echo $user->PersonalizationEnabled ? 'checked' : ''; ?> style="width:20px;height:20px;">
+                <input type="checkbox" aria-label="Personalized recommendations" name="personalization_enabled" <?php echo $user->PersonalizationEnabled ? 'checked' : ''; ?> style="width:20px;height:20px;">
             </div>
             <button type="submit" name="save_preferences" class="btn btn-primary" style="margin-top:16px;">Save Preferences</button>
         </form>
@@ -191,7 +195,7 @@ $exportUrl = 'export-my-data.php';
 
     <div class="priv-card">
         <h3><i class="fa fa-robot"></i> AI History</h3>
-        <p class="desc">Permanently delete your Trip Copilot conversations, AI-generated itineraries, travel memories, cached AI recommendations, and learned preference profile. This cannot be undone.</p>
+        <p class="desc">Permanently delete your Trip Copilot conversations, saved assistant preferences (<a href="ai-memory.php">My AI memory</a>), AI-generated itineraries, travel memories, cached AI recommendations, and learned preference profile. This cannot be undone.</p>
         <form method="post" onsubmit="return confirm('Delete all your AI history? This cannot be undone.');">
             <?php tms_csrf_field(); ?>
             <button type="submit" name="clear_ai_history" class="btn btn-default"><i class="fa fa-trash"></i> Clear My AI History</button>

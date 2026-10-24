@@ -1,5 +1,5 @@
 <?php
-session_start();
+require_once __DIR__ . '/../backend/session-boot.php';
 error_reporting(E_ALL);
 ini_set('display_errors', 0);
 ini_set('log_errors', 1);
@@ -12,7 +12,6 @@ tms_require_admin();
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>TMS | Change Admin Password</title>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Plus+Jakarta+Sans:wght@600;700;800&display=swap" rel="stylesheet">
 <link href="css/font-awesome.min2.css" rel="stylesheet">
 <link href="css/bootstrap.min.css" rel="stylesheet">
 <link href="<?php echo tms_asset_ver('css/admin-v6.css'); ?>" rel="stylesheet">
@@ -38,8 +37,8 @@ if (isset($_POST['submit'])) {
 
     if (empty($currentPass) || empty($newPass) || empty($confirmPass)) {
         $error = 'All fields are required.';
-    } elseif (strlen($newPass) < 6) {
-        $error = 'New password must be at least 6 characters.';
+    } elseif (($pwErr = tms_password_error($newPass)) !== null) {
+        $error = $pwErr;
     } elseif ($newPass !== $confirmPass) {
         $error = 'New password and confirm password do not match.';
     } else {
@@ -86,7 +85,7 @@ if (isset($_POST['submit'])) {
                         <input type="password" id="cpw_currentpassword" name="currentpassword" class="form-control" required autocomplete="current-password">
                     </div>
                     <div class="form-group">
-                        <label for="cpw_newpassword">New Password * <small class="text-muted">(min 6 characters)</small></label>
+                        <label for="cpw_newpassword">New Password * <small class="text-muted">(min 8 characters)</small></label>
                         <input type="password" id="cpw_newpassword" name="newpassword" class="form-control" required autocomplete="new-password">
                     </div>
                     <div class="form-group">

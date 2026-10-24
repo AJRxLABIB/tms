@@ -39,7 +39,7 @@ class AchievementEngine {
                 'check' => fn($email) => $this->countBookings($email) >= 1,
             ],
             'frequent_traveler' => [
-                'name' => 'Frequent Traveler', 'icon' => 'plane', 'color' => '#8b5cf6',
+                'name' => 'Frequent Traveler', 'icon' => 'plane', 'color' => '#1F8A66',
                 'description' => 'Complete 5 bookings',
                 'check' => fn($email) => $this->countBookings($email) >= 5,
             ],

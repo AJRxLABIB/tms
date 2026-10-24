@@ -1,3 +1,4 @@
+</main>
 <!-- TMS Modern Footer Partial (used by inner pages) -->
 <!-- ════════════════ FOOTER ════════════════ -->
 <footer class="tms-footer">
@@ -11,7 +12,7 @@
                         <span>Tourism Management</span>
                     </div>
                 </a>
-                <p>Your premium travel partner. AI-powered planning, expert guidance, and world-class service.</p>
+                <p>Plan, compare and book tour packages with AI-assisted trip planning, live weather and multi-currency prices.</p>
                 <?php /* Round 14: these four buttons were all href="#" — clicking any of
                          them just jumped to the top of the page. Set TMS_SOCIAL_* in .env
                          to switch them on; until then they are not rendered at all, which
@@ -43,6 +44,8 @@
                     <li><a href="blog.php"><?php echo tms_t('nav_blog','Travel Blog'); ?></a></li>
                     <li><a href="enquiry.php">Enquiry</a></li>
                     <li><a href="page.php?type=contact"><?php echo tms_t('nav_contact','Contact Us'); ?></a></li>
+                    <li><a href="page.php?type=terms"><?php echo tms_t('label_terms','Terms of Service'); ?></a></li>
+                    <li><a href="page.php?type=privacy"><?php echo tms_t('label_privacy_policy','Privacy Policy'); ?></a></li>
                 </ul>
             </div>
             <div class="tms-footer-col">
@@ -72,17 +75,19 @@
                     <li><a href="reviews.php">Reviews</a></li>
                     <li><a href="loyalty.php">Loyalty Points</a></li>
                     <li><a href="custom-trip.php">Custom Trips</a></li>
-                    <li><a href="admin/index.php">Admin Login</a></li>
                 </ul>
-                <div style="margin-top:20px;padding:14px;background:rgba(255,183,3,0.1);border-radius:10px;border:1px solid rgba(255,183,3,0.2);">
-                    <div style="color:var(--accent);font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;">24/7 Support</div>
-                    <div style="color:#fff;font-size:15px;font-weight:700;"><i class="fa fa-phone"></i> +880 1759-443004</div>
+                <?php $tmsSupportPhone = trim((string)tms_env('TMS_SUPPORT_PHONE', '+880 1759-443004')); ?>
+                <?php if ($tmsSupportPhone !== ''): ?>
+                <div style="margin-top:20px;padding:14px;background:rgba(184,228,201,0.1);border-radius:10px;border:1px solid rgba(184,228,201,0.25);">
+                    <div style="color:var(--mint);font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;">Contact</div>
+                    <a href="tel:<?php echo htmlspecialchars(preg_replace('/[^0-9+]/', '', $tmsSupportPhone), ENT_QUOTES, 'UTF-8'); ?>" style="color:#fff;font-size:15px;font-weight:700;"><i class="fa fa-phone" aria-hidden="true"></i> <?php echo htmlspecialchars($tmsSupportPhone, ENT_QUOTES, 'UTF-8'); ?></a>
                 </div>
+                <?php endif; ?>
             </div>
             <?php endif; ?>
         </div>
         <div class="tms-footer-bottom">
-            <span>© 2026 TMS — Tourism Management System. <?php echo tms_t('footer_rights','All rights reserved.'); ?></span>
+            <span>© <?php echo date('Y'); ?> TMS — Tourism Management System. <?php echo tms_t('footer_rights','All rights reserved.'); ?></span>
             <?php if (empty($tms_landing_mode)): ?>
             <div style="display:flex;align-items:center;gap:16px;">
                 <select class="tms-currency-select" aria-label="See price in" title="See price in" style="background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.2);color:rgba(255,255,255,0.85);">
@@ -92,10 +97,10 @@
                     </option>
                     <?php endforeach; ?>
                 </select>
-                <button type="button" id="tmsInstallBtnFooter" style="display:none;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.2);color:rgba(255,255,255,0.85);padding:6px 14px;border-radius:20px;font-size:12px;cursor:pointer;font-family:'Poppins',sans-serif;">
+                <button type="button" id="tmsInstallBtnFooter" style="display:none;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.2);color:rgba(255,255,255,0.85);padding:6px 14px;border-radius:20px;font-size:12px;cursor:pointer;font-family:var(--font-body);">
                     <i class="fa fa-download"></i> Install App
                 </button>
-                <button id="darkModeBtn" onclick="tmsToggleTheme()" style="background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.2);color:rgba(255,255,255,0.7);padding:6px 14px;border-radius:20px;font-size:12px;cursor:pointer;font-family:'Poppins',sans-serif;">
+                <button id="darkModeBtn" onclick="tmsToggleTheme()" style="background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.2);color:rgba(255,255,255,0.7);padding:6px 14px;border-radius:20px;font-size:12px;cursor:pointer;font-family:var(--font-body);">
                     <i class="fa fa-moon-o" id="darkIcon"></i> <span id="darkLabel">Dark Mode</span>
                 </button>
             </div>
@@ -157,7 +162,7 @@ if('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch
 // strip and About page mission stats were static text ("1,900+") with no
 // animation at all. Any element with data-counter="N" now counts up from 0
 // to N once it scrolls into view, formatted with thousands separators and
-// a trailing "+". IntersectionObserver-based so it only ever plays once per
+// an optional data-suffix (e.g. "+"; none by default so exact counts stay exact). IntersectionObserver-based so it only ever plays once per
 // element and costs nothing on pages that don't use it.
 (function() {
     var counters = document.querySelectorAll('[data-counter]');
@@ -174,7 +179,7 @@ if('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch
             // ease-out — fast start, gentle settle, matches "subtle and professional"
             var eased = 1 - Math.pow(1 - progress, 3);
             var current = Math.floor(eased * target);
-            el.textContent = current.toLocaleString() + (progress >= 1 ? '+' : '');
+            el.textContent = current.toLocaleString() + (progress >= 1 ? (el.getAttribute('data-suffix') || '') : '');
             if (progress < 1) requestAnimationFrame(step);
         }
         requestAnimationFrame(step);
@@ -275,5 +280,19 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 });
 </script>
-<?php include('includes/chatbot.php'); ?>
+<?php
+// Round 115 architecture cleanup: this used to say 'includes/chatbot.php'
+// -- a leftover from before the Round 49 restructure, same class of bug as
+// the includes/header.php/includes/footer.php one already fixed in
+// backend/landing.php. Since this footer is include()'d from every
+// frontend/*.php page (all reached through their root-shim, so PHP's
+// working directory is the project root), the bare path was resolving to
+// the stale project-root includes/chatbot.php on every single page site-
+// wide instead of this file's own live sibling, backend/chatbot.php.
+// The two were still byte-identical at the time of this fix, so nothing
+// visibly changed -- but a future edit to backend/chatbot.php would have
+// silently never reached a real visitor. Now points at the real sibling.
+include('backend/chatbot.php');
+?>
+<script src="js/tms-a11y.js" defer></script>
 <?php /* Human "Chat with our team" widget removed per user request — Contact page covers this */ ?>

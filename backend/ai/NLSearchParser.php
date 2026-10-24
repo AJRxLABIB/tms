@@ -200,23 +200,14 @@ SYSTEM;
             if ($firstWord !== '' && str_contains($q, $firstWord)) { $type = $t; break; }
         }
 
-        $maxPrice = null;
-        // "under 20000", "under ৳20,000", "below 20k", "less than 20000"
-        if (preg_match('/(?:under|below|less than|within|max(?:imum)?)\D{0,6}([\d,]+)\s*(k)?/i', $q, $m)) {
-            $val = (int)str_replace(',', '', $m[1]);
-            if (!empty($m[2])) { $val *= 1000; }
-            if ($val > 0) { $maxPrice = $val; }
-        }
-
-        $durationMin = $durationMax = null;
-        if (preg_match('/(\d+)\s*-\s*(\d+)\s*[- ]?(day|days|night|nights)/i', $q, $m)) {
-            $durationMin = (int)$m[1]; $durationMax = (int)$m[2];
-        } elseif (preg_match('/(\d+)\s*-?\s*(day|days|night|nights)/i', $q, $m)) {
-            // Covers both "3 days" and the common hyphenated adjective form
-            // "3-day trip" -- found live-testing this exact phrasing, which
-            // the master prompt's own example query uses.
-            $durationMin = $durationMax = (int)$m[1];
-        }
+        // Amounts, durations and traveller counts come from the shared
+        // QueryParser (English / Bangla / Banglish, k / lakh / hajar, ranges,
+        // total-vs-per-person). "under 1.5 lakh" used to be read as 1.
+        require_once __DIR__ . '/QueryParser.php';
+        $qp = QueryParser::parse($query);
+        $maxPrice = QueryParser::perPersonCeiling($qp);
+        $durationMin = $qp['days_min'];
+        $durationMax = $qp['days_max'];
 
         $ratedOnly = (bool)preg_match('/\b(highly[- ]rated|best[- ]rated|top[- ]rated|5[- ]star|four[- ]star|4[- ]star)\b/i', $q);
 

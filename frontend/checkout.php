@@ -1,7 +1,8 @@
 <?php
-session_start();
+require_once __DIR__ . '/../backend/session-boot.php';
 error_reporting(E_ALL); ini_set('display_errors', '0'); ini_set('log_errors', '1');
 include('backend/config.php');
+require_once 'backend/services/SupplierService.php';
 tms_require_user();
 
 $email = $_SESSION['login'];
@@ -9,7 +10,7 @@ $error = '';
 
 $q = $dbh->prepare(
     "SELECT c.id, c.PackageId, c.FromDate, c.ToDate, c.Comment, c.NoOfPersons, c.DynamicPrice,
-            p.PackageName, p.PackageLocation, p.PackagePrice, p.PackageImage
+            p.PackageName, p.PackageLocation, p.PackagePrice, p.PackageImage, p.CancellationPolicy
      FROM tblcart c JOIN tbltourpackages p ON p.PackageId = c.PackageId
      WHERE c.UserEmail=:e ORDER BY c.id DESC"
 );
@@ -69,7 +70,11 @@ if (isset($_POST['confirm_checkout'])) {
     tms_csrf_validate();
     $mobile = tms_clean($_POST['mobile'] ?? '');
 
-    if ($hasInvalidPrice) {
+    // Explicit consent is enforced server-side (the HTML `required` attribute
+    // alone is not a control -- a crafted POST would skip it).
+    if (empty($_POST['accept_terms'])) {
+        $error = tms_t('msg_accept_terms_required', 'Please confirm that you have read the cancellation policy and privacy policy before booking.');
+    } elseif ($hasInvalidPrice) {
         $error = "One or more items in your cart don't have a price set yet, so checkout can't proceed. Please remove them from your cart or contact support.";
     } else {
     // CONCURRENCY FIX (Rule 9 -- prevent double booking): everything from the
@@ -93,6 +98,21 @@ if (isset($_POST['confirm_checkout'])) {
     $dbh->beginTransaction();
     $capacityError = '';
     try {
+        // Double-submit guard: lock this customer's cart rows and make sure the cart is exactly what was shown. A second parallel
+        // POST (double click, retry) blocks here until the first commits, then finds the cart gone and creates nothing.
+        $lk = $dbh->prepare('SELECT id, PackageId, FromDate, ToDate, NoOfPersons, DynamicPrice FROM tblcart WHERE UserEmail = :e ORDER BY id FOR UPDATE');
+        $lk->execute([':e' => $email]);
+        $sig = fn(array $rows) => json_encode(array_map(fn($r) => [(int)$r->id, (int)$r->PackageId, (string)$r->FromDate, (string)$r->ToDate, (int)$r->NoOfPersons, $r->DynamicPrice === null ? null : (int)$r->DynamicPrice], $rows));
+        $shown = $items; usort($shown, fn($a, $b) => (int)$a->id <=> (int)$b->id);
+        if ($sig($lk->fetchAll(PDO::FETCH_OBJ)) !== $sig($shown)) {
+            throw new RuntimeException('cart_changed');
+        }
+        // Supplier blackout dates: re-checked here, server-side, for every cart item.
+        foreach ($items as $it) {
+            if (!tms_package_bookable($dbh, (int)$it->PackageId)) { $capacityError .= "A package in your cart is no longer available. "; continue; }
+            $blk = SupplierService::blackoutConflict($dbh, (int)$it->PackageId, (string)$it->FromDate, (string)$it->ToDate);
+            if ($blk !== null) $capacityError .= "A package in your cart is not available on the dates you chose. ";
+        }
         // Lock package rows in a fixed order (ascending PackageId) to avoid a
         // deadlock if two checkouts touch the same two packages in different
         // orders.
@@ -108,9 +128,13 @@ if (isset($_POST['confirm_checkout'])) {
             }
         }
     } catch (Exception $e) {
-        $dbh->rollBack();
-        error_log('[TMS Checkout] Capacity lock check failed: ' . $e->getMessage());
-        $error = "Something went wrong checking availability. Please try again.";
+        if ($dbh->inTransaction()) $dbh->rollBack();
+        if ($e->getMessage() === 'cart_changed') {
+            $error = 'Your cart changed while you were checking out (it may already have been submitted). Please check My Tours and your cart before trying again.';
+        } else {
+            error_log('[TMS Checkout] Capacity lock check failed: ' . $e->getMessage());
+            $error = "Something went wrong checking availability. Please try again.";
+        }
         $capacityError = null; // signal: already handled, skip the block below
     }
 
@@ -118,7 +142,7 @@ if (isset($_POST['confirm_checkout'])) {
         // already set $error above and rolled back -- fall through to render
     } elseif ($capacityError !== '') {
         $dbh->rollBack();
-        $error = trim($capacityError) . " Please adjust the traveler count in your cart.";
+        $error = trim($capacityError) . ((strpos($capacityError, 'not available on the dates') !== false || strpos($capacityError, 'no longer available') !== false) ? " Please remove it from your cart or choose other dates." : " Please adjust the traveler count in your cart.");
     } else {
     $createdIds = [];
     try {
@@ -135,12 +159,19 @@ if (isset($_POST['confirm_checkout'])) {
         // Round 91 (items 10/81): + this item's cart add-ons, computed above.
         $itemTotal   = ((int)$it->EffectivePrice * $itemPersons) + (int)$it->AddonTotal;
         $verificationCode = strtoupper(bin2hex(random_bytes(5)));
+        // FEATURE (Round 115 continuation, master prompt item 37 --
+        // Currency): see tms_capture_booking_fx()'s own docblock and
+        // package-details.php's identical comment.
+        $itemFx = tms_capture_booking_fx((float)$itemTotal);
+        // Defensive (Rule 8): migration 013 may not have run yet on this
+        // deployment -- never let a pending migration break checkout.
+        $hasBookingFx = tms_booking_fx_columns_exist($dbh);
 
         $ins = $dbh->prepare(
-            "INSERT INTO tblbooking(PackageId,UserEmail,FromDate,ToDate,Comment,status,NoOfPersons,MobileNumber,TotalCost,VerificationCode,BookingDate)
-             VALUES(:pid,:email,:from,:to,:comment,0,:persons,:mobile,:total,:vcode,:bdate)"
+            "INSERT INTO tblbooking(PackageId,UserEmail,FromDate,ToDate,Comment,status,NoOfPersons,MobileNumber,TotalCost,VerificationCode,BookingDate" . ($hasBookingFx ? ",DisplayCurrency,DisplayAmount,FxRate,FxRateSource,FxRateTimestamp" : "") . ")
+             VALUES(:pid,:email,:from,:to,:comment,0,:persons,:mobile,:total,:vcode,:bdate" . ($hasBookingFx ? ",:dcur,:damt,:frate,:fsrc,:fts" : "") . ")"
         );
-        $ins->execute([
+        $ins->execute(array_merge([
             ':pid' => $it->PackageId, ':email' => $email,
             ':from' => $it->FromDate, ':to' => $it->ToDate, ':comment' => $it->Comment,
             ':persons' => $itemPersons, ':mobile' => $mobile ?: null,
@@ -156,7 +187,10 @@ if (isset($_POST['confirm_checkout'])) {
             // actually expects (RegDate already covers "when the booking
             // record was created").
             ':bdate' => $it->FromDate,
-        ]);
+        ], $hasBookingFx ? [
+            ':dcur' => $itemFx['currency'], ':damt' => $itemFx['converted_amount'],
+            ':frate' => $itemFx['rate'], ':fsrc' => $itemFx['source'], ':fts' => $itemFx['rate_timestamp'],
+        ] : []));
         $newId = $dbh->lastInsertId();
         if ($newId) {
             $createdIds[] = $newId;
@@ -175,14 +209,7 @@ if (isset($_POST['confirm_checkout'])) {
                     ]);
                 }
             }
-            $dbh->prepare("INSERT INTO tblloyalty(UserEmail,Points,TotalEarned) VALUES(:e,100,100)
-                ON DUPLICATE KEY UPDATE Points=Points+100, TotalEarned=TotalEarned+100")->execute([':e'=>$email]);
-            try {
-                $dbh->prepare("INSERT INTO tblloyalty_log(UserEmail,Points,Description) VALUES(:e,100,:d)")
-                    ->execute([':e'=>$email, ':d'=>'Booking #BK'.$newId.' confirmed']);
-            } catch (Exception $e) {
-                error_log('[TMS Loyalty] Log insert failed (booking still succeeded): ' . $e->getMessage());
-            }
+            tms_loyalty_award_booking($dbh, $email, (int)$newId, 100);
         }
     }
 
@@ -235,24 +262,27 @@ if (isset($_POST['confirm_checkout'])) {
 ?>
 <!DOCTYPE HTML><html lang="<?php echo htmlspecialchars(tms_active_language(), ENT_QUOTES, 'UTF-8'); ?>"><head>
 <link rel="manifest" href="manifest.json">
-<meta name="theme-color" content="#0B2B3C">
+<meta name="theme-color" content="#104B3A">
 <link rel="apple-touch-icon" href="images/icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="TMS">
+<meta name="mobile-web-app-capable" content="yes">
 <title>TMS | Checkout</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <link href="css/bootstrap.min2.css" rel='stylesheet'/>
-<link href="css/style.min.css" rel='stylesheet'/>
+<link href="<?php echo tms_asset_ver('css/style.min.css'); ?>" rel='stylesheet'/>
 <link href="css/font-awesome.min2.css" rel="stylesheet">
 <link href="<?php echo tms_asset_ver('css/modern-theme.css'); ?>" rel="stylesheet">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700;9..144,800&family=Manrope:wght@400;500;600;700;800&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
 <script src="js/jquery-1.12.0.min.js" defer></script>
 <style>
 .page-title{background:linear-gradient(135deg,var(--primary-dark),var(--primary));color:#fff;padding:40px 0;margin-bottom:30px;}
 .checkout-item{display:flex;justify-content:space-between;padding:12px 0;border-bottom:1px solid #eef1f6;font-size:14px;}
 .checkout-item:last-child{border-bottom:none;}
 .summary-box{background:var(--white);border-radius:12px;padding:26px;box-shadow:0 3px 15px rgba(0,0,0,0.08);}
-.summary-row.total{display:flex;justify-content:space-between;font-size:19px;font-weight:800;color:#1e293b;border-top:2px solid #eee;margin-top:14px;padding-top:16px;}
+.summary-row.total{display:flex;justify-content:space-between;font-size:19px;font-weight:800;color:var(--text);border-top:2px solid #eee;margin-top:14px;padding-top:16px;}
 html[data-theme="dark"] .summary-row.total { color: var(--text) !important; }
 .btn-confirm{background:var(--secondary);color:#fff;border:none;border-radius:8px;padding:14px;font-weight:700;font-size:15px;width:100%;cursor:pointer;margin-top:18px;}
 .btn-confirm:hover{background:#2d6a97;}
@@ -261,19 +291,19 @@ html[data-theme="dark"] .summary-row.total { color: var(--text) !important; }
 <?php include('backend/header.php'); ?>
 <div class="page-title">
   <div class="container">
-    <h2 style="margin:0 0 20px;"><i class="fa fa-lock"></i> Checkout</h2>
+    <h2 style="margin:0 0 20px;"><i class="fa fa-lock"></i> <?php echo tms_t('step_checkout','Checkout'); ?></h2>
     <div class="tms-steps">
-      <div class="tms-step done"><div class="tms-step-circle"><i class="fa fa-check"></i></div><div class="tms-step-label">Cart</div></div>
-      <div class="tms-step active"><div class="tms-step-circle">2</div><div class="tms-step-label">Checkout</div></div>
-      <div class="tms-step"><div class="tms-step-circle">3</div><div class="tms-step-label">Confirmed</div></div>
+      <div class="tms-step done"><div class="tms-step-circle"><i class="fa fa-check"></i></div><div class="tms-step-label"><?php echo tms_t('step_cart','Cart'); ?></div></div>
+      <div class="tms-step active"><div class="tms-step-circle">2</div><div class="tms-step-label"><?php echo tms_t('step_checkout','Checkout'); ?></div></div>
+      <div class="tms-step"><div class="tms-step-circle">3</div><div class="tms-step-label"><?php echo tms_t('step_confirmed','Confirmed'); ?></div></div>
     </div>
   </div>
 </div>
 <div class="container" style="padding-bottom:50px;max-width:700px;">
   <div class="summary-box">
-    <h5 style="font-weight:700;margin-bottom:10px;">Review Your <?php echo count($items); ?> Booking(s)</h5>
+    <h5 style="font-weight:700;margin-bottom:10px;"><?php echo tms_t('label_review_your_prefix','Review Your'); ?> <?php echo count($items); ?> <?php echo tms_t('label_bookings_suffix','Booking(s)'); ?></h5>
     <?php if ($error): ?>
-    <div style="background:#fee2e2;color:#991b1b;border:1px solid #fecaca;border-radius:8px;padding:12px 14px;margin-bottom:16px;font-size:13.5px;">
+    <div style="background:var(--danger-bg);color:var(--danger-text);border:1px solid var(--danger);border-radius:8px;padding:12px 14px;margin-bottom:16px;font-size:13.5px;">
       <i class="fa fa-exclamation-circle"></i> <?php echo htmlspecialchars($error, ENT_QUOTES, 'UTF-8'); ?>
     </div>
     <?php endif; ?>
@@ -281,9 +311,15 @@ html[data-theme="dark"] .summary-row.total { color: var(--text) !important; }
     <div class="checkout-item">
       <div>
         <strong><?php echo htmlspecialchars($it->PackageName, ENT_QUOTES, 'UTF-8'); ?></strong><br>
-        <small style="color:#888;"><?php echo date('d M Y', strtotime($it->FromDate)); ?> &rarr; <?php echo date('d M Y', strtotime($it->ToDate)); ?></small>
+        <small style="color:var(--text-muted);"><?php echo date('d M Y', strtotime($it->FromDate)); ?> &rarr; <?php echo date('d M Y', strtotime($it->ToDate)); ?></small>
+        <?php if (!empty(trim((string)$it->CancellationPolicy))): ?>
+        <details style="margin-top:6px;font-size:12.5px;color:var(--text-muted);">
+          <summary style="cursor:pointer;color:var(--secondary);font-weight:600;"><?php echo htmlspecialchars(tms_t('label_cancellation_policy', 'Cancellation policy'), ENT_QUOTES, 'UTF-8'); ?></summary>
+          <div style="margin-top:6px;white-space:pre-line;"><?php echo htmlspecialchars(trim((string)$it->CancellationPolicy), ENT_QUOTES, 'UTF-8'); ?></div>
+        </details>
+        <?php endif; ?>
         <?php if (!empty($it->Addons)): ?>
-        <br><small style="color:#888;">
+        <br><small style="color:var(--text-muted);">
           <i class="fa fa-plus-circle"></i>
           <?php foreach ($it->Addons as $ao): ?>
             <?php echo htmlspecialchars($ao->Name, ENT_QUOTES, 'UTF-8'); ?><?php echo $ao->Quantity > 1 ? ' ×' . (int)$ao->Quantity : ''; ?><?php echo $ao !== end($it->Addons) ? ',' : ''; ?>
@@ -294,40 +330,49 @@ html[data-theme="dark"] .summary-row.total { color: var(--text) !important; }
       <?php $pax = max(1, (int)$it->NoOfPersons); ?>
       <div style="text-align:right;">
         <?php if ($it->PackagePrice === null || (float)$it->PackagePrice <= 0): ?>
-          <span style="color:#e11d48;">Price not set</span>
+          <span style="color:var(--danger);"><?php echo tms_t('msg_price_not_set','Price not set'); ?></span>
         <?php else: ?>
           <?php echo tms_currency((int)$it->EffectivePrice); ?>
-          <div style="font-size:12px;color:#888;">
-            × <?php echo $pax; ?> traveller<?php echo $pax > 1 ? 's' : ''; ?>
-            <?php if ($it->AddonTotal > 0): ?>+ <?php echo tms_currency($it->AddonTotal); ?> add-ons<?php endif; ?>
+          <div style="font-size:12px;color:var(--text-muted);">
+            × <?php echo $pax; ?> <?php echo tms_t('label_traveller_word','traveller(s)'); ?>
+            <?php if ($it->AddonTotal > 0): ?>+ <?php echo tms_currency($it->AddonTotal); ?> <?php echo tms_t('label_addons_word','add-ons'); ?><?php endif; ?>
             = <strong><?php echo tms_currency(((int)$it->EffectivePrice * $pax) + $it->AddonTotal); ?></strong>
           </div>
         <?php endif; ?>
       </div>
     </div>
     <?php endforeach; ?>
-    <div class="summary-row total"><span>Total</span><span><?php echo tms_currency($total); ?></span></div>
+    <div class="summary-row total"><span><?php echo tms_t('label_total','Total'); ?></span><span><?php echo tms_currency($total); ?></span></div>
 
     <form method="post">
       <?php tms_csrf_field(); ?>
       <div class="form-group" style="margin-top:16px;">
-        <label style="font-weight:600;font-size:13px;">Mobile Number <small style="color:#94a3b8;">(optional, for booking contact)</small></label>
-        <input type="tel" name="mobile" class="form-control" placeholder="e.g. 017XXXXXXXX" maxlength="20">
+        <label style="font-weight:600;font-size:13px;" for="fld_mobile"><?php echo tms_t('label_mobile_number','Mobile Number'); ?> <small style="color:var(--text-muted);"><?php echo tms_t('dest_mobile_optional_hint','(optional, for booking contact)'); ?></small></label>
+        <input type="tel" name="mobile" class="form-control" placeholder="e.g. 017XXXXXXXX" maxlength="20" id="fld_mobile">
+      </div>
+      <div class="form-group" style="margin-top:14px;">
+        <label style="display:flex;gap:10px;align-items:flex-start;font-weight:500;font-size:13.5px;cursor:pointer;">
+          <input type="checkbox" name="accept_terms" value="1" required style="margin-top:3px;width:18px;height:18px;flex-shrink:0;">
+          <span><?php echo tms_t('label_accept_terms_pre', 'I have read the cancellation policy above and the'); ?>
+            <a href="page.php?type=terms" target="_blank" rel="noopener" style="color:var(--secondary);text-decoration:underline;"><?php echo tms_t('label_terms', 'terms of service'); ?></a>,
+            <a href="page.php?type=privacy" target="_blank" rel="noopener" style="color:var(--secondary);text-decoration:underline;"><?php echo tms_t('label_privacy_policy', 'privacy policy'); ?></a>,
+            <?php echo tms_t('label_accept_terms_post', 'and I understand the booking starts as pending until confirmed.'); ?></span>
+        </label>
       </div>
       <?php if ($hasInvalidPrice): ?>
-      <button type="button" class="btn-confirm" disabled style="opacity:.5;cursor:not-allowed;" title="Remove the unpriced item(s) from your cart first">
-        <i class="fa fa-check-circle"></i> Confirm &amp; Book All
+      <button type="button" class="btn-confirm" disabled style="opacity:.5;cursor:not-allowed;" title="<?php echo htmlspecialchars(tms_t('msg_remove_unpriced_first','Remove the unpriced item(s) from your cart first'), ENT_QUOTES, 'UTF-8'); ?>">
+        <i class="fa fa-check-circle"></i> <?php echo tms_t('btn_confirm_book_all','Confirm & Book All'); ?>
       </button>
-      <a href="cart.php" style="display:block;text-align:center;margin-top:10px;font-size:13px;color:var(--secondary);">&larr; Back to cart</a>
+      <a href="cart.php" style="display:block;text-align:center;margin-top:10px;font-size:13px;color:var(--secondary);">&larr; <?php echo tms_t('link_back_to_cart','Back to Cart'); ?></a>
       <?php else: ?>
       <button type="submit" name="confirm_checkout" class="btn-confirm">
-        <i class="fa fa-check-circle"></i> Confirm &amp; Book All
+        <i class="fa fa-check-circle"></i> <?php echo tms_t('btn_confirm_book_all','Confirm & Book All'); ?>
       </button>
       <?php endif; ?>
     </form>
-    <p style="text-align:center;margin-top:12px;"><a href="cart.php" style="font-size:13px;color:#94a3b8;">← Back to Cart</a></p>
-    <p style="text-align:center;font-size:11.5px;color:#cbd5e1;margin-top:8px;">
-      Each booking starts as <strong>pending</strong> and will be confirmed by our team shortly — just like booking one package at a time.
+    <p style="text-align:center;margin-top:12px;"><a href="cart.php" style="font-size:13px;color:var(--text-muted);">← <?php echo tms_t('link_back_to_cart','Back to Cart'); ?></a></p>
+    <p style="text-align:center;font-size:11.5px;color:var(--text-muted);margin-top:8px;">
+      <?php echo tms_t('dest_checkout_pending_note', 'Each booking starts as <strong>pending</strong> and will be confirmed by our team shortly — just like booking one package at a time.'); ?>
     </p>
   </div>
 </div>

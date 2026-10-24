@@ -1,5 +1,5 @@
 <?php
-session_start();
+require_once __DIR__ . '/../backend/session-boot.php';
 error_reporting(E_ALL);
 ini_set('display_errors', 0);
 ini_set('log_errors', 1);
@@ -13,7 +13,6 @@ tms_admin_require_role($dbh, ['content_manager', 'manager']); // Round 20 RBAC (
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>TMS | TMS Admin | Add Blog Post</title>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Plus+Jakarta+Sans:wght@600;700;800&display=swap" rel="stylesheet">
 <link href="css/font-awesome.min2.css" rel="stylesheet">
 <link href="css/bootstrap.min.css" rel="stylesheet">
 <link href="<?php echo tms_asset_ver('css/admin-v6.css'); ?>" rel="stylesheet">
@@ -127,17 +126,17 @@ if (isset($_POST['save_post'])) {
   <div class="card-body">
     <form method="post" enctype="multipart/form-data">
       <?php tms_csrf_field(); ?>
-      <div class="form-group"><label>Title *</label><input type="text" name="title" class="form-control" required></div>
+      <div class="form-group"><label for="blogTitleField">Title *</label><input type="text" id="blogTitleField" name="title" class="form-control" required></div>
       <div class="row">
-        <div class="col-md-6"><div class="form-group"><label>Tag / Category</label><input type="text" name="tag" class="form-control" placeholder="e.g. Travel Tips, Destination"></div></div>
-        <div class="col-md-6"><div class="form-group"><label>Cover Image</label><input type="file" name="cover" class="form-control" accept="image/*"></div></div>
+        <div class="col-md-6"><div class="form-group"><label for="blogTagField">Tag / Category</label><input type="text" id="blogTagField" name="tag" class="form-control" placeholder="e.g. Travel Tips, Destination"></div></div>
+        <div class="col-md-6"><div class="form-group"><label for="blogCoverField">Cover Image</label><input type="file" id="blogCoverField" name="cover" class="form-control" accept="image/*"></div></div>
       </div>
-      <div class="form-group"><label>Content *</label><textarea name="content" class="form-control" rows="12" required></textarea></div>
+      <div class="form-group"><label for="blogContentField">Content *</label><textarea id="blogContentField" name="content" class="form-control" rows="12" required></textarea></div>
       <div class="row">
         <div class="col-md-6">
           <div class="form-group">
-            <label>Related Destination <small style="font-weight:400;color:#999;">(optional)</small></label>
-            <select name="related_destination" class="form-control">
+            <label for="blogRelatedDestField">Related Destination <small style="font-weight:400;color:var(--text-muted);">(optional)</small></label>
+            <select id="blogRelatedDestField" name="related_destination" class="form-control">
               <option value="">— None —</option>
               <?php foreach ($blogDestOptions as $c): ?>
               <option value="<?= htmlspecialchars($c, ENT_QUOTES, 'UTF-8') ?>"><?= htmlspecialchars($c, ENT_QUOTES, 'UTF-8') ?></option>
@@ -147,8 +146,8 @@ if (isset($_POST['save_post'])) {
         </div>
         <div class="col-md-6">
           <div class="form-group">
-            <label>Related Package <small style="font-weight:400;color:#999;">(optional)</small></label>
-            <select name="related_package_id" class="form-control">
+            <label for="blogRelatedPkgField">Related Package <small style="font-weight:400;color:var(--text-muted);">(optional)</small></label>
+            <select id="blogRelatedPkgField" name="related_package_id" class="form-control">
               <option value="">— None —</option>
               <?php foreach ($blogPkgOptions as $p): ?>
               <option value="<?= (int)$p->PackageId ?>"><?= htmlspecialchars($p->PackageName, ENT_QUOTES, 'UTF-8') ?></option>
@@ -158,8 +157,8 @@ if (isset($_POST['save_post'])) {
         </div>
       </div>
       <div class="form-group">
-        <label>Sources <small style="font-weight:400;color:#999;">(optional — one URL or citation per line)</small></label>
-        <textarea name="sources" class="form-control" rows="3" placeholder="e.g. https://example.gov/visa-requirements"></textarea>
+        <label for="blogSourcesField">Sources <small style="font-weight:400;color:var(--text-muted);">(optional — one URL or citation per line)</small></label>
+        <textarea id="blogSourcesField" name="sources" class="form-control" rows="3" placeholder="e.g. https://example.gov/visa-requirements"></textarea>
       </div>
       <button name="save_post" class="btn-v6 success"><i class="fa fa-paper-plane"></i> Publish Post</button>
       <a href="manage-blog.php" class="btn-v6 ghost">Cancel</a>

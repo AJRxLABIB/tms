@@ -1,7 +1,8 @@
 <?php
-session_start();
+require_once __DIR__ . '/../backend/session-boot.php';
 error_reporting(E_ALL); ini_set('display_errors', '0'); ini_set('log_errors', '1');
 include('backend/config.php');
+require_once __DIR__ . '/../backend/Seo.php';
 // LIVE BUG FIX (customer-facing audit): this page is real browsing/
 // marketing content -- it's explicitly allowed in robots.txt and listed
 // in sitemap.php for search engines -- but a blanket "require login
@@ -89,7 +90,7 @@ try {
 }
 
 // ─── Build query ──────────────────────────────────────────────────────────────
-$where  = [];
+$where  = [TMS_PKG_PUBLIC_SQL]; // never list unpublished / pending-review supplier packages
 $params = [];
 
 if ($search !== '') {
@@ -130,6 +131,9 @@ if ($maxPrice !== null) {
 }
 $whereSQL = $where ? ('WHERE ' . implode(' AND ', $where)) : '';
 
+// Only the columns the listing renders (avoids pulling PackageDescription and other long text for every row).
+$listCols = 'PackageId, PackageName, PackageType, PackageLocation, PackagePrice, PackageFetures, PackageImage, PackageDuration, SeatsAvailable, AvgRating, MapLat, MapLng';
+
 $orderSQL = match($sortBy) {
     'price_asc'  => 'ORDER BY PackagePrice ASC',
     'price_desc' => 'ORDER BY PackagePrice DESC',
@@ -146,7 +150,7 @@ if ($durationMin !== null) {
     // it would need revisiting well before the catalog reached a size where
     // that stopped being true.
     require_once dirname(__DIR__) . '/backend/ai/NLSearchParser.php';
-    $sql   = "SELECT * FROM tbltourpackages $whereSQL $orderSQL";
+    $sql   = "SELECT $listCols FROM tbltourpackages $whereSQL $orderSQL";
     $query = $dbh->prepare($sql);
     foreach ($params as $k => $v) { $query->bindValue($k, $v, PDO::PARAM_STR); }
     $query->execute();
@@ -165,7 +169,7 @@ if ($durationMin !== null) {
     $totalPages = (int)ceil($totalRows / $perPage);
 
     // Paginated results
-    $sql   = "SELECT * FROM tbltourpackages $whereSQL $orderSQL LIMIT :limit OFFSET :offset";
+    $sql   = "SELECT $listCols FROM tbltourpackages $whereSQL $orderSQL LIMIT :limit OFFSET :offset";
     $query = $dbh->prepare($sql);
     foreach ($params as $k => $v) { $query->bindValue($k, $v, PDO::PARAM_STR); }
     $query->bindValue(':limit',  $perPage, PDO::PARAM_INT);
@@ -185,8 +189,11 @@ if (!empty($_SESSION['login']) && count($results) > 0) {
     $wishlistIds = array_map('intval', $wQ->fetchAll(PDO::FETCH_COLUMN));
 }
 
+// Dynamic prices for the whole page in two grouped queries (was ~4 queries per card); same arithmetic as tms_dynamic_price().
+$listPrices = $results ? tms_dynamic_price_batch($dbh, array_map(fn($r) => ['PackageId' => $r->PackageId, 'PackagePrice' => $r->PackagePrice, 'SeatsAvailable' => $r->SeatsAvailable ?? null], $results)) : [];
+
 // Package types for filter dropdown
-$typesQ = $dbh->query("SELECT DISTINCT PackageType FROM tbltourpackages ORDER BY PackageType");
+$typesQ = $dbh->query("SELECT DISTINCT PackageType FROM tbltourpackages WHERE " . TMS_PKG_PUBLIC_SQL . " ORDER BY PackageType");
 $packageTypes = $typesQ->fetchAll(PDO::FETCH_COLUMN);
 
 // Translate package names for the active language (cached after first request —
@@ -213,19 +220,46 @@ function pageUrl(int $p): string {
 <html lang="<?php echo htmlspecialchars(tms_active_language(), ENT_QUOTES, 'UTF-8'); ?>">
 <head>
 <link rel="manifest" href="manifest.json">
-<meta name="theme-color" content="#0B2B3C">
+<meta name="theme-color" content="#104B3A">
 <link rel="apple-touch-icon" href="images/icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="TMS">
+<meta name="mobile-web-app-capable" content="yes">
 <title>TMS | Package List</title>
+<?php
+// NEW (Round 118, master prompt item 53 -- SEO): this page is explicitly
+// public/indexable (see the "LIVE BUG FIX" comment at the top of this
+// file -- it's allowed in robots.txt and listed in sitemap.php) yet had
+// no canonical/OpenGraph tags at all, unlike destinations.php's already-
+// wired equivalent. Same convention as that page: canonical is stripped
+// of the query string by tms_seo_meta()'s own default (so
+// ?type=X&sort=Y&page=2 all canonicalize to the base listing rather than
+// counting as separate duplicate-content pages), only title/description
+// vary with whatever real filter is active, and nothing is fabricated --
+// $totalRows/$search/$filterType are the same real values already
+// computed above for the on-page "Showing N results" text.
+$seoTitleParts = array_filter([$filterType ?: null, $search !== '' ? ('"' . $search . '"') : null]);
+tms_seo_meta([
+    'title'       => $seoTitleParts ? ('Packages: ' . implode(', ', $seoTitleParts)) : 'Tour Packages',
+    'description' => $totalRows > 0
+        ? "Browse {$totalRows} tour packages" . ($filterType ? " in {$filterType}" : '') . '.'
+        : 'Browse our tour packages.',
+    'jsonld'      => tms_seo_itemlist_jsonld($results ?? []),
+    'breadcrumbs' => [
+        ['label' => 'Home', 'url' => 'index.php'],
+        ['label' => 'Package List'],
+    ],
+]);
+?>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
 <link href="css/bootstrap.min2.css" rel='stylesheet' type='text/css' />
-<link href="css/style.min.css" rel='stylesheet' type='text/css' />
+<link href="<?php echo tms_asset_ver('css/style.min.css'); ?>" rel='stylesheet' type='text/css' />
 <link href="css/font-awesome.min2.css" rel="stylesheet">
 <link href="<?php echo tms_asset_ver('css/modern-theme.css'); ?>" rel="stylesheet">
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700;9..144,800&family=Manrope:wght@400;500;600;700;800&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
 <script src="js/jquery-1.12.0.min.js" defer></script>
 <script src="js/bootstrap.min.js" defer></script>
 <link href="css/animate.css" rel="stylesheet" type="text/css" media="all">
@@ -261,9 +295,9 @@ function pageUrl(int $p): string {
 .pagination>.active>a,.pagination>.active>a:hover{background:var(--secondary);border-color:var(--secondary);}
 .pagination>li>a:hover{background:#e8f2fa;color:var(--secondary);}
 /* ── Results count ── */
-.results-info{color:#888;font-size:13px;margin-bottom:16px;}
+.results-info{color:var(--text-muted);font-size:13px;margin-bottom:16px;}
 /* ── No results ── */
-.no-results{text-align:center;padding:60px 20px;color:#aaa;}
+.no-results{text-align:center;padding:60px 20px;color:var(--text-muted);}
 .no-results i{font-size:50px;display:block;margin-bottom:16px;}
 </style>
 </head>
@@ -272,7 +306,7 @@ function pageUrl(int $p): string {
 
 <div class="banner-3">
     <div class="container">
-        <h1 class="wow zoomIn animated" data-wow-delay=".1s">TMS – Package List</h1>
+        <h1 class="wow zoomIn animated" data-wow-delay=".1s"><?php echo tms_t('heading_tms_package_list','TMS – Package List'); ?></h1>
     </div>
 </div>
 
@@ -281,7 +315,7 @@ function pageUrl(int $p): string {
         <!-- ── Smart Search quick filters ── -->
         <div class="wow fadeInDown" data-wow-delay=".05s" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px;">
             <a href="package-list.php<?php echo ($search!=='' || $filterType!=='') ? '?search='.urlencode($search).'&type='.urlencode($filterType) : ''; ?>"
-               class="nearby-tab<?php echo $quick===''?' active':''; ?>">All Packages</a>
+               class="nearby-tab<?php echo $quick===''?' active':''; ?>"><?php echo tms_t('chip_all_packages','All Packages'); ?></a>
             <?php foreach ($quickFilters as $qkey => $qinfo):
                 $qparams = $_GET; $qparams['quick'] = $qkey; unset($qparams['page']);
             ?>
@@ -301,16 +335,16 @@ html[data-theme="dark"] .no-results { color: var(--text-light) !important; }
         <div class="pkg-toolbar wow fadeInDown" data-wow-delay=".05s" style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;">
             <div style="flex:1;min-width:240px;">
                 <label for="nlSearchInput" style="font-size:13px;font-weight:600;color:#555;margin-bottom:4px;display:block;">
-                    <i class="fa fa-magic"></i> Describe the trip you want
+                    <i class="fa fa-magic"></i> <?php echo tms_t('label_describe_trip','Describe the trip you want'); ?>
                 </label>
                 <input type="text" id="nlSearchInput" class="form-control"
-                       placeholder="e.g. cheap 3-day beach trip under &#2547;20,000"
+                       placeholder="<?php echo tms_t('nl_search_placeholder','e.g. cheap 3-day beach trip under &#2547;20,000'); ?>"
                        maxlength="300">
             </div>
             <button type="button" id="nlSearchBtn" class="btn-search" onclick="tmsNlSearch()">
-                <i class="fa fa-magic"></i> Find it
+                <i class="fa fa-magic"></i> <?php echo tms_t('btn_find_it','Find it'); ?>
             </button>
-            <div id="nlSearchStatus" style="width:100%;font-size:12.5px;color:#888;"></div>
+            <div id="nlSearchStatus" style="width:100%;font-size:12.5px;color:var(--text-muted);"></div>
         </div>
         <script>
         const TMS_NL_CSRF = <?php echo json_encode(tms_csrf_token()); ?>;
@@ -372,18 +406,18 @@ html[data-theme="dark"] .no-results { color: var(--text-light) !important; }
                 <div class="row" style="display:flex;align-items:flex-end;flex-wrap:wrap;gap:10px;">
                     <div class="col-md-4" style="flex:1;min-width:180px;">
                         <label for="pkgListSearch" style="font-size:13px;font-weight:600;color:#555;margin-bottom:4px;">
-                            <i class="fa fa-search"></i> Search
+                            <i class="fa fa-search"></i> <?php echo tms_t('btn_search','Search'); ?>
                         </label>
                         <input type="text" name="search" id="pkgListSearch" class="form-control"
-                               placeholder="Destination or package name…"
+                               placeholder="<?php echo tms_t('placeholder_dest_or_package','Destination or package name…'); ?>"
                                value="<?php echo htmlspecialchars($search, ENT_QUOTES, 'UTF-8'); ?>">
                     </div>
                     <div class="col-md-3" style="flex:0 0 200px;">
                         <label for="pkgListType" style="font-size:13px;font-weight:600;color:#555;margin-bottom:4px;">
-                            <i class="fa fa-filter"></i> Type
+                            <i class="fa fa-filter"></i> <?php echo tms_t('label_type','Type'); ?>
                         </label>
                         <select name="type" id="pkgListType" class="form-control">
-                            <option value="">All Types</option>
+                            <option value=""><?php echo tms_t('all_types','All Types'); ?></option>
                             <?php foreach ($packageTypes as $t): ?>
                                 <option value="<?php echo htmlspecialchars($t, ENT_QUOTES, 'UTF-8'); ?>"
                                     <?php echo ($filterType === $t) ? 'selected' : ''; ?>>
@@ -394,19 +428,19 @@ html[data-theme="dark"] .no-results { color: var(--text-light) !important; }
                     </div>
                     <div class="col-md-3" style="flex:0 0 170px;">
                         <label for="pkgListDuration" style="font-size:13px;font-weight:600;color:#555;margin-bottom:4px;">
-                            <i class="fa fa-clock-o"></i> Duration
+                            <i class="fa fa-clock-o"></i> <?php echo tms_t('label_duration','Duration'); ?>
                         </label>
                         <?php
                         // Round 36 -- buckets built from the real PackageDuration
                         // text shapes seen in the catalog (see NLSearchParser's
                         // durationOverlaps()), not invented labels.
                         $durationBuckets = [
-                            ''      => 'Any Duration',
-                            '0-1'   => 'Half / 1 Day',
-                            '2-3'   => '2-3 Days',
-                            '4-5'   => '4-5 Days',
-                            '6-8'   => '6-8 Days',
-                            '9-60'  => '9+ Days',
+                            ''      => tms_t('duration_any','Any Duration'),
+                            '0-1'   => tms_t('duration_half_1day','Half / 1 Day'),
+                            '2-3'   => tms_t('duration_2_3','2-3 Days'),
+                            '4-5'   => tms_t('duration_4_5','4-5 Days'),
+                            '6-8'   => tms_t('duration_6_8','6-8 Days'),
+                            '9-60'  => tms_t('duration_9plus','9+ Days'),
                         ];
                         $currentBucket = ($durationMin !== null) ? ($durationMin . '-' . $durationMax) : '';
                         ?>
@@ -421,20 +455,20 @@ html[data-theme="dark"] .no-results { color: var(--text-light) !important; }
                     </div>
                     <div class="col-md-3" style="flex:0 0 200px;">
                         <label for="pkgListSort" style="font-size:13px;font-weight:600;color:#555;margin-bottom:4px;">
-                            <i class="fa fa-sort"></i> Sort By
+                            <i class="fa fa-sort"></i> <?php echo tms_t('label_sort_by','Sort By'); ?>
                         </label>
                         <select name="sort" id="pkgListSort" class="form-control">
-                            <option value="default"    <?php echo $sortBy==='default'    ?'selected':''; ?>>Newest First</option>
-                            <option value="price_asc"  <?php echo $sortBy==='price_asc'  ?'selected':''; ?>>Price: Low → High</option>
-                            <option value="price_desc" <?php echo $sortBy==='price_desc' ?'selected':''; ?>>Price: High → Low</option>
-                            <option value="name"       <?php echo $sortBy==='name'       ?'selected':''; ?>>Name A–Z</option>
+                            <option value="default"    <?php echo $sortBy==='default'    ?'selected':''; ?>><?php echo tms_t('sort_newest','Newest First'); ?></option>
+                            <option value="price_asc"  <?php echo $sortBy==='price_asc'  ?'selected':''; ?>><?php echo tms_t('sort_price_asc','Price: Low → High'); ?></option>
+                            <option value="price_desc" <?php echo $sortBy==='price_desc' ?'selected':''; ?>><?php echo tms_t('sort_price_desc','Price: High → Low'); ?></option>
+                            <option value="name"       <?php echo $sortBy==='name'       ?'selected':''; ?>><?php echo tms_t('sort_name_az','Name A–Z'); ?></option>
                         </select>
                     </div>
                     <div style="display:flex;gap:8px;align-items:flex-end;padding-bottom:0;">
                         <button type="submit" class="btn-search">
-                            <i class="fa fa-search"></i> Search
+                            <i class="fa fa-search"></i> <?php echo tms_t('btn_search','Search'); ?>
                         </button>
-                        <a href="package-list.php" class="btn-reset">Reset</a>
+                        <a href="package-list.php" class="btn-reset"><?php echo tms_t('btn_reset','Reset'); ?></a>
                     </div>
                 </div>
             </form>
@@ -455,12 +489,12 @@ html[data-theme="dark"] .no-results { color: var(--text-light) !important; }
                 <?php else: ?>
                     <strong><?php echo $totalRows; ?></strong> package<?php echo $totalRows !== 1 ? 's' : ''; ?> available
                 <?php endif; ?>
-                &nbsp;·&nbsp; Page <?php echo $page; ?> of <?php echo max(1, $totalPages); ?>
+                &nbsp;·&nbsp; <?php echo tms_t('label_page','Page'); ?> <?php echo $page; ?> <?php echo tms_t('label_of_pagination','of'); ?> <?php echo max(1, $totalPages); ?>
                 </div>
                 <?php if (count($results) > 0): ?>
                 <div style="display:flex;gap:6px;">
-                    <button type="button" id="viewListBtn" class="nearby-tab active" onclick="tmsSwitchView('list')"><i class="fa fa-list"></i> List</button>
-                    <button type="button" id="viewMapBtn" class="nearby-tab" onclick="tmsSwitchView('map')"><i class="fa fa-map"></i> Map</button>
+                    <button type="button" id="viewListBtn" class="nearby-tab active" onclick="tmsSwitchView('list')"><i class="fa fa-list"></i> <?php echo tms_t('btn_view_list','List'); ?></button>
+                    <button type="button" id="viewMapBtn" class="nearby-tab" onclick="tmsSwitchView('map')"><i class="fa fa-map"></i> <?php echo tms_t('btn_view_map','Map'); ?></button>
                 </div>
                 <?php endif; ?>
             </div>
@@ -491,27 +525,30 @@ html[data-theme="dark"] .no-results { color: var(--text-light) !important; }
                 <div class="rom-btm wow fadeInUp animated" data-wow-delay=".05s">
                     <div class="col-md-3 room-left">
                         <span class="tms-stamp"><?php echo htmlspecialchars(mb_strtoupper(substr($result->PackageType ?? 'TOUR', 0, 12), 'UTF-8'), ENT_QUOTES, 'UTF-8'); ?></span>
-                        <img loading="lazy"
-                             src="<?php echo htmlspecialchars(tms_package_image_src($result->PackageImage), ENT_QUOTES, 'UTF-8'); ?>"
-                             onerror="this.src='images/no-image-placeholder.jpg'"
+                        <?php $tmsCardImg = tms_card_image((string)$result->PackageImage, (string)$result->PackageName, (string)$result->PackageType, (string)$result->PackageLocation); ?>
+                        <span class="tms-img-wrap">
+                        <img loading="lazy" width="400" height="260"
+                             src="<?php echo htmlspecialchars($tmsCardImg['src'], ENT_QUOTES, 'UTF-8'); ?>"<?php echo tms_img_onerror($tmsCardImg['fallback']); ?>
                              class="img-responsive" alt="<?php echo htmlspecialchars(tms_pkg_name($result, $translatedNames), ENT_QUOTES, 'UTF-8'); ?>">
+                        <?php if ($tmsCardImg['caption'] !== ''): ?><span class="tms-img-caption"><?php echo htmlspecialchars($tmsCardImg['caption'], ENT_QUOTES, 'UTF-8'); ?></span><?php endif; ?>
+                        </span>
                     </div>
                     <div class="col-md-6 room-midle">
                         <h4><?php echo htmlspecialchars(tms_pkg_name($result, $translatedNames), ENT_QUOTES, 'UTF-8'); ?></h4>
                         <h6><i class="fa fa-tag" style="color:var(--secondary)"></i> <?php echo htmlspecialchars($result->PackageType, ENT_QUOTES, 'UTF-8'); ?></h6>
-                        <p><i class="fa fa-map-marker" style="color:#e74c3c"></i> <strong>Location:</strong> <?php echo htmlspecialchars($result->PackageLocation, ENT_QUOTES, 'UTF-8'); ?></p>
-                        <p><i class="fa fa-list" style="color:#27ae60"></i> <?php echo htmlspecialchars($result->PackageFetures ?? '', ENT_QUOTES, 'UTF-8'); ?></p>
+                        <p><i class="fa fa-map-marker" style="color:var(--primary)"></i> <strong>Location:</strong> <?php echo htmlspecialchars($result->PackageLocation, ENT_QUOTES, 'UTF-8'); ?></p>
+                        <p><i class="fa fa-list" style="color:var(--success)"></i> <?php echo htmlspecialchars($result->PackageFetures ?? '', ENT_QUOTES, 'UTF-8'); ?></p>
                         <?php if (!empty($result->AvgRating) && $result->AvgRating > 0): ?>
                         <p style="margin:4px 0;">
                             <?php for ($s = 1; $s <= 5; $s++): ?>
-                                <i class="fa fa-star<?php echo $s <= round($result->AvgRating) ? '' : '-o'; ?>" style="color:#f0ad4e;font-size:13px;"></i>
+                                <i class="fa fa-star<?php echo $s <= round($result->AvgRating) ? '' : '-o'; ?>" style="color:var(--brass);font-size:13px;"></i>
                             <?php endfor; ?>
-                            <span style="font-size:12px;color:#888;margin-left:4px;"><?php echo number_format($result->AvgRating, 1); ?></span>
+                            <span style="font-size:12px;color:var(--text-muted);margin-left:4px;"><?php echo number_format($result->AvgRating, 1); ?></span>
                         </p>
                         <?php endif; ?>
                     </div>
                     <div class="col-md-3 room-right">
-                        <?php $listPricing = ((float)$result->PackagePrice > 0) ? tms_dynamic_price($dbh, (int)$result->PackageId, (float)$result->PackagePrice) : null; ?>
+                        <?php $listPricing = ((float)$result->PackagePrice > 0) ? ($listPrices[(int)$result->PackageId] ?? tms_dynamic_price($dbh, (int)$result->PackageId, (float)$result->PackagePrice)) : null; ?>
                         <h5><?php echo tms_currency((float)($listPricing['final'] ?? $result->PackagePrice)); ?></h5>
                         <?php if (!empty($listPricing) && $listPricing['demand_pct'] > 0): ?>
                         <div style="font-size:10.5px;font-weight:600;color:#f97316;margin:-8px 0 8px;"><i class="fa fa-bolt"></i> High demand</div>
@@ -545,7 +582,7 @@ html[data-theme="dark"] .no-results { color: var(--text-light) !important; }
                             <form method="post" action="wishlist.php" style="display:inline;">
                                 <?php tms_csrf_field(); ?>
                                 <input type="hidden" name="pkgid" value="<?php echo (int)$result->PackageId; ?>">
-                                <button name="toggle_wish" style="background:<?php echo $inWish?'#e74c3c':'#fff'; ?>;color:<?php echo $inWish?'#fff':'#e74c3c'; ?>;border:1px solid #e74c3c;padding:5px 12px;border-radius:6px;font-size:13px;cursor:pointer;">
+                                <button name="toggle_wish" class="tms-btn-save<?php echo $inWish?' is-saved':''; ?>" aria-pressed="<?php echo $inWish?'true':'false'; ?>">
                                     <i class="fa fa-heart<?php echo $inWish?'':'-o'; ?>"></i> <?php echo $inWish?'Saved':'Save'; ?>
                                 </button>
                             </form>
@@ -559,12 +596,12 @@ html[data-theme="dark"] .no-results { color: var(--text-light) !important; }
                             <form method="post" action="compare.php" style="display:inline;">
                                 <?php tms_csrf_field(); ?>
                                 <input type="hidden" name="pkgid" value="<?php echo (int)$result->PackageId; ?>">
-                                <button name="add_compare" style="background:var(--secondary);color:#fff;border:none;padding:5px 12px;border-radius:6px;font-size:13px;cursor:pointer;">
+                                <button name="add_compare" class="tms-btn-compare">
                                     <i class="fa fa-columns"></i> Compare
                                 </button>
                             </form>
                             <?php elseif($inCompare): ?>
-                            <span style="background:#e8f5e9;color:#2e7d32;padding:5px 12px;border-radius:6px;font-size:13px;border:1px solid #a5d6a7;">
+                            <span class="tms-chip-added">
                                 <i class="fa fa-check"></i> Added
                             </span>
                             <?php endif; ?>
@@ -580,8 +617,8 @@ html[data-theme="dark"] .no-results { color: var(--text-light) !important; }
                 <div class="pagination-wrap">
                     <ul class="pagination">
                         <?php if ($page > 1): ?>
-                            <li><a href="<?php echo pageUrl(1); ?>" title="First">&laquo;</a></li>
-                            <li><a href="<?php echo pageUrl($page - 1); ?>" title="Previous">&lsaquo;</a></li>
+                            <li><a href="<?php echo pageUrl(1); ?>" title="<?php echo tms_t('pagination_title_first','First'); ?>">&laquo;</a></li>
+                            <li><a href="<?php echo pageUrl($page - 1); ?>" title="<?php echo tms_t('pagination_title_previous','Previous'); ?>">&lsaquo;</a></li>
                         <?php endif; ?>
 
                         <?php
@@ -594,8 +631,8 @@ html[data-theme="dark"] .no-results { color: var(--text-light) !important; }
                         <?php endfor; ?>
 
                         <?php if ($page < $totalPages): ?>
-                            <li><a href="<?php echo pageUrl($page + 1); ?>" title="Next">&rsaquo;</a></li>
-                            <li><a href="<?php echo pageUrl($totalPages); ?>" title="Last">&raquo;</a></li>
+                            <li><a href="<?php echo pageUrl($page + 1); ?>" title="<?php echo tms_t('pagination_title_next','Next'); ?>">&rsaquo;</a></li>
+                            <li><a href="<?php echo pageUrl($totalPages); ?>" title="<?php echo tms_t('pagination_title_last','Last'); ?>">&raquo;</a></li>
                         <?php endif; ?>
                     </ul>
                 </div>
@@ -605,7 +642,7 @@ html[data-theme="dark"] .no-results { color: var(--text-light) !important; }
                 <div class="no-results">
                     <i class="fa fa-search"></i>
                     <h3><?php echo tms_t('msg_no_packages_found','No packages found'); ?></h3>
-                    <p>Try a different search term or <a href="package-list.php">view all packages</a>.</p>
+                    <p><?php echo tms_t('msg_try_different_search','Try a different search term or'); ?> <a href="package-list.php"><?php echo tms_t('link_view_all_packages','view all packages'); ?></a>.</p>
                 </div>
             <?php endif; ?>
         </div>
@@ -613,7 +650,8 @@ html[data-theme="dark"] .no-results { color: var(--text-light) !important; }
 </div>
 
 <?php if (count($results) > 0): ?>
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="js/tms-leaflet-loader.js"></script>
+<script src="js/tms-map.js"></script>
 <script>
 var TMS_MAP_POINTS = <?php echo json_encode($mapPoints, JSON_UNESCAPED_SLASHES); ?>;
 var tmsPkgMap = null;
@@ -629,7 +667,7 @@ function tmsSwitchView(view) {
         mapBtn.classList.add('active');
         if (!tmsPkgMap) {
             if (!TMS_MAP_POINTS.length) {
-                mapEl.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:#94a3b8;font-size:13px;">None of the packages on this page have map coordinates set yet.</div>';
+                mapEl.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:var(--text-muted);font-size:13px;">None of the packages on this page have map coordinates set yet.</div>';
                 return;
             }
             // Master prompt item 62 (error/empty/loading states): this box
@@ -642,24 +680,29 @@ function tmsSwitchView(view) {
             // the same blank grey box with zero explanation. Show a brief
             // spinner immediately, and a clear message instead of a crash
             // if Leaflet itself never loaded.
-            mapEl.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:#94a3b8;font-size:13px;"><i class="fa fa-spinner fa-spin" style="margin-right:8px;"></i> Loading map…</div>';
-            if (typeof L === 'undefined') {
-                mapEl.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:#94a3b8;font-size:13px;text-align:center;padding:20px;"><i class="fa fa-exclamation-triangle" style="display:block;font-size:24px;margin-bottom:8px;"></i>Map couldn\'t load (offline or blocked script). Use List view to browse these packages instead.</div>';
-                return;
-            }
-            mapEl.innerHTML = '';
-            tmsPkgMap = L.map('pkgMapView');
-            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                attribution: '&copy; OpenStreetMap contributors', maxZoom: 18
-            }).addTo(tmsPkgMap);
-            var bounds = [];
-            TMS_MAP_POINTS.forEach(function(p) {
-                var m = L.marker([p.lat, p.lng]).addTo(tmsPkgMap)
-                    .bindPopup('<strong>' + p.name.replace(/</g,'&lt;') + '</strong><br>' + p.price +
-                        '<br><a href="package-details.php?pkgid=' + p.id + '">View package</a>');
-                bounds.push([p.lat, p.lng]);
+            mapEl.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:var(--text-muted);font-size:13px;"><i class="fa fa-spinner fa-spin" style="margin-right:8px;"></i> Loading map…</div>';
+            // Leaflet is loaded on demand (js/tms-leaflet-loader.js) so the CDN never blocks first paint.
+            if (window.tmsPkgMapBuilding) { return; }
+            window.tmsPkgMapBuilding = true;
+            tmsLoadLeaflet(function (err) {
+                window.tmsPkgMapBuilding = false;
+                if (err || typeof L === 'undefined') {
+                    mapEl.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:var(--text-muted);font-size:13px;text-align:center;padding:20px;"><i class="fa fa-exclamation-triangle" style="display:block;font-size:24px;margin-bottom:8px;"></i>Map couldn\'t load (offline or blocked script). Use List view to browse these packages instead.</div>';
+                    return;
+                }
+                mapEl.innerHTML = '';
+                tmsPkgMap = L.map('pkgMapView');
+                if (window.TmsMap) { TmsMap.addTiles(tmsPkgMap, { maxZoom: 18 }); TmsMap.fixSize(tmsPkgMap); }
+                else L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '&copy; OpenStreetMap contributors', maxZoom: 18 }).addTo(tmsPkgMap);
+                var bounds = [];
+                TMS_MAP_POINTS.forEach(function(p) {
+                    var m = L.marker([p.lat, p.lng]).addTo(tmsPkgMap)
+                        .bindPopup('<strong>' + p.name.replace(/</g,'&lt;') + '</strong><br>' + p.price +
+                            '<br><a href="package-details.php?pkgid=' + p.id + '">View package</a>');
+                    bounds.push([p.lat, p.lng]);
+                });
+                tmsPkgMap.fitBounds(bounds, { padding: [40, 40], maxZoom: 12 });
             });
-            tmsPkgMap.fitBounds(bounds, { padding: [40, 40], maxZoom: 12 });
         } else {
             setTimeout(function(){ tmsPkgMap.invalidateSize(); }, 50);
         }

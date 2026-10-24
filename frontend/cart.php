@@ -1,5 +1,5 @@
 <?php
-session_start();
+require_once __DIR__ . '/../backend/session-boot.php';
 error_reporting(E_ALL); ini_set('display_errors', '0'); ini_set('log_errors', '1');
 include('backend/config.php');
 tms_require_user();
@@ -11,9 +11,14 @@ if (isset($_GET['remove'])) {
     // Round 91: no FK CASCADE in this project's convention (see config.php's
     // tblcartaddons comment), so a removed cart item's add-on selections
     // must be cleared explicitly here or they'd silently orphan.
-    $dbh->prepare("DELETE FROM tblcartaddons WHERE CartId=:id")->execute([':id' => $removeId]);
-    $dbh->prepare("DELETE FROM tblcart WHERE id=:id AND UserEmail=:e")
-        ->execute([':id' => $removeId, ':e' => $email]);
+    // Ownership first: add-ons are only cleared for a cart row that belongs to THIS user (was: any user could wipe anyone's by id).
+    $own = $dbh->prepare("SELECT 1 FROM tblcart WHERE id=:id AND UserEmail=:e");
+    $own->execute([':id' => $removeId, ':e' => $email]);
+    if ($own->fetchColumn()) {
+        $dbh->prepare("DELETE FROM tblcartaddons WHERE CartId=:id")->execute([':id' => $removeId]);
+        $dbh->prepare("DELETE FROM tblcart WHERE id=:id AND UserEmail=:e")
+            ->execute([':id' => $removeId, ':e' => $email]);
+    }
     header('Location: cart.php');
     exit;
 }
@@ -65,17 +70,20 @@ foreach ($items as $it) {
 ?>
 <!DOCTYPE HTML><html lang="<?php echo htmlspecialchars(tms_active_language(), ENT_QUOTES, 'UTF-8'); ?>"><head>
 <link rel="manifest" href="manifest.json">
-<meta name="theme-color" content="#0B2B3C">
+<meta name="theme-color" content="#104B3A">
 <link rel="apple-touch-icon" href="images/icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="TMS">
+<meta name="mobile-web-app-capable" content="yes">
 <title>TMS | My Cart</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <link href="css/bootstrap.min2.css" rel='stylesheet'/>
-<link href="css/style.min.css" rel='stylesheet'/>
+<link href="<?php echo tms_asset_ver('css/style.min.css'); ?>" rel='stylesheet'/>
 <link href="css/font-awesome.min2.css" rel="stylesheet">
 <link href="<?php echo tms_asset_ver('css/modern-theme.css'); ?>" rel="stylesheet">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700;9..144,800&family=Manrope:wght@400;500;600;700;800&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
 <script src="js/jquery-1.12.0.min.js" defer></script>
 <style>
 .page-title{background:linear-gradient(135deg,var(--primary-dark),var(--primary));color:#fff;padding:40px 0;margin-bottom:30px;}
@@ -83,7 +91,7 @@ foreach ($items as $it) {
 .cart-item img{width:100px;height:80px;object-fit:cover;border-radius:8px;flex-shrink:0;}
 .cart-item .info{flex:1;}
 .cart-item .info h5{margin:0 0 4px;font-weight:700;}
-.cart-item .info .meta{font-size:12.5px;color:#888;}
+.cart-item .info .meta{font-size:12.5px;color:var(--text-muted);}
 .cart-item .price{font-weight:800;color:var(--secondary);font-size:16px;white-space:nowrap;}
 .cart-remove{color:#e74c3c;background:none;border:none;font-size:16px;cursor:pointer;padding:6px;}
 .summary-box{background:var(--white);border-radius:12px;padding:24px;box-shadow:0 3px 15px rgba(0,0,0,0.08);position:sticky;top:20px;}
@@ -101,11 +109,11 @@ html[data-theme="dark"] .summary-row.total { color: var(--text) !important; }
 <?php include('backend/header.php'); ?>
 <div class="page-title">
   <div class="container">
-    <h2 style="margin:0 0 20px;"><i class="fa fa-shopping-cart"></i> My Cart</h2>
+    <h2 style="margin:0 0 20px;"><i class="fa fa-shopping-cart"></i> <?php echo tms_t('heading_my_cart','My Cart'); ?></h2>
     <div class="tms-steps">
-      <div class="tms-step active"><div class="tms-step-circle">1</div><div class="tms-step-label">Cart</div></div>
-      <div class="tms-step"><div class="tms-step-circle">2</div><div class="tms-step-label">Checkout</div></div>
-      <div class="tms-step"><div class="tms-step-circle">3</div><div class="tms-step-label">Confirmed</div></div>
+      <div class="tms-step active"><div class="tms-step-circle">1</div><div class="tms-step-label"><?php echo tms_t('step_cart','Cart'); ?></div></div>
+      <div class="tms-step"><div class="tms-step-circle">2</div><div class="tms-step-label"><?php echo tms_t('step_checkout','Checkout'); ?></div></div>
+      <div class="tms-step"><div class="tms-step-circle">3</div><div class="tms-step-label"><?php echo tms_t('step_confirmed','Confirmed'); ?></div></div>
     </div>
   </div>
 </div>
@@ -113,9 +121,9 @@ html[data-theme="dark"] .summary-row.total { color: var(--text) !important; }
 <?php if (empty($items)): ?>
   <div class="empty-cart">
     <i class="fa fa-shopping-cart"></i>
-    <h4>Your cart is empty</h4>
-    <p style="color:#94a3b8;margin-bottom:18px;">Browse packages and add a few to compare before booking all at once.</p>
-    <a href="package-list.php" class="btn-checkout" style="display:inline-block;width:auto;padding:12px 30px;text-decoration:none;">Browse Packages</a>
+    <h4><?php echo tms_t('msg_cart_empty','Your cart is empty'); ?></h4>
+    <p style="color:var(--text-muted);margin-bottom:18px;"><?php echo tms_t('dest_cart_empty_subtitle','Browse packages and add a few to compare before booking all at once.'); ?></p>
+    <a href="package-list.php" class="btn-checkout" style="display:inline-block;width:auto;padding:12px 30px;text-decoration:none;"><?php echo tms_t('btn_browse_packages','Browse Packages'); ?></a>
   </div>
 <?php else: ?>
   <div class="row">
@@ -130,11 +138,11 @@ html[data-theme="dark"] .summary-row.total { color: var(--text) !important; }
           <?php if ($itSeatsLeft !== null && (int)$it->NoOfPersons > $itSeatsLeft): ?>
           <div class="meta" style="color:#dc2626;font-weight:600;"><i class="fa fa-exclamation-triangle"></i> Only <?php echo $itSeatsLeft; ?> seat<?php echo $itSeatsLeft===1?'':'s'; ?> left — you're requesting <?php echo (int)$it->NoOfPersons; ?>. Reduce travelers or this item will block checkout.</div>
           <?php elseif ($itSeatsLeft !== null && $itSeatsLeft <= 5): ?>
-          <div class="meta" style="color:#b45309;font-weight:600;"><i class="fa fa-users"></i> Only <?php echo $itSeatsLeft; ?> seats left for this package</div>
+          <div class="meta" style="color:#b45309;font-weight:600;"><i class="fa fa-users"></i> <?php echo tms_t('msg_only_prefix','Only'); ?> <?php echo $itSeatsLeft; ?> <?php echo tms_t('label_seats_left_for_package','seats left for this package'); ?></div>
           <?php endif; ?>
           <?php if (!empty($it->Addons)): ?>
           <div class="meta" style="margin-top:4px;">
-            <i class="fa fa-plus-circle"></i> Add-ons:
+            <i class="fa fa-plus-circle"></i> <?php echo tms_t('label_addons_colon','Add-ons:'); ?>
             <?php foreach ($it->Addons as $ao): ?>
               <?php echo htmlspecialchars($ao->Name, ENT_QUOTES, 'UTF-8'); ?><?php echo $ao->Quantity > 1 ? ' ×' . (int)$ao->Quantity : ''; ?><?php echo $ao !== end($it->Addons) ? ',' : ''; ?>
             <?php endforeach; ?>
@@ -151,7 +159,7 @@ html[data-theme="dark"] .summary-row.total { color: var(--text) !important; }
         <div class="price">
           <?php echo tms_currency((int)$it->EffectivePrice); ?>
           <div style="font-weight:400;font-size:12px;opacity:.75;">
-            × <?php echo $pax; ?> traveller<?php echo $pax > 1 ? 's' : ''; ?>
+            × <?php echo $pax; ?> <?php echo tms_t('label_traveller_word','traveller(s)'); ?>
             <?php if ($pax > 1): ?>
               = <strong><?php echo tms_currency((int)$it->EffectivePrice * $pax); ?></strong>
             <?php endif; ?>
@@ -163,16 +171,16 @@ html[data-theme="dark"] .summary-row.total { color: var(--text) !important; }
           </div>
           <?php endif; ?>
         </div>
-        <button class="cart-remove" onclick="if(confirm('Remove this item from your cart?')) window.location='cart.php?remove=<?php echo (int)$it->id; ?>'"><i class="fa fa-trash"></i></button>
+        <button class="cart-remove" onclick="if(confirm('<?php echo addslashes(tms_t('msg_confirm_remove_cart_item','Remove this item from your cart?')); ?>')) window.location='cart.php?remove=<?php echo (int)$it->id; ?>'"><i class="fa fa-trash"></i></button>
       </div>
       <?php endforeach; ?>
     </div>
     <div class="col-md-4">
       <div class="summary-box">
-        <h5 style="font-weight:700;margin-bottom:14px;">Order Summary</h5>
-        <div class="summary-row"><span><?php echo count($items); ?> package(s)</span><span><?php echo tms_currency($total); ?></span></div>
-        <div class="summary-row total"><span>Total</span><span><?php echo tms_currency($total); ?></span></div>
-        <a href="checkout.php" style="text-decoration:none;"><button class="btn-checkout"><i class="fa fa-lock"></i> Proceed to Checkout</button></a>
+        <h5 style="font-weight:700;margin-bottom:14px;"><?php echo tms_t('heading_order_summary','Order Summary'); ?></h5>
+        <div class="summary-row"><span><?php echo count($items); ?> <?php echo tms_t('label_packages_count_suffix','package(s)'); ?></span><span><?php echo tms_currency($total); ?></span></div>
+        <div class="summary-row total"><span><?php echo tms_t('label_total','Total'); ?></span><span><?php echo tms_currency($total); ?></span></div>
+        <a href="checkout.php" style="text-decoration:none;"><button class="btn-checkout"><i class="fa fa-lock"></i> <?php echo tms_t('btn_proceed_checkout','Proceed to Checkout'); ?></button></a>
       </div>
     </div>
   </div>

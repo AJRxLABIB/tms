@@ -1,5 +1,5 @@
 <?php
-session_start();
+require_once __DIR__ . '/../backend/session-boot.php';
 error_reporting(E_ALL);
 ini_set('display_errors', 0);
 ini_set('log_errors', 1);
@@ -12,14 +12,13 @@ tms_admin_require_role($dbh, ['superadmin', 'package_manager']);
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>TMS | Popular Destinations</title>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Plus+Jakarta+Sans:wght@600;700;800&display=swap" rel="stylesheet">
 <link href="css/font-awesome.css" rel="stylesheet">
 <link href="css/bootstrap.min.css" rel="stylesheet">
 <link href="<?php echo tms_asset_ver('css/admin-v6.css'); ?>" rel="stylesheet">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 <style>
 .page-title-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;flex-wrap:wrap;gap:12px;}
-.page-title-row h2{font-family:'Plus Jakarta Sans',sans-serif;font-size:22px;font-weight:800;color:#0f172a;margin:0;}
+.page-title-row h2{font-family:'Inter',sans-serif;font-size:22px;font-weight:800;color:var(--text-primary);margin:0;}
 </style>
 </head>
 <body>
@@ -29,9 +28,9 @@ tms_admin_require_role($dbh, ['superadmin', 'package_manager']);
 <?php include('includes/header.php'); ?>
 <div class="tms-content">
 <div class="page-title-row">
-  <h2><i class="fa fa-map-marker" style="color:#1d4ed8;margin-right:10px;"></i>Popular Destinations</h2>
+  <h2><i class="fa fa-map-marker" style="color:#176B50;margin-right:10px;"></i>Popular Destinations</h2>
 </div>
-<p style="color:#64748b;font-size:13px;margin-top:-12px;margin-bottom:22px;">
+<p style="color:var(--text-muted);font-size:13px;margin-top:-12px;margin-bottom:22px;">
   Three different signals of "popular," each from real usage data — not just one blended guess.
 </p>
 
@@ -72,13 +71,13 @@ $mapBookedPlaces = array_values(array_filter($mostBookedPlaces, fn($r) => !empty
 
 <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:20px;">
   <div style="background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:20px;">
-    <h3 style="font-size:15px;font-weight:700;margin-bottom:6px;"><i class="fa fa-search" style="color:#7c3aed;margin-right:8px;"></i>Most Explored</h3>
-    <div style="font-size:11.5px;color:#94a3b8;margin-bottom:14px;">From Explore page AI lookups</div>
+    <h3 style="font-size:15px;font-weight:700;margin-bottom:6px;"><i class="fa fa-search" style="color:#1F8A66;margin-right:8px;"></i>Most Explored</h3>
+    <div style="font-size:11.5px;color:var(--text-muted);margin-bottom:14px;">From Explore page AI lookups</div>
     <div class="table-responsive"><table class="tms-table" style="font-size:12px;">
       <thead><tr><th>#</th><th>Destination</th><th>Lookups</th></tr></thead>
       <tbody>
       <?php if (empty($mostExplored)): ?>
-      <tr><td colspan="3" style="text-align:center;color:#94a3b8;padding:20px;">No explore activity logged yet.</td></tr>
+      <tr><td colspan="3" style="text-align:center;color:var(--text-muted);padding:20px;">No explore activity logged yet.</td></tr>
       <?php else: $i=1; foreach ($mostExplored as $r): ?>
       <tr>
         <td><?=$i++?></td>
@@ -92,16 +91,16 @@ $mapBookedPlaces = array_values(array_filter($mostBookedPlaces, fn($r) => !empty
 
   <div style="background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:20px;">
     <h3 style="font-size:15px;font-weight:700;margin-bottom:6px;"><i class="fa fa-heart" style="color:#e11d48;margin-right:8px;"></i>Most Wishlisted</h3>
-    <div style="font-size:11.5px;color:#94a3b8;margin-bottom:14px;">Saved but not yet booked</div>
+    <div style="font-size:11.5px;color:var(--text-muted);margin-bottom:14px;">Saved but not yet booked</div>
     <div class="table-responsive"><table class="tms-table" style="font-size:12px;">
       <thead><tr><th>#</th><th>Package</th><th>Saves</th></tr></thead>
       <tbody>
       <?php if (empty($mostWishlisted)): ?>
-      <tr><td colspan="3" style="text-align:center;color:#94a3b8;padding:20px;">No wishlist activity yet.</td></tr>
+      <tr><td colspan="3" style="text-align:center;color:var(--text-muted);padding:20px;">No wishlist activity yet.</td></tr>
       <?php else: $i=1; foreach ($mostWishlisted as $r): ?>
       <tr>
         <td><?=$i++?></td>
-        <td><?=htmlspecialchars($r->PackageName)?> <small style="color:#94a3b8;">(<?=htmlspecialchars($r->PackageLocation)?>)</small></td>
+        <td><?=htmlspecialchars($r->PackageName)?> <small style="color:var(--text-muted);">(<?=htmlspecialchars($r->PackageLocation)?>)</small></td>
         <td><?=$r->cnt?></td>
       </tr>
       <?php endforeach; endif; ?>
@@ -110,13 +109,13 @@ $mapBookedPlaces = array_values(array_filter($mostBookedPlaces, fn($r) => !empty
   </div>
 
   <div style="background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:20px;">
-    <h3 style="font-size:15px;font-weight:700;margin-bottom:6px;"><i class="fa fa-check-circle" style="color:#16a34a;margin-right:8px;"></i>Most Booked</h3>
-    <div style="font-size:11.5px;color:#94a3b8;margin-bottom:14px;">Confirmed bookings, by destination</div>
+    <h3 style="font-size:15px;font-weight:700;margin-bottom:6px;"><i class="fa fa-check-circle" style="color:#0B6B2E;margin-right:8px;"></i>Most Booked</h3>
+    <div style="font-size:11.5px;color:var(--text-muted);margin-bottom:14px;">Confirmed bookings, by destination</div>
     <div class="table-responsive"><table class="tms-table" style="font-size:12px;">
       <thead><tr><th>#</th><th>Destination</th><th>Confirmed Bookings</th></tr></thead>
       <tbody>
       <?php if (empty($mostBookedPlaces)): ?>
-      <tr><td colspan="3" style="text-align:center;color:#94a3b8;padding:20px;">No confirmed bookings yet.</td></tr>
+      <tr><td colspan="3" style="text-align:center;color:var(--text-muted);padding:20px;">No confirmed bookings yet.</td></tr>
       <?php else: $i=1; foreach ($mostBookedPlaces as $r): ?>
       <tr>
         <td><?=$i++?></td>
@@ -131,8 +130,8 @@ $mapBookedPlaces = array_values(array_filter($mostBookedPlaces, fn($r) => !empty
 
 <?php if (!empty($mapBookedPlaces)): ?>
 <div style="background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:20px;margin-top:20px;">
-  <h3 style="font-size:15px;font-weight:700;margin-bottom:6px;"><i class="fa fa-globe" style="color:#0891b2;margin-right:8px;"></i>Booking Heat Map</h3>
-  <div style="font-size:11.5px;color:#94a3b8;margin-bottom:14px;">Bubble size = confirmed bookings at that destination. Only destinations with a package that has map coordinates set are shown — no estimated pins.</div>
+  <h3 style="font-size:15px;font-weight:700;margin-bottom:6px;"><i class="fa fa-globe" style="color:#0E7490;margin-right:8px;"></i>Booking Heat Map</h3>
+  <div style="font-size:11.5px;color:var(--text-muted);margin-bottom:14px;">Bubble size = confirmed bookings at that destination. Only destinations with a package that has map coordinates set are shown — no estimated pins.</div>
   <div id="destHeatMap" style="height:380px;border-radius:10px;background:#eef2f5;"></div>
 </div>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>

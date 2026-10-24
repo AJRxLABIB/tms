@@ -13,6 +13,7 @@
 require_once __DIR__ . '/AIClient.php';
 require_once __DIR__ . '/../CacheService.php';
 require_once __DIR__ . '/../ExploreService.php';
+require_once __DIR__ . '/TripState.php';
 
 class TripCopilot {
 
@@ -43,8 +44,16 @@ class TripCopilot {
      */
     public function chat(int $bookingId, string $userMsg, string $email): array {
         $booking  = $this->getBookingContext($bookingId, $email);
-        $history  = $this->getHistory($bookingId, 10); // last 10 turns
-        $system   = $this->buildSystemPrompt($booking);
+        // Ownership first: a booking that is not the caller's must never reach history, the model or the session table.
+        if ($booking === null) {
+            return ['reply' => "I can't find that booking on your account.", 'suggestions' => [], 'action' => 'none'];
+        }
+        $history  = $this->getHistory($bookingId, 10, $email); // last 10 turns
+        // Structured trip state: confirmed facts from the booking + what the traveller has said (budget, constraints), labelled by basis.
+        // Survives beyond the 10-turn history window so "keep the hotel but change the activities" still knows the budget and constraints.
+        $state    = TripState::applyMessage(TripState::fromBooking($booking, TripState::load($this->db, $bookingId, $email)), $userMsg);
+        TripState::save($this->db, $bookingId, $email, $state);
+        $system   = $this->buildSystemPrompt($booking, TripState::render($state));
 
         // Build messages array with history
         $messages = [];
@@ -100,12 +109,12 @@ class TripCopilot {
      * situation (e.g. weather turning) still surfaces promptly.
      */
     public function generateProactiveAlert(int $bookingId, string $email): ?array {
-        $cacheKey = 'copilot_alert_' . $bookingId;
-        $cached = $this->cache->get($cacheKey);
-        if ($cached !== null) return $cached;
-
+        // Ownership BEFORE the cache read, and the key carries the owner, so one user can never be served another's alert.
         $booking = $this->getBookingContext($bookingId, $email);
         if (!$booking) return null;
+        $cacheKey = 'copilot_alert_' . $bookingId . '_' . substr(sha1(strtolower($email)), 0, 12);
+        $cached = $this->cache->get($cacheKey);
+        if ($cached !== null) return $cached;
 
         $system = "You are a proactive travel assistant. Given trip context, generate ONE relevant proactive alert for the traveler RIGHT NOW. Return JSON: {\"type\":\"weather|reminder|tip|warning\",\"title\":\"<short>\",\"message\":\"<2-3 sentences>\",\"urgency\":\"low|medium|high\"}. No other text.";
 
@@ -140,13 +149,16 @@ class TripCopilot {
     /**
      * Get full conversation history for a booking.
      */
-    public function getHistory(int $bookingId, int $limit = 50): array {
+    public function getHistory(int $bookingId, int $limit, string $email): array {
+        if ($email === '' || $email === 'guest') return [];
         try {
+            // Scoped to the owner: only rows for a booking that belongs to $email are readable.
             $stmt = $this->db->prepare(
-                "SELECT role, message, created_at FROM tbl_copilot_sessions
-                 WHERE booking_id = ? ORDER BY id DESC LIMIT " . (int)$limit
+                "SELECT s.role, s.message, s.created_at FROM tbl_copilot_sessions s
+                   JOIN tblbooking b ON b.BookingId = s.booking_id AND b.UserEmail = ?
+                  WHERE s.booking_id = ? ORDER BY s.id DESC LIMIT " . (int)$limit
             );
-            $stmt->execute([$bookingId]);
+            $stmt->execute([$email, $bookingId]);
             return array_reverse($stmt->fetchAll(PDO::FETCH_OBJ));
         } catch (Exception $e) {
             error_log('[TMS] ' . __METHOD__ . ' failed: ' . $e->getMessage());
@@ -179,7 +191,7 @@ class TripCopilot {
 
     // ── Private ───────────────────────────────────────────────────────────────
 
-    private function buildSystemPrompt(?array $booking): string {
+    private function buildSystemPrompt(?array $booking, string $stateBlock = ''): string {
         $now = date('Y-m-d H:i');
         // Phase 2b — context compression: this used to be
         // json_encode($booking, JSON_PRETTY_PRINT), which re-sent the ENTIRE
@@ -202,6 +214,8 @@ Current datetime: {$now}
 
 ACTIVE TRIP CONTEXT:
 {$tripInfo}
+
+{$stateBlock}
 
 Your personality: warm, knowledgeable, proactive, concise. You speak like a trusted local friend who happens to be a travel expert.
 
@@ -407,7 +421,7 @@ SYSTEM;
             $suggestions = array_slice($suggestions, 0, 3);
 
             return [
-                'reply'       => $data['reply'],
+                'reply'       => $this->stripDuplicatedEnvelope($data['reply']),
                 'suggestions' => $suggestions,
                 'action'      => 'none', // reserved for future use; not consumed by the UI today (see api handler / ai-copilot.php)
             ];
@@ -418,10 +432,32 @@ SYSTEM;
         // so a non-compliant response still degrades to a usable reply with
         // best-effort keyword-based suggestions rather than breaking the chat.
         return [
-            'reply'       => $reply,
+            'reply'       => $this->stripDuplicatedEnvelope($reply),
             'suggestions' => $this->extractSuggestions($reply),
             'action'      => 'none',
         ];
+    }
+
+    /**
+     * FIX (Round 117 -- found via live testing of the sibling SiteAssistant
+     * chat widget, same underlying model/prompt pattern): the model can emit
+     * a syntactically valid {"reply":...,"suggestions":...} envelope whose
+     * own "reply" string value has a second, escaped envelope appended
+     * inside it -- duplicating itself inside its own field rather than
+     * breaking JSON validity, so parseJson() has no way to flag it. Kept
+     * identical to SiteAssistant::stripDuplicatedEnvelope() -- see that
+     * method's docblock for the full explanation. Applied here defensively
+     * even though it wasn't directly reproduced on this class in this round,
+     * since both classes share the exact same prompt/parse pattern.
+     */
+    private function stripDuplicatedEnvelope(string $text): string {
+        foreach (['{"reply"', '{\"reply\"'] as $marker) {
+            $pos = strpos($text, $marker);
+            if ($pos !== false && $pos > 0) {
+                return rtrim(substr($text, 0, $pos));
+            }
+        }
+        return $text;
     }
 
     private function extractSuggestions(string $reply): array {

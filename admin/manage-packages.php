@@ -1,5 +1,5 @@
 <?php
-session_start();
+require_once __DIR__ . '/../backend/session-boot.php';
 error_reporting(E_ALL);
 ini_set('display_errors', 0);
 ini_set('log_errors', 1);
@@ -13,18 +13,17 @@ tms_admin_require_role($dbh, ['package_manager', 'manager']); // Round 20 RBAC (
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>TMS | Manage Packages</title>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Plus+Jakarta+Sans:wght@600;700;800&display=swap" rel="stylesheet">
 <link href="css/font-awesome.css" rel="stylesheet">
 <link href="css/bootstrap.min.css" rel="stylesheet">
 <link href="<?php echo tms_asset_ver('css/admin-v6.css'); ?>" rel="stylesheet">
 <style>
 .page-title-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;flex-wrap:wrap;gap:12px;}
-.page-title-row h2{font-family:'Plus Jakarta Sans',sans-serif;font-size:22px;font-weight:800;color:#0f172a;margin:0;}
+.page-title-row h2{font-family:'Inter',sans-serif;font-size:22px;font-weight:800;color:var(--text-primary);margin:0;}
 .alert-msg{padding:12px 16px;border-radius:10px;font-size:13.5px;margin-bottom:18px;display:flex;align-items:center;gap:8px;}
 .alert-success{background:#d1fae5;color:#065f46;border:1px solid #a7f3d0;}
 .alert-error{background:#fee2e2;color:#991b1b;border:1px solid #fca5a5;}
 .action-btn{display:inline-flex;align-items:center;gap:5px;padding:5px 10px;border-radius:6px;font-size:12px;font-weight:500;border:none;cursor:pointer;text-decoration:none;transition:all .15s;}
-.btn-edit{background:#dbeafe;color:#1e40af;}.btn-edit:hover{background:#bfdbfe;}
+.btn-edit{background:#DCF1E5;color:#104B3A;}.btn-edit:hover{background:#B8E4C9;}
 .btn-delete{background:#fee2e2;color:#991b1b;}.btn-delete:hover{background:#fecaca;}
 .btn-approve{background:#d1fae5;color:#065f46;}.btn-approve:hover{background:#a7f3d0;}
 </style>
@@ -36,7 +35,7 @@ tms_admin_require_role($dbh, ['package_manager', 'manager']); // Round 20 RBAC (
 <?php include('includes/header.php'); ?>
 <div class="tms-content">
 <div class="page-title-row">
-  <h2><i class="fa fa-briefcase" style="color:#1d4ed8;margin-right:10px;"></i>Manage Packages</h2>
+  <h2><i class="fa fa-briefcase" style="color:#176B50;margin-right:10px;"></i>Manage Packages</h2>
 </div>
 
 
@@ -95,13 +94,13 @@ try{
         <button type="submit" class="btn-v6" style="background:#f1f5f9;color:#334155;"><i class="fa fa-search"></i></button>
     </form>
 </div>
-<div style="font-size:12.5px;color:#94a3b8;margin-bottom:10px;"><?=$total?> package<?=$total!==1?'s':''?> total &nbsp;·&nbsp; page <?=$page?> of <?=$totalPages?></div>
+<div style="font-size:12.5px;color:var(--text-muted);margin-bottom:10px;"><?=$total?> package<?=$total!==1?'s':''?> total &nbsp;·&nbsp; page <?=$page?> of <?=$totalPages?></div>
 <div class="table-responsive">
 <table class="tms-table" style="font-size:13px;">
   <thead><tr><th>#</th><th>Package Name</th><th>Price</th><th>Description</th><th>Actions</th></tr></thead>
   <tbody>
   <?php if(empty($packages)): ?>
-  <tr><td colspan="5" style="text-align:center;padding:40px;color:#94a3b8;">No packages found. <a href="add-package.php">Add one</a>.</td></tr>
+  <tr><td colspan="5" style="text-align:center;padding:40px;color:var(--text-muted);">No packages found. <a href="add-package.php">Add one</a>.</td></tr>
   <?php else: $i=1; foreach($packages as $p): ?>
   <tr>
     <td><?=$i++?></td>
@@ -123,7 +122,7 @@ try{
     <?php for($pn=1; $pn<=$totalPages; $pn++):
         $qs = http_build_query(array_merge($_GET, ['p'=>$pn])); ?>
     <a href="?<?=$qs?>" style="padding:6px 12px;border-radius:6px;font-size:13px;text-decoration:none;
-        <?=$pn===$page ? 'background:#1d4ed8;color:#fff;' : 'background:#f1f5f9;color:#334155;'?>"><?=$pn?></a>
+        <?=$pn===$page ? 'background:#176B50;color:#fff;' : 'background:#f1f5f9;color:#334155;'?>"><?=$pn?></a>
     <?php endfor; ?>
 </div>
 <?php endif; ?>

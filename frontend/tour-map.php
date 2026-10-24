@@ -1,5 +1,5 @@
 <?php
-session_start();
+require_once __DIR__ . '/../backend/session-boot.php';
 error_reporting(E_ALL); ini_set('display_errors', '0'); ini_set('log_errors', '1');
 include('backend/config.php');
 // LIVE BUG FIX (customer-facing audit): this page is real browsing/
@@ -41,7 +41,7 @@ $allPackages = $q2->fetchAll(PDO::FETCH_OBJ);
 // quick filters), each given a real color, so the legend/pills/markers
 // all describe the actual catalogue.
 $tmsMapTypeColors = [];
-$tmsMapTypePalette = ['#27ae60', '#8e44ad', '#3498db', '#f1c40f', '#1abc9c', '#e67e22'];
+$tmsMapTypePalette = ['#1B7F5F', '#176B50', '#2B6CB0', '#8A5A00', '#0F766E', '#C2410C'];
 try {
     $typeRows = $dbh->query(
         "SELECT PackageType, COUNT(*) AS n FROM tbltourpackages
@@ -57,25 +57,29 @@ try {
 } catch (Exception $e) {
     error_log('[TMS] tour-map type colors failed: ' . $e->getMessage());
 }
-$tmsMapOtherColor = '#95a5a6';
+$tmsMapOtherColor = '#5F6D65';
 ?>
 <!DOCTYPE HTML>
 <html lang="<?php echo htmlspecialchars(tms_active_language(), ENT_QUOTES, 'UTF-8'); ?>">
 <head>
 <link rel="manifest" href="manifest.json">
-<meta name="theme-color" content="#0B2B3C">
+<meta name="theme-color" content="#104B3A">
 <link rel="apple-touch-icon" href="images/icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="TMS">
+<meta name="mobile-web-app-capable" content="yes">
 <title>TMS | Interactive Map</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <link href="css/bootstrap.min2.css" rel='stylesheet' type='text/css' />
-<link href="css/style.min.css" rel='stylesheet' type='text/css' />
+<link href="<?php echo tms_asset_ver('css/style.min.css'); ?>" rel='stylesheet' type='text/css' />
 <link href="css/font-awesome.min2.css" rel="stylesheet">
 <link href="<?php echo tms_asset_ver('css/modern-theme.css'); ?>" rel="stylesheet">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700;9..144,800&family=Manrope:wght@400;500;600;700;800&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<link rel="stylesheet" href="js/vendor/leaflet/leaflet.css" />
+<script src="js/vendor/leaflet/leaflet.js"></script>
+<script src="js/tms-map.js"></script>
 <script src="js/jquery-1.12.0.min.js" defer></script>
 <script src="js/bootstrap.min.js" defer></script>
 <style>
@@ -86,35 +90,37 @@ $tmsMapOtherColor = '#95a5a6';
 .map-sidebar { background:var(--white); border-radius:12px; box-shadow:0 4px 20px rgba(0,0,0,0.08); padding:20px; height:520px; overflow-y:auto; margin:25px 0; }
 .map-sidebar h4 { color:#333; font-size:1em; border-bottom:2px solid #eee; padding-bottom:10px; margin-bottom:15px; }
 .dest-item { padding:10px; border-radius:8px; cursor:pointer; transition:0.2s; margin-bottom:8px; border:1px solid #f0f0f0; }
-.dest-item:hover, .dest-item.active { background: linear-gradient(135deg,#667eea11,#764ba211); border-color:#667eea; }
+.dest-item:hover, .dest-item.active { background: linear-gradient(135deg,#176B5011,#104B3A11); border-color:#176B50; }
 .dest-item h5 { font-size:13px; font-weight:700; margin:0 0 3px; color:#333; }
-.dest-item p { font-size:12px; color:#777; margin:0; }
-.dest-item span { font-size:12px; font-weight:700; color:#667eea; }
-.dest-item-nomap { opacity:0.6; cursor:help; }
+.dest-item p { font-size:12px; color:var(--text-muted); margin:0; }
+.dest-item span { font-size:12px; font-weight:700; color:var(--secondary); }
+.dest-item span.dest-nomap-badge { color:#92400e; }
+.dest-item-nomap { cursor:help; }
+.dest-item-nomap h5, .dest-item-nomap p { font-style:italic; }
 .dest-item-nomap:hover { background:#f7f7f7; border-color:#f0f0f0; }
 .dest-nomap-badge { display:inline-block; margin-left:6px; padding:1px 7px; border-radius:10px; background:#fef3c7; color:#92400e; font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.3px; }
 .popup-card h4 { font-size:14px; font-weight:700; margin:0 0 5px; }
 .popup-card p { font-size:12px; margin:2px 0; color:#555; }
-.popup-card a { display:inline-block; background:#667eea; color:#fff; padding:5px 12px; border-radius:5px; font-size:12px; margin-top:8px; text-decoration:none; }
+.popup-card a { display:inline-block; background:#176B50; color:#fff; padding:5px 12px; border-radius:5px; font-size:12px; margin-top:8px; text-decoration:none; }
 .map-legend { background:var(--white); border-radius:10px; padding:15px 20px; box-shadow:0 2px 15px rgba(0,0,0,0.1); margin-bottom:20px; }
 .map-legend h5 { font-size:14px; font-weight:700; margin-bottom:10px; }
 .legend-item { display:inline-block; margin-right:15px; font-size:13px; }
 .legend-dot { width:12px; height:12px; border-radius:50%; display:inline-block; margin-right:5px; vertical-align:middle; }
 .filter-pills { margin-bottom:20px; }
-.filter-pill { display:inline-block; padding:6px 15px; border-radius:20px; font-size:13px; border:2px solid #667eea; color:#667eea; cursor:pointer; margin:3px; transition:0.2s; }
-.filter-pill.active, .filter-pill:hover { background:#667eea; color:#fff; }
+.filter-pill { display:inline-block; padding:6px 15px; border-radius:20px; font-size:13px; border:2px solid var(--secondary); color:var(--secondary); cursor:pointer; margin:3px; transition:0.2s; }
+.filter-pill.active, .filter-pill:hover { background:#176B50; color:#fff; }
 
 /* ── Destination search (live autocomplete) ── */
 .map-search-wrap { position:relative; margin-bottom:20px; }
 .map-search-input { width:100%; padding:12px 16px 12px 42px; border-radius:10px; border:2px solid #e5e7eb; font-size:14px; }
-.map-search-input:focus { outline:none; border-color:#667eea; }
-.map-search-icon { position:absolute; left:15px; top:13px; color:#999; }
+.map-search-input:focus { outline:none; border-color:#176B50; }
+.map-search-icon { position:absolute; left:15px; top:13px; color:var(--text-muted); }
 .map-search-results { position:absolute; top:calc(100% + 6px); left:0; right:0; background:var(--white); border-radius:10px; box-shadow:0 8px 30px rgba(0,0,0,0.18); max-height:320px; overflow-y:auto; z-index:1000; display:none; }
 .map-search-result { padding:10px 16px; cursor:pointer; border-bottom:1px solid #f2f2f2; }
 .map-search-result:last-child { border-bottom:none; }
 .map-search-result:hover { background:#f5f6fb; }
 .map-search-result strong { display:block; font-size:13px; color:#333; }
-.map-search-result span { font-size:12px; color:#888; }
+.map-search-result span { font-size:12px; color:var(--text-muted); }
 
 /* ── Get Directions (Task 4 fix): this used to render the mode buttons and
      route stats INSIDE the marker's Leaflet popup, so the popup ballooned
@@ -132,10 +138,10 @@ $tmsMapOtherColor = '#95a5a6';
 .tms-dir-panel.open { display:block; }
 .tms-dir-panel-head { display:flex; align-items:center; justify-content:space-between; margin-bottom:8px; }
 .tms-dir-panel-title { font-weight:700; font-size:13px; color:#333; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:190px; }
-.tms-dir-panel-close { background:none; border:none; color:#999; font-size:16px; cursor:pointer; line-height:1; padding:2px 4px; }
+.tms-dir-panel-close { background:none; border:none; color:var(--text-muted); font-size:16px; cursor:pointer; line-height:1; padding:2px 4px; }
 .tms-dir-panel-close:hover { color:#e74c3c; }
 .mode-btn { display:inline-block; padding:5px 9px; border-radius:6px; border:1px solid #ddd; font-size:11.5px; cursor:pointer; margin-right:5px; background:var(--white); }
-.mode-btn.active { background:#667eea; color:#fff; border-color:#667eea; }
+.mode-btn.active { background:#176B50; color:#fff; border-color:#176B50; }
 .directions-stats { font-size:12px; margin-top:8px; color:#333; }
 html[data-theme="dark"] .map-sidebar h4,
 html[data-theme="dark"] .dest-item h5,
@@ -145,7 +151,7 @@ html[data-theme="dark"] .directions-stats { color: var(--text) !important; }
 html[data-theme="dark"] .dest-item p,
 html[data-theme="dark"] .map-search-icon,
 html[data-theme="dark"] .map-search-result span { color: var(--text-muted) !important; }
-.directions-stats strong { color:#667eea; }
+.directions-stats strong { color:#176B50; }
 @media (max-width:600px) { .tms-dir-panel { width:calc(100% - 24px); } }
 .tms-you-are-here { position:relative; width:22px; height:22px; background:#4285f4; color:#fff; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:11px; border:2px solid #fff; box-shadow:0 1px 4px rgba(0,0,0,0.4); }
 .tms-you-are-here-pulse { position:absolute; inset:-8px; border-radius:50%; background:rgba(66,133,244,0.35); animation:tmsPulse 1.8s ease-out infinite; }
@@ -171,7 +177,7 @@ html[data-theme="dark"] .map-search-result span { color: var(--text-muted) !impo
     </div>
 
     <div class="map-legend">
-        <h5><i class="fa fa-info-circle" style="color:#667eea"></i> Map Legend</h5>
+        <h5><i class="fa fa-info-circle" style="color:#176B50"></i> Map Legend</h5>
         <?php foreach ($tmsMapTypeColors as $tName => $tInfo): ?>
         <span class="legend-item"><span class="legend-dot" style="background:<?php echo $tInfo['color']; ?>"></span> <?php echo htmlentities($tName); ?></span>
         <?php endforeach; ?>
@@ -230,8 +236,8 @@ html[data-theme="dark"] .map-search-result span { color: var(--text-muted) !impo
             </div>
         </div>
         <div class="col-md-3">
-            <div class="map-sidebar">
-                <h4><i class="fa fa-list" style="color:#667eea"></i> Destinations (<span id="destCount"><?php echo count($allPackages); ?></span>)</h4>
+            <div class="map-sidebar" tabindex="0" role="region" aria-label="Destinations list">
+                <h4><i class="fa fa-list" style="color:#176B50"></i> Destinations (<span id="destCount"><?php echo count($allPackages); ?></span>)</h4>
                 <?php foreach($allPackages as $p):
                     $c = $tmsMapTypeColors[$p->PackageType]['color'] ?? $tmsMapOtherColor;
                     // BUG FIX: a package with no (or only partial) map coordinates
@@ -258,9 +264,8 @@ html[data-theme="dark"] .map-search-result span { color: var(--text-muted) !impo
 
 <script>
 var map = L.map('tourMap').setView([20, 70], 3);
-L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    attribution: '© OpenStreetMap contributors', maxZoom: 18
-}).addTo(map);
+if (window.TmsMap) { TmsMap.addTiles(map, { maxZoom: 18 }); TmsMap.fixSize(map); }
+else L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OpenStreetMap contributors', maxZoom: 18 }).addTo(map);
 
 var markers = {};
 var allMarkerData = [];
@@ -478,7 +483,7 @@ searchInput.addEventListener('input', function() {
         return (pkg.name + ' ' + pkg.location + ' ' + pkg.type).toLowerCase().indexOf(q) !== -1;
     }).slice(0, 12);
     if (!matches.length) {
-        searchResults.innerHTML = '<div class="map-search-result" style="color:#999;">No matching destinations</div>';
+        searchResults.innerHTML = '<div class="map-search-result" style="color:var(--text-muted);">No matching destinations</div>';
         searchResults.style.display = 'block';
         return;
     }
@@ -607,8 +612,8 @@ function computeRoute() {
         var route = data.routes[0];
         if (routeLine) map.removeLayer(routeLine);
         var latlngs = route.geometry.coordinates.map(function(c){ return [c[1], c[0]]; });
-        var routeColors = { driving:'#667eea', cycling:'#27ae60', walking:'#f39c12' };
-        routeLine = L.polyline(latlngs, { color: routeColors[currentMode] || '#667eea', weight: 5, opacity: 0.85 }).addTo(map);
+        var routeColors = { driving:'#176B50', cycling:'#27ae60', walking:'#f39c12' };
+        routeLine = L.polyline(latlngs, { color: routeColors[currentMode] || '#176B50', weight: 5, opacity: 0.85 }).addTo(map);
         // Padding is asymmetric on the left/bottom so the fitted route doesn't
         // duck under the directions panel docked in that corner (Task 4 fix —
         // "the route should remain visible" while the info panel stays put).
@@ -618,7 +623,7 @@ function computeRoute() {
         var mins = Math.round(route.duration / 60);
         var timeLabel = mins >= 60 ? Math.floor(mins/60) + 'h ' + (mins%60) + 'm' : mins + ' min';
         statsEl.innerHTML = '<strong>' + km + ' km</strong> · <strong>' + timeLabel + '</strong> by ' + currentMode +
-            '<br><span style="color:#999;">Route shown on map · OpenStreetMap data</span>';
+            '<br><span style="color:var(--text-muted);">Route shown on map · OpenStreetMap data</span>';
     }).catch(function(){
         statsEl.innerHTML = 'Could not calculate a route right now. You can still get directions manually via <a href="https://www.openstreetmap.org/directions?from='+userStart.lat+'%2C'+userStart.lng+'&to='+activeDestination.lat+'%2C'+activeDestination.lng+'" target="_blank" rel="noopener">OpenStreetMap</a>.';
     });

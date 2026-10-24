@@ -40,11 +40,40 @@ components:
           properties:
             version: { type: string, example: "1" }
             versioned_path: { type: boolean }
+            request_id: { type: string, example: req_3f9a1c2b7d4e5a60, description: "Correlation id; same value as the X-Request-Id response header" }
+    Pagination:
+      type: object
+      description: Returned in `meta` by paginated lists (packages; my_bookings when page/per_page is sent)
+      properties:
+        total: { type: integer }
+        page: { type: integer }
+        per_page: { type: integer }
+        total_pages: { type: integer }
+        links:
+          type: object
+          properties:
+            self: { type: string }
+            first: { type: string }
+            prev: { type: string, nullable: true }
+            next: { type: string, nullable: true }
+            last: { type: string }
+    ErrorDetail:
+      type: object
+      properties:
+        code: { type: string, example: not_found, description: "Stable machine-readable code (bad_request, unauthorized, forbidden, not_found, method_not_allowed, conflict, unprocessable, rate_limited, server_error, idempotency_key_reused, idempotency_in_progress, invalid_idempotency_key)" }
+        message: { type: string }
+        request_id: { type: string }
     ErrorEnvelope:
       type: object
+      description: >
+        Legacy fields (`success`, `error` as a string) are unchanged. `error_code`, `request_id` and
+        `error_detail` (the standard {code, message, request_id} object) are additive.
       properties:
         success: { type: boolean, example: false }
         error: { type: string }
+        error_code: { type: string }
+        request_id: { type: string }
+        error_detail: { $ref: '#/components/schemas/ErrorDetail' }
     Package:
       type: object
       properties:
@@ -69,9 +98,31 @@ components:
         TotalCost: { type: number }
         RegDate: { type: string }
         VerificationCode: { type: string }
+  parameters:
+    RequestId:
+      name: X-Request-Id
+      in: header
+      required: false
+      description: "Optional correlation id (8-64 chars: letters, digits, dot, underscore, hyphen). If absent or unsafe the server generates one. Always echoed in the X-Request-Id response header."
+      schema: { type: string }
+    IdempotencyKey:
+      name: Idempotency-Key
+      in: header
+      required: false
+      description: >
+        For POST `book`. Same key + same body within 24 h replays the first response (header `Idempotent-Replayed: true`)
+        instead of creating a second booking; same key + different body returns 422 `idempotency_key_reused`;
+        a concurrent duplicate returns 409 `idempotency_in_progress`. 8-128 chars: letters, digits, - _ . :
+      schema: { type: string }
+  headers:
+    RateLimitLimit: { description: Requests allowed in the window, schema: { type: integer } }
+    RateLimitRemaining: { description: Requests left in the window, schema: { type: integer } }
+    RateLimitReset: { description: Seconds until the window resets, schema: { type: integer } }
   responses:
     RateLimited:
-      description: Too many requests for this endpoint/IP in the current window
+      description: Too many requests for this endpoint/IP in the current window (see Retry-After)
+      headers:
+        Retry-After: { schema: { type: integer } }
       content:
         application/json:
           schema: { $ref: '#/components/schemas/ErrorEnvelope' }
@@ -107,7 +158,12 @@ paths:
         - name: limit
           in: query
           schema: { type: integer, default: 12, maximum: 50 }
-          description: packages only
+          description: packages only (alias of per_page)
+        - name: per_page
+          in: query
+          schema: { type: integer, default: 12, maximum: 50 }
+          description: packages only; `meta` then also carries `links` (self/first/prev/next/last)
+        - $ref: '#/components/parameters/RequestId'
         - name: sort
           in: query
           schema: { type: string, enum: [price_asc, price_desc, name] }
@@ -126,11 +182,13 @@ paths:
         '404': { description: Package not found, or unknown action }
         '429': { $ref: '#/components/responses/RateLimited' }
     post:
-      summary: Public write actions (check_email, login) and auth-required actions (logout, book, cancel_booking)
+      summary: Public write actions (check_email, login, refresh) and auth-required actions (logout, book, cancel_booking, revoke_session, revoke_all_sessions)
       parameters:
         - name: action
           in: query
-          schema: { type: string, enum: [check_email, login, logout, book, cancel_booking] }
+          schema: { type: string, enum: [check_email, login, refresh, logout, book, cancel_booking, revoke_session, revoke_all_sessions] }
+        - $ref: '#/components/parameters/RequestId'
+        - $ref: '#/components/parameters/IdempotencyKey'
       security:
         - bearerAuth: []
         - {}
@@ -145,6 +203,10 @@ paths:
                 email: { type: string, description: "login" }
                 password: { type: string, description: "login" }
                 device: { type: string, description: "login, optional device label" }
+                scope: { type: string, description: "login, optional -- comma/space-separated: profile:read, bookings:read, bookings:write. Omit for full access." }
+                refresh_token: { type: string, description: "refresh -- the refresh token issued by login or a previous refresh" }
+                session_id: { type: integer, description: "revoke_session -- the id from GET /sessions" }
+                keep_current: { type: boolean, description: "revoke_all_sessions, optional -- keep the session making this request active" }
                 package_id: { type: integer, description: "book" }
                 from_date: { type: string, format: date, description: "book, YYYY-MM-DD" }
                 to_date: { type: string, format: date, description: "book, YYYY-MM-DD" }
@@ -199,8 +261,70 @@ paths:
                         items: { $ref: '#/components/schemas/Booking' }
         '401': { $ref: '#/components/responses/Unauthorized' }
 
-  # NOTE: /me and /my_bookings above are documented as their own paths for
-  # readability; on the wire they are still ?action=me / ?action=my_bookings
-  # against the same "/" entry point as everything else — this file does
-  # not do real path-based routing (see api/v1/index.php's own comment for
-  # why that's a deliberate, documented choice, not an oversight).
+  /sessions:
+    get:
+      summary: List the current user's active API sessions/devices (Round 115 continuation)
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SuccessEnvelope' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+  /trip_readiness:
+    get:
+      summary: >
+        Trip Readiness Score for one of the caller's own bookings ("TMS V2"
+        prompt Phase 29 -- see TMS_V2_PHASE1_AUDIT.md Section E). Requires
+        the bookings:read scope.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: booking_id
+          in: query
+          required: true
+          schema: { type: integer }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SuccessEnvelope' }
+        '400': { description: booking_id missing }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { description: Token scope does not permit this action }
+        '404': { description: Booking not found (or not owned by the caller) }
+
+  /budget_status:
+    get:
+      summary: >
+        Real budget-vs-spend comparison (ExpenseAnalyst::getBudgetComparison)
+        plus the last AI Budget Autopilot alert, if any, for one of the
+        caller's own bookings ("TMS V2" prompt Phase 29). Requires the
+        bookings:read scope.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: booking_id
+          in: query
+          required: true
+          schema: { type: integer }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SuccessEnvelope' }
+        '400': { description: booking_id missing }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { description: Token scope does not permit this action }
+        '404': { description: Booking not found (or not owned by the caller) }
+
+  # NOTE: /me, /my_bookings, /sessions, /trip_readiness, and /budget_status above are documented as their
+  # own paths for readability; on the wire they are still ?action=me /
+  # ?action=my_bookings / ?action=sessions against the same "/" entry
+  # point as everything else, and refresh/revoke_session/
+  # revoke_all_sessions live in "/"'s own POST enum for the same reason
+  # logout/book/cancel_booking do — this file does not do real
+  # path-based routing (see api/v1/index.php's own comment for why
+  # that's a deliberate, documented choice, not an oversight).

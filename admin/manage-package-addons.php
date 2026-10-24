@@ -1,5 +1,5 @@
 <?php
-session_start();
+require_once __DIR__ . '/../backend/session-boot.php';
 error_reporting(E_ALL);
 ini_set('display_errors', 0);
 ini_set('log_errors', 1);
@@ -77,19 +77,18 @@ try {
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>TMS | Manage Package Add-ons</title>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Plus+Jakarta+Sans:wght@600;700;800&display=swap" rel="stylesheet">
 <link href="css/font-awesome.min2.css" rel="stylesheet">
 <link href="css/bootstrap.min.css" rel="stylesheet">
 <link href="<?php echo tms_asset_ver('css/admin-v6.css'); ?>" rel="stylesheet">
 <style>
 .page-title-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;flex-wrap:wrap;gap:12px;}
-.page-title-row h2{font-family:'Plus Jakarta Sans',sans-serif;font-size:22px;font-weight:800;color:#0f172a;margin:0;}
-.page-title-row h2 small{display:block;font-size:13px;font-weight:500;color:#64748b;margin-top:4px;}
+.page-title-row h2{font-family:'Inter',sans-serif;font-size:22px;font-weight:800;color:var(--text-primary);margin:0;}
+.page-title-row h2 small{display:block;font-size:13px;font-weight:500;color:var(--text-muted);margin-top:4px;}
 .alert-msg{padding:12px 16px;border-radius:10px;font-size:13.5px;margin-bottom:18px;display:flex;align-items:center;gap:8px;}
 .alert-success{background:#d1fae5;color:#065f46;border:1px solid #a7f3d0;}
 .alert-error{background:#fee2e2;color:#991b1b;border:1px solid #fca5a5;}
 .action-btn{display:inline-flex;align-items:center;gap:5px;padding:5px 10px;border-radius:6px;font-size:12px;font-weight:500;border:none;cursor:pointer;text-decoration:none;transition:all .15s;}
-.btn-edit{background:#dbeafe;color:#1e40af;}.btn-edit:hover{background:#bfdbfe;}
+.btn-edit{background:#DCF1E5;color:#104B3A;}.btn-edit:hover{background:#B8E4C9;}
 .btn-delete{background:#fee2e2;color:#991b1b;}.btn-delete:hover{background:#fecaca;}
 </style>
 </head>
@@ -100,7 +99,7 @@ try {
 <?php include('includes/header.php'); ?>
 <div class="tms-content">
 <div class="page-title-row">
-  <h2><i class="fa fa-plus-square" style="color:#1d4ed8;margin-right:10px;"></i>Manage Add-ons
+  <h2><i class="fa fa-plus-square" style="color:#176B50;margin-right:10px;"></i>Manage Add-ons
     <small>Package: <?php echo htmlspecialchars($pkg->PackageName, ENT_QUOTES, 'UTF-8'); ?> (#<?php echo (int)$pkg->PackageId; ?>)</small>
   </h2>
   <a href="edit-package.php?pid=<?php echo (int)$pkgid; ?>" class="btn-v6 ghost"><i class="fa fa-arrow-left"></i> Back to Package</a>
@@ -112,12 +111,12 @@ try {
   <h3 style="font-size:16px;font-weight:700;margin-bottom:14px;">Add New Add-on</h3>
   <form method="post" style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;">
   <?php tms_csrf_field(); ?>
-    <div><label style="font-size:12px;font-weight:500;color:#64748b;display:block;margin-bottom:4px;">Name</label>
-    <input type="text" name="name" placeholder="e.g. Airport Pickup" maxlength="150" style="padding:8px 12px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:13px;" required></div>
-    <div><label style="font-size:12px;font-weight:500;color:#64748b;display:block;margin-bottom:4px;">Description</label>
-    <input type="text" name="description" placeholder="Optional details" maxlength="500" style="padding:8px 12px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:13px;width:260px;"></div>
-    <div><label style="font-size:12px;font-weight:500;color:#64748b;display:block;margin-bottom:4px;">Price (৳)</label>
-    <input type="number" name="price" placeholder="500" min="0" style="padding:8px 12px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:13px;width:110px;" required></div>
+    <div><label for="addonNameField" style="font-size:12px;font-weight:500;color:var(--text-muted);display:block;margin-bottom:4px;">Name</label>
+    <input type="text" id="addonNameField" name="name" placeholder="e.g. Airport Pickup" maxlength="150" style="padding:8px 12px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:13px;" required></div>
+    <div><label for="addonDescriptionField" style="font-size:12px;font-weight:500;color:var(--text-muted);display:block;margin-bottom:4px;">Description</label>
+    <input type="text" id="addonDescriptionField" name="description" placeholder="Optional details" maxlength="500" style="padding:8px 12px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:13px;width:260px;"></div>
+    <div><label for="addonPriceField" style="font-size:12px;font-weight:500;color:var(--text-muted);display:block;margin-bottom:4px;">Price (৳)</label>
+    <input type="number" id="addonPriceField" name="price" placeholder="500" min="0" style="padding:8px 12px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:13px;width:110px;" required></div>
     <button type="submit" name="add_addon" class="btn-v6 primary"><i class="fa fa-plus"></i> Add Add-on</button>
   </form>
 </div>
@@ -127,7 +126,7 @@ try {
   <thead><tr><th>#</th><th>Name</th><th>Description</th><th>Price</th><th>Status</th><th>Actions</th></tr></thead>
   <tbody>
   <?php if (empty($addons)): ?>
-  <tr><td colspan="6" style="text-align:center;padding:40px;color:#94a3b8;">No add-ons yet for this package.</td></tr>
+  <tr><td colspan="6" style="text-align:center;padding:40px;color:var(--text-muted);">No add-ons yet for this package.</td></tr>
   <?php else: $i=1; foreach ($addons as $a): $active = !empty($a->IsActive); ?>
   <tr>
     <td><?=$i++?></td>

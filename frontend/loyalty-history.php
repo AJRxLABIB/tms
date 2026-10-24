@@ -1,5 +1,5 @@
 <?php
-session_start();
+require_once __DIR__ . '/../backend/session-boot.php';
 error_reporting(E_ALL); ini_set('display_errors', '0'); ini_set('log_errors', '1');
 include('backend/config.php');
 tms_require_user();
@@ -26,17 +26,20 @@ $history = $hist->fetchAll(PDO::FETCH_OBJ);
 ?>
 <!DOCTYPE HTML><html lang="<?php echo htmlspecialchars(tms_active_language(), ENT_QUOTES, 'UTF-8'); ?>"><head>
 <link rel="manifest" href="manifest.json">
-<meta name="theme-color" content="#0B2B3C">
+<meta name="theme-color" content="#104B3A">
 <link rel="apple-touch-icon" href="images/icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="TMS">
+<meta name="mobile-web-app-capable" content="yes">
 <title>TMS | Loyalty Points History</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <link href="css/bootstrap.min2.css" rel='stylesheet'/>
-<link href="css/style.min.css" rel='stylesheet'/>
+<link href="<?php echo tms_asset_ver('css/style.min.css'); ?>" rel='stylesheet'/>
 <link href="css/font-awesome.min2.css" rel="stylesheet">
 <link href="<?php echo tms_asset_ver('css/modern-theme.css'); ?>" rel="stylesheet">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700;9..144,800&family=Manrope:wght@400;500;600;700;800&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
 <script src="js/jquery-1.12.0.min.js" defer></script>
 <style>
 .page-title{background:linear-gradient(135deg,#f5c518,#e8a000);color:#fff;padding:40px 0;margin-bottom:30px;}
@@ -45,6 +48,9 @@ $history = $hist->fetchAll(PDO::FETCH_OBJ);
 .pager a,.pager span{padding:7px 13px;border-radius:6px;font-size:13px;text-decoration:none;color:var(--secondary);border:1px solid #e2e8f0;}
 .pager .current{background:var(--secondary);color:#fff;border-color:var(--secondary);}
 .pager a:hover{background:#f1f5f9;}
+.pts-pos{color:#0B6B2E;}.pts-neg{color:#B3302B;}
+html[data-theme="dark"] .pts-pos{color:#5CC79C;}html[data-theme="dark"] .pts-neg{color:#FCA5A5;}
+.table-responsive:focus-visible{outline:2px solid var(--secondary);outline-offset:2px;}
 </style>
 </head><body>
 <?php include('backend/header.php'); ?>
@@ -57,16 +63,16 @@ $history = $hist->fetchAll(PDO::FETCH_OBJ);
 <div class="container" style="padding-bottom:50px;">
   <div class="info-card">
     <?php if (empty($history)): ?>
-      <p style="color:#999;text-align:center;padding:30px;">No points activity yet. Book a tour, write a review, or refer a friend to start earning!</p>
+      <p style="color:var(--text-muted);text-align:center;padding:30px;">No points activity yet. Book a tour, write a review, or refer a friend to start earning!</p>
     <?php else: ?>
-    <div class="table-responsive"><table class="table table-striped">
+    <div class="table-responsive" tabindex="0" role="region" aria-label="Points history"><table class="table table-striped">
       <thead><tr><th>Date</th><th>Description</th><th style="text-align:right;">Points</th></tr></thead>
       <tbody>
       <?php foreach ($history as $h): ?>
       <tr>
         <td><?= date('d M Y, g:i A', strtotime($h->CreatedAt)) ?></td>
         <td><?= htmlspecialchars($h->Description) ?></td>
-        <td style="text-align:right;"><span style="color:<?= $h->Points > 0 ? 'green' : 'red' ?>;font-weight:700;"><?= ($h->Points > 0 ? '+' : '') . $h->Points ?> pts</span></td>
+        <td style="text-align:right;"><span class="<?= $h->Points > 0 ? 'pts-pos' : 'pts-neg' ?>" style="font-weight:700;"><?= ($h->Points > 0 ? '+' : '') . $h->Points ?> pts</span></td>
       </tr>
       <?php endforeach; ?>
       </tbody>

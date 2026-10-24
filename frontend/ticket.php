@@ -9,7 +9,7 @@
  * print dialog (window.print() -> "Save as PDF" destination), which every
  * modern browser supports natively and reliably, with zero new dependencies.
  */
-session_start();
+require_once __DIR__ . '/../backend/session-boot.php';
 error_reporting(E_ALL); ini_set('display_errors', '0'); ini_set('log_errors', '1');
 include('backend/config.php');
 tms_require_user();
@@ -17,9 +17,13 @@ tms_require_user();
 $bid   = tms_int($_GET['bkid'] ?? 0, 1);
 $email = $_SESSION['login'];
 
+// Defensive (Rule 8): migration 013 may not have run yet on this
+// deployment -- never let a pending migration break ticket viewing.
+$hasBookingFx = tms_booking_fx_columns_exist($dbh);
 $q = $dbh->prepare(
     "SELECT b.BookingId, b.PackageId, b.FromDate, b.ToDate, b.Comment, b.status, b.RegDate,
-            b.NoOfPersons, b.TotalCost, b.MobileNumber, b.CouponCode, b.DiscountApplied, b.VerificationCode,
+            b.NoOfPersons, b.TotalCost, b.MobileNumber, b.CouponCode, b.DiscountApplied, b.VerificationCode"
+            . ($hasBookingFx ? ", b.DisplayCurrency, b.DisplayAmount, b.FxRate, b.FxRateSource, b.FxRateTimestamp" : "") . ",
             p.PackageName, p.PackageLocation, p.PackageDuration, p.PackagePrice
      FROM tblbooking b
      JOIN tbltourpackages p ON p.PackageId = b.PackageId
@@ -54,8 +58,12 @@ if ($booking) {
 <html lang="<?php echo htmlspecialchars(tms_active_language(), ENT_QUOTES, 'UTF-8'); ?>">
 <head>
 <link rel="manifest" href="manifest.json">
-<meta name="theme-color" content="#0B2B3C">
+<meta name="theme-color" content="#104B3A">
 <link rel="apple-touch-icon" href="images/icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="TMS">
+<meta name="mobile-web-app-capable" content="yes">
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>TMS | E-Ticket<?php echo $booking ? ' #BK'.str_pad($booking->BookingId,3,'0',STR_PAD_LEFT) : ''; ?></title>
@@ -63,7 +71,6 @@ if ($booking) {
 <link href="<?php echo tms_asset_ver('css/modern-theme.css'); ?>" rel="stylesheet">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700;9..144,800&family=Manrope:wght@400;500;600;700;800&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
 <style>
   * { box-sizing: border-box; }
   body { font-family: 'Segoe UI', Arial, sans-serif; background:#f1f3f6; margin:0; padding:30px 16px; color:#26313f; }
@@ -83,20 +90,20 @@ if ($booking) {
   .ticket-body { padding:28px 30px; }
   .row { display:flex; flex-wrap:wrap; gap:24px; margin-bottom:22px; }
   .field { flex:1; min-width:170px; }
-  .field .lbl { font-size:11px; color:#94a3b8; text-transform:uppercase; letter-spacing:.5px; margin-bottom:4px; }
+  .field .lbl { font-size:11px; color:var(--text-muted); text-transform:uppercase; letter-spacing:.5px; margin-bottom:4px; }
   .field .val { font-size:15px; font-weight:600; color:#1e293b; }
   hr.dashed { border:none; border-top:2px dashed #e2e8f0; margin:22px 0; }
   .cost-box { background:#f8fafc; border-radius:10px; padding:16px 20px; }
   .cost-row { display:flex; justify-content:space-between; font-size:13.5px; padding:4px 0; color:#475569; }
   .cost-row.total { font-size:16px; font-weight:800; color:#1e293b; border-top:1px solid #e2e8f0; margin-top:6px; padding-top:10px; }
-  .footer-note { padding:18px 30px 28px; font-size:12px; color:#94a3b8; line-height:1.6; }
+  .footer-note { padding:18px 30px 28px; font-size:12px; color:var(--text-muted); line-height:1.6; }
   .empty-box { background:#fff; border-radius:14px; padding:60px 30px; text-align:center; box-shadow:0 6px 30px rgba(0,0,0,0.09); }
   .empty-box i { font-size:48px; color:#e2e8f0; margin-bottom:16px; display:block; }
   .boarding-stub { position:relative; display:flex; align-items:center; gap:16px; padding:20px 30px; border-top:1px dashed #e2e8f0; }
   .stub-perf { position:absolute; top:-11px; left:0; right:0; height:22px; background:
       radial-gradient(circle at 0 11px, transparent 10px, #f1f3f6 11px) left/22px 22px repeat-x; }
   .qr-box { width:96px; height:96px; flex-shrink:0; background:#fff; border:1px solid #e2e8f0; border-radius:8px; padding:6px; box-sizing:border-box; display:flex; align-items:center; justify-content:center; }
-  .qr-noscript { font-size:11px; color:#94a3b8; text-align:center; }
+  .qr-noscript { font-size:11px; color:var(--text-muted); text-align:center; }
   .stub-info { font-size:12.5px; color:#475569; line-height:1.6; }
   @media print {
     body { background:#fff; padding:0; }
@@ -108,54 +115,54 @@ if ($booking) {
 <body>
 <div class="ticket-wrap">
   <div class="toolbar">
-    <a href="tour-history.php"><i class="fa fa-arrow-left"></i> Back to My Bookings</a>
+    <a href="tour-history.php"><i class="fa fa-arrow-left"></i> <?php echo tms_t('link_back_to_my_bookings','Back to My Bookings'); ?></a>
     <?php if ($booking && !$notReady): ?>
-    <button class="btn-print" onclick="window.print()"><i class="fa fa-download"></i> Save as PDF / Print</button>
+    <button class="btn-print" onclick="window.print()"><i class="fa fa-download"></i> <?php echo tms_t('btn_save_pdf_print','Save as PDF / Print'); ?></button>
     <?php endif; ?>
   </div>
 
   <?php if ($notFound): ?>
     <div class="empty-box">
       <i class="fa fa-ticket"></i>
-      <h3>Ticket not found</h3>
-      <p style="color:#94a3b8;">We couldn't find that booking on your account.</p>
+      <h3><?php echo tms_t('heading_ticket_not_found','Ticket not found'); ?></h3>
+      <p style="color:var(--text-muted);"><?php echo tms_t('msg_ticket_not_found_subtitle',"We couldn't find that booking on your account."); ?></p>
     </div>
   <?php elseif ($notReady): ?>
     <div class="empty-box">
       <i class="fa fa-clock-o"></i>
-      <h3>Ticket not ready yet</h3>
-      <p style="color:#94a3b8;">
+      <h3><?php echo tms_t('heading_ticket_not_ready','Ticket not ready yet'); ?></h3>
+      <p style="color:var(--text-muted);">
         <?php echo (int)$booking->status === 2
-          ? 'This booking was cancelled, so no ticket is available.'
-          : 'This booking is still pending confirmation. Your e-ticket will be ready once our team confirms it.'; ?>
+          ? tms_t('msg_booking_cancelled_no_ticket','This booking was cancelled, so no ticket is available.')
+          : tms_t('msg_booking_pending_no_ticket','This booking is still pending confirmation. Your e-ticket will be ready once our team confirms it.'); ?>
       </p>
     </div>
   <?php else: ?>
     <div class="ticket">
       <div class="ticket-head">
         <div>
-          <h1><i class="fa fa-plane"></i> TMS E-Ticket</h1>
+          <h1><i class="fa fa-plane"></i> <?php echo tms_t('heading_tms_eticket','TMS E-Ticket'); ?></h1>
           <div class="brand">Tourism Management System</div>
-          <div class="status-pill"><i class="fa fa-check-circle"></i> Confirmed</div>
+          <div class="status-pill"><i class="fa fa-check-circle"></i> <?php echo tms_t('step_confirmed','Confirmed'); ?></div>
         </div>
         <div class="ref">
-          <div class="lbl">BOOKING REFERENCE</div>
+          <div class="lbl"><?php echo tms_t('label_booking_reference','BOOKING REFERENCE'); ?></div>
           <div class="val">#BK<?php echo str_pad($booking->BookingId,3,'0',STR_PAD_LEFT); ?></div>
         </div>
       </div>
       <div class="ticket-body">
         <div class="row">
           <div class="field">
-            <div class="lbl">Passenger</div>
+            <div class="lbl"><?php echo tms_t('label_passenger','Passenger'); ?></div>
             <div class="val"><?php echo htmlspecialchars($passenger, ENT_QUOTES, 'UTF-8'); ?></div>
           </div>
           <div class="field">
-            <div class="lbl">Contact Email</div>
+            <div class="lbl"><?php echo tms_t('label_contact_email','Contact Email'); ?></div>
             <div class="val"><?php echo htmlspecialchars($email, ENT_QUOTES, 'UTF-8'); ?></div>
           </div>
           <?php if (!empty($booking->MobileNumber)): ?>
           <div class="field">
-            <div class="lbl">Mobile</div>
+            <div class="lbl"><?php echo tms_t('label_mobile','Mobile'); ?></div>
             <div class="val"><?php echo htmlspecialchars($booking->MobileNumber, ENT_QUOTES, 'UTF-8'); ?></div>
           </div>
           <?php endif; ?>
@@ -165,26 +172,26 @@ if ($booking) {
 
         <div class="row">
           <div class="field" style="flex-basis:100%;">
-            <div class="lbl">Tour Package</div>
+            <div class="lbl"><?php echo tms_t('label_tour_package','Tour Package'); ?></div>
             <div class="val" style="font-size:17px;"><?php echo htmlspecialchars($booking->PackageName, ENT_QUOTES, 'UTF-8'); ?></div>
           </div>
         </div>
         <div class="row">
           <div class="field">
-            <div class="lbl">Destination</div>
+            <div class="lbl"><?php echo tms_t('label_destination','Destination'); ?></div>
             <div class="val"><i class="fa fa-map-marker" style="color:var(--secondary);"></i> <?php echo htmlspecialchars($booking->PackageLocation, ENT_QUOTES, 'UTF-8'); ?></div>
           </div>
           <div class="field">
-            <div class="lbl">From</div>
+            <div class="lbl"><?php echo tms_t('label_from','From'); ?></div>
             <div class="val"><?php echo htmlspecialchars($booking->FromDate, ENT_QUOTES, 'UTF-8'); ?></div>
           </div>
           <div class="field">
-            <div class="lbl">To</div>
+            <div class="lbl"><?php echo tms_t('label_to','To'); ?></div>
             <div class="val"><?php echo htmlspecialchars($booking->ToDate, ENT_QUOTES, 'UTF-8'); ?></div>
           </div>
           <?php if (!empty($booking->NoOfPersons)): ?>
           <div class="field">
-            <div class="lbl">Travelers</div>
+            <div class="lbl"><?php echo tms_t('label_travelers','Travelers'); ?></div>
             <div class="val"><?php echo (int)$booking->NoOfPersons; ?></div>
           </div>
           <?php endif; ?>
@@ -193,7 +200,7 @@ if ($booking) {
         <?php if (!empty($booking->Comment)): ?>
         <div class="row">
           <div class="field" style="flex-basis:100%;">
-            <div class="lbl">Special Notes</div>
+            <div class="lbl"><?php echo tms_t('label_special_notes','Special Notes'); ?></div>
             <div class="val" style="font-weight:400;font-size:13.5px;"><?php echo nl2br(htmlspecialchars($booking->Comment, ENT_QUOTES, 'UTF-8')); ?></div>
           </div>
         </div>
@@ -217,31 +224,46 @@ if ($booking) {
             $subtotal  = !empty($booking->TotalCost) ? (int)$booking->TotalCost + $discount - $bookingAddonTotal : $unitPrice * $persons;
             $total     = !empty($booking->TotalCost) ? (int)$booking->TotalCost : max(0, $subtotal - $discount);
           ?>
-          <div class="cost-row"><span>Package price × <?php echo $persons; ?> traveler(s)</span><span><?php echo tms_currency($subtotal); ?></span></div>
+          <div class="cost-row"><span><?php echo tms_t('label_package_price_x_prefix','Package price ×'); ?> <?php echo $persons; ?> <?php echo tms_t('label_traveller_word','traveler(s)'); ?></span><span><?php echo tms_currency($subtotal); ?></span></div>
           <?php if ($discount > 0): ?>
-          <div class="cost-row"><span>Discount <?php echo !empty($booking->CouponCode) ? '(' . htmlspecialchars($booking->CouponCode, ENT_QUOTES, 'UTF-8') . ')' : ''; ?></span><span>&minus; <?php echo tms_currency($discount); ?></span></div>
+          <div class="cost-row"><span><?php echo tms_t('label_discount','Discount'); ?> <?php echo !empty($booking->CouponCode) ? '(' . htmlspecialchars($booking->CouponCode, ENT_QUOTES, 'UTF-8') . ')' : ''; ?></span><span>&minus; <?php echo tms_currency($discount); ?></span></div>
           <?php endif; ?>
           <?php foreach ($bookingAddons as $ba): ?>
           <div class="cost-row"><span><?php echo htmlspecialchars($ba->Name, ENT_QUOTES, 'UTF-8'); ?><?php echo ((int)$ba->Quantity > 1 ? ' × ' . (int)$ba->Quantity : ''); ?></span><span><?php echo tms_currency((int)$ba->Price * (int)$ba->Quantity); ?></span></div>
           <?php endforeach; ?>
-          <div class="cost-row total"><span>Total Paid</span><span><?php echo tms_currency($total); ?></span></div>
+          <div class="cost-row total"><span><?php echo tms_t('label_total_paid','Total Paid'); ?></span><span><?php echo tms_currency($total); ?></span></div>
+          <?php if (!empty($booking->DisplayCurrency) && $booking->DisplayCurrency !== 'BDT' && isset(TMS_CURRENCIES[$booking->DisplayCurrency])): ?>
+          <?php
+            // FEATURE (Round 115 continuation, master prompt item 37 --
+            // Currency): "Total Paid" above always reflects tms_currency()'s
+            // LIVE rate for whatever currency is active in THIS session right
+            // now -- it can drift from what the customer actually saw the day
+            // they booked. This is that fixed historical record instead --
+            // source/rate/timestamp, captured once at booking time and never
+            // recalculated (see tms_capture_booking_fx()).
+            $dispMeta = TMS_CURRENCIES[$booking->DisplayCurrency];
+          ?>
+          <div class="cost-row" style="font-size:12px;color:var(--text-muted);">
+            <span><?php echo tms_t('dest_shown_in_currency_prefix','Shown to you in'); ?> <?php echo htmlspecialchars($booking->DisplayCurrency, ENT_QUOTES, 'UTF-8'); ?> <?php echo tms_t('dest_shown_in_currency_suffix','when you booked'); ?></span>
+            <span><?php echo htmlspecialchars($dispMeta['symbol'], ENT_QUOTES, 'UTF-8'); ?> <?php echo number_format((float)$booking->DisplayAmount, (int)$dispMeta['decimals']); ?> (rate <?php echo number_format((float)$booking->FxRate, 4); ?>, <?php echo htmlspecialchars((string)$booking->FxRateSource, ENT_QUOTES, 'UTF-8'); ?>, as of <?php echo htmlspecialchars((string)$booking->FxRateTimestamp, ENT_QUOTES, 'UTF-8'); ?>)</span>
+          </div>
+          <?php endif; ?>
         </div>
       </div>
       <div class="footer-note">
-        Booked on <?php echo htmlspecialchars($booking->RegDate, ENT_QUOTES, 'UTF-8'); ?>.
-        Please carry a valid photo ID matching the passenger name above. For cancellations, refunds, or changes,
-        visit <strong>My Bookings</strong> or contact TMS support at +880 1759-443004.
+        <?php echo tms_t('label_booked_on_prefix','Booked on'); ?> <?php echo htmlspecialchars($booking->RegDate, ENT_QUOTES, 'UTF-8'); ?>.
+        <?php echo tms_t('dest_ticket_footer_note', 'Please carry a valid photo ID matching the passenger name above. For cancellations, refunds, or changes, visit <strong>My Bookings</strong> or contact TMS support at +880 1759-443004.'); ?>
       </div>
       <?php if (!empty($booking->VerificationCode)): ?>
       <div class="boarding-stub">
         <div class="stub-perf" aria-hidden="true"></div>
         <div class="stub-qr">
           <div id="tmsTicketQr" class="qr-box" data-qr-value="TMS-BK<?php echo (int)$booking->BookingId; ?>-<?php echo htmlspecialchars($booking->VerificationCode, ENT_QUOTES, 'UTF-8'); ?>"></div>
-          <noscript><div class="qr-noscript">Enable JavaScript to display the scannable QR code.</div></noscript>
+          <noscript><div class="qr-noscript"><?php echo tms_t('msg_enable_js_qr','Enable JavaScript to display the scannable QR code.'); ?></div></noscript>
         </div>
         <div class="stub-info">
-          <strong style="color:#1e293b;">Verification code: <?php echo htmlspecialchars($booking->VerificationCode, ENT_QUOTES,'UTF-8'); ?></strong><br>
-          Scan this code or show it at check-in to confirm this booking is genuine. This QR is generated on your device — no booking data is sent to any third-party QR service.
+          <strong style="color:#1e293b;"><?php echo tms_t('label_verification_code_colon','Verification code:'); ?> <?php echo htmlspecialchars($booking->VerificationCode, ENT_QUOTES,'UTF-8'); ?></strong><br>
+          <?php echo tms_t('dest_qr_scan_instructions', 'Scan this code or show it at check-in to confirm this booking is genuine. This QR is generated on your device — no booking data is sent to any third-party QR service.'); ?>
         </div>
       </div>
       <?php endif; ?>

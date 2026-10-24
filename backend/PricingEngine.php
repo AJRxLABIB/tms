@@ -119,15 +119,22 @@ function tms_remaining_seats_for_update(PDO $dbh, int $packageId): ?int {
     return max(0, (int)$capacity - $booked);
 }
 
+/**
+ * Coupon discount in whole currency units, exact integer arithmetic, half-up. Percent is clamped to [0, TMS_MAX_LOYALTY_DISCOUNT].
+ * (Was float round(x,2) written into INT columns: 13,665 at 10% became discount 1,367 but total 12,299 - off by one.)
+ */
+function tms_coupon_discount(int $subtotal, float $percent): int {
+    $pct = max(0.0, min($percent, (float)TMS_MAX_LOYALTY_DISCOUNT));
+    $bp  = (int) round($pct * 100);                       // basis points, e.g. 12.5% -> 1250
+    return max(0, min($subtotal, intdiv($subtotal * $bp + 5000, 10000)));
+}
+
 function tms_dynamic_price(PDO $dbh, int $packageId, float $basePrice, ?string $fromDate = null): array
 {
-    if ($basePrice <= 0) {
-        return ['base' => $basePrice, 'final' => (int) round($basePrice), 'multiplier' => 1.0,
-                'demand_pct' => 0, 'date_pct' => 0, 'weekend_pct' => 0, 'seats_pct' => 0, 'label' => ''];
-    }
+    if ($basePrice <= 0) return tms_price_from_signals($basePrice, 0, null, 0, $fromDate);
 
     // ── Demand signal: recent bookings for this exact package ──────────────
-    $demandPct = 0;
+    $recentBookings = 0;
     try {
         $dq = $dbh->prepare(
             "SELECT COUNT(*) FROM tblbooking
@@ -136,14 +143,74 @@ function tms_dynamic_price(PDO $dbh, int $packageId, float $basePrice, ?string $
         );
         $dq->execute([':pid' => $packageId]);
         $recentBookings = (int) $dq->fetchColumn();
-
-        if ($recentBookings >= 10)      $demandPct = 12;
-        elseif ($recentBookings >= 5)   $demandPct = 6;
-        elseif ($recentBookings >= 2)   $demandPct = 2;
     } catch (Exception $e) {
         error_log('[TMS Pricing] Demand lookup failed: ' . $e->getMessage());
-        $demandPct = 0;
+        $recentBookings = 0;
     }
+
+    // ── Scarcity signal inputs: only when this package actually tracks capacity ──
+    $remainingSeats = tms_remaining_seats($dbh, $packageId);
+    $totalCapacity = 0;
+    if ($remainingSeats !== null) {
+        $capQ2 = $dbh->prepare("SELECT SeatsAvailable FROM tbltourpackages WHERE PackageId = :pid");
+        $capQ2->execute([':pid' => $packageId]);
+        $totalCapacity = (int) $capQ2->fetchColumn();
+    }
+    return tms_price_from_signals($basePrice, $recentBookings, $remainingSeats, $totalCapacity, $fromDate);
+}
+
+/**
+ * Dynamic prices for MANY packages with two grouped queries instead of ~4 per package (listing pages, search results).
+ * Uses exactly the same arithmetic as tms_dynamic_price() (both call tms_price_from_signals); tests/perf/listing_test.php proves
+ * the results are identical, including capacity-tracked packages.
+ * @param array<int,array{PackageId:int|string,PackagePrice:int|float|string,SeatsAvailable?:mixed}> $rows
+ * @return array<int,array> package id => same shape as tms_dynamic_price()
+ */
+function tms_dynamic_price_batch(PDO $dbh, array $rows, ?string $fromDate = null): array
+{
+    $ids = [];
+    foreach ($rows as $r) { $id = (int)$r['PackageId']; if ($id > 0 && (float)$r['PackagePrice'] > 0) $ids[$id] = true; }
+    $ids = array_keys($ids);
+    $recent = []; $booked = [];
+    if ($ids) {
+        $in = implode(',', array_fill(0, count($ids), '?'));
+        try {
+            $q = $dbh->prepare("SELECT PackageId, COUNT(*) FROM tblbooking WHERE PackageId IN ($in) AND status IN (0,1) AND RegDate >= (NOW() - INTERVAL 30 DAY) GROUP BY PackageId");
+            $q->execute($ids);
+            foreach ($q->fetchAll(PDO::FETCH_NUM) as [$pid, $n]) $recent[(int)$pid] = (int)$n;
+        } catch (Exception $e) { error_log('[TMS Pricing] Batch demand lookup failed: ' . $e->getMessage()); $recent = []; }
+        try {
+            $q = $dbh->prepare("SELECT PackageId, COALESCE(SUM(NoOfPersons),0) FROM tblbooking WHERE PackageId IN ($in) AND status IN (0,1) GROUP BY PackageId");
+            $q->execute($ids);
+            foreach ($q->fetchAll(PDO::FETCH_NUM) as [$pid, $n]) $booked[(int)$pid] = (int)$n;
+        } catch (Exception $e) { error_log('[TMS Pricing] Batch seat lookup failed: ' . $e->getMessage()); $booked = null; }
+    }
+    $out = [];
+    foreach ($rows as $r) {
+        $id = (int)$r['PackageId']; $base = (float)$r['PackagePrice'];
+        if ($base <= 0) { $out[$id] = tms_price_from_signals($base, 0, null, 0, $fromDate); continue; }
+        $cap = $r['SeatsAvailable'] ?? null;
+        $remaining = null; $total = 0;
+        if ($booked !== null && $cap !== null && $cap !== '') { $total = (int)$cap; $remaining = max(0, $total - ($booked[$id] ?? 0)); }
+        $out[$id] = tms_price_from_signals($base, $recent[$id] ?? 0, $remaining, $total, $fromDate);
+    }
+    return $out;
+}
+
+/**
+ * Pure pricing arithmetic (no database): demand, timing, weekend and scarcity signals -> final price and label.
+ * @return array{base:float, final:int, multiplier:float, demand_pct:int, date_pct:int, weekend_pct:int, seats_pct:int, label:string, remaining_seats?:?int}
+ */
+function tms_price_from_signals(float $basePrice, int $recentBookings, ?int $remainingSeats, int $totalCapacity, ?string $fromDate = null): array
+{
+    if ($basePrice <= 0) {
+        return ['base' => $basePrice, 'final' => (int) round($basePrice), 'multiplier' => 1.0,
+                'demand_pct' => 0, 'date_pct' => 0, 'weekend_pct' => 0, 'seats_pct' => 0, 'label' => ''];
+    }
+    $demandPct = 0;
+    if ($recentBookings >= 10)      $demandPct = 12;
+    elseif ($recentBookings >= 5)   $demandPct = 6;
+    elseif ($recentBookings >= 2)   $demandPct = 2;
 
     // ── Timing signal: only when a real departure date is known ────────────
     $datePct = 0;
@@ -182,17 +249,11 @@ function tms_dynamic_price(PDO $dbh, int $packageId, float $basePrice, ?string $
 
     // ── Scarcity signal: only when this package actually tracks capacity ───
     $seatsPct = 0;
-    $remainingSeats = tms_remaining_seats($dbh, $packageId);
-    if ($remainingSeats !== null) {
-        $capQ2 = $dbh->prepare("SELECT SeatsAvailable FROM tbltourpackages WHERE PackageId = :pid");
-        $capQ2->execute([':pid' => $packageId]);
-        $totalCapacity = (int) $capQ2->fetchColumn();
-        if ($totalCapacity > 0) {
-            $fillRatio = 1 - ($remainingSeats / $totalCapacity);
-            if ($remainingSeats <= 2)        $seatsPct = 18; // almost sold out
-            elseif ($fillRatio >= 0.8)       $seatsPct = 10;
-            elseif ($fillRatio >= 0.5)       $seatsPct = 4;
-        }
+    if ($remainingSeats !== null && $totalCapacity > 0) {
+        $fillRatio = 1 - ($remainingSeats / $totalCapacity);
+        if ($remainingSeats <= 2)        $seatsPct = 18; // almost sold out
+        elseif ($fillRatio >= 0.8)       $seatsPct = 10;
+        elseif ($fillRatio >= 0.5)       $seatsPct = 4;
     }
 
     $multiplier = (1 + $demandPct / 100) * (1 + $datePct / 100) * (1 + $weekendPct / 100) * (1 + $seatsPct / 100);
@@ -298,5 +359,59 @@ function tms_get_price_history(PDO $dbh, int $packageId, int $days = 90): array
     } catch (Exception $e) {
         error_log('[TMS Pricing] get_price_history failed: ' . $e->getMessage());
         return [];
+    }
+}
+
+/**
+ * Loyalty points for a booking, recorded against that booking so a cancellation can reverse exactly what it earned.
+ * Idempotent: awarding the same booking twice credits once. The log text ("Booking #BK<id> confirmed") is unchanged for
+ * compatibility with the loyalty page. Safe to call inside an open transaction. Never throws (a missed award is not a failed booking).
+ */
+function tms_loyalty_award_booking(PDO $dbh, string $email, int $bookingId, int $points = 100): bool
+{
+    if ($email === '' || $bookingId <= 0 || $points <= 0) return false;
+    $desc = 'Booking #BK' . $bookingId . ' confirmed';
+    try {
+        $dupe = $dbh->prepare('SELECT 1 FROM tblloyalty_log WHERE UserEmail = ? AND Description = ? LIMIT 1');
+        $dupe->execute([$email, $desc]);
+        if ($dupe->fetchColumn()) return false;
+        $dbh->prepare('INSERT INTO tblloyalty(UserEmail,Points,TotalEarned) VALUES(:e,:p,:p2) ON DUPLICATE KEY UPDATE Points=Points+:p3, TotalEarned=TotalEarned+:p4')
+            ->execute([':e' => $email, ':p' => $points, ':p2' => $points, ':p3' => $points, ':p4' => $points]);
+        $dbh->prepare('INSERT INTO tblloyalty_log(UserEmail,Points,Description) VALUES(?,?,?)')->execute([$email, $points, $desc]);
+        return true;
+    } catch (Throwable $e) {
+        error_log('[TMS Loyalty] award failed (booking unaffected): ' . $e->getMessage());
+        return false;
+    }
+}
+
+/**
+ * Take back the points a booking earned when it is cancelled. Deducts exactly what that booking awarded (the balance may go
+ * negative if the points were already spent - the customer then owes them, so earn-spend-cancel cannot farm points), once only.
+ * Bookings with no award record (older rows) are untouched. Returns the number of points reversed (0 if none).
+ */
+function tms_loyalty_reverse_booking(PDO $dbh, int $bookingId): int
+{
+    if ($bookingId <= 0) return 0;
+    $own = !$dbh->inTransaction();
+    try {
+        if ($own) $dbh->beginTransaction();
+        $em = $dbh->prepare('SELECT UserEmail FROM tblbooking WHERE BookingId = ?'); $em->execute([$bookingId]);
+        $email = (string)$em->fetchColumn();
+        if ($email === '') { if ($own) $dbh->commit(); return 0; }
+        $dbh->prepare('INSERT IGNORE INTO tblloyalty(UserEmail,Points,TotalEarned) VALUES(?,0,0)')->execute([$email]);
+        $dbh->prepare('SELECT Points FROM tblloyalty WHERE UserEmail = ? FOR UPDATE')->execute([$email]);   // serialises concurrent reversals
+        $aw = $dbh->prepare('SELECT COALESCE(SUM(Points),0) FROM tblloyalty_log WHERE UserEmail = ? AND Description = ?');
+        $aw->execute([$email, 'Booking #BK' . $bookingId . ' confirmed']); $awarded = (int)$aw->fetchColumn();
+        $aw->execute([$email, 'Booking #BK' . $bookingId . ' cancelled - points reversed']); $already = (int)$aw->fetchColumn();
+        if ($awarded <= 0 || $already !== 0) { if ($own) $dbh->commit(); return 0; }
+        $dbh->prepare('UPDATE tblloyalty SET Points = Points - ?, TotalEarned = GREATEST(0, TotalEarned - ?) WHERE UserEmail = ?')->execute([$awarded, $awarded, $email]);
+        $dbh->prepare('INSERT INTO tblloyalty_log(UserEmail,Points,Description) VALUES(?,?,?)')->execute([$email, -$awarded, 'Booking #BK' . $bookingId . ' cancelled - points reversed']);
+        if ($own) $dbh->commit();
+        return $awarded;
+    } catch (Throwable $e) {
+        if ($own && $dbh->inTransaction()) $dbh->rollBack();
+        error_log('[TMS Loyalty] reversal failed: ' . $e->getMessage());
+        return 0;
     }
 }

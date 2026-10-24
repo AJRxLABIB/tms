@@ -10,7 +10,7 @@
   <div style="background:#fff;border-radius:16px;width:100%;max-width:440px;margin:20px;overflow:hidden;box-shadow:0 24px 60px rgba(0,0,0,.4);">
 
     <!-- Header -->
-    <div style="background:linear-gradient(135deg,#667eea,#764ba2);padding:24px 28px 20px;color:#fff;position:relative;">
+    <div style="background:linear-gradient(135deg,#176B50,#104B3A);padding:24px 28px 20px;color:#fff;position:relative;">
       <button onclick="closeModal('signupModal')" style="position:absolute;top:14px;right:16px;background:rgba(255,255,255,.2);border:none;color:#fff;width:28px;height:28px;border-radius:50%;cursor:pointer;font-size:16px;line-height:1;">&times;</button>
       <div style="font-size:20px;font-weight:800;"><i class="fa fa-globe"></i> TMS</div>
       <div style="font-size:15px;font-weight:600;margin-top:6px;opacity:.9;"><i class="fa fa-user-plus"></i> Create Account</div>
@@ -30,7 +30,7 @@
             <i class="fa fa-user" style="position:absolute;left:11px;top:50%;transform:translateY(-50%);color:#a0aec0;font-size:13px;"></i>
             <input type="text" name="FullName" placeholder="Your full name"
                    style="width:100%;padding:10px 12px 10px 32px;border:2px solid #e2e8f0;border-radius:8px;font-size:13px;outline:none;transition:.2s;"
-                   onfocus="this.style.borderColor='#667eea'" onblur="this.style.borderColor='#e2e8f0'"
+                   onfocus="this.style.borderColor='#176B50'" onblur="this.style.borderColor='#e2e8f0'"
                    required minlength="3" maxlength="100">
           </div>
         </div>
@@ -41,7 +41,7 @@
             <i class="fa fa-phone" style="position:absolute;left:11px;top:50%;transform:translateY(-50%);color:#a0aec0;font-size:13px;"></i>
             <input type="tel" name="MobileNumber" placeholder="+880 1XXX-XXXXXX"
                    style="width:100%;padding:10px 12px 10px 32px;border:2px solid #e2e8f0;border-radius:8px;font-size:13px;outline:none;transition:.2s;"
-                   onfocus="this.style.borderColor='#667eea'" onblur="this.style.borderColor='#e2e8f0'"
+                   onfocus="this.style.borderColor='#176B50'" onblur="this.style.borderColor='#e2e8f0'"
                    required maxlength="15">
           </div>
         </div>
@@ -52,7 +52,7 @@
             <i class="fa fa-envelope" style="position:absolute;left:11px;top:50%;transform:translateY(-50%);color:#a0aec0;font-size:13px;"></i>
             <input type="email" name="EmailId" placeholder="you@example.com"
                    style="width:100%;padding:10px 12px 10px 32px;border:2px solid #e2e8f0;border-radius:8px;font-size:13px;outline:none;transition:.2s;"
-                   onfocus="this.style.borderColor='#667eea'" onblur="this.style.borderColor='#e2e8f0'"
+                   onfocus="this.style.borderColor='#176B50'" onblur="this.style.borderColor='#e2e8f0'"
                    required maxlength="100">
           </div>
         </div>
@@ -71,7 +71,7 @@
             <i class="fa fa-lock" style="position:absolute;left:11px;top:50%;transform:translateY(-50%);color:#a0aec0;font-size:13px;"></i>
             <input type="password" name="Password" id="suPass" placeholder="Min. 6 characters"
                    style="width:100%;padding:10px 32px 10px 32px;border:2px solid #e2e8f0;border-radius:8px;font-size:13px;outline:none;transition:.2s;"
-                   onfocus="this.style.borderColor='#667eea'" onblur="this.style.borderColor='#e2e8f0'"
+                   onfocus="this.style.borderColor='#176B50'" onblur="this.style.borderColor='#e2e8f0'"
                    required minlength="6" maxlength="100">
             <button type="button" onclick="suToggle('suPass',this)" style="position:absolute;right:4px;top:50%;transform:translateY(-50%);background:none;border:none;color:#a0aec0;cursor:pointer;padding:0;font-size:13px;width:24px;height:24px;display:flex;align-items:center;justify-content:center;"><i class="fa fa-eye"></i></button>
           </div>
@@ -83,14 +83,14 @@
             <i class="fa fa-lock" style="position:absolute;left:11px;top:50%;transform:translateY(-50%);color:#a0aec0;font-size:13px;"></i>
             <input type="password" name="CPassword" id="suCPass" placeholder="Repeat your password"
                    style="width:100%;padding:10px 32px 10px 32px;border:2px solid #e2e8f0;border-radius:8px;font-size:13px;outline:none;transition:.2s;"
-                   onfocus="this.style.borderColor='#667eea'" onblur="this.style.borderColor='#e2e8f0'"
+                   onfocus="this.style.borderColor='#176B50'" onblur="this.style.borderColor='#e2e8f0'"
                    required minlength="6" maxlength="100">
             <button type="button" onclick="suToggle('suCPass',this)" style="position:absolute;right:4px;top:50%;transform:translateY(-50%);background:none;border:none;color:#a0aec0;cursor:pointer;padding:0;font-size:13px;width:24px;height:24px;display:flex;align-items:center;justify-content:center;"><i class="fa fa-eye"></i></button>
           </div>
         </div>
 
         <button type="submit" id="signupBtn"
-                style="width:100%;background:linear-gradient(135deg,#667eea,#764ba2);color:#fff;border:none;border-radius:8px;height:44px;font-size:14px;font-weight:700;cursor:pointer;transition:.2s;">
+                style="width:100%;background:linear-gradient(135deg,#176B50,#104B3A);color:#fff;border:none;border-radius:8px;height:44px;font-size:14px;font-weight:700;cursor:pointer;transition:.2s;">
           <i class="fa fa-user-plus"></i> Create Account
         </button>
       </form>
@@ -98,7 +98,7 @@
       <div style="text-align:center;margin-top:16px;font-size:13px;color:#718096;">
         Already have an account?
         <a href="javascript:void(0)" onclick="closeModal('signupModal');openModal('signinModal')"
-           style="color:#667eea;font-weight:700;text-decoration:none;">Sign In</a>
+           style="color:#176B50;font-weight:700;text-decoration:none;">Sign In</a>
       </div>
     </div>
 

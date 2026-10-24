@@ -5,7 +5,7 @@
  * opens their notification dropdown. Marks all of that user's notifications
  * as read. No response body is needed — the browser fires this and moves on.
  */
-session_start();
+require_once __DIR__ . '/../backend/session-boot.php';
 error_reporting(E_ALL); ini_set('display_errors', '0'); ini_set('log_errors', '1');
 include('backend/config.php');
 

@@ -1,7 +1,8 @@
 <?php
-session_start();
+require_once __DIR__ . '/../backend/session-boot.php';
 error_reporting(E_ALL); ini_set('display_errors', '0'); ini_set('log_errors', '1');
 include('backend/config.php');
+require_once 'backend/services/SupplierService.php';
 // LIVE BUG FIX (customer-facing audit): this page is real browsing/
 // marketing content -- it's explicitly allowed in robots.txt and listed
 // in sitemap.php for search engines -- but a blanket "require login
@@ -35,12 +36,23 @@ if (isset($_POST['submit2']) || isset($_POST['addcart'])) {
         $mobile    = tms_clean($_POST['mobile'] ?? '');
         $couponRaw = tms_clean($_POST['couponCode'] ?? '');
 
+        // Double-submit / replay guard for "Book Now": each rendering of the form carries a one-time id (kept in the session). A second
+        // click, a browser re-POST after reload, or a replayed request finds it already consumed and creates nothing.
+        $bookNonceOk = true;
+        if (isset($_POST['submit2'])) {
+            $bn = (string)($_POST['booking_nonce'] ?? '');
+            $bookNonceOk = ($bn !== '' && isset($_SESSION['book_nonces'][$bn]));
+            if ($bookNonceOk) unset($_SESSION['book_nonces'][$bn]);
+        }
+
         // Date validation
         $from = DateTime::createFromFormat('d-m-Y', $fromdate) ?: DateTime::createFromFormat('Y-m-d', $fromdate);
         $to   = DateTime::createFromFormat('d-m-Y', $todate)   ?: DateTime::createFromFormat('Y-m-d', $todate);
         $now  = new DateTime();
 
-        if (!$from || !$to) {
+        if (!$bookNonceOk) {
+            $error = 'This booking form was already submitted or has expired. Please check My Tours before trying again.';
+        } elseif (!$from || !$to) {
             $error = 'Please enter valid dates in dd-mm-yyyy format.';
         } elseif ($from <= $now) {
             $error = 'Departure date must be in the future.';
@@ -48,6 +60,10 @@ if (isset($_POST['submit2']) || isset($_POST['addcart'])) {
             $error = 'Return date must be after the departure date.';
         } elseif ($pid === 0) {
             $error = 'Invalid package.';
+        } elseif (!tms_package_bookable($dbh, $pid)) {
+            $error = 'This package is not available for booking.'; // unpublished / pending review / removed
+        } elseif (($blackoutMsg = SupplierService::blackoutConflict($dbh, $pid, $from->format('Y-m-d'), $to->format('Y-m-d'))) !== null) {
+            $error = $blackoutMsg; // supplier blackout dates are enforced server-side
         } elseif (isset($_POST['addcart'])) {
             $cartPriceQ = $dbh->prepare("SELECT PackagePrice FROM tbltourpackages WHERE PackageId=:pid LIMIT 1");
             $cartPriceQ->execute([':pid' => $pid]);
@@ -100,11 +116,18 @@ if (isset($_POST['submit2']) || isset($_POST['addcart'])) {
             } elseif (($seatsAvail = tms_remaining_seats($dbh, $pid)) !== null && $persons > $seatsAvail) {
                 $error = "Sorry, only {$seatsAvail} seat" . ($seatsAvail===1?'':'s') . " left for this package, but you requested {$persons}. Please reduce the number of travelers.";
             } else {
+                // One real transaction: seat re-check under a row lock, coupon claim, booking, add-ons and loyalty either all happen or
+                // none do (a failed insert used to leave a personal coupon burned; two simultaneous requests could both pass a lock-free
+                // seat check for the last seats).
+                $dbh->beginTransaction();
+                try {
+                $lockedSeats = tms_remaining_seats_for_update($dbh, $pid);
+                if ($lockedSeats !== null && $persons > $lockedSeats) throw new RuntimeException('seats:' . $lockedSeats);
                 $pricing   = tms_dynamic_price($dbh, $pid, (float)$rawPrice, $from->format('Y-m-d'));
                 $unitPrice = (float)$pricing['final'];
-                $subtotal  = $unitPrice * $persons;
+                $subtotal  = (int)round($unitPrice) * $persons; // whole units, exact
 
-                $discountAmt = 0.0;
+                $discountAmt = 0;
                 $couponCode  = null;
                 if ($couponRaw !== '') {
                     $cq = $dbh->prepare("SELECT * FROM tblcoupons WHERE Code=:c AND (UserEmail=:e OR UserEmail IS NULL) AND IsUsed=0 AND (ExpiryDate IS NULL OR ExpiryDate >= CURDATE()) LIMIT 1");
@@ -132,8 +155,7 @@ if (isset($_POST['submit2']) || isset($_POST['addcart'])) {
                         if ($claimed) {
                             // Clamp: never trust a stored percentage. A legacy row
                             // written before the cap existed could be 100 or 120.
-                            $pct = max(0, min((float)$coupon->DiscountPercent, (float)TMS_MAX_LOYALTY_DISCOUNT));
-                            $discountAmt = round($subtotal * ($pct / 100), 2);
+                            $discountAmt = tms_coupon_discount((int)$subtotal, (float)$coupon->DiscountPercent); // clamped, integer-exact
                             $couponCode  = $couponRaw;
                         } else {
                             $error = 'Note: coupon code was just used by another request, so it was not applied.';
@@ -167,11 +189,21 @@ if (isset($_POST['submit2']) || isset($_POST['addcart'])) {
 
                 $total = max(0, $subtotal - $discountAmt) + $addonTotal;
                 $verificationCode = strtoupper(bin2hex(random_bytes(5)));
+                // FEATURE (Round 115 continuation, master prompt item 37 --
+                // Currency): records what the customer was actually shown
+                // (source/rate/timestamp) if they had a non-BDT display
+                // currency selected -- see tms_capture_booking_fx()'s own
+                // docblock. TotalCost itself is untouched, still BDT.
+                $fx = tms_capture_booking_fx((float)$total);
+                // Defensive (Rule 8): migration 013 may not have run yet on
+                // this deployment -- never let a pending migration break
+                // this booking path.
+                $hasBookingFx = tms_booking_fx_columns_exist($dbh);
 
-                $sql = "INSERT INTO tblbooking(PackageId,UserEmail,FromDate,ToDate,Comment,status,NoOfPersons,MobileNumber,TotalCost,CouponCode,DiscountApplied,VerificationCode,BookingDate)
-                        VALUES(:pid,:email,:from,:to,:comment,0,:persons,:mobile,:total,:coupon,:discount,:vcode,:bdate)";
+                $sql = "INSERT INTO tblbooking(PackageId,UserEmail,FromDate,ToDate,Comment,status,NoOfPersons,MobileNumber,TotalCost,CouponCode,DiscountApplied,VerificationCode,BookingDate" . ($hasBookingFx ? ",DisplayCurrency,DisplayAmount,FxRate,FxRateSource,FxRateTimestamp" : "") . ")
+                        VALUES(:pid,:email,:from,:to,:comment,0,:persons,:mobile,:total,:coupon,:discount,:vcode,:bdate" . ($hasBookingFx ? ",:dcur,:damt,:frate,:fsrc,:fts" : "") . ")";
                 $q = $dbh->prepare($sql);
-                $q->execute([
+                $q->execute(array_merge([
                     ':pid'     => $pid,
                     ':email'   => $email,
                     ':from'    => $from->format('Y-m-d'),
@@ -186,7 +218,13 @@ if (isset($_POST['submit2']) || isset($_POST['addcart'])) {
                     // BUG FIX: see checkout.php's identical comment —
                     // BookingDate was never populated by any booking path.
                     ':bdate'   => $from->format('Y-m-d'),
-                ]);
+                ], $hasBookingFx ? [
+                    ':dcur'    => $fx['currency'],
+                    ':damt'    => $fx['converted_amount'],
+                    ':frate'   => $fx['rate'],
+                    ':fsrc'    => $fx['source'],
+                    ':fts'     => $fx['rate_timestamp'],
+                ] : []));
                 $newBkId = $dbh->lastInsertId();
                 if ($newBkId) {
                     // Snapshot each selected add-on's Name/Price at booking time
@@ -203,20 +241,24 @@ if (isset($_POST['submit2']) || isset($_POST['addcart'])) {
                             ]);
                         }
                     }
-                    // Award 100 loyalty points
-                    $email2 = $_SESSION['login'];
-                    $dbh->prepare("INSERT INTO tblloyalty(UserEmail,Points,TotalEarned) VALUES(:e,100,100)
-                        ON DUPLICATE KEY UPDATE Points=Points+100, TotalEarned=TotalEarned+100")->execute([':e'=>$email2]);
-                    try {
-                        $dbh->prepare("INSERT INTO tblloyalty_log(UserEmail,Points,Description) VALUES(:e,100,:d)")
-                            ->execute([':e'=>$email2,':d'=>'Booking #BK'.$newBkId.' confirmed']);
-                    } catch (Exception $e) {
-                        error_log('[TMS Loyalty] Log insert failed (booking still succeeded): ' . $e->getMessage());
-                    }
+                    // Award 100 loyalty points (recorded against this booking so a cancellation can reverse it)
+                    tms_loyalty_award_booking($dbh, (string)$_SESSION['login'], (int)$newBkId, 100);
+                    $dbh->commit();
                     $msg = ($error ?: '') . ' Package booked successfully! Check your booking in <a href="tour-history.php">My Tours</a>. You earned <strong>100 loyalty points!</strong>';
                     $error = '';
                 } else {
-                    $error = 'Something went wrong. Please try again.';
+                    throw new RuntimeException('insert_failed');
+                }
+                } catch (Throwable $bookEx) {
+                    if ($dbh->inTransaction()) $dbh->rollBack();
+                    $msg = '';
+                    if (str_starts_with($bookEx->getMessage(), 'seats:')) {
+                        $left = (int)substr($bookEx->getMessage(), 6);
+                        $error = "Sorry, only {$left} seat" . ($left === 1 ? '' : 's') . " left for this package, but you requested {$persons}. Please reduce the number of travelers.";
+                    } else {
+                        error_log('[TMS Booking] Book Now rolled back: ' . $bookEx->getMessage());
+                        $error = 'Something went wrong. Nothing was reserved or charged. Please try again.';
+                    }
                 }
             }
         }
@@ -224,7 +266,7 @@ if (isset($_POST['submit2']) || isset($_POST['addcart'])) {
 }
 
 $pid = tms_int($_GET['pkgid'] ?? 0, 1);
-$q   = $dbh->prepare("SELECT * FROM tbltourpackages WHERE PackageId=:pid LIMIT 1");
+$q   = $dbh->prepare("SELECT * FROM tbltourpackages WHERE PackageId=:pid AND " . TMS_PKG_PUBLIC_SQL . " LIMIT 1");
 $q->bindParam(':pid', $pid, PDO::PARAM_INT);
 $q->execute();
 $pkg = $q->fetch(PDO::FETCH_OBJ);
@@ -324,14 +366,21 @@ $gallery = [];
 $galleryOwnCount = 0;
 if ($pkg) {
     $ownImg = tms_package_image_src($pkg->PackageImage);
-    if ($ownImg && strpos($ownImg, 'no-image-placeholder') === false) {
+    // A stock photo chosen only by a generic category (no destination keyword matched) is how a rice-terrace
+    // package got a city skyline. Those are replaced by a neutral illustration instead of a wrong "photo".
+    $tmsStockSpecific = tms_stock_photo_is_specific((string)$pkg->PackageName, (string)$pkg->PackageLocation, (string)$pkg->PackageType);
+    $tmsOwnIsMismatchedStock = tms_is_stock_url((string)$pkg->PackageImage) && !$tmsStockSpecific;
+    if ($ownImg && strpos($ownImg, 'no-image-placeholder') === false && !$tmsOwnIsMismatchedStock) {
         $gallery[] = $ownImg;
         $galleryOwnCount = 1;
     }
-    foreach (tms_destination_gallery($pkg->PackageName, $pkg->PackageLocation, $pkg->PackageType) as $g) {
-        if (!in_array($g, $gallery, true)) $gallery[] = $g;
+    if ($tmsStockSpecific) {
+        foreach (tms_destination_gallery($pkg->PackageName, $pkg->PackageLocation, $pkg->PackageType) as $g) {
+            if (!in_array($g, $gallery, true)) $gallery[] = $g;
+        }
     }
 }
+$tmsHeroImg = $pkg ? tms_card_image('', (string)$pkg->PackageName, (string)$pkg->PackageType, (string)$pkg->PackageLocation) : null;
 // Master prompt item 65 (photo/content provenance): everything past the
 // package's own uploaded photo (if any) comes from tms_destination_gallery()'s
 // curated Unsplash stock-photo pool, picked by keyword match on the
@@ -376,8 +425,12 @@ if (!empty($pkg) && $totalReviewCount >= 3) {
 <html lang="<?php echo htmlspecialchars(tms_active_language(), ENT_QUOTES, 'UTF-8'); ?>">
 <head>
 <link rel="manifest" href="manifest.json">
-<meta name="theme-color" content="#0B2B3C">
+<meta name="theme-color" content="#104B3A">
 <link rel="apple-touch-icon" href="images/icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="TMS">
+<meta name="mobile-web-app-capable" content="yes">
 <title>TMS | <?php echo $pkg ? htmlspecialchars($pkgNameT ?? $pkg->PackageName,ENT_QUOTES,'UTF-8') : 'Package Details'; ?></title>
 <?php
 // NEW (Round 20, spec item 53 — SEO): only emitted when a real package was
@@ -438,13 +491,11 @@ if ($pkg) {
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
 <link href="css/bootstrap.min2.css" rel='stylesheet'/>
-<link href="css/style.min.css" rel='stylesheet'/>
+<link href="<?php echo tms_asset_ver('css/style.min.css'); ?>" rel='stylesheet'/>
 <link href="css/font-awesome.min2.css" rel="stylesheet">
 <link href="<?php echo tms_asset_ver('css/modern-theme.css'); ?>" rel="stylesheet">
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700;9..144,800&family=Manrope:wght@400;500;600;700;800&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
 <script src="js/jquery-1.12.0.min.js" defer></script>
 <script src="js/bootstrap.min.js" defer></script>
 <link href="css/animate.css" rel="stylesheet" media="all">
@@ -466,19 +517,20 @@ if ($pkg) {
 .pkg-card .pkg-gallery-thumb:hover{opacity:.9;}
 .pkg-card .pkg-gallery-thumb.active{opacity:1;border-color:var(--secondary);}
 .pkg-body{padding:28px;}
-.pkg-body h2{font-size:1.6em;font-weight:700;color:#333;margin-bottom:6px;}
-.meta-row{display:flex;flex-wrap:wrap;gap:18px;margin:14px 0;font-size:14px;color:#666;}
+.pkg-body h2{font-size:1.6em;font-weight:700;color:var(--text);margin-bottom:6px;}
+.meta-row{display:flex;flex-wrap:wrap;gap:18px;margin:14px 0;font-size:14px;color:var(--text-muted);}
 .meta-row span i{margin-right:5px;color:var(--secondary);}
-.price-box{background:linear-gradient(135deg,var(--secondary),#27ae60);color:#fff;border-radius:10px;padding:18px 22px;margin-bottom:22px;text-align:center;}
+.price-box{background:linear-gradient(135deg,var(--primary-dark),var(--primary));color:#fff;border-radius:10px;padding:18px 22px;margin-bottom:22px;text-align:center;}
 .price-box .price{font-size:2.2em;font-weight:700;}
 .price-box small{opacity:.85;font-size:13px;}
 .form-control{border:2px solid #e0e0e0;border-radius:7px;height:42px;font-size:14px;}
 .form-control:focus{border-color:var(--secondary);box-shadow:none;outline:none;}
 .btn-book{background:var(--secondary);color:#fff;border:none;border-radius:8px;padding:12px 34px;font-weight:700;font-size:15px;cursor:pointer;transition:.2s;width:100%;}
 .btn-book:hover{background:#2d6a97;}
-.review-mini{background:#f8f9fa;border-radius:8px;padding:14px;margin-bottom:12px;}
-.review-mini h6{font-size:13px;font-weight:700;color:#333;margin:0 0 4px;}
-.stars-sm{color:#f0ad4e;font-size:13px;}
+.btn-book-outline{background:var(--white);color:var(--secondary);border:2px solid var(--secondary);border-radius:8px;padding:12px 34px;font-weight:700;font-size:15px;cursor:pointer;transition:.2s;width:100%;margin-top:8px;}
+.review-mini{background:var(--bg);border-radius:8px;padding:14px;margin-bottom:12px;}
+.review-mini h6{font-size:13px;font-weight:700;color:var(--text);margin:0 0 4px;}
+.stars-sm{color:var(--brass);font-size:13px;}
 </style>
 </head>
 <body>
@@ -508,10 +560,9 @@ if ($pkg) {
             <div class="col-md-8">
                 <div class="pkg-card wow fadeInLeft">
                     <div class="pkg-gallery" id="pkgGallery">
-                        <img loading="lazy" id="pkgGalleryMain"
-                             src="<?php echo htmlspecialchars($gallery[0] ?? tms_package_image_src($pkg->PackageImage),ENT_QUOTES,'UTF-8'); ?>"
-                             <?php echo tms_responsive_img_attrs($gallery[0] ?? ''); ?>
-                             onerror="this.src='images/no-image-placeholder.jpg'"
+                        <img loading="lazy" id="pkgGalleryMain" width="1200" height="600"
+                             src="<?php echo htmlspecialchars($gallery[0] ?? $tmsHeroImg['src'],ENT_QUOTES,'UTF-8'); ?>"
+                             <?php echo tms_responsive_img_attrs($gallery[0] ?? ''); ?><?php echo tms_img_onerror($tmsHeroImg['fallback']); ?>
                              alt="<?php echo htmlspecialchars($pkgNameT ?? $pkg->PackageName,ENT_QUOTES,'UTF-8'); ?>">
                         <?php if (count($gallery) > 1): ?>
                         <button type="button" class="pkg-gallery-nav prev" onclick="tmsGalleryStep(-1)" aria-label="Previous photo">&#8249;</button>
@@ -544,18 +595,27 @@ if ($pkg) {
                     })();
                     </script>
                     <?php endif; ?>
+                    <?php if (!$gallery): ?>
+                    <div class="pkg-gallery-stock-note" style="font-size:11.5px;color:var(--text-muted);padding:6px 2px 0;">
+                        <i class="fa fa-info-circle"></i> Illustration only. No photo of this destination has been added yet.
+                    </div>
+                    <?php endif; ?>
                     <?php if ($galleryHasStockPhotos): ?>
-                    <div class="pkg-gallery-stock-note" style="font-size:11.5px;color:#94a3b8;padding:6px 2px 0;">
+                    <div class="pkg-gallery-stock-note" style="font-size:11.5px;color:var(--text-muted);padding:6px 2px 0;">
                         <i class="fa fa-info-circle"></i> Some photos are representative stock images of this destination, not exclusive property photos.
                     </div>
                     <?php endif; ?>
                     <div class="pkg-body">
-                        <p style="font-size:12px;color:#aaa;margin:0;">#PKG-<?php echo (int)$pkg->PackageId; ?></p>
+                        <p style="font-size:12px;color:var(--text-muted);margin:0;">#PKG-<?php echo (int)$pkg->PackageId; ?></p>
                         <h2><?php echo htmlspecialchars($pkgNameT ?? $pkg->PackageName,ENT_QUOTES,'UTF-8'); ?></h2>
+                        <?php $tmsMetaProbe = !empty($pkg->PackageMeta) ? json_decode((string)$pkg->PackageMeta, true) : null; ?>
+                        <?php if (tms_meta_is_sample($tmsMetaProbe)): ?>
+                        <p style="margin:6px 0 10px;"><span class="tms-sample-badge"><i class="fa fa-flask" aria-hidden="true"></i> <?php echo !empty($tmsMetaProbe) && tms_meta_is_generated($tmsMetaProbe) ? 'Sample listing — details are placeholders' : 'Sample listing'; ?></span></p>
+                        <?php endif; ?>
                         <?php if (!empty($pkg->AvgRating) && $pkg->AvgRating > 0): ?>
-                        <div style="color:#f0ad4e;font-size:16px;margin-bottom:8px;">
+                        <div style="color:var(--brass);font-size:16px;margin-bottom:8px;">
                             <?php for ($i=1;$i<=5;$i++) echo $i<=round($pkg->AvgRating)?'★':'☆'; ?>
-                            <span style="font-size:13px;color:#888;"><?php echo number_format($pkg->AvgRating,1); ?> / 5</span>
+                            <span style="font-size:13px;color:var(--text-muted);"><?php echo number_format($pkg->AvgRating,1); ?> / 5</span>
                         </div>
                         <?php endif; ?>
                         <?php if ($matchScore && $matchScore['overall_match'] !== null): ?>
@@ -574,10 +634,10 @@ if ($pkg) {
                                 </li>
                                 <?php endforeach; ?>
                             </ul>
-                            <p style="font-size:11px;color:#94a3b8;margin:8px 0 0;">Computed from real platform data (price, live weather forecast, seat availability, ratings, distance) -- not an AI guess.</p>
+                            <p style="font-size:11px;color:var(--text-muted);margin:8px 0 0;">Computed from real platform data (price, live weather forecast, seat availability, ratings, distance) -- not an AI guess.</p>
                         </div>
                         <?php elseif ($matchScore && !empty($matchScore['note'])): ?>
-                        <div style="font-size:12px;color:#94a3b8;margin-bottom:12px;"><i class="fa fa-info-circle"></i> <?php echo htmlspecialchars($matchScore['note'],ENT_QUOTES,'UTF-8'); ?></div>
+                        <div style="font-size:12px;color:var(--text-muted);margin-bottom:12px;"><i class="fa fa-info-circle"></i> <?php echo htmlspecialchars($matchScore['note'],ENT_QUOTES,'UTF-8'); ?></div>
                         <?php endif; ?>
                         <div class="meta-row">
                             <span><i class="fa fa-tag"></i> <?php echo htmlspecialchars($pkg->PackageType,ENT_QUOTES,'UTF-8'); ?></span>
@@ -643,6 +703,9 @@ if ($pkg) {
                         }
                         if (is_array($meta)):
                             $esc = function($s) { return htmlspecialchars((string)$s, ENT_QUOTES, 'UTF-8'); };
+                            // Hide generic filler and invented numbers (random suitability stars, formula price ranges) on
+                            // template-generated sample listings; real, written content is untouched.
+                            $meta = tms_clean_package_meta($meta);
                         ?>
                         <hr style="margin:24px 0;border-color:#eee;">
 
@@ -671,11 +734,11 @@ if ($pkg) {
 
                         <!-- Live crowd insights (Phase 2e): loads async, grounded in real
                              booking history when enough exists — see CrowdPredictor.php -->
-                        <div id="crowdInsightsBox" style="display:none;margin-top:6px;margin-bottom:12px;padding:14px 16px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;font-size:13.5px;color:#4a5568;"></div>
+                        <div id="crowdInsightsBox" style="display:none;margin-top:6px;margin-bottom:12px;padding:14px 16px;background:var(--white);border:1px solid var(--border);border-radius:10px;font-size:13.5px;color:var(--text);"></div>
 
                         <!-- Carbon footprint / sustainability (Phase 2i): loads async,
                              real distance-based estimate — see SustainabilityCalculator.php -->
-                        <div id="sustainabilityBox" style="display:none;margin-top:6px;margin-bottom:18px;padding:14px 16px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;font-size:13.5px;color:#166534;"></div>
+                        <div id="sustainabilityBox" style="display:none;margin-top:6px;margin-bottom:18px;padding:14px 16px;background:var(--white);border:1px solid var(--border);border-left:4px solid var(--primary);border-radius:10px;font-size:13.5px;color:var(--text);"></div>
 
                         <?php
                         $suitLabels = ['adventure_level'=>'Adventure Level','family_suitability'=>'Family','couple_suitability'=>'Couple','solo_suitability'=>'Solo Traveler'];
@@ -688,7 +751,7 @@ if ($pkg) {
                             <?php foreach ($suitLabels as $key=>$label): if (!isset($meta[$key])) continue; ?>
                             <div style="font-size:13px;color:#555;">
                                 <?php echo $label; ?>:
-                                <span style="color:#f0ad4e;"><?php for($i=1;$i<=5;$i++) echo $i<=intval($meta[$key])?'★':'☆'; ?></span>
+                                <span style="color:var(--brass);"><?php for($i=1;$i<=5;$i++) echo $i<=intval($meta[$key])?'★':'☆'; ?></span>
                             </div>
                             <?php endforeach; ?>
                         </div>
@@ -731,7 +794,7 @@ if ($pkg) {
                             <?php endif; ?>
                             <?php if (!empty($meta['nearby_hospitals'])): ?>
                             <div class="col-sm-6" style="margin-bottom:14px;">
-                                <h5><i class="fa fa-plus-square" style="color:#e74c3c"></i> Nearby Hospitals / Emergency</h5>
+                                <h5><i class="fa fa-plus-square" style="color:var(--danger)"></i> Nearby Hospitals / Emergency</h5>
                                 <ul style="font-size:13px;color:#666;padding-left:18px;">
                                     <?php foreach ($meta['nearby_hospitals'] as $hos): ?><li><?php echo $esc($hos); ?></li><?php endforeach; ?>
                                 </ul>
@@ -740,14 +803,14 @@ if ($pkg) {
                         </div>
 
                         <?php if (!empty($meta['travel_tips'])): ?>
-                        <h4 style="margin-top:10px;"><i class="fa fa-lightbulb-o" style="color:#f0ad4e"></i> Travel Tips</h4>
+                        <h4 style="margin-top:10px;"><i class="fa fa-lightbulb-o" style="color:var(--brass)"></i> Travel Tips</h4>
                         <ul style="font-size:13.5px;color:#555;padding-left:18px;">
                             <?php foreach ($meta['travel_tips'] as $tip): ?><li><?php echo $esc($tip); ?></li><?php endforeach; ?>
                         </ul>
                         <?php endif; ?>
 
                         <?php if (!empty($meta['safety_guidelines'])): ?>
-                        <h4 style="margin-top:10px;"><i class="fa fa-shield" style="color:#27ae60"></i> Safety Guidelines</h4>
+                        <h4 style="margin-top:10px;"><i class="fa fa-shield" style="color:var(--success)"></i> Safety Guidelines</h4>
                         <ul style="font-size:13.5px;color:#555;padding-left:18px;">
                             <?php foreach ($meta['safety_guidelines'] as $s): ?><li><?php echo $esc($s); ?></li><?php endforeach; ?>
                         </ul>
@@ -772,7 +835,7 @@ if ($pkg) {
                         <div style="font-weight:600;color:#333;cursor:pointer;display:flex;justify-content:space-between;align-items:center;"
                              onclick="var a=document.getElementById('pkgFaqA<?php echo $fi; ?>');a.style.display=a.style.display==='block'?'none':'block';this.querySelector('i').classList.toggle('fa-chevron-down');this.querySelector('i').classList.toggle('fa-chevron-up');">
                             <span><?php echo htmlspecialchars($faq['q'],ENT_QUOTES,'UTF-8'); ?></span>
-                            <i class="fa fa-chevron-down" style="font-size:12px;color:#999;"></i>
+                            <i class="fa fa-chevron-down" style="font-size:12px;color:var(--text-muted);"></i>
                         </div>
                         <div id="pkgFaqA<?php echo $fi; ?>" style="display:none;font-size:13.5px;color:#666;margin-top:8px;line-height:1.6;">
                             <?php echo htmlspecialchars($faq['a'],ENT_QUOTES,'UTF-8'); ?>
@@ -826,14 +889,14 @@ if ($pkg) {
                 <!-- Recent Reviews -->
                 <?php if (count($reviews) > 0): ?>
                 <div class="pkg-card wow fadeInUp" style="padding:24px;">
-                    <h4 style="font-weight:700;margin-bottom:16px;"><i class="fa fa-star" style="color:#f0ad4e"></i> <?php echo tms_t('heading_reviews','Recent Reviews'); ?></h4>
+                    <h4 style="font-weight:700;margin-bottom:16px;"><i class="fa fa-star" style="color:var(--brass)"></i> <?php echo tms_t('heading_reviews','Recent Reviews'); ?></h4>
                     <?php foreach ($reviews as $rev): ?>
                     <div class="review-mini">
                         <div style="display:flex;justify-content:space-between;align-items:center;">
                             <h6><?php echo htmlspecialchars($rev->UserName,ENT_QUOTES,'UTF-8'); ?></h6>
                             <div class="stars-sm"><?php for ($i=1;$i<=5;$i++) echo $i<=$rev->Rating?'★':'☆'; ?></div>
                         </div>
-                        <p style="font-size:13px;color:#666;margin:4px 0 0;"><?php echo htmlspecialchars(substr($rev->ReviewText,0,150),ENT_QUOTES,'UTF-8'); ?>…</p>
+                        <p style="font-size:13px;color:var(--text-muted);margin:4px 0 0;"><?php echo htmlspecialchars(substr($rev->ReviewText,0,150),ENT_QUOTES,'UTF-8'); ?>…</p>
                     </div>
                     <?php endforeach; ?>
                     <a href="reviews.php?pkg=<?php echo (int)$pkg->PackageId; ?>" style="font-size:13px;color:var(--secondary);">
@@ -909,8 +972,8 @@ if ($pkg) {
                 ?>
                 <?php if(!empty($pkg->MapLat) && !empty($pkg->MapLng) && defined('GOOGLE_MAPS_API_KEY') && GOOGLE_MAPS_API_KEY !== '' && $tmsStreetViewOk): ?>
                 <div class="pkg-card wow fadeInUp" style="padding:24px;">
-                    <h4 style="font-weight:700;margin-bottom:4px;"><i class="fa fa-street-view" style="color:#7c3aed"></i> Virtual Preview</h4>
-                    <p style="font-size:12.5px;color:#94a3b8;margin-bottom:14px;">Real 360° street-level imagery of this destination — drag to look around.</p>
+                    <h4 style="font-weight:700;margin-bottom:4px;"><i class="fa fa-street-view" style="color:#1F8A66"></i> Virtual Preview</h4>
+                    <p style="font-size:12.5px;color:var(--text-muted);margin-bottom:14px;">Real 360° street-level imagery of this destination — drag to look around.</p>
                     <div style="border-radius:var(--radius-sm);overflow:hidden;box-shadow:var(--shadow-sm);">
                         <iframe
                             width="100%" height="320" style="border:0;display:block;" loading="lazy"
@@ -928,8 +991,8 @@ if ($pkg) {
                      coordinates set — no fake pins for packages without them. -->
                 <?php if(!empty($pkg->MapLat) && !empty($pkg->MapLng)): ?>
                 <div class="pkg-card wow fadeInUp" style="padding:24px;">
-                    <h4 style="font-weight:700;margin-bottom:4px;"><i class="fa fa-map-marker" style="color:#e74c3c"></i> Nearby Essentials</h4>
-                    <p style="font-size:12.5px;color:#94a3b8;margin-bottom:14px;">Live data around this destination — hotels, food, and emergency services.</p>
+                    <h4 style="font-weight:700;margin-bottom:4px;"><i class="fa fa-map-marker" style="color:var(--primary)"></i> Nearby Essentials</h4>
+                    <p style="font-size:12.5px;color:var(--text-muted);margin-bottom:14px;">Live data around this destination — hotels, food, and emergency services.</p>
                     <div id="nearbyMap" style="height:280px;border-radius:var(--radius-sm);margin-bottom:14px;background:#eef2f5;"></div>
                     <div id="nearbyTabs" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px;">
                         <button type="button" class="nearby-tab active" data-cat="hotel"><i class="fa fa-bed"></i> Hotels</button>
@@ -939,7 +1002,7 @@ if ($pkg) {
                         <button type="button" class="nearby-tab" data-cat="police"><i class="fa fa-shield"></i> Police</button>
                     </div>
                     <div id="nearbyList" style="font-size:13px;color:#666;">
-                        <div style="text-align:center;padding:16px;color:#aaa;"><i class="fa fa-spinner fa-spin"></i> Loading hotels nearby…</div>
+                        <div style="text-align:center;padding:16px;color:var(--text-muted);"><i class="fa fa-spinner fa-spin"></i> Loading hotels nearby…</div>
                     </div>
                 </div>
                 <style>
@@ -949,8 +1012,8 @@ if ($pkg) {
                 .nearby-item{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid #f0f0f0;cursor:pointer;transition:background .15s;border-radius:6px;}
                 .nearby-item:hover{background:var(--bg);padding-left:6px;padding-right:6px;}
                 .nearby-item:last-child{border-bottom:none;}
-                .nearby-item .name{font-weight:600;color:#333;font-size:13.5px;}
-                .nearby-item .addr{font-size:11.5px;color:#94a3b8;margin-top:2px;}
+                .nearby-item .name{font-weight:600;color:var(--text);font-size:13.5px;}
+                .nearby-item .addr{font-size:11.5px;color:var(--text-muted);margin-top:2px;}
                 .nearby-item .dist{font-family:var(--font-mono);font-size:11.5px;color:var(--secondary);font-weight:700;white-space:nowrap;}
 html[data-theme="dark"] .pkg-body h2,
 html[data-theme="dark"] .nearby-item .name { color: var(--text) !important; }
@@ -961,12 +1024,12 @@ html[data-theme="dark"] .meta-row { color: var(--text-muted) !important; }
                    for smaller places) are honestly labeled "Not listed" rather
                    than invented, and a real map link is always offered so the
                    visitor can dig further on an authoritative source. */
-                #placeDetailsOverlay{display:none;position:fixed;inset:0;background:rgba(11,43,60,0.55);z-index:10000;align-items:center;justify-content:center;padding:20px;}
+                #placeDetailsOverlay{display:none;position:fixed;inset:0;background:rgba(16,75,58,0.55);z-index:10000;align-items:center;justify-content:center;padding:20px;}
                 #placeDetailsOverlay.open{display:flex;}
                 #placeDetailsModal{background:#fff;border-radius:16px;max-width:420px;width:100%;max-height:85vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.3);}
                 .pd-head{padding:20px 22px 14px;border-bottom:1px solid #f0f0f0;position:relative;}
                 .pd-head h3{margin:0 18px 0 0;font-size:17px;font-weight:700;color:var(--text);}
-                .pd-close{position:absolute;top:16px;right:18px;background:none;border:none;font-size:20px;color:#94a3b8;cursor:pointer;line-height:1;}
+                .pd-close{position:absolute;top:16px;right:18px;background:none;border:none;font-size:20px;color:var(--text-muted);cursor:pointer;line-height:1;}
                 .pd-close:hover{color:#333;}
                 .pd-body{padding:16px 22px 22px;}
                 .pd-row{display:flex;gap:10px;padding:8px 0;border-bottom:1px solid #f8fafc;font-size:13px;}
@@ -1004,7 +1067,7 @@ html[data-theme="dark"] .meta-row { color: var(--text-muted) !important; }
                 .pd-section-title i{color:var(--secondary);}
                 .pd-section-text{font-size:12.5px;color:#64748b;line-height:1.5;margin:0;}
                 .pd-list-item{font-size:12.5px;color:var(--text);padding:4px 0;display:flex;gap:8px;align-items:flex-start;}
-                .pd-list-item i{color:#27ae60;margin-top:3px;flex-shrink:0;}
+                .pd-list-item i{color:var(--success);margin-top:3px;flex-shrink:0;}
                 html[data-theme="dark"] .pd-section{border-top-color:#2a3441;}
                 html[data-theme="dark"] .pd-badge{background:#232b37;color:#eef2f7;}
                 </style>
@@ -1017,14 +1080,17 @@ html[data-theme="dark"] .meta-row { color: var(--text-muted) !important; }
                         <div class="pd-body" id="pdBody"></div>
                     </div>
                 </div>
-                <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+                <script src="js/tms-leaflet-loader.js"></script>
+                <script src="js/tms-map.js"></script>
                 <script>
+                tmsLoadLeaflet(function (leafletErr) {
+                if (leafletErr || typeof L === "undefined") { var nm = document.getElementById("nearbyMap"); if (nm) nm.innerHTML = '<div style="padding:24px;text-align:center;color:#94a3b8;font-size:13px;">The map could not be loaded right now. Check your connection and reload.</div>'; return; }
                 (function(){
                     var lat = <?php echo (float)$pkg->MapLat; ?>, lng = <?php echo (float)$pkg->MapLng; ?>;
                     var map = L.map('nearbyMap').setView([lat, lng], 13);
-                    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                        attribution: '&copy; OpenStreetMap contributors', maxZoom: 18
-                    }).addTo(map);
+                    // Tile fallback chain (OSM -> Carto -> OSM France) and redraw when the container is resized/revealed.
+                    if (window.TmsMap) { TmsMap.addTiles(map, { maxZoom: 18 }); TmsMap.fixSize(map); }
+                    else L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '&copy; OpenStreetMap contributors', maxZoom: 18 }).addTo(map);
                     var destIcon = L.divIcon({className:'', html:'<div style="width:16px;height:16px;background:var(--accent);border:3px solid #fff;border-radius:50%;box-shadow:0 2px 6px rgba(0,0,0,.3);"></div>', iconSize:[16,16]});
                     // FIX (Round 114, package/places/map upgrade): this used to be
                     // htmlspecialchars(addslashes(...)) -- HTML-entity-encoding a
@@ -1071,7 +1137,7 @@ html[data-theme="dark"] .meta-row { color: var(--text-muted) !important; }
                     // stylesheet.
                     function openPlaceDetails(p, category) {
                         document.getElementById('pdName').textContent = p.name || 'Place';
-                        document.getElementById('pdBody').innerHTML = '<div style="text-align:center;padding:20px;color:#aaa;"><i class="fa fa-spinner fa-spin"></i> Loading details…</div>';
+                        document.getElementById('pdBody').innerHTML = '<div style="text-align:center;padding:20px;color:var(--text-muted);"><i class="fa fa-spinner fa-spin"></i> Loading details…</div>';
                         document.getElementById('placeDetailsOverlay').classList.add('open');
 
                         var qs = new URLSearchParams({
@@ -1171,12 +1237,24 @@ html[data-theme="dark"] .meta-row { color: var(--text-muted) !important; }
                         if (e.target === this) tmsClosePlaceDetails();
                     });
 
+                    var nearbyToken = 0;
+                    function nearbyRetryHtml(msg, cat, label) {
+                        return '<div style="text-align:center;padding:16px;color:#e11d48;" role="alert">' + escHtml(msg) +
+                            '<br><button type="button" class="nearby-retry" data-cat="' + cat + '" data-label="' + escHtml(label) + '" style="margin-top:8px;border:2px solid #e11d48;background:#fff;color:#9f1239;border-radius:18px;padding:6px 14px;font-weight:700;font-size:12.5px;cursor:pointer;min-height:36px;">Try again</button></div>';
+                    }
+                    document.getElementById('nearbyList').addEventListener('click', function(e){
+                        var b = e.target.closest ? e.target.closest('.nearby-retry') : null;
+                        if (b) loadCategory(b.getAttribute('data-cat'), b.getAttribute('data-label'));
+                    });
                     function loadCategory(cat, label){
-                        document.getElementById('nearbyList').innerHTML = '<div style="text-align:center;padding:16px;color:#aaa;"><i class="fa fa-spinner fa-spin"></i> Loading ' + label + ' nearby…</div>';
+                        var token = ++nearbyToken;   // ignore answers for a category the visitor has already left
+                        document.getElementById('nearbyList').innerHTML = '<div style="text-align:center;padding:16px;color:var(--text-muted);" role="status"><i class="fa fa-spinner fa-spin"></i> Loading ' + label + ' nearby…</div>';
                         clearMarkers();
-                        fetch('api/explore.php?action=places&lat=' + lat + '&lng=' + lng + '&category=' + cat)
-                            .then(function(r){ return r.json(); })
+                        var placesUrl = 'api/explore.php?action=places&lat=' + lat + '&lng=' + lng + '&category=' + cat;
+                        // Hard 14 s timeout (TmsMap.fetchJson): this used to wait forever when the map-data server stalled.
+                        (window.TmsMap ? TmsMap.fetchJson(placesUrl, { timeout: 14000 }) : fetch(placesUrl).then(function(r){ return r.json(); }))
                             .then(function(res){
+                                if (token !== nearbyToken) return;
                                 // api/explore.php wraps its response as
                                 // {success, data:{places, source}, ts}.
                                 // FIX (Round 14): a failed lookup used to be turned into an
@@ -1186,19 +1264,26 @@ html[data-theme="dark"] .meta-row { color: var(--text-muted) !important; }
                                 // rate-limits aggressively, so this fired regularly. The API
                                 // already returns a real message; show it.
                                 if (!res || !res.success) {
-                                    document.getElementById('nearbyList').innerHTML =
-                                        '<div style="text-align:center;padding:16px;color:#e11d48;">' +
-                                        escHtml((res && res.error) || 'Nearby places are temporarily unavailable — please try again shortly.') +
-                                        '</div>';
+                                    document.getElementById('nearbyList').innerHTML = nearbyRetryHtml((res && res.error) || 'Nearby places are temporarily unavailable — please try again shortly.', cat, label);
                                     return;
                                 }
                                 var results = (res.data && res.data.places) ? res.data.places : [];
+                                var origin = res.origin || (res.data && res.data.origin) || 'live';
                                 if (!results.length) {
-                                    document.getElementById('nearbyList').innerHTML = '<div style="text-align:center;padding:16px;color:#aaa;">No ' + label + ' found within a few kilometres of this destination.</div>';
+                                    document.getElementById('nearbyList').innerHTML = '<div style="text-align:center;padding:16px;color:var(--text-muted);">No ' + label + ' found within a few kilometres of this destination.</div>';
                                     return;
                                 }
                                 var listEl = document.getElementById('nearbyList');
                                 listEl.innerHTML = '';
+                                if (origin === 'stale' || origin === 'local') {
+                                    var note = document.createElement('div');
+                                    note.setAttribute('role', 'status');
+                                    note.style.cssText = 'font-size:12px;padding:8px 10px;margin-bottom:8px;border-radius:8px;background:#fff7e6;color:#8a5a00;border:1px solid #f5d38a;';
+                                    note.textContent = origin === 'local'
+                                        ? 'Live map data is unavailable right now. Showing places from our own catalogue.'
+                                        : 'Live data is unavailable right now. Showing results saved earlier; they may be out of date.';
+                                    listEl.appendChild(note);
+                                }
                                 results.slice(0, 8).forEach(function(p){
                                     // BUG FIX: distance_m can be null (e.g. a
                                     // Google Places result missing lat/lng —
@@ -1226,7 +1311,10 @@ html[data-theme="dark"] .meta-row { color: var(--text-muted) !important; }
                                     row.innerHTML = '<div><div class="name">' + escHtml(p.name) + '</div>' +
                                         (p.address ? '<div class="addr">' + escHtml(p.address) + '</div>' : '') + openBadge + '</div>' +
                                         '<div class="dist">' + distKm + '</div>';
-                                    row.addEventListener('click', function(){ openPlaceDetails(p, cat); });
+                                    row.addEventListener('click', function(){
+                                        if (p.source === 'local' && p.local_url) { window.location.href = p.local_url; return; }   // catalogue item: open its own page
+                                        openPlaceDetails(p, cat);
+                                    });
                                     listEl.appendChild(row);
                                     // Round 14: L.marker() with a null lat/lng throws
                                     // "Invalid LatLng object", which aborted the rest of
@@ -1239,8 +1327,10 @@ html[data-theme="dark"] .meta-row { color: var(--text-muted) !important; }
                                     }
                                 });
                             })
-                            .catch(function(){
-                                document.getElementById('nearbyList').innerHTML = '<div style="text-align:center;padding:16px;color:#e11d48;">Nearby places service is temporarily unavailable.</div>';
+                            .catch(function(err){
+                                if (token !== nearbyToken) return;
+                                var msg = (err && err.message === 'timeout') ? 'Loading took too long. The map data servers may be busy.' : 'Nearby places service is temporarily unavailable.';
+                                document.getElementById('nearbyList').innerHTML = nearbyRetryHtml(msg, cat, label);
                             });
                     }
                     document.querySelectorAll('.nearby-tab').forEach(function(btn){
@@ -1252,6 +1342,7 @@ html[data-theme="dark"] .meta-row { color: var(--text-muted) !important; }
                     });
                     loadCategory('hotel', 'hotels');
                 })();
+                });
                 </script>
                 <?php endif; ?>
             </div>
@@ -1317,7 +1408,7 @@ html[data-theme="dark"] .meta-row { color: var(--text-muted) !important; }
                             <i class="fa fa-bolt"></i> <?php echo htmlspecialchars($pkgPricing['label'], ENT_QUOTES, 'UTF-8'); ?>
                         </div>
                         <?php else: ?>
-                        <div id="tmsPriceBadge" style="margin-top:6px;font-size:11.5px;color:#94a3b8;"></div>
+                        <div id="tmsPriceBadge" style="margin-top:6px;font-size:11.5px;color:var(--text-muted);"></div>
                         <?php endif; ?>
                         <div style="margin-top:4px;font-size:10.5px;color:#b0b7c3;">Dynamic pricing — updates once you pick travel dates below.</div>
                         <?php if (count($priceHistory) >= 2):
@@ -1347,12 +1438,21 @@ html[data-theme="dark"] .meta-row { color: var(--text-muted) !important; }
                         </div>
                     </div>
 
+                    <?php require_once 'backend/services/TravelNoticeService.php'; $tnList = (!empty($pkg->Country)) ? TravelNoticeService::visible($dbh, (string)$pkg->Country) : []; if ($tnList): ?>
+                    <div class="pkg-card" style="padding:18px;" role="note">
+                        <h5 style="font-weight:700;margin:0 0 8px;"><i class="fa fa-info-circle" aria-hidden="true"></i> Travel notices for <?php echo htmlspecialchars((string)$pkg->Country, ENT_QUOTES, 'UTF-8'); ?></h5>
+                        <?php foreach (array_slice($tnList, 0, 3) as $tn): ?><p style="font-size:13px;margin:0 0 6px;"><b><?php echo htmlspecialchars($tn['Title'], ENT_QUOTES, 'UTF-8'); ?></b> <span style="color:var(--text-muted)">(checked <?php echo htmlspecialchars($tn['VerifiedOn'], ENT_QUOTES, 'UTF-8'); ?><?php echo $tn['stale'] ? ', may be out of date' : ''; ?>)</span></p><?php endforeach; ?>
+                        <a href="travel-notices.php?country=<?php echo urlencode((string)$pkg->Country); ?>" style="font-size:13px;text-decoration:underline;">See sources and details</a>
+                    </div>
+                    <?php endif; ?>
                     <div class="pkg-card" style="padding:24px;">
                         <h5 style="font-weight:700;margin-bottom:18px;"><i class="fa fa-calendar-check-o" style="color:var(--secondary)"></i> <?php echo tms_t('heading_book_package','Book This Package'); ?></h5>
                         <form method="post">
                             <?php tms_csrf_field(); ?>
+                            <?php $bookNonce = bin2hex(random_bytes(12)); $_SESSION['book_nonces'] = array_slice(($_SESSION['book_nonces'] ?? []) + [$bookNonce => time()], -20, null, true); ?>
+                            <input type="hidden" name="booking_nonce" value="<?php echo $bookNonce; ?>">
                             <div class="form-group">
-                                <label style="font-weight:600;font-size:13px;">Departure Date</label>
+                                <label style="font-weight:600;font-size:13px;" for="datepicker">Departure Date</label>
                                 <?php /* FIX (Round 14): these were bare text boxes with a
                                          "dd-mm-yyyy" placeholder and NO datepicker — js/jquery-ui.js
                                          ships in the repo but no page ever loads it, and nothing
@@ -1365,7 +1465,7 @@ html[data-theme="dark"] .meta-row { color: var(--text-muted) !important; }
                                        id="datepicker" min="<?php echo date('Y-m-d', strtotime('+1 day')); ?>" required>
                             </div>
                             <div class="form-group">
-                                <label style="font-weight:600;font-size:13px;">Return Date</label>
+                                <label for="datepicker1" style="font-weight:600;font-size:13px;">Return Date</label>
                                 <input type="date" name="todate" class="form-control date"
                                        id="datepicker1" min="<?php echo date('Y-m-d', strtotime('+1 day')); ?>" required>
                             </div>
@@ -1387,23 +1487,23 @@ html[data-theme="dark"] .meta-row { color: var(--text-muted) !important; }
                             });
                             </script>
                             <div class="form-group">
-                                <label style="font-weight:600;font-size:13px;">Number of Travelers</label>
+                                <label style="font-weight:600;font-size:13px;" for="personsInput">Number of Travelers</label>
                                 <input type="number" name="persons" id="personsInput" class="form-control" value="1" min="1" max="20" required>
                             </div>
                             <div class="form-group">
-                                <label style="font-weight:600;font-size:13px;">Mobile Number <small style="color:#aaa;">(optional)</small></label>
-                                <input type="tel" name="mobile" class="form-control" placeholder="e.g. 017XXXXXXXX" maxlength="20">
+                                <label style="font-weight:600;font-size:13px;" for="fld_mobile">Mobile Number <small style="color:var(--text-muted);">(optional)</small></label>
+                                <input type="tel" name="mobile" class="form-control" placeholder="e.g. 017XXXXXXXX" maxlength="20" id="fld_mobile">
                             </div>
                             <?php if (!empty($packageAddons)): ?>
                             <div class="form-group">
-                                <label style="font-weight:600;font-size:13px;">Add-ons <small style="color:#aaa;">(optional — works with either button below)</small></label>
+                                <label style="font-weight:600;font-size:13px;">Add-ons <small style="color:var(--text-muted);">(optional — works with either button below)</small></label>
                                 <div style="border:1px solid #eee;border-radius:8px;padding:10px 12px;">
                                     <?php foreach ($packageAddons as $ao): ?>
                                     <div style="display:flex;align-items:center;gap:8px;padding:6px 0;<?php echo $ao !== end($packageAddons) ? 'border-bottom:1px solid #f2f2f2;' : ''; ?>">
                                         <input type="checkbox" name="addons[]" value="<?php echo (int)$ao->AddOnId; ?>" id="addon-<?php echo (int)$ao->AddOnId; ?>">
                                         <label for="addon-<?php echo (int)$ao->AddOnId; ?>" style="flex:1;margin:0;font-weight:400;font-size:13.5px;cursor:pointer;">
                                             <?php echo htmlspecialchars($ao->Name, ENT_QUOTES, 'UTF-8'); ?>
-                                            <?php if (!empty($ao->Description)): ?><br><small style="color:#94a3b8;"><?php echo htmlspecialchars($ao->Description, ENT_QUOTES, 'UTF-8'); ?></small><?php endif; ?>
+                                            <?php if (!empty($ao->Description)): ?><br><small style="color:var(--text-muted);"><?php echo htmlspecialchars($ao->Description, ENT_QUOTES, 'UTF-8'); ?></small><?php endif; ?>
                                         </label>
                                         <span style="font-weight:600;font-size:13px;white-space:nowrap;"><?php echo tms_currency((float)$ao->Price); ?></span>
                                         <input type="number" name="addon_qty[<?php echo (int)$ao->AddOnId; ?>]" value="1" min="1" max="20" class="form-control" style="width:60px;padding:4px 6px;">
@@ -1413,7 +1513,7 @@ html[data-theme="dark"] .meta-row { color: var(--text-muted) !important; }
                             </div>
                             <?php endif; ?>
                             <div class="form-group">
-                                <label style="font-weight:600;font-size:13px;">Coupon Code <small style="color:#aaa;">(optional)</small></label>
+                                <label style="font-weight:600;font-size:13px;" for="couponCode">Coupon Code <small style="color:var(--text-muted);">(optional)</small></label>
                                 <div style="display:flex;gap:8px;">
                                     <input type="text" name="couponCode" id="couponCode" placeholder="e.g. WELCOME10" class="form-control" style="flex:1;">
                                     <button type="button" onclick="checkCoupon()" class="btn btn-info" style="white-space:nowrap;">Check</button>
@@ -1421,16 +1521,16 @@ html[data-theme="dark"] .meta-row { color: var(--text-muted) !important; }
                                 <div id="couponResult" style="margin-top:5px;font-size:13px;"></div>
                             </div>
                             <div class="form-group">
-                                <label style="font-weight:600;font-size:13px;">Special Requests</label>
+                                <label style="font-weight:600;font-size:13px;" for="fld_comment">Special Requests</label>
                                 <input type="text" name="comment" class="form-control"
-                                       placeholder="Any special request (optional)" maxlength="500">
+                                       placeholder="Any special request (optional)" maxlength="500" id="fld_comment">
                             </div>
 
                             <?php if (!empty($_SESSION['login'])): ?>
                             <button type="submit" name="submit2" class="btn-book">
                                 <i class="fa fa-check-circle"></i> <?php echo tms_t('btn_book_now','Book Now'); ?>
                             </button>
-                            <button type="submit" name="addcart" class="btn-book" style="background:var(--white);color:var(--secondary);border:2px solid var(--secondary);margin-top:8px;">
+                            <button type="submit" name="addcart" class="btn-book-outline">
                                 <i class="fa fa-cart-plus"></i> Add to Cart
                             </button>
                             <?php else: ?>
@@ -1449,7 +1549,7 @@ html[data-theme="dark"] .meta-row { color: var(--text-muted) !important; }
                         </a>
                         <?php if(!empty($pkg->MapLat) && !empty($pkg->MapLng)): ?>
                         <a href="tour-map.php?focus=<?php echo (int)$pkg->PackageId; ?>" class="btn btn-default" style="flex:1;border:2px solid #eee;border-radius:8px;font-size:13px;padding:10px;text-align:center;">
-                            <i class="fa fa-map-marker" style="color:#e74c3c"></i> View on Map
+                            <i class="fa fa-map-marker" style="color:var(--primary)"></i> View on Map
                         </a>
                         <?php endif; ?>
                     </div>
@@ -1460,7 +1560,7 @@ html[data-theme="dark"] .meta-row { color: var(--text-muted) !important; }
         <?php else: ?>
             <div style="text-align:center;padding:60px 20px;">
                 <i class="fa fa-exclamation-triangle" style="font-size:60px;color:#ddd;display:block;margin-bottom:20px;"></i>
-                <h3 style="color:#aaa;">Package not found</h3>
+                <h3 style="color:var(--text-muted);">Package not found</h3>
                 <a href="package-list.php" class="btn btn-primary" style="margin-top:10px;">Browse All Packages</a>
             </div>
         <?php endif; ?>
@@ -1512,7 +1612,7 @@ if (!empty($_SESSION['login']) && $pkg) {
 <script>
 function checkCoupon() {
     var code = document.getElementById('couponCode').value.trim();
-    if (!code) { document.getElementById('couponResult').innerHTML = '<span style="color:#e74c3c">Enter a coupon code first.</span>'; return; }
+    if (!code) { document.getElementById('couponResult').innerHTML = '<span style="color:var(--danger)">Enter a coupon code first.</span>'; return; }
     var xhr = new XMLHttpRequest();
     xhr.open('POST', 'coupon-check.php', true);
     xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
@@ -1520,9 +1620,9 @@ function checkCoupon() {
         var res = JSON.parse(xhr.responseText);
         var el = document.getElementById('couponResult');
         if (res.valid) {
-            el.innerHTML = '<span style="color:#27ae60;font-weight:700;"><i class="fa fa-check"></i> ' + res.msg + '</span>';
+            el.innerHTML = '<span style="color:var(--success);font-weight:700;"><i class="fa fa-check"></i> ' + res.msg + '</span>';
         } else {
-            el.innerHTML = '<span style="color:#e74c3c;"><i class="fa fa-times"></i> ' + res.msg + '</span>';
+            el.innerHTML = '<span style="color:var(--danger);"><i class="fa fa-times"></i> ' + res.msg + '</span>';
         }
     };
     xhr.send('code=' + encodeURIComponent(code));
@@ -1555,12 +1655,27 @@ function checkCoupon() {
                     priceEl.textContent = res.formatted_unit;
                     priceEl.dataset.bdt = res.unit_price;
                     if (badgeEl) {
+                        // TMS V2 Phase 8 (pricing transparency): the badge
+                        // itself still just shows the collapsed label,
+                        // exactly as before -- this only adds a `title`
+                        // tooltip with the itemized breakdown when the
+                        // server sent one, so hovering explains WHY the
+                        // price moved. Additive only: nothing here changes
+                        // for a response with no 'breakdown' key (older
+                        // cached JS, or a non-adjusted price).
                         badgeEl.innerHTML = res.is_adjusted
                             ? '<i class="fa fa-bolt"></i> ' + res.label
                             : '';
                         badgeEl.style.cssText = res.is_adjusted
-                            ? 'margin-top:6px;font-size:11.5px;font-weight:600;color:#f97316;background:#fff7ed;display:inline-block;padding:3px 10px;border-radius:20px;'
-                            : 'margin-top:6px;font-size:11.5px;color:#94a3b8;';
+                            ? 'margin-top:6px;font-size:11.5px;font-weight:600;color:#f97316;background:#fff7ed;display:inline-block;padding:3px 10px;border-radius:20px;cursor:help;'
+                            : 'margin-top:6px;font-size:11.5px;color:var(--text-muted);';
+                        if (res.is_adjusted && Array.isArray(res.breakdown) && res.breakdown.length) {
+                            badgeEl.title = res.breakdown.map(function (b) {
+                                return b.label + ': +' + b.pct + '%';
+                            }).join('\n');
+                        } else {
+                            badgeEl.removeAttribute('title');
+                        }
                     }
                 } catch (e) { /* leave last known price on screen */ }
             };
@@ -1593,7 +1708,7 @@ function checkCoupon() {
             html += (p.data_source === 'historical_bookings') ? ' (based on ' + p.total_bookings_analysed + ' real bookings)' : ' (general estimate)';
             html += ':</strong> ' + p.ai_narrative;
             if (p.busiest_months && p.busiest_months.length) {
-                html += '<br><span style="font-size:12px;color:#a0aec0;">Busiest: ' + p.busiest_months.join(', ') + ' &middot; Quietest: ' + p.quietest_months.join(', ') + '</span>';
+                html += '<br><span style="font-size:12px;color:var(--text-muted);">Busiest: ' + p.busiest_months.join(', ') + ' &middot; Quietest: ' + p.quietest_months.join(', ') + '</span>';
             }
             box.innerHTML = html;
             box.style.display = 'block';

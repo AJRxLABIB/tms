@@ -1,18 +1,37 @@
 /* ============================================================
-   TMS DESIGN SYSTEM — "Boarding Pass" identity
-   Grounded in the actual artifacts of travel: tickets, passport
-   stamps, luggage tags — not a generic SaaS blue template.
+   TMS DESIGN SYSTEM — "Forest" identity (v7 redesign)
+   Premium travel-tech: deep forest green, warm-white neutrals,
+   charcoal text, restrained mint accent. All colors are tokens;
+   do not hardcode hex values in pages — use var(--token).
 
-   Color System:
-   --primary   #0B2B3C  Marine ink   — deep teal-navy, the "passport cover"
-   --secondary #0FA3A3  Lagoon       — the ocean/teal accent, used for links & UI
-   --accent    #FF6B45  Sunset coral — the one warm, energetic color; CTAs & badges
-   --brass     #C9A227  Stamp brass  — postmark/seal accent, used sparingly
-   --bg        #F4FAFC  Pale sky     — airy background tint (not paper cream)
-   Fonts: Fraunces (display, travel-poster warmth) + Manrope (body/UI)
-          + Space Mono (prices, dates, booking/verification codes —
-          reads like ticket-stock printing)
+   --primary   #176B50  Forest      — brand, primary buttons, links
+   --accent    #176B50  (= primary) — call-to-action
+   --mint      #B8E4C9  Mint        — restrained highlight surfaces
+   --bg        #F7F8F5  Warm white  — page background
+   --text      #17231E  Charcoal    — body text
+   Font: Inter (self-hosted, fonts/inter/, SIL OFL) with system fallbacks.
+   Bengali falls back to the OS Bengali UI font (Nirmala UI / Noto Sans Bengali).
+   Contrast (measured, WCAG): text 15.2:1, muted 5.1:1, primary 6.05:1 on bg.
 ============================================================ */
+
+@font-face {
+  font-family: 'Inter';
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url('../fonts/inter/inter-latin-wght-normal.woff2') format('woff2-variations'),
+       url('../fonts/inter/inter-latin-wght-normal.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'Inter';
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url('../fonts/inter/inter-latin-ext-wght-normal.woff2') format('woff2-variations'),
+       url('../fonts/inter/inter-latin-ext-wght-normal.woff2') format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
 
 /* PERFORMANCE FIX (Section 9 audit): the Poppins/Playfair Display font
  * request used to live here as @import url(...) — CSS @import is one of
@@ -28,30 +47,32 @@
  */
 
 :root {
-  --primary: #0B2B3C;
-  --primary-dark: #071C28;
-  --primary-light: #163F54;
-  --secondary: #0FA3A3;
-  --secondary-light: #14C4C4;
-  --accent: #FF6B45;
-  --accent-dark: #E5502B;
-  --brass: #C9A227;
-  --bg: #F4FAFC;
-  --bg-dark: #E7F2F5;
-  --text: #0F2430;
-  --text-muted: #5D7481;
-  --text-light: #97ABB6;
+  --primary: #176B50;
+  --primary-dark: #104B3A;
+  --primary-light: #1F8A66;
+  --secondary: #176B50;          /* link / button-text color: 6.05:1 on --bg (old teal was 2.94:1) */
+  --secondary-light: #2E9E78;
+  --accent: #176B50;             /* call-to-action */
+  --accent-dark: #104B3A;
+  --mint: #B8E4C9;               /* restrained highlight surface */
+  --mint-ink: #0E3B2D;           /* text on --mint (8.9:1) */
+  --brass: #B7791F;              /* amber accent; for icons/borders, use --warning-text for text */
+  --bg: #F7F8F5;
+  --bg-dark: #EEF1EC;
+  --text: #17231E;
+  --text-muted: #5F6D65;         /* 5.1:1 on --bg */
+  --text-light: #5F6D65;         /* old #97ABB6 failed AA (2.3:1); merged into muted, see DESIGN_SYSTEM.md */
   --white: #ffffff;
-  --shadow-sm: 0 2px 10px rgba(11,43,60,0.08);
-  --shadow-md: 0 10px 32px rgba(11,43,60,0.14);
-  --shadow-lg: 0 22px 60px rgba(11,43,60,0.20);
+  --shadow-sm: 0 1px 3px rgba(23,35,30,0.06), 0 1px 2px rgba(23,35,30,0.04);
+  --shadow-md: 0 6px 20px rgba(23,35,30,0.08);
+  --shadow-lg: 0 16px 40px rgba(23,35,30,0.12);
   --radius-sm: 8px;
-  --radius-md: 16px;
-  --radius-lg: 24px;
-  --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  --font-display: 'Fraunces', Georgia, serif;
-  --font-body: 'Manrope', sans-serif;
-  --font-mono: 'Space Mono', monospace;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  --font-display: 'Inter', system-ui, -apple-system, 'Segoe UI', 'Nirmala UI', 'Noto Sans Bengali', Roboto, Arial, sans-serif;
+  --font-body: 'Inter', system-ui, -apple-system, 'Segoe UI', 'Nirmala UI', 'Noto Sans Bengali', Roboto, Arial, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
 
   /* NEW (Round 20, spec item 33 — Dark Mode): master prompt asks for a
      centralized token system covering background/surface/text/secondary
@@ -68,14 +89,14 @@
      status pills -- both halves get redefined for dark mode below so a
      badge never ends up as unreadable dark-on-dark or a chip that stays
      paper-white against a near-black page. */
-  --border: #DCE6EA;
-  --success: #16A34A;
+  --border: #E2E8E3;
+  --success: #218653;
   --success-bg: #DCFCE7;
   --success-text: #14532D;
-  --warning: #D97706;
+  --warning: #B7791F;
   --warning-bg: #FEF3C7;
-  --warning-text: #78350F;
-  --danger: #DC2626;
+  --warning-text: #7A4F0E;
+  --danger: #C23B3B;
   --danger-bg: #FEE2E2;
   --danger-text: #7F1D1D;
 }
@@ -86,7 +107,7 @@
 html, body {
   font-family: var(--font-body);
   background:
-    linear-gradient(rgba(244,250,252,0.94), rgba(244,250,252,0.96)),
+    linear-gradient(rgba(247,248,245,0.96), rgba(247,248,245,0.98)),
     url('images/7.jpg');
   background-size: auto, cover;
   background-position: center, center;
@@ -104,13 +125,18 @@ a:hover { text-decoration: none; }
 h1,h2,h3,h4,h5,h6 {
   font-family: var(--font-display);
   font-weight: 700;
-  line-height: 1.15;
-  letter-spacing: -0.01em;
+  line-height: 1.2;
+  letter-spacing: -0.015em;
   margin: 0;
 }
 /* Prices, dates, booking references, and verification codes read like
    ticket-stock printing rather than blending into body copy. */
-.tms-mono, .price, .badge-price, .tms-currency, code.tms-code {
+.tms-mono, .price, .badge-price, .tms-currency {
+  font-family: var(--font-body);
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum";
+}
+code.tms-code {
   font-family: var(--font-mono);
   font-feature-settings: "tnum";
 }
@@ -151,8 +177,8 @@ img { max-width: 100%; }
   border-radius: 4px;
 }
 .tms-topbar a:hover { color: #fff; background: rgba(255,255,255,0.1); }
-.tms-topbar .tms-phone { font-weight: 600; color: var(--accent); }
-.tms-topbar .tms-phone i { color: var(--accent); }
+.tms-topbar .tms-phone { font-weight: 600; color: var(--mint); }
+.tms-topbar .tms-phone i { color: var(--mint); }
 .tms-topbar-divider { width: 1px; height: 18px; background: rgba(255,255,255,0.2); }
 
 /* ═══ Notification bell (topbar) ═══ */
@@ -189,8 +215,8 @@ html[data-theme="dark"] .tms-notif-item:hover { background: #232b37; }
 html[data-theme="dark"] .tms-notif-item.unread { background: #202a3d; }
 html[data-theme="dark"] .tms-notif-msg { color: #eef2f7; }
 .btn-topbar-login {
-  background: var(--accent);
-  color: var(--primary-dark) !important;
+  background: var(--primary);
+  color: #fff !important;
   font-weight: 700 !important;
   padding: 5px 14px !important;
   border-radius: 20px !important;
@@ -204,7 +230,7 @@ html[data-theme="dark"] .tms-notif-msg { color: #eef2f7; }
      to free up topbar width first (e.g. shrinking the logo wordmark at
      this breakpoint), which is a separate, more invasive change. */
 }
-.btn-topbar-login:hover { background: var(--accent-dark) !important; transform: translateY(-1px); }
+.btn-topbar-login:hover { background: var(--primary-dark) !important; transform: translateY(-1px); }
 .btn-topbar-signup {
   border: 1px solid rgba(255,255,255,0.4) !important;
   border-radius: 20px !important;
@@ -224,7 +250,7 @@ html[data-theme="dark"] .tms-notif-msg { color: #eef2f7; }
   border: 1px solid rgba(255,255,255,0.35);
 }
 .tms-glass-dark {
-  background: rgba(11,43,60,0.55);
+  background: rgba(16,75,58,0.55);
   backdrop-filter: blur(18px) saturate(160%);
   -webkit-backdrop-filter: blur(18px) saturate(160%);
   border: 1px solid rgba(255,255,255,0.14);
@@ -292,7 +318,7 @@ html[data-theme="dark"] .tms-notif-msg { color: #eef2f7; }
 }
 .modal-body .form-control:focus {
   border-color: var(--secondary);
-  box-shadow: 0 0 0 3px rgba(15,163,163,0.14);
+  box-shadow: 0 0 0 3px rgba(23,107,80,0.14);
 }
 .modal-backdrop.in { opacity: 0.55; }
 
@@ -359,7 +385,7 @@ html[data-theme="dark"] .tms-notif-msg { color: #eef2f7; }
 .tms-step.done .tms-step-circle { background: var(--secondary); border-color: var(--secondary); color: #fff; }
 .tms-step.done .tms-step-label { color: #fff; }
 .tms-step.done::before { background: var(--secondary); }
-.tms-step.active .tms-step-circle { background: var(--accent); border-color: var(--accent); color: #fff; box-shadow: 0 0 0 5px rgba(255,107,69,0.22); }
+.tms-step.active .tms-step-circle { background: var(--accent); border-color: var(--accent); color: #fff; box-shadow: 0 0 0 5px rgba(23,107,80,0.22); }
 .tms-step.active .tms-step-label { color: #fff; }
 /* Light variant for use on white/light backgrounds instead of the dark page-title band */
 .tms-steps.light .tms-step-circle { background: #fff; border-color: #dbe4ea; color: var(--text-muted); }
@@ -562,17 +588,18 @@ html[data-theme="dark"] .tms-notif-msg { color: #eef2f7; }
   transition: var(--transition);
 }
 .tms-mega-item:hover .tms-mega-icon { transform: scale(1.1); }
-.icon-ai { background: linear-gradient(135deg, #667eea, #764ba2); color: #fff; }
+.icon-ai { background: linear-gradient(135deg, #176B50, #104B3A); color: #fff; }
 .icon-map { background: linear-gradient(135deg, #11998e, #38ef7d); color: #fff; }
 .icon-weather { background: linear-gradient(135deg, #4facfe, #00f2fe); color: #fff; }
 .icon-budget { background: linear-gradient(135deg, #f093fb, #f5576c); color: #fff; }
 .icon-review { background: linear-gradient(135deg, #ffecd2, #fcb69f); color: #e55a3c; }
-.icon-custom { background: linear-gradient(135deg, #a18cd1, #fbc2eb); color: #7c3aed; }
+.icon-custom { background: linear-gradient(135deg, #a18cd1, #fbc2eb); color: #1F8A66; }
 .icon-safety { background: linear-gradient(135deg, #ffeaa7, #dfe6e9); color: #d63031; }
 .icon-lang { background: linear-gradient(135deg, #00b09b, #96c93d); color: #fff; }
 .icon-wish { background: linear-gradient(135deg, #ff9a9e, #fecfef); color: #e91e63; }
 .icon-loyalty { background: linear-gradient(135deg, #f6d365, #fda085); color: #fff; }
-.icon-compare { background: linear-gradient(135deg, #0B2B3C, #0FA3A3); color: #fff; }
+.icon-compare { background: linear-gradient(135deg, var(--primary-dark), var(--primary-light)); color: #fff; }
+.icon-bd { background: linear-gradient(135deg, #006A4E, #F42A41); color: #fff; } /* Round 115 Phase G: Bangladesh flag green/red, for the Bangladesh Travel Guide feature card */
 .tms-mega-label strong { display: block; font-size: 13.5px; font-weight: 600; }
 .tms-mega-label span { font-size: 11.5px; color: var(--text-muted); }
 .tms-mega-item:hover .tms-mega-label strong { color: var(--primary); }
@@ -590,8 +617,8 @@ html[data-theme="dark"] .tms-notif-msg { color: #eef2f7; }
   align-items: center;
   overflow: hidden;
   background:
-    radial-gradient(ellipse 80% 60% at 30% 0%, rgba(15,163,163,0.35), transparent 60%),
-    linear-gradient(160deg, rgba(11,43,60,0.88) 0%, rgba(15,76,101,0.86) 55%, rgba(12,58,74,0.9) 100%),
+    radial-gradient(ellipse 80% 60% at 30% 0%, rgba(23,107,80,0.35), transparent 60%),
+    linear-gradient(160deg, rgba(16,75,58,0.88) 0%, rgba(23,107,80,0.86) 55%, rgba(16,75,58,0.9) 100%),
     url('images/6.jpg');
   background-size: auto, auto, cover;
   background-position: center, center, center 65%;
@@ -635,9 +662,9 @@ html[data-theme="dark"] .tms-notif-msg { color: #eef2f7; }
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  background: rgba(255,107,69,0.18);
-  border: 1px solid rgba(255,107,69,0.4);
-  color: #FF9270;
+  background: rgba(184,228,201,0.14);
+  border: 1px solid rgba(184,228,201,0.35);
+  color: var(--mint);
   padding: 6px 16px;
   border-radius: 30px;
   font-size: 12.5px;
@@ -659,7 +686,7 @@ html[data-theme="dark"] .tms-notif-msg { color: #eef2f7; }
 .tms-hero h1 .highlight {
   font-style: italic;
   font-weight: 600;
-  background: linear-gradient(135deg, var(--accent), var(--brass));
+  background: linear-gradient(135deg, var(--mint), #7ED6B2);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -738,7 +765,7 @@ html[data-theme="dark"] .tms-notif-msg { color: #eef2f7; }
   transition: var(--transition);
   flex-shrink: 0;
 }
-.tms-search-btn:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(11,43,60,0.35); }
+.tms-search-btn:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(16,75,58,0.35); }
 
 /* Hero CTA Buttons */
 .tms-hero-cta {
@@ -752,15 +779,15 @@ html[data-theme="dark"] .tms-notif-msg { color: #eef2f7; }
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  background: var(--accent);
-  color: var(--primary-dark);
+  background: var(--mint);
+  color: var(--mint-ink) !important;
   padding: 14px 28px;
   border-radius: var(--radius-md);
   font-weight: 700;
   font-size: 15px;
   transition: var(--transition);
 }
-.btn-hero-primary:hover { background: var(--accent-dark); transform: translateY(-2px); box-shadow: 0 8px 24px rgba(255,183,3,0.4); color: var(--primary-dark); }
+.btn-hero-primary:hover { background: #fff; transform: translateY(-2px); box-shadow: 0 8px 24px rgba(0,0,0,0.25); color: var(--primary-dark) !important; }
 .btn-hero-secondary {
   display: inline-flex;
   align-items: center;
@@ -881,7 +908,7 @@ html[data-theme="dark"] .tms-notif-msg { color: #eef2f7; }
   margin-bottom: 14px;
 }
 .tms-section-title {
-  font-family: 'Playfair Display', serif;
+  font-family: var(--font-display);
   font-size: clamp(28px, 4vw, 42px);
   color: var(--primary);
   margin-bottom: 16px;
@@ -976,8 +1003,8 @@ html[data-theme="dark"] .tms-notif-msg { color: #eef2f7; }
   position: absolute;
   top: 12px;
   left: 12px;
-  background: var(--accent);
-  color: var(--primary-dark);
+  background: var(--mint);
+  color: var(--mint-ink);
   font-size: 11px;
   font-weight: 700;
   padding: 4px 10px;
@@ -1013,7 +1040,7 @@ html[data-theme="dark"] .tms-notif-msg { color: #eef2f7; }
   bottom: 0;
   left: 0;
   right: 0;
-  background: rgba(11,43,60,0.55);
+  background: rgba(16,75,58,0.55);
   backdrop-filter: blur(12px) saturate(160%);
   -webkit-backdrop-filter: blur(12px) saturate(160%);
   border-top: 1px solid rgba(255,255,255,0.18);
@@ -1138,7 +1165,7 @@ html[data-theme="dark"] .tms-notif-msg { color: #eef2f7; }
 }
 .tms-stat-item:last-child { border-right: none; }
 .tms-stat-num { font-size: 44px; font-weight: 800; color: #fff; line-height: 1; margin-bottom: 8px; }
-.tms-stat-num span { color: var(--accent); }
+.tms-stat-num span { color: var(--mint); }
 .tms-stat-lbl { font-size: 13px; color: rgba(255,255,255,0.65); text-transform: uppercase; letter-spacing: 1px; }
 
 /* ─── REVIEWS ─── */
@@ -1162,12 +1189,12 @@ html[data-theme="dark"] .tms-notif-msg { color: #eef2f7; }
   position: absolute;
   top: 20px;
   right: 24px;
-  font-family: 'Playfair Display', serif;
+  font-family: var(--font-display);
   font-size: 60px;
   color: var(--bg-dark);
   line-height: 1;
 }
-.tms-review-stars { color: var(--accent); font-size: 14px; margin-bottom: 14px; }
+.tms-review-stars { color: var(--brass); font-size: 14px; margin-bottom: 14px; }
 .tms-review-text { font-size: 14px; color: var(--text-muted); line-height: 1.7; margin-bottom: 20px; font-style: italic; }
 .tms-review-author { display: flex; align-items: center; gap: 12px; }
 .tms-review-avatar {
@@ -1266,7 +1293,7 @@ html[data-theme="dark"] .tms-notif-msg { color: #eef2f7; }
   background: rgba(255,255,255,0.06);
   border-radius: 50%;
 }
-.tms-cta h2 { font-family: 'Playfair Display', serif; font-size: 36px; margin-bottom: 14px; }
+.tms-cta h2 { font-family: var(--font-display); font-size: 36px; margin-bottom: 14px; }
 .tms-cta p { font-size: 17px; color: rgba(255,255,255,0.8); margin-bottom: 32px; }
 .tms-cta-btns { display: flex; gap: 16px; justify-content: center; flex-wrap: wrap; }
 .btn-cta-white {
@@ -1310,7 +1337,7 @@ html[data-theme="dark"] .tms-notif-msg { color: #eef2f7; }
   margin-bottom: 48px;
 }
 .tms-footer-brand .tms-logo-text strong { color: #fff; }
-.tms-footer-brand .tms-logo-text span { color: rgba(255,255,255,0.4); }
+.tms-footer-brand .tms-logo-text span { color: rgba(255,255,255,0.72); }
 .tms-footer-brand p { font-size: 13.5px; margin-top: 14px; line-height: 1.7; color: rgba(255,255,255,0.55); }
 .tms-footer-social { display: flex; gap: 10px; margin-top: 20px; }
 .tms-social-btn {
@@ -1329,7 +1356,7 @@ html[data-theme="dark"] .tms-notif-msg { color: #eef2f7; }
 .tms-footer-col h5 { font-size: 14px; font-weight: 700; color: #fff; margin-bottom: 20px; text-transform: uppercase; letter-spacing: 1px; }
 .tms-footer-col ul li { margin-bottom: 10px; }
 .tms-footer-col ul li a { font-size: 13.5px; color: rgba(255,255,255,0.55); transition: var(--transition); }
-.tms-footer-col ul li a:hover { color: var(--secondary); padding-left: 4px; }
+.tms-footer-col ul li a:hover { color: var(--mint); padding-left: 4px; }
 .tms-footer-bottom {
   border-top: 1px solid rgba(255,255,255,0.08);
   padding: 20px 0;
@@ -1338,7 +1365,7 @@ html[data-theme="dark"] .tms-notif-msg { color: #eef2f7; }
   justify-content: space-between;
   font-size: 12.5px;
 }
-.tms-footer-bottom a { color: var(--secondary); }
+.tms-footer-bottom a { color: var(--mint); }
 
 /* ─── UTILITY BUTTONS ─── */
 .btn-primary-tms {
@@ -1544,7 +1571,7 @@ html[data-theme="dark"] .tms-notif-msg { color: #eef2f7; }
     border-radius: 50%;
 }
 .tms-page-hero h1 {
-    font-family: 'Playfair Display', serif;
+    font-family: var(--font-display);
     font-size: clamp(28px, 4vw, 44px);
     color: #fff;
     margin-bottom: 10px;
@@ -1567,7 +1594,7 @@ html[data-theme="dark"] .tms-notif-msg { color: #eef2f7; }
 .header { display: none !important; }
 /* Old rupes/holiday/routes sections - restyle */
 .rupes { background:#fff; border-radius:var(--radius-md); box-shadow:var(--shadow-sm); padding:24px; margin-bottom:32px; }
-.holiday h3 { font-family:'Playfair Display',serif; font-size:28px; color:var(--primary); margin-bottom:24px; }
+.holiday h3 { font-family:var(--font-display); font-size:28px; color:var(--primary); margin-bottom:24px; }
 .routes { background:linear-gradient(135deg,var(--primary-dark),var(--primary)); padding:48px 0; }
 .routes h3 { color:#fff !important; font-size:36px !important; font-weight:800 !important; }
 .routes p { color:rgba(255,255,255,0.7) !important; font-size:14px !important; }
@@ -1596,7 +1623,7 @@ html[data-theme="dark"] .tms-notif-msg { color: #eef2f7; }
     align-items:center;
 }
 .banner h1 {
-    font-family: 'Playfair Display', serif !important;
+    font-family: var(--font-display) !important;
     padding: 0 !important;
     font-size: 42px !important;
     text-shadow: none !important;
@@ -1621,12 +1648,12 @@ textarea:focus-visible,
 .tms-pkg-card:focus-visible,
 .tms-feature-card:focus-visible,
 [tabindex]:focus-visible {
-  outline: 2.5px solid var(--accent, #FF6B45);
+  outline: 2.5px solid var(--accent, #176B50);
   outline-offset: 2px;
   border-radius: 4px;
 }
 .tms-search-field:focus-within {
-  box-shadow: 0 0 0 2.5px var(--accent, #FF6B45);
+  box-shadow: 0 0 0 2.5px var(--accent, #176B50);
   border-radius: var(--radius-sm, 8px);
 }
 
@@ -1662,7 +1689,7 @@ textarea:focus-visible,
 .rom-btm:hover {
   box-shadow: var(--shadow-md);
   transform: translateY(-3px);
-  border-color: rgba(15,163,163,0.25);
+  border-color: rgba(23,107,80,0.25);
 }
 .room-left { position: relative; }
 .tms-stamp {
@@ -1670,7 +1697,7 @@ textarea:focus-visible,
   top: 10px; left: -6px;
   z-index: 2;
   background: var(--brass);
-  color: #2b2205;
+  color: #140F00;
   font-family: var(--font-mono);
   font-size: 9.5px;
   font-weight: 700;
@@ -1724,7 +1751,7 @@ textarea:focus-visible,
   align-items: center;
   gap: 5px;
   background: #fff3cd;
-  color: #8a6d00;
+  color: #735A00;
   border: 1px solid #ffe08a;
   border-radius: 20px;
   padding: 3px 11px;
@@ -1783,3 +1810,75 @@ html[data-theme="dark"] .tms-breadcrumb li:not(:first-child)::before { color: #4
   min-height: 24px;
   min-width: 24px;
 }
+
+
+/* ═══ v7 compatibility layer: neutralise legacy template styles ═══
+   css/style.css (the original Bootstrap template) defines GLOBAL rules such as
+   `i.fa.fa-columns { font-size: 9em; color: blue }`, which blow up icons on every
+   page that uses them (nav "Home", Compare buttons, lock icons...). Reset them to
+   inherit; pages that want a larger icon set font-size inline (which still wins). */
+html body i.fa.fa-home, html body i.fa.fa-lock, html body i.fa.fa-columns, html body i.fa.fa-usd,
+html body i.fa.fa-h-square, html body i.fa.fa-mobile, html body i.fa.fa-map-marker, html body i.fa.fa-truck,
+html body i.fa.fa-user, html body i.fa.fa-ticket, html body i.fa.fa-clock-o, html body i.fa.fa-gift {
+  font-size: inherit; color: inherit; padding-right: 0; margin-top: 0;
+}
+/* Old template page banners used unrelated stock photos; use the brand gradient instead. */
+.banner-1, .banner-2, .banner-3 {
+  background: linear-gradient(135deg, var(--primary-dark), var(--primary)) !important;
+  min-height: 160px;
+}
+/* Bootstrap-3 blue buttons -> brand tokens */
+.btn-primary { background: var(--primary); border-color: var(--primary-dark); color: #fff; }
+.btn-primary:hover, .btn-primary:focus { background: var(--primary-dark); border-color: var(--primary-dark); color: #fff; }
+.btn-info { background: var(--mint); border-color: var(--mint); color: var(--mint-ink); }
+.btn-info:hover, .btn-info:focus { background: #A5D9BB; border-color: #A5D9BB; color: var(--mint-ink); }
+/* Header auth buttons: keep labels on one line on narrow screens */
+.btn-topbar-signup, .btn-topbar-login { white-space: nowrap; }
+@media (max-width: 480px) { .btn-topbar-signup, .btn-topbar-login { padding: 8px 12px !important; font-size: 13px !important; } }
+
+/* signed-in topbar links: single line, tighter spacing so they don't wrap */
+.tms-topbar a { white-space: nowrap; }
+@media (max-width: 1280px) { .tms-topbar a { font-size: 12px; } }
+
+/* ── a11y (WCAG 1.4.3) refinements ───────────────────────────── */
+::placeholder, .form-control::placeholder, input::placeholder, textarea::placeholder,
+::-webkit-input-placeholder, .form-control::-webkit-input-placeholder { color: #6B756F !important; opacity: 1 !important; }
+html[data-theme="dark"] ::placeholder, html[data-theme="dark"] .form-control::placeholder { color: #93A399; opacity: 1; }
+.label-warning { background-color: #8A5A00; color: #fff; }
+.label-default { background-color: #5F6D65; color: #fff; }
+
+/* ─── a11y contrast fixes (round 3) ─── */
+.pkg-card > h4 { color: var(--text) !important; }
+#couponCode, #fld_comment, .form-control { color: var(--text) !important; }
+html[data-theme="dark"] .btn-topbar-signup, html[data-theme="dark"] .btn-topbar-signup:hover { background: #104B3A !important; color: #fff !important; }
+html[data-theme="dark"] .pagination > li > a { background: #18211C !important; color: #CFE3D6 !important; border-color: #2B3A32 !important; }
+html[data-theme="dark"] .pagination > .active > a { background: #104B3A !important; color: #fff !important; }
+html[data-theme="dark"] td span[style*="color:#0B6B2E"] { color: #5CC79C !important; }
+.btn-cta-outline { border-color: rgba(255,255,255,.85); }
+p > a:not(.btn):not([class]), td > a:not(.btn):not([class]) { text-decoration: underline; }
+
+.tms-theme-switch { min-width: 32px; min-height: 32px; }
+
+/* ─── listing pages (hotels / activities / destinations): toolbar + hero polish ─── */
+.pkg-toolbar label, .dest-toolbar label { display: block; margin: 0 0 4px; line-height: 1.3; font-size: 13px; font-weight: 600; color: var(--text-muted) !important; }
+.pkg-toolbar .row > [class*="col-"], .dest-toolbar .row > [class*="col-"] { padding-left: 0; padding-right: 0; float: none; width: auto; }
+.pkg-toolbar .row, .dest-toolbar .row { margin-left: 0; margin-right: 0; }
+.btn-search, .btn-reset { display: inline-flex; align-items: center; justify-content: center; gap: 6px; line-height: 1; cursor: pointer; text-decoration: none; }
+.btn-reset { background: var(--bg-dark) !important; color: var(--text) !important; border: 1px solid var(--border) !important; }
+.btn-reset:hover { background: var(--border) !important; text-decoration: none; }
+.banner-3 { padding: 36px 0 34px; display: flex; align-items: center; }
+.banner-3 .container { text-align: center; }
+.banner-3 h1 { margin: 0 0 8px; }
+.banner-3 p { margin: 0; padding: 0; }
+.dest-card img { background: var(--bg-dark); }
+.pkg-toolbar label, .dest-toolbar label { min-height: 18px; display: flex; align-items: center; gap: 5px; }
+.pkg-toolbar .form-control, .dest-toolbar .form-control { margin: 0; } .pkg-toolbar .row > div, .dest-toolbar .row > div { margin: 0; }
+html[data-theme="dark"] .hd-body h1 { color: var(--text); }
+@media (max-width: 768px) { .pkg-toolbar .row > div, .dest-toolbar .row > div { flex: 1 1 100% !important; min-width: 0 !important; padding: 0 !important; width: 100% !important; } .pkg-toolbar .row, .dest-toolbar .row { display: flex; flex-direction: column; align-items: stretch !important; } }
+html[data-theme="dark"] .hd-body h1, html[data-theme="dark"] .hd-body h2, html[data-theme="dark"] .hd-body h3 { color: var(--text); }
+html[data-theme="dark"] .hd-body h1, html[data-theme="dark"] .hd-body h2, html[data-theme="dark"] .hd-body h3, html[data-theme="dark"] .hd-body > h3 { color: var(--text) !important; }
+/* dark: translucent "glass" cards relied on the old photo background; make them solid */
+html[data-theme="dark"] .recover-box, html[data-theme="dark"] .pwd-card, html[data-theme="dark"] .ticket-panel, html[data-theme="dark"] .tfa-card { background: var(--white) !important; backdrop-filter: none; -webkit-backdrop-filter: none; border-color: var(--border); }
+.label-primary { background-color: #176B50; color: #fff; }
+/* admin-edited page content (pasted from Word) carries hard-coded black/grey inline colours */
+html[data-theme="dark"] .privacy span[style*="color"], html[data-theme="dark"] .privacy p[style*="color"] { color: var(--text) !important; }

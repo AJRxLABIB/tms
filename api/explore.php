@@ -17,7 +17,7 @@
  *   POST /api/explore.php?action=chat
  */
 
-session_start();
+require_once __DIR__ . '/../backend/session-boot.php';
 error_reporting(E_ALL); ini_set('display_errors', '0'); ini_set('log_errors', '1');
 require_once dirname(__DIR__) . '/backend/config.php';
 require_once dirname(__DIR__) . '/backend/ai/AIClient.php';
@@ -94,6 +94,7 @@ try {
 // ══════════════════════════════════════════════════════════════════════════════
 
 function handleSearch(ExploreService $service): void {
+    releaseSessionLock();
     $q = tms_clean($_GET['q'] ?? '');
     $res = $service->searchDestinations($q);
     $res['success'] ? apiSuccess(['results' => $res['results']]) : apiError(503, $res['error'] ?? 'Search failed.');
@@ -126,6 +127,7 @@ function handleInfo(PDO $dbh, ExploreService $service, string $email): void {
 }
 
 function handleWeather(ExploreService $service): void {
+    releaseSessionLock();
     [$lat, $lng] = requireCoords($_GET['lat'] ?? null, $_GET['lng'] ?? null);
 
     $res = $service->getWeather($lat, $lng);
@@ -133,16 +135,35 @@ function handleWeather(ExploreService $service): void {
 }
 
 function handlePlaces(ExploreService $service): void {
+    releaseSessionLock();
     [$lat, $lng] = requireCoords($_GET['lat'] ?? null, $_GET['lng'] ?? null);
     $category = tms_clean($_GET['category'] ?? '');
     $radius   = tms_int($_GET['radius'] ?? 4000, 500, 20000);
 
     if ($category === '') apiError(400, 'A place category is required.');
 
+    // getNearbyPlaces() never hangs: fresh cache -> live (mirrors raced, ~9 s cap) -> stale cache -> local catalogue.
+    // The answer is always HTTP 200 JSON, so the page can show its own empty/error state with a Retry button.
+    @set_time_limit(25);
     $res = $service->getNearbyPlaces($lat, $lng, $category, $radius);
-    $res['success']
-        ? apiSuccess(['places' => $res['results'], 'source' => $res['source'] ?? 'openstreetmap'])
-        : apiError(503, $res['error'] ?? 'Nearby places unavailable.');
+    if ($res['success']) {
+        $items = $res['results'];
+        $origin = $res['origin'] ?? (!empty($res['cached']) ? 'cached' : 'live');
+        echo json_encode([
+            'success' => true, 'ok' => true, 'items' => $items, 'error' => null,
+            'source' => $res['source'] ?? 'openstreetmap', 'origin' => $origin, 'stale' => !empty($res['stale']),
+            'notice' => $res['notice'] ?? null,
+            'data' => ['places' => $items, 'items' => $items, 'source' => $res['source'] ?? 'openstreetmap', 'origin' => $origin,
+                       'stale' => !empty($res['stale']), 'notice' => $res['notice'] ?? null],
+            'ts' => time(),
+        ], JSON_UNESCAPED_UNICODE | JSON_INVALID_UTF8_SUBSTITUTE);
+        exit;
+    }
+    echo json_encode([
+        'success' => false, 'ok' => false, 'items' => [], 'source' => 'none', 'origin' => 'none', 'stale' => false,
+        'error' => $res['error'] ?? 'Nearby places unavailable.', 'retryable' => true, 'ts' => time(),
+    ], JSON_UNESCAPED_UNICODE);
+    exit;
 }
 
 function handlePlaceDetails(): void {
@@ -190,6 +211,7 @@ function handlePlaceDetails(): void {
 }
 
 function handleRoute(ExploreService $service): void {
+    releaseSessionLock();
     $fromLat = (float)($_GET['from_lat'] ?? 0);
     $fromLng = (float)($_GET['from_lng'] ?? 0);
     $toLat   = (float)($_GET['to_lat'] ?? 0);
@@ -291,7 +313,12 @@ function handleChat(PDO $dbh, string $email): void {
     $res = $ai->call($system, $messages, '', $email);
 
     if (!$res['success']) {
-        apiError(503, $res['error'] ?? 'The AI travel assistant is temporarily unavailable.');
+        // No language model available: answer from the catalogue (packages, hotels, activities, guides) instead of an error.
+        // Deterministic and grounded; see backend/ai/OfflineAssistant.php.
+        require_once dirname(__DIR__) . '/backend/ai/OfflineAssistant.php';
+        $place = trim(explode(',', $destination)[0]);
+        $off = OfflineAssistant::reply($dbh, trim($message . ' ' . ($place !== 'your destination' ? $place : '')), [], $email, '', 'en', true);
+        $res = ['success' => true, 'content' => OfflineAssistant::plain((string)$off['reply'])];
     }
 
     try {
@@ -311,6 +338,15 @@ function handleChat(PDO $dbh, string $email): void {
 // ══════════════════════════════════════════════════════════════════════════════
 // HELPERS
 // ══════════════════════════════════════════════════════════════════════════════
+
+/**
+ * These handlers wait on third-party servers. PHP holds an exclusive lock on the session file until the script ends,
+ * so every other request from the same browser (the other Nearby Places categories, weather, the page itself)
+ * queued behind the slowest one. $_SESSION stays readable after this; nothing below writes to it.
+ */
+function releaseSessionLock(): void {
+    if (session_status() === PHP_SESSION_ACTIVE) session_write_close();
+}
 
 function apiSuccess(array $data): void {
     echo json_encode(['success' => true, 'data' => $data, 'ts' => time()], JSON_UNESCAPED_UNICODE);

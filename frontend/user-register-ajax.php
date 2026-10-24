@@ -48,12 +48,16 @@ if (strlen($fullName) < 3) {
     echo json_encode(['success' => false, 'message' => tms_t('reg_err_name_too_short', 'Full name must be at least 3 characters.')]);
     exit;
 }
+if (!tms_rate_limit($dbh, 'register', tms_client_ip(), 10)) {
+    echo json_encode(['success' => false, 'message' => 'Too many sign-up attempts from this network. Please try again in an hour.']);
+    exit;
+}
 if (!$email) {
     echo json_encode(['success' => false, 'message' => tms_t('reg_err_invalid_email', 'Please enter a valid email address.')]);
     exit;
 }
-if (strlen($password) < 6) {
-    echo json_encode(['success' => false, 'message' => tms_t('reg_err_password_too_short', 'Password must be at least 6 characters.')]);
+if (tms_password_error($password) !== null) {
+    echo json_encode(['success' => false, 'message' => tms_t('reg_err_password_too_short', 'Password must be at least 8 characters.')]);
     exit;
 }
 if ($password !== $confirm) {

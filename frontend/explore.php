@@ -1,5 +1,5 @@
 <?php
-session_start();
+require_once __DIR__ . '/../backend/session-boot.php';
 error_reporting(E_ALL); ini_set('display_errors', '0'); ini_set('log_errors', '1');
 include('backend/config.php');
 require_once dirname(__DIR__) . '/backend/ExploreService.php';
@@ -32,19 +32,22 @@ $popularDestinations = [
 <html lang="<?php echo htmlspecialchars(tms_active_language(), ENT_QUOTES, 'UTF-8'); ?>">
 <head>
 <link rel="manifest" href="manifest.json">
-<meta name="theme-color" content="#0B2B3C">
+<meta name="theme-color" content="#104B3A">
 <link rel="apple-touch-icon" href="images/icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="TMS">
+<meta name="mobile-web-app-capable" content="yes">
 <title>TMS | Explore — Travel Without Booking</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <link href="css/bootstrap.min2.css" rel='stylesheet' type='text/css' />
-<link href="css/style.min.css" rel='stylesheet' type='text/css' />
+<link href="<?php echo tms_asset_ver('css/style.min.css'); ?>" rel='stylesheet' type='text/css' />
 <link href="css/font-awesome.min2.css" rel="stylesheet">
 <link href="<?php echo tms_asset_ver('css/modern-theme.css'); ?>" rel="stylesheet">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700;9..144,800&family=Manrope:wght@400;500;600;700;800&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
 <link href="css/animate.css" rel="stylesheet">
-<link href="css/explore.css" rel="stylesheet">
+<link href="<?php echo tms_asset_ver('css/explore.css'); ?>" rel="stylesheet">
 <script src="js/jquery-1.12.0.min.js" defer></script>
 <script src="js/bootstrap.min.js" defer></script>
 <script src="js/wow.min.js" defer></script>
@@ -53,15 +56,15 @@ $popularDestinations = [
 <?php include('backend/header.php'); ?>
 
 <section class="explore-hero">
-    <h1><i class="fa fa-compass"></i> Explore Mode</h1>
-    <p>Discover any destination on Earth — live weather, nearby places, interactive maps &amp; an AI travel guide. No booking required.</p>
+    <h1><i class="fa fa-compass"></i> <?php echo tms_t('heading_explore_mode','Explore Mode'); ?></h1>
+    <p><?php echo tms_t('dest_explore_subtitle','Discover any destination on Earth — live weather, nearby places, interactive maps &amp; an AI travel guide. No booking required.'); ?></p>
 </section>
 
 <div class="explore-search-card wow fadeInUp">
     <div class="explore-search-wrap">
         <i class="fa fa-search explore-search-icon"></i>
         <input type="text" id="exploreSearchInput" class="explore-search-input"
-               placeholder="Enter a city, country, or tourist place (e.g. 'Kyoto, Japan')" autocomplete="off">
+               placeholder="<?php echo tms_t('explore_search_placeholder',"Enter a city, country, or tourist place (e.g. 'Kyoto, Japan')"); ?>" autocomplete="off">
         <i class="fa fa-spinner fa-spin explore-search-spinner" id="exploreSearchSpinner"></i>
         <div class="explore-suggestions" id="exploreSuggestions"></div>
     </div>
@@ -76,7 +79,7 @@ $popularDestinations = [
 
 <?php if ($recent): ?>
 <div class="explore-recent wow fadeInUp">
-    <h5><i class="fa fa-history"></i> Recently Explored</h5>
+    <h5><i class="fa fa-history"></i> <?php echo tms_t('heading_recently_explored','Recently Explored'); ?></h5>
     <div class="explore-popular" style="justify-content:flex-start;">
         <?php foreach ($recent as $r): ?>
         <span class="explore-chip" onclick="goToDestination(<?php echo htmlspecialchars(json_encode($r['display_name']), ENT_QUOTES); ?>, <?php echo $r['lat']; ?>, <?php echo $r['lng']; ?>, '')">
@@ -89,11 +92,9 @@ $popularDestinations = [
 
 <div class="explore-recent">
     <div class="explore-card" style="text-align:center;">
-        <h4 style="justify-content:center;"><i class="fa fa-lightbulb"></i> What you'll get</h4>
+        <h4 style="justify-content:center;"><i class="fa fa-lightbulb"></i> <?php echo tms_t('heading_what_youll_get',"What you'll get"); ?></h4>
         <p style="color:var(--text-muted);font-size:13.5px;max-width:640px;margin:0 auto;">
-            A full destination overview, live interactive map with turn-by-turn navigation, nearby hotels/restaurants/hospitals
-            &amp; more, real-time weather &amp; forecasts, and a 24/7 AI travel guide chatbot — all without creating a booking.
-            Prefer a curated, all-inclusive trip instead? <a href="package-list.php">Browse our Tour Packages →</a>
+            <?php echo tms_t('dest_explore_what_youll_get','A full destination overview, live interactive map with turn-by-turn navigation, nearby hotels/restaurants/hospitals &amp; more, real-time weather &amp; forecasts, and a 24/7 AI travel guide chatbot — all without creating a booking. Prefer a curated, all-inclusive trip instead?'); ?> <a href="package-list.php"><?php echo tms_t('link_browse_tour_packages','Browse our Tour Packages →'); ?></a>
         </p>
     </div>
 </div>
@@ -101,7 +102,7 @@ $popularDestinations = [
 <?php include('backend/footer.php'); ?>
 <?php include('backend/signin.php'); ?>
 <?php include('backend/write-us.php'); ?>
-<script src="js/explore.js"></script>
+<script src="<?php echo tms_asset_ver('js/explore.js'); ?>"></script>
 <script>window.addEventListener("load",function(){if(typeof WOW!=="undefined")new WOW().init()});</script>
 </body>
 </html>

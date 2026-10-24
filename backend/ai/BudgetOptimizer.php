@@ -7,6 +7,7 @@
  */
 
 require_once __DIR__ . '/AIClient.php';
+require_once __DIR__ . '/AIOutputChecks.php';
 
 class BudgetOptimizer {
 
@@ -30,10 +31,13 @@ You know typical costs for hotels, transport, food, and activities in these regi
 Return ONLY valid JSON. No other text.
 SYSTEM;
 
-        $dest      = $tripParams['destination'] ?? 'Bangladesh';
-        $days      = $tripParams['duration'] ?? 3;
-        $travelers = $tripParams['travelers'] ?? 2;
-        $style     = $tripParams['travel_type'] ?? 'leisure';
+        // Prompt fields: free text stripped/capped, numbers cast (the JSON template below embeds them).
+        $dest      = PackageDraft::text($tripParams['destination'] ?? 'Bangladesh', 100) ?: 'Bangladesh';
+        $dest      = str_replace(['"', '{', '}'], ' ', $dest);
+        $days      = max(1, min(60, (int)($tripParams['duration'] ?? 3)));
+        $travelers = max(1, min(50, (int)($tripParams['travelers'] ?? 2)));
+        $style     = str_replace(['"', '{', '}'], ' ', PackageDraft::text($tripParams['travel_type'] ?? 'leisure', 40) ?: 'leisure');
+        $tripParams = ['destination' => $dest, 'duration' => $days, 'travelers' => $travelers, 'travel_type' => $style] + $tripParams;
 
         // Ground the AI's tier numbers in real catalog prices for this
         // destination where we have them, instead of letting three budget
@@ -126,7 +130,8 @@ MSG;
             return $this->fallbackBudget($tripParams);
         }
 
-        $plan = $this->ai->parseJson($result['content']);
+        // Tier totals recomputed from their parts, enums/sizes checked, request fields (days/travellers) restored: see AIOutputChecks::budgetPlan.
+        $plan = AIOutputChecks::budgetPlan($this->ai->parseJson($result['content']), $tripParams);
         return $plan ?: $this->fallbackBudget($tripParams);
     }
 
@@ -337,21 +342,22 @@ Return: {\"essentials\":[{\"item\":\"<item>\",\"quantity\":\"<qty>\",\"priority\
     }
 
     private function fallbackBudget(array $params): array {
-        $days      = $params['duration'] ?? 3;
-        $travelers = $params['travelers'] ?? 2;
-        $perDay    = 2500;
+        $days      = max(1, (int)($params['duration'] ?? 3));
+        $travelers = max(1, (int)($params['travelers'] ?? 2));
+        $perDay    = 2500;     // a rough placeholder rate, NOT market data: labelled as such below
 
         return [
             'destination' => $params['destination'] ?? 'Unknown',
             'duration'    => $days,
             'travelers'   => $travelers,
             'tiers' => [
-                'budget'      => ['label'=>'Budget Traveler','total'=>$perDay*$days*$travelers*0.6,'daily_per_person'=>$perDay*0.6],
-                'recommended' => ['label'=>'Smart Traveler','total'=>$perDay*$days*$travelers,'daily_per_person'=>$perDay],
-                'premium'     => ['label'=>'Premium Experience','total'=>$perDay*$days*$travelers*1.8,'daily_per_person'=>$perDay*1.8],
+                'budget'      => ['label'=>'Budget Traveler','total'=>(int)round($perDay*$days*$travelers*0.6),'daily_per_person'=>(int)round($perDay*0.6)],
+                'recommended' => ['label'=>'Smart Traveler','total'=>(int)round($perDay*$days*$travelers),'daily_per_person'=>$perDay],
+                'premium'     => ['label'=>'Premium Experience','total'=>(int)round($perDay*$days*$travelers*1.8),'daily_per_person'=>(int)round($perDay*1.8)],
             ],
             'savings_tips' => [['tip'=>'Book 2+ weeks in advance','estimated_savings'=>'10-15%']],
-            'ai_budget_verdict' => 'AI budget analysis temporarily unavailable. These are estimated figures.',
+            'ai_budget_verdict' => 'AI budget analysis temporarily unavailable. These are rough placeholder figures (a flat daily rate), not market data.',
+            'validation' => ['basis' => 'flat placeholder rate, not market data', 'warnings' => []],
         ];
     }
 }

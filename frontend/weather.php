@@ -1,5 +1,5 @@
 <?php
-session_start();
+require_once __DIR__ . '/../backend/session-boot.php';
 error_reporting(E_ALL); ini_set('display_errors', '0'); ini_set('log_errors', '1');
 include('backend/config.php');
 // LIVE BUG FIX (customer-facing audit): this page is real browsing/
@@ -80,53 +80,56 @@ $currentMonth = date('M');
 <html lang="<?php echo htmlspecialchars(tms_active_language(), ENT_QUOTES, 'UTF-8'); ?>">
 <head>
 <link rel="manifest" href="manifest.json">
-<meta name="theme-color" content="#0B2B3C">
+<meta name="theme-color" content="#104B3A">
 <link rel="apple-touch-icon" href="images/icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="TMS">
+<meta name="mobile-web-app-capable" content="yes">
 <title>TMS | Weather & Best Travel Time</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <link href="css/bootstrap.min2.css" rel='stylesheet' type='text/css' />
-<link href="css/style.min.css" rel='stylesheet' type='text/css' />
+<link href="<?php echo tms_asset_ver('css/style.min.css'); ?>" rel='stylesheet' type='text/css' />
 <link href="css/font-awesome.min2.css" rel="stylesheet">
 <link href="<?php echo tms_asset_ver('css/modern-theme.css'); ?>" rel="stylesheet">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700;9..144,800&family=Manrope:wght@400;500;600;700;800&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
 <link href="css/animate.css" rel="stylesheet">
 <script src="js/jquery-1.12.0.min.js" defer></script>
 <script src="js/bootstrap.min.js" defer></script>
 <script src="js/wow.min.js" defer></script>
 <style>
-.weather-hero { background: linear-gradient(135deg,#1e3c72,#2a5298); color:#fff; padding:55px 0 30px; text-align:center; }
+.weather-hero { background: linear-gradient(135deg,#176B50,#104B3A); color:#fff; padding:55px 0 30px; text-align:center; }
 .weather-hero h1 { font-size:2.3em; margin-bottom:8px; }
 .dest-select-card { background:var(--white); border-radius:12px; box-shadow:0 8px 30px rgba(0,0,0,0.1); padding:30px; margin:-25px auto 30px; max-width:700px; position:relative; z-index:10; }
-.form-control { border:2px solid #e0e0e0; border-radius:8px; padding:12px 15px; font-size:15px; }
-.btn-weather { background: linear-gradient(135deg,#1e3c72,#2a5298); color:#fff; border:none; border-radius:8px; padding:12px 30px; font-size:15px; font-weight:700; cursor:pointer; width:100%; margin-top:10px; }
+.form-control { border:2px solid var(--border); border-radius:8px; padding:12px 15px; font-size:15px; }
+.btn-weather { background: linear-gradient(135deg,#176B50,#104B3A); color:#fff; border:none; border-radius:8px; padding:12px 30px; font-size:15px; font-weight:700; cursor:pointer; width:100%; margin-top:10px; }
 .weather-card { background:var(--white); border-radius:12px; box-shadow:0 4px 20px rgba(0,0,0,0.08); padding:25px; margin-bottom:25px; }
-.weather-card h4 { color:#333; font-size:1.1em; font-weight:700; margin-bottom:15px; border-bottom:2px solid #f0f0f0; padding-bottom:10px; }
+.weather-card h4 { color:var(--text); font-size:1.1em; font-weight:700; margin-bottom:15px; border-bottom:2px solid var(--border); padding-bottom:10px; }
 .month-grid { display:flex; flex-wrap:wrap; gap:8px; }
 .month-badge { padding:8px 12px; border-radius:8px; font-size:13px; font-weight:600; text-align:center; min-width:55px; }
 .month-best { background:#d4edda; color:#155724; border:2px solid #c3e6cb; }
 .month-avoid { background:#f8d7da; color:#721c24; border:2px solid #f5c6cb; }
 .month-ok { background:#fff3cd; color:#856404; border:2px solid #ffeaa7; }
-.month-current { border:3px solid #1e3c72 !important; }
+.month-current { border:3px solid #176B50 !important; }
 .season-legend { display:flex; gap:15px; margin-bottom:15px; font-size:13px; flex-wrap:wrap; }
 .season-dot { width:14px; height:14px; border-radius:3px; display:inline-block; margin-right:5px; vertical-align:middle; }
-.weather-widget { background: linear-gradient(135deg,#74b9ff,#a29bfe); border-radius:12px; padding:25px; color:#fff; text-align:center; }
+.weather-widget { background: linear-gradient(135deg,#176B50,#104B3A); border-radius:12px; padding:25px; color:#fff; text-align:center; }
 .weather-widget .temp { font-size:3em; font-weight:700; }
 .weather-widget .desc { font-size:1.1em; opacity:0.9; }
 .weather-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:15px; margin-top:15px; }
 .weather-stat { background:rgba(255,255,255,0.2); border-radius:8px; padding:12px; }
 .weather-stat .label { font-size:11px; opacity:0.8; display:block; }
 .weather-stat .val { font-size:1.3em; font-weight:700; }
-.tip-card { background: linear-gradient(135deg,#ffecd2,#fcb69f); border-radius:10px; padding:20px; margin-bottom:20px; }
+.tip-card { background: var(--white); border-radius:10px; padding:20px; margin-bottom:20px; }
 .tip-card h5 { font-weight:700; color:#c0392b; margin-bottom:8px; }
 .visit-rating { display:flex; align-items:center; gap:10px; margin:15px 0; }
 .visit-stars { color:#f0ad4e; font-size:18px; }
-.forecast-row { display:flex; justify-content:space-between; background:#f8f9fa; border-radius:10px; padding:12px 20px; margin-bottom:8px; align-items:center; }
-.forecast-day { font-weight:600; color:#333; min-width:80px; }
+.forecast-row { display:flex; justify-content:space-between; background:var(--bg); border-radius:10px; padding:12px 20px; margin-bottom:8px; align-items:center; }
+.forecast-day { font-weight:600; color:var(--text); min-width:80px; }
 .forecast-icon { font-size:18px; min-width:30px; text-align:center; }
-.forecast-temps { font-size:13px; color:#555; }
-.forecast-temps strong { color:#333; }
+.forecast-temps { font-size:13px; color:var(--text); }
+.forecast-temps strong { color:var(--text); }
 html[data-theme="dark"] .weather-card h4,
 html[data-theme="dark"] .forecast-day,
 html[data-theme="dark"] .forecast-temps strong { color: var(--text) !important; }
@@ -145,11 +148,11 @@ html[data-theme="dark"] .forecast-temps { color: var(--text-muted) !important; }
 
 <div class="container">
     <div class="dest-select-card wow fadeInUp">
-        <h4 style="color:#333;margin-bottom:20px;"><i class="fa fa-search" style="color:#1e3c72"></i> Select a Destination</h4>
+        <h4 style="color:var(--text);margin-bottom:20px;"><i class="fa fa-search" style="color:#176B50"></i> Select a Destination</h4>
         <form method="get">
             <div class="row">
                 <div class="col-md-9">
-                    <select name="dest" class="form-control">
+                    <select name="dest" class="form-control" aria-label="Destination">
                         <option value="">-- Select Tour Destination --</option>
                         <?php foreach($packages as $p): ?>
                         <option value="<?php echo $p->PackageId; ?>" <?php echo (isset($_GET['dest'])&&$_GET['dest']==$p->PackageId)?'selected':''; ?>>
@@ -169,7 +172,7 @@ html[data-theme="dark"] .forecast-temps { color: var(--text-muted) !important; }
     <div class="row">
         <div class="col-md-4">
             <div class="weather-card wow fadeInLeft">
-                <h4><i class="fa fa-thermometer-half" style="color:#1e3c72"></i> Current Weather</h4>
+                <h4><i class="fa fa-thermometer-half" style="color:#176B50"></i> Current Weather</h4>
                 <?php if($liveWeather['ok']): ?>
                 <div class="weather-widget">
                     <?php if(($liveWeather['source'] ?? 'openweathermap') === 'openweathermap'): ?>
@@ -223,7 +226,7 @@ html[data-theme="dark"] .forecast-temps { color: var(--text-muted) !important; }
                         <?php echo date('F Y'); ?>
                     </div>
                 </div>
-                <p style="font-size:11.5px;color:#999;margin-top:10px;">
+                <p style="font-size:11.5px;color:var(--text-muted);margin-top:10px;">
                     <i class="fa fa-info-circle"></i>
                     <?php
                     // BUG FIX: this checked for error === 'no_key', a value
@@ -252,7 +255,7 @@ html[data-theme="dark"] .forecast-temps { color: var(--text-muted) !important; }
                 <?php endif; ?>
 
                 <div class="visit-rating" style="margin-top:20px;">
-                    <span style="font-weight:600;color:#555;">Visit Rating:</span>
+                    <span style="font-weight:600;color:var(--text);">Visit Rating:</span>
                     <span class="visit-stars">
                         <?php
                         $isBest = in_array($currentMonth, $seasonInfo['best']);
@@ -261,12 +264,12 @@ html[data-theme="dark"] .forecast-temps { color: var(--text-muted) !important; }
                         for($i=1;$i<=5;$i++) echo $i<=$stars ? '★' : '☆';
                         ?>
                     </span>
-                    <span style="font-size:13px;color:#777;">(<?php echo $stars; ?>/5)</span>
+                    <span style="font-size:13px;color:var(--text-muted);">(<?php echo $stars; ?>/5)</span>
                 </div>
             </div>
 
             <div class="weather-card wow fadeInLeft" style="margin-top:0;">
-                <h4><i class="fa fa-calendar" style="color:#1e3c72"></i> <?php echo ($liveWeather['ok'] && !empty($liveWeather['forecast'])) ? 'Forecast' : 'Seasonal Guidance'; ?></h4>
+                <h4><i class="fa fa-calendar" style="color:#176B50"></i> <?php echo ($liveWeather['ok'] && !empty($liveWeather['forecast'])) ? 'Forecast' : 'Seasonal Guidance'; ?></h4>
                 <?php if($liveWeather['ok'] && !empty($liveWeather['forecast'])): ?>
                     <?php foreach($liveWeather['forecast'] as $f): ?>
                     <div class="forecast-row">
@@ -281,7 +284,7 @@ html[data-theme="dark"] .forecast-temps { color: var(--text-muted) !important; }
                         <span class="forecast-temps"><strong><?php echo $f['temp_max']; ?>°C</strong> / <?php echo $f['temp_min']; ?>°C</span>
                     </div>
                     <?php endforeach; ?>
-                    <p style="font-size:11px;color:#aaa;margin-top:8px;">Live forecast via <?php echo $liveWeather['source'] === 'openweathermap' ? 'OpenWeatherMap' : 'Open-Meteo'; ?></p>
+                    <p style="font-size:11px;color:var(--text-muted);margin-top:8px;">Live forecast via <?php echo $liveWeather['source'] === 'openweathermap' ? 'OpenWeatherMap' : 'Open-Meteo'; ?></p>
                 <?php else: ?>
                 <?php
                 // HONESTY FIX (Round 14): this block used to render seven
@@ -314,12 +317,12 @@ html[data-theme="dark"] .forecast-temps { color: var(--text-muted) !important; }
 
         <div class="col-md-8">
             <div class="weather-card wow fadeInRight">
-                <h4><i class="fa fa-calendar-check-o" style="color:#1e3c72"></i> Best & Worst Months to Visit</h4>
+                <h4><i class="fa fa-calendar-check-o" style="color:#176B50"></i> Best & Worst Months to Visit</h4>
                 <div class="season-legend">
                     <span><span class="season-dot" style="background:#d4edda;border:1px solid #c3e6cb;"></span> Best Time</span>
                     <span><span class="season-dot" style="background:#f8d7da;border:1px solid #f5c6cb;"></span> Avoid</span>
                     <span><span class="season-dot" style="background:#fff3cd;border:1px solid #ffeaa7;"></span> Acceptable</span>
-                    <span><span class="season-dot" style="background:var(--white);border:3px solid #1e3c72;"></span> Current Month</span>
+                    <span><span class="season-dot" style="background:var(--white);border:3px solid #176B50;"></span> Current Month</span>
                 </div>
                 <div class="month-grid">
                     <?php foreach($months as $m):
@@ -340,7 +343,7 @@ html[data-theme="dark"] .forecast-temps { color: var(--text-muted) !important; }
             </div>
 
             <div class="weather-card wow fadeInRight">
-                <h4><i class="fa fa-map-marker" style="color:#1e3c72"></i> About This Destination</h4>
+                <h4><i class="fa fa-map-marker" style="color:#176B50"></i> About This Destination</h4>
                 <div class="row">
                     <div class="col-sm-6">
                         <p><strong>Package:</strong> <?php echo htmlentities($selectedPkg->PackageName); ?></p>
@@ -354,7 +357,7 @@ html[data-theme="dark"] .forecast-temps { color: var(--text-muted) !important; }
                         <p><strong>Features:</strong> <?php echo htmlentities(substr($selectedPkg->PackageFetures ?? '', 0, 80)); ?>...</p>
                     </div>
                 </div>
-                <a href="package-details.php?pkgid=<?php echo $selectedPkg->PackageId; ?>" class="btn btn-primary" style="margin-top:15px;background:#1e3c72;border:none;border-radius:8px;">
+                <a href="package-details.php?pkgid=<?php echo $selectedPkg->PackageId; ?>" class="btn btn-primary" style="margin-top:15px;background:#176B50;border:none;border-radius:8px;">
                     <i class="fa fa-book"></i> Book This Package
                 </a>
             </div>
@@ -374,8 +377,8 @@ html[data-theme="dark"] .forecast-temps { color: var(--text-muted) !important; }
         ?>
         <div class="col-md-6 wow fadeInUp" style="margin-bottom:20px;">
             <div class="weather-card" style="background:<?php echo $tip['color']; ?>;border:none;">
-                <h4 style="color:#333;"><?php echo $tip['icon']; ?> <?php echo $tip['title']; ?></h4>
-                <p style="color:#555;"><?php echo $tip['tip']; ?></p>
+                <h4 style="color:#1f2937 !important;"><?php echo $tip['icon']; ?> <?php echo $tip['title']; ?></h4>
+                <p style="color:#374151 !important;"><?php echo $tip['tip']; ?></p>
             </div>
         </div>
         <?php endforeach; ?>

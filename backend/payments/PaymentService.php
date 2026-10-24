@@ -39,6 +39,35 @@ class PaymentService
         return new SandboxProvider();
     }
 
+    /**
+     * Whether the SANDBOX "Pay" button may actually mark a booking as paid.
+     *
+     * The sandbox never moves money, so on a public site it would let anyone
+     * confirm a booking for free. It is therefore allowed only when:
+     *   - TMS_ALLOW_SANDBOX_PAYMENTS is explicitly true in .env, or
+     *   - the request comes from this machine itself (REMOTE_ADDR is loopback
+     *     and no X-Forwarded-For header is present, i.e. not via a proxy).
+     * REMOTE_ADDR is set by the web server and cannot be spoofed by the client
+     * (unlike the Host header, which is deliberately NOT used here).
+     */
+    public static function sandboxAllowed(): bool
+    {
+        $flag = strtolower(trim((string)tms_env('TMS_ALLOW_SANDBOX_PAYMENTS', '')));
+        if ($flag !== '') {
+            return in_array($flag, ['1', 'true', 'yes', 'on'], true);
+        }
+        // Never implicit in production, and never when the request carries any sign of having come through a proxy or a public host
+        // name: a reverse proxy on the same machine shows up as loopback, which used to open the sandbox to everyone.
+        if (in_array(strtolower((string)tms_env('APP_ENV', '')), ['production', 'prod', 'live'], true)) return false;
+        foreach (['HTTP_X_FORWARDED_FOR', 'HTTP_X_FORWARDED_HOST', 'HTTP_X_FORWARDED_PROTO', 'HTTP_X_REAL_IP', 'HTTP_FORWARDED', 'HTTP_VIA', 'HTTP_CF_CONNECTING_IP'] as $h) {
+            if (!empty($_SERVER[$h])) return false;
+        }
+        $host = strtolower((string)preg_replace('/:\d+$/', '', (string)($_SERVER['HTTP_HOST'] ?? '')));
+        $localHost = in_array($host, ['localhost', '127.0.0.1', '[::1]', '::1'], true) || str_ends_with($host, '.localhost') || str_ends_with($host, '.test');
+        $ip = (string)($_SERVER['REMOTE_ADDR'] ?? '');
+        return $localHost && in_array($ip, ['127.0.0.1', '::1'], true);
+    }
+
     /** ৳ (or any currency) float amount -> integer minor units, the only
      *  representation tblpayments.AmountMinor accepts (Rule 8). */
     public static function toMinorUnits(float $amount): int
@@ -53,6 +82,14 @@ class PaymentService
      */
     public function createPendingPayment(int $bookingId, float $amountFloat, string $currency = 'BDT'): array
     {
+        // Only a live, unpaid booking can be paid: no new payment for a cancelled or already-paid booking.
+        $bk = $this->dbh->prepare('SELECT status, PaymentStatus FROM tblbooking WHERE BookingId = :b');
+        $bk->execute([':b' => $bookingId]);
+        $bkRow = $bk->fetch(PDO::FETCH_ASSOC);
+        if (!$bkRow) throw new DomainException('booking_not_found');
+        if ((int)$bkRow['status'] === 2) throw new DomainException('booking_cancelled');
+        if (strtolower((string)$bkRow['PaymentStatus']) === 'paid') throw new DomainException('booking_already_paid');
+
         $provider = $this->getProvider();
         $amountMinor = self::toMinorUnits($amountFloat);
         $idempotencyKey = hash('sha256', $bookingId . '|' . $amountMinor . '|' . $provider->name() . '|' . date('Y-m-d'));
@@ -108,6 +145,9 @@ class PaymentService
         $stmt->execute([':id' => $paymentId]);
         $payment = $stmt->fetch(PDO::FETCH_ASSOC);
 
+        if (!self::sandboxAllowed()) {
+            return false; // sandbox cannot confirm payments on a public site
+        }
         if (!$payment || $payment['Provider'] !== 'sandbox') {
             return false;
         }
@@ -121,6 +161,16 @@ class PaymentService
 
         $this->dbh->beginTransaction();
         try {
+            // Lock the booking row and refuse to touch a cancelled booking:
+            // without this, paying a cancelled booking set status=1 and
+            // silently resurrected it.
+            $lock = $this->dbh->prepare("SELECT status FROM tblbooking WHERE BookingId = :bid FOR UPDATE");
+            $lock->execute([':bid' => $payment['BookingId']]);
+            $bStatus = $lock->fetchColumn();
+            if ($bStatus === false || (int)$bStatus === 2) {
+                $this->dbh->rollBack();
+                return false;
+            }
             $this->dbh->prepare("UPDATE tblpayments SET Status='paid', RawResponse=:raw WHERE PaymentId=:id")
                 ->execute([':id' => $paymentId, ':raw' => json_encode(['confirmed_at' => date('c'), 'mode' => 'sandbox'])]);
             $this->dbh->prepare("UPDATE tblbooking SET PaymentStatus='paid', status=1 WHERE BookingId=:bid")
@@ -280,6 +330,10 @@ class PaymentService
             }
         }
 
+        // Oversized bodies are refused before anything is stored (the endpoint is unauthenticated; the events table must not be floodable).
+        if (strlen($rawBody) > 262144) {
+            return ['status' => 413, 'body' => ['status' => 'error', 'message' => 'Payload too large.']];
+        }
         $providerEventId = $payload['event_id'] ?? $payload['id'] ?? $payload['transactionId']
             ?? $payload['tran_id'] ?? $payload['paymentID'] ?? null;
         if (!$providerEventId) {
@@ -295,10 +349,20 @@ class PaymentService
                 "SELECT EventId, ProcessingStatus FROM tblpayment_events WHERE Provider = :prov AND ProviderEventId = :peid LIMIT 1"
             );
             $existing->execute([':prov' => $providerName, ':peid' => $providerEventId]);
-            if ($dupe = $existing->fetch(PDO::FETCH_ASSOC)) {
+            $dupe = $existing->fetch(PDO::FETCH_ASSOC);
+            // Only an event that was fully PROCESSED is a true duplicate. A 'failed' / 'received' / 'rejected' row must not swallow the
+            // gateway's retry (otherwise one transient error, or an unsigned forged body reusing a real transaction id, would make the
+            // genuine signed callback answer "duplicate" forever and the payment would never reconcile).
+            if ($dupe && $dupe['ProcessingStatus'] === 'processed') {
                 return ['status' => 200, 'body' => ['status' => 'duplicate', 'already' => $dupe['ProcessingStatus']]];
             }
 
+            if ($dupe) {
+                // Reuse the existing row for this retry instead of inserting (the unique key would reject a second row).
+                $this->dbh->prepare("UPDATE tblpayment_events SET RetryCount = RetryCount + 1, ProcessingStatus = 'received', SignatureValid = 0, Signature = :sig, Payload = :payload WHERE EventId = :id")
+                    ->execute([':sig' => $signature, ':payload' => $rawBody !== '' ? $rawBody : json_encode($payload), ':id' => (int)$dupe['EventId']]);
+                $eventId = (int)$dupe['EventId'];
+            } else {
             // Log unconditionally, before verification -- a forged or
             // malformed request still leaves a record.
             $ins = $this->dbh->prepare(
@@ -313,6 +377,7 @@ class PaymentService
                 ':payload' => $rawBody !== '' ? $rawBody : json_encode($payload),
             ]);
             $eventId = (int)$this->dbh->lastInsertId();
+            }
         } catch (PDOException $e) {
             error_log("[TMS Webhooks] {$providerName}: failed to log inbound event -- " . $e->getMessage());
             return ['status' => 500, 'body' => ['status' => 'error', 'message' => 'Could not record event.']];

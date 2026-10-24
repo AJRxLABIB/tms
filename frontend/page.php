@@ -1,7 +1,8 @@
 <?php
-session_start();
+require_once __DIR__ . '/../backend/session-boot.php';
 error_reporting(E_ALL); ini_set('display_errors', '0'); ini_set('log_errors', '1');
 include('backend/config.php');
+require_once __DIR__ . '/../backend/HtmlSanitizer.php';
 // LIVE BUG FIX (customer-facing audit): this page is real browsing/
 // marketing content -- it's explicitly allowed in robots.txt and listed
 // in sitemap.php for search engines -- but a blanket "require login
@@ -18,8 +19,11 @@ if(isset($_POST['submit1']))
     $mobile      = tms_clean($_POST['mobileno'] ?? '');
     $subject     = tms_clean($_POST['subject'] ?? '');
     $description = tms_clean($_POST['description'] ?? '');
+    $fname = mb_substr($fname, 0, 100); $mobile = mb_substr($mobile, 0, 20); $subject = mb_substr($subject, 0, 100); $description = mb_substr($description, 0, 5000);
 
-    if (empty($fname) || empty($email) || empty($subject) || empty($description)) {
+    if (!tms_rate_limit($dbh, 'enquiry', tms_client_ip(), 5)) {
+        $error = "Too many messages from this network in the last hour. Please try again later.";
+    } elseif (empty($fname) || empty($email) || empty($subject) || empty($description)) {
         $error = "Please fill in all required fields.";
     } else {
         $sql = "INSERT INTO tblenquiry(FullName,EmailId,MobileNumber,Subject,Description) VALUES(:fname,:email,:mobile,:subject,:description)";
@@ -29,7 +33,7 @@ if(isset($_POST['submit1']))
         $query->bindParam(':mobile',      $mobile,      PDO::PARAM_STR);
         $query->bindParam(':subject',     $subject,     PDO::PARAM_STR);
         $query->bindParam(':description', $description, PDO::PARAM_STR);
-        $query->execute();
+        try { $query->execute(); } catch (PDOException $e) { error_log('[TMS enquiry] ' . $e->getMessage()); }
         if ($dbh->lastInsertId()) {
             $msg = "Enquiry successfully submitted!";
         } else {
@@ -43,19 +47,22 @@ if(isset($_POST['submit1']))
 <html lang="<?php echo htmlspecialchars(tms_active_language(), ENT_QUOTES, 'UTF-8'); ?>">
 <head>
 <link rel="manifest" href="manifest.json">
-<meta name="theme-color" content="#0B2B3C">
+<meta name="theme-color" content="#104B3A">
 <link rel="apple-touch-icon" href="images/icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="TMS">
+<meta name="mobile-web-app-capable" content="yes">
 <title>TMS | Tourism Management System</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
 <meta name="keywords" content="Tourism Management System In PHP" />
 <link href="css/bootstrap.min2.css" rel='stylesheet' type='text/css' />
-<link href="css/style.min.css" rel='stylesheet' type='text/css' />
+<link href="<?php echo tms_asset_ver('css/style.min.css'); ?>" rel='stylesheet' type='text/css' />
 <link href="css/font-awesome.min2.css" rel="stylesheet">
 <link href="<?php echo tms_asset_ver('css/modern-theme.css'); ?>" rel="stylesheet">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700;9..144,800&family=Manrope:wght@400;500;600;700;800&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
 <!-- Custom Theme files -->
 <script src="js/jquery-1.12.0.min.js" defer></script>
 <script src="js/bootstrap.min.js" defer></script>
@@ -142,7 +149,7 @@ if (in_array($pagetype, ['aboutus', 'contact'], true) && tms_active_language() !
             'why_1'            => 'Locally vetted packages, no hidden fees',
             'why_2'            => 'Live weather & nearby-places for every destination',
             'why_3'            => 'Secure booking with instant confirmation',
-            'why_4'            => 'Multilingual support, 24/7 human help',
+            'why_4'            => 'Multilingual support, with an AI travel assistant available any time',
         ], tms_active_language(), $dbh);
     } else {
         $T = tms_translate_batch([
@@ -171,7 +178,7 @@ function tms_page_t(array $T, string $key, string $fallback): string {
 <?php if ($pagetype === 'aboutus'): ?>
 	<h3 class="wow fadeInDown"><i class="fa fa-info-circle" style="color:var(--secondary)"></i> <?php echo htmlspecialchars(tms_page_t($T, 'heading', 'About Us'), ENT_QUOTES, 'UTF-8'); ?></h3>
 	<?php if ($cms && trim(strip_tags($cms->detail)) !== ''): ?>
-	<p><?php echo $cms->detail; ?></p>
+	<p><?php echo HtmlSanitizer::clean((string)$cms->detail); ?></p>
 	<?php else: ?>
 	<p><?php echo htmlspecialchars(tms_page_t($T, 'intro', "TMS (Tourism Management System) helps travellers discover, plan and book unforgettable trips across Bangladesh and beyond — from the sandy shores of Cox's Bazar to the hill tracts of Bandarban and destinations worldwide."), ENT_QUOTES, 'UTF-8'); ?></p>
 	<?php endif; ?>
@@ -196,19 +203,24 @@ function tms_page_t(array $T, string $key, string $fallback): string {
 		<p style="color:#555;"><?php echo htmlspecialchars(tms_page_t($T, 'story_body', "TMS started with a simple frustration: booking a trip shouldn't mean juggling five different websites for packages, weather, maps and reviews. We built a single place where you can explore any destination, see live weather and nearby places, compare packages, and book — all without leaving the site."), ENT_QUOTES, 'UTF-8'); ?></p>
 	</div>
 
+	<?php
+	require_once dirname(__DIR__) . '/backend/SiteStats.php';
+	$aboutStats = isset($dbh) && $dbh instanceof PDO ? tms_site_stats($dbh) : [];
+	$aboutItems = array_filter([
+		tms_page_t($T, 'stat_packages', 'Tour Packages')      => (int)($aboutStats['packages'] ?? 0),
+		tms_page_t($T, 'stat_destinations', 'Destinations')   => (int)($aboutStats['destinations'] ?? 0),
+		tms_page_t($T, 'stat_reviews', 'Traveller Reviews')   => (int)($aboutStats['reviews'] ?? 0),
+	], static function ($n) { return $n > 0; });
+	?>
+	<?php if ($aboutItems): ?>
 	<div class="row wow fadeInUp" style="text-align:center;margin:30px 0;">
-		<div class="col-xs-6 col-sm-3" style="margin-bottom:20px;">
-			<h2 style="color:var(--secondary);font-weight:800;" data-counter="400">0</h2><p style="color:#666;"><?php echo htmlspecialchars(tms_page_t($T, 'stat_packages', 'Tour Packages'), ENT_QUOTES, 'UTF-8'); ?></p>
+		<?php foreach ($aboutItems as $lbl => $n): ?>
+		<div class="col-xs-6 col-sm-4" style="margin-bottom:20px;">
+			<h2 style="color:var(--secondary);font-weight:800;" data-counter="<?php echo (int)$n; ?>">0</h2><p style="color:var(--text-muted);"><?php echo htmlspecialchars($lbl, ENT_QUOTES, 'UTF-8'); ?></p>
 		</div>
-		<div class="col-xs-6 col-sm-3" style="margin-bottom:20px;">
-			<h2 style="color:var(--secondary);font-weight:800;" data-counter="1900">0</h2><p style="color:#666;"><?php echo htmlspecialchars(tms_page_t($T, 'stat_travellers', 'Happy Travellers'), ENT_QUOTES, 'UTF-8'); ?></p>
-		</div>
-		<div class="col-xs-6 col-sm-3" style="margin-bottom:20px;">
-			<h2 style="color:var(--secondary);font-weight:800;" data-counter="60">0</h2><p style="color:#666;"><?php echo htmlspecialchars(tms_page_t($T, 'stat_destinations', 'Destinations'), ENT_QUOTES, 'UTF-8'); ?></p>
-		</div>
-		<div class="col-xs-6 col-sm-3" style="margin-bottom:20px;">
-			<h2 style="color:var(--secondary);font-weight:800;">24/7</h2><p style="color:#666;"><?php echo htmlspecialchars(tms_page_t($T, 'stat_support', 'Support'), ENT_QUOTES, 'UTF-8'); ?></p>
-		</div>
+		<?php endforeach; ?>
+	</div>
+	<?php endif; ?>
 	</div>
 
 	<div class="pkg-card wow fadeInUp" style="padding:24px;">
@@ -217,14 +229,14 @@ function tms_page_t(array $T, string $key, string $fallback): string {
 			<div class="col-sm-6"><p style="color:#555;"><i class="fa fa-check-circle" style="color:#27ae60"></i> <?php echo htmlspecialchars(tms_page_t($T, 'why_1', 'Locally vetted packages, no hidden fees'), ENT_QUOTES, 'UTF-8'); ?></p></div>
 			<div class="col-sm-6"><p style="color:#555;"><i class="fa fa-check-circle" style="color:#27ae60"></i> <?php echo htmlspecialchars(tms_page_t($T, 'why_2', 'Live weather & nearby-places for every destination'), ENT_QUOTES, 'UTF-8'); ?></p></div>
 			<div class="col-sm-6"><p style="color:#555;"><i class="fa fa-check-circle" style="color:#27ae60"></i> <?php echo htmlspecialchars(tms_page_t($T, 'why_3', 'Secure booking with instant confirmation'), ENT_QUOTES, 'UTF-8'); ?></p></div>
-			<div class="col-sm-6"><p style="color:#555;"><i class="fa fa-check-circle" style="color:#27ae60"></i> <?php echo htmlspecialchars(tms_page_t($T, 'why_4', 'Multilingual support, 24/7 human help'), ENT_QUOTES, 'UTF-8'); ?></p></div>
+			<div class="col-sm-6"><p style="color:#555;"><i class="fa fa-check-circle" style="color:#27ae60"></i> <?php echo htmlspecialchars(tms_page_t($T, 'why_4', 'Multilingual support, with an AI travel assistant available any time'), ENT_QUOTES, 'UTF-8'); ?></p></div>
 		</div>
 	</div>
 
 <?php elseif ($pagetype === 'contact'): ?>
 	<h3 class="wow fadeInDown"><i class="fa fa-envelope" style="color:var(--secondary)"></i> <?php echo htmlspecialchars(tms_page_t($T, 'heading', 'Contact Us'), ENT_QUOTES, 'UTF-8'); ?></h3>
 	<?php if ($cms && trim(strip_tags($cms->detail)) !== ''): ?>
-	<p><?php echo $cms->detail; ?></p>
+	<p><?php echo HtmlSanitizer::clean((string)$cms->detail); ?></p>
 	<?php else: ?>
 	<p><?php echo htmlspecialchars(tms_page_t($T, 'intro', 'Questions about a package, a booking, or planning a custom trip? Send us a message and our team will get back to you shortly.'), ENT_QUOTES, 'UTF-8'); ?></p>
 	<?php endif; ?>
@@ -276,37 +288,61 @@ function tms_page_t(array $T, string $key, string $fallback): string {
 			</div>
 		</div>
 		<div class="col-md-5" style="margin-bottom:20px;">
+			<?php
+			// Contact details come from .env so the site never shows made-up or leftover template details.
+			// A field that is not configured is simply not shown.
+			$tmsOffAddr  = trim((string)tms_env('TMS_OFFICE_ADDRESS', ''));
+			$tmsOffPhone = trim((string)tms_env('TMS_SUPPORT_PHONE', '+880 1759-443004'));
+			$tmsOffMail  = trim((string)tms_env('TMS_SUPPORT_EMAIL', ''));
+			$tmsOffLat   = tms_env('TMS_OFFICE_LAT', '');
+			$tmsOffLng   = tms_env('TMS_OFFICE_LNG', '');
+			$tmsHasMap   = is_numeric($tmsOffLat) && is_numeric($tmsOffLng) && abs((float)$tmsOffLat) <= 90 && abs((float)$tmsOffLng) <= 180;
+			?>
+			<?php if ($tmsOffAddr !== '' || $tmsOffPhone !== '' || $tmsOffMail !== ''): ?>
 			<div class="pkg-card" style="padding:24px;margin-bottom:16px;">
-				<h5 style="font-weight:700;"><i class="fa fa-map-marker" style="color:#e74c3c"></i> <?php echo htmlspecialchars(tms_page_t($T, 'office_title', 'Our Office'), ENT_QUOTES, 'UTF-8'); ?></h5>
-				<p style="color:#666;font-size:14px;"><?php echo htmlspecialchars(tms_page_t($T, 'office_addr', 'Gulshan Avenue, Dhaka 1212, Bangladesh'), ENT_QUOTES, 'UTF-8'); ?></p>
-				<h5 style="font-weight:700;margin-top:14px;"><i class="fa fa-phone" style="color:var(--secondary)"></i> <?php echo htmlspecialchars(tms_page_t($T, 'phone_title', 'Phone'), ENT_QUOTES, 'UTF-8'); ?></h5>
-				<p style="color:#666;font-size:14px;">Toll: +880 1759-443004</p>
-				<h5 style="font-weight:700;margin-top:14px;"><i class="fa fa-envelope-o" style="color:var(--secondary)"></i> <?php echo htmlspecialchars(tms_page_t($T, 'email_title', 'Email'), ENT_QUOTES, 'UTF-8'); ?></h5>
-				<p style="color:#666;font-size:14px;">support@tms.example.com</p>
+				<?php if ($tmsOffAddr !== ''): ?>
+				<h5 style="font-weight:700;"><i class="fa fa-map-marker" style="color:var(--danger)" aria-hidden="true"></i> <?php echo htmlspecialchars(tms_page_t($T, 'office_title', 'Our Office'), ENT_QUOTES, 'UTF-8'); ?></h5>
+				<p style="color:var(--text-muted);font-size:14px;"><?php echo htmlspecialchars($tmsOffAddr, ENT_QUOTES, 'UTF-8'); ?></p>
+				<?php endif; ?>
+				<?php if ($tmsOffPhone !== ''): ?>
+				<h5 style="font-weight:700;margin-top:14px;"><i class="fa fa-phone" style="color:var(--secondary)" aria-hidden="true"></i> <?php echo htmlspecialchars(tms_page_t($T, 'phone_title', 'Phone'), ENT_QUOTES, 'UTF-8'); ?></h5>
+				<p style="color:var(--text-muted);font-size:14px;"><?php echo htmlspecialchars($tmsOffPhone, ENT_QUOTES, 'UTF-8'); ?></p>
+				<?php endif; ?>
+				<?php if ($tmsOffMail !== '' && filter_var($tmsOffMail, FILTER_VALIDATE_EMAIL)): ?>
+				<h5 style="font-weight:700;margin-top:14px;"><i class="fa fa-envelope-o" style="color:var(--secondary)" aria-hidden="true"></i> <?php echo htmlspecialchars(tms_page_t($T, 'email_title', 'Email'), ENT_QUOTES, 'UTF-8'); ?></h5>
+				<p style="color:var(--text-muted);font-size:14px;"><?php echo htmlspecialchars($tmsOffMail, ENT_QUOTES, 'UTF-8'); ?></p>
+				<?php endif; ?>
 			</div>
+			<?php endif; ?>
+			<?php if ($tmsHasMap): ?>
 			<div id="contactMap" style="height:220px;border-radius:8px;overflow:hidden;"></div>
+			<?php endif; ?>
 		</div>
 	</div>
-	<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-	<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+	<?php if ($tmsHasMap): ?>
+	<link rel="stylesheet" href="js/vendor/leaflet/leaflet.css" />
+	<script src="js/vendor/leaflet/leaflet.js"></script>
 	<script>
 	window.addEventListener('load', function () {
 		if (typeof L === 'undefined') return;
-		var map = L.map('contactMap', { scrollWheelZoom: false }).setView([23.7925, 90.4078], 14);
+		var pos = [<?php echo (float)$tmsOffLat; ?>, <?php echo (float)$tmsOffLng; ?>];
+		var map = L.map('contactMap', { scrollWheelZoom: false }).setView(pos, 14);
 		L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
 			attribution: '&copy; OpenStreetMap contributors'
 		}).addTo(map);
-		L.marker([23.7925, 90.4078]).addTo(map).bindPopup('TMS Office — Gulshan, Dhaka');
+		L.marker(pos).addTo(map).bindPopup('TMS office');
 	});
 	</script>
+	<?php endif; ?>
 
 <?php elseif ($cms): ?>
-	<h3 class="wow fadeInDown"><?php echo htmlspecialchars($pagetype, ENT_QUOTES, 'UTF-8'); ?></h3>
-	<p><?php echo $cms->detail; ?></p>
+	<?php $cmsTitles = ['terms'=>'Terms of Service','privacy'=>'Privacy Policy']; ?>
+	<h3 class="wow fadeInDown"><?php echo htmlspecialchars($cmsTitles[$pagetype] ?? ucfirst($pagetype), ENT_QUOTES, 'UTF-8'); ?></h3>
+	<div class="cms-body" style="color:var(--text);line-height:1.7;"><?php echo HtmlSanitizer::clean((string)$cms->detail); ?></div>
 <?php else: ?>
 	<div style="text-align:center;padding:60px 20px;">
 		<i class="fa fa-file-o" style="font-size:50px;color:#ddd;display:block;margin-bottom:16px;"></i>
-		<h3 style="color:#aaa;">Page not found</h3>
+		<h3 style="color:var(--text-muted);">Page not found</h3>
 		<a href="index.php" class="btn btn-primary" style="margin-top:10px;">Back to Home</a>
 	</div>
 <?php endif; ?>

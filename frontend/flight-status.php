@@ -1,5 +1,5 @@
 <?php
-session_start();
+require_once __DIR__ . '/../backend/session-boot.php';
 error_reporting(E_ALL); ini_set('display_errors', '0'); ini_set('log_errors', '1');
 include('backend/config.php');
 tms_require_user(); // Batch 1 (landing/auth gating): whole app now requires login
@@ -8,27 +8,30 @@ tms_require_user(); // Batch 1 (landing/auth gating): whole app now requires log
 <title>TMS | Flight Tracker</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <link rel="manifest" href="manifest.json">
-<meta name="theme-color" content="#0B2B3C">
+<meta name="theme-color" content="#104B3A">
 <link rel="apple-touch-icon" href="images/icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="TMS">
+<meta name="mobile-web-app-capable" content="yes">
 <link href="css/bootstrap.min2.css" rel='stylesheet'/>
-<link href="css/style.min.css" rel='stylesheet'/>
+<link href="<?php echo tms_asset_ver('css/style.min.css'); ?>" rel='stylesheet'/>
 <link href="css/font-awesome.min2.css" rel="stylesheet">
 <link href="<?php echo tms_asset_ver('css/modern-theme.css'); ?>" rel="stylesheet">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700;9..144,800&family=Manrope:wght@400;500;600;700;800&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<link rel="stylesheet" href="js/vendor/leaflet/leaflet.css" />
 <script src="js/jquery-1.12.0.min.js" defer></script>
 <script src="js/bootstrap.min.js" defer></script>
 <style>
 .page-title{background:linear-gradient(135deg,var(--primary-dark),var(--primary));color:#fff;padding:40px 0;margin-bottom:30px;}
-.ft-card{background:#fff;border-radius:12px;box-shadow:0 3px 20px rgba(0,0,0,0.07);padding:24px;margin-bottom:24px;}
+.ft-card{background:var(--white);border-radius:12px;box-shadow:0 3px 20px rgba(0,0,0,0.07);padding:24px;margin-bottom:24px;}
 .scope-note{background:#fffbeb;border:1px solid #fde68a;color:#92400e;font-size:12.5px;padding:12px 16px;border-radius:8px;margin-bottom:20px;display:flex;gap:10px;align-items:flex-start;}
 #flightMap{height:380px;border-radius:10px;margin-top:16px;display:none;}
 .stat-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:14px;margin-top:16px;}
-.stat-box{background:#f8fafc;border-radius:10px;padding:14px;text-align:center;}
-.stat-box .val{font-size:20px;font-weight:800;color:#1f2937;}
-.stat-box .lbl{font-size:11px;color:#94a3b8;text-transform:uppercase;letter-spacing:.4px;margin-top:2px;}
+.stat-box{background:var(--bg);border-radius:10px;padding:14px;text-align:center;}
+.stat-box .val{font-size:20px;font-weight:800;color:var(--text);}
+.stat-box .lbl{font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.4px;margin-top:2px;}
 </style>
 </head><body>
 <?php include('backend/header.php'); ?>
@@ -63,8 +66,9 @@ tms_require_user(); // Batch 1 (landing/auth gating): whole app now requires log
 
 </div>
 <?php include('backend/footer.php'); ?>
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="js/vendor/leaflet/leaflet.js"></script>
 <script>
+function esc(v) { return String(v == null ? "" : v).replace(/[&<>"']/g, function (c) { return {"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c]; }); }
 let flightMap = null, flightMarker = null;
 
 async function trackFlight(e) {
@@ -76,7 +80,7 @@ async function trackFlight(e) {
 
   btn.disabled = true;
   btn.innerHTML = '<i class="fa fa-spinner fa-spin"></i> Searching...';
-  resultBox.innerHTML = '<div style="margin-top:16px;color:#94a3b8;font-size:13px;"><i class="fa fa-circle-o-notch fa-spin"></i> Checking live aircraft positions...</div>';
+  resultBox.innerHTML = '<div style="margin-top:16px;color:var(--text-muted);font-size:13px;"><i class="fa fa-circle-o-notch fa-spin"></i> Checking live aircraft positions...</div>';
   document.getElementById('flightMap').style.display = 'none';
 
   try {
@@ -88,25 +92,25 @@ async function trackFlight(e) {
     btn.innerHTML = '<i class="fa fa-search"></i> Track';
 
     if (!data.success) {
-      resultBox.innerHTML = '<div class="alert alert-warning" style="margin-top:16px;">' + (data.error || data.message || 'Could not check flight status right now.') + '</div>';
+      resultBox.innerHTML = '<div class="alert alert-warning" style="margin-top:16px;">' + esc(data.error || data.message || 'Could not check flight status right now.') + '</div>';
       return false;
     }
 
     if (!data.data.found) {
-      resultBox.innerHTML = '<div class="alert alert-info" style="margin-top:16px;"><i class="fa fa-info-circle"></i> ' + data.data.message + '</div>';
+      resultBox.innerHTML = '<div class="alert alert-info" style="margin-top:16px;"><i class="fa fa-info-circle"></i> ' + esc(data.data.message) + '</div>';
       return false;
     }
 
     const f = data.data.flight;
     let statusHtml = '<div class="alert alert-success" style="margin-top:16px;">';
-    statusHtml += '<strong><i class="fa fa-plane"></i> ' + f.callsign + '</strong> — ';
+    statusHtml += '<strong><i class="fa fa-plane"></i> ' + esc(f.callsign) + '</strong> — ';
     statusHtml += f.on_ground ? 'On the ground' : (f.climbing ? 'Climbing' : (f.descending ? 'Descending' : 'Cruising'));
-    if (f.origin_country) statusHtml += ' &middot; Operator country: ' + f.origin_country;
+    if (f.origin_country) statusHtml += ' &middot; Operator country: ' + esc(f.origin_country);
     statusHtml += '</div>';
     statusHtml += '<div class="stat-grid">';
-    statusHtml += '<div class="stat-box"><div class="val">' + (f.altitude_ft !== null ? f.altitude_ft.toLocaleString() : '—') + '</div><div class="lbl">Altitude (ft)</div></div>';
-    statusHtml += '<div class="stat-box"><div class="val">' + (f.speed_kmh !== null ? f.speed_kmh : '—') + '</div><div class="lbl">Speed (km/h)</div></div>';
-    statusHtml += '<div class="stat-box"><div class="val">' + (f.heading_deg !== null ? Math.round(f.heading_deg) + '°' : '—') + '</div><div class="lbl">Heading</div></div>';
+    statusHtml += '<div class="stat-box"><div class="val">' + (f.altitude_ft != null ? esc(Number(f.altitude_ft).toLocaleString()) : '—') + '</div><div class="lbl">Altitude (ft)</div></div>';
+    statusHtml += '<div class="stat-box"><div class="val">' + (f.speed_kmh != null ? esc(f.speed_kmh) : '—') + '</div><div class="lbl">Speed (km/h)</div></div>';
+    statusHtml += '<div class="stat-box"><div class="val">' + (f.heading_deg != null ? Math.round(Number(f.heading_deg)) + '°' : '—') + '</div><div class="lbl">Heading</div></div>';
     statusHtml += '</div>';
     // Master prompt item 64 (source provenance): this is a live, perishable
     // position -- the aircraft has moved on by the time it's read -- so show
@@ -116,7 +120,7 @@ async function trackFlight(e) {
     // result.
     if (f.source || f.fetched_at) {
       statusHtml += '<p style="font-size:10.5px;margin-top:10px;opacity:0.75;">';
-      statusHtml += 'Source: ' + (f.source === 'opensky' ? 'OpenSky Network' : (f.source || 'unknown'));
+      statusHtml += 'Source: ' + (f.source === 'opensky' ? 'OpenSky Network' : esc(f.source || 'unknown'));
       if (f.fetched_at) {
         const t = new Date(f.fetched_at);
         if (!isNaN(t.getTime())) {

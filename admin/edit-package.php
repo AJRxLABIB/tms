@@ -1,5 +1,5 @@
 <?php
-session_start();
+require_once __DIR__ . '/../backend/session-boot.php';
 error_reporting(E_ALL);
 ini_set('display_errors', 0);
 ini_set('log_errors', 1);
@@ -11,7 +11,6 @@ include('includes/config.php');
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>TMS | Edit Package</title>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Plus+Jakarta+Sans:wght@600;700;800&display=swap" rel="stylesheet">
 <link href="css/font-awesome.min2.css" rel="stylesheet">
 <link href="css/bootstrap.min.css" rel="stylesheet">
 <link href="<?php echo tms_asset_ver('css/admin-v6.css'); ?>" rel="stylesheet">
@@ -144,12 +143,12 @@ if(isset($_POST['submit'])) {
                 <form method="post" enctype="multipart/form-data">
                 <?php tms_csrf_field(); ?>
                     <div class="form-group">
-                        <label>Package Name *</label>
-                        <input type="text" name="packagename" class="form-control" value="<?php echo htmlentities($package->PackageName); ?>" required>
+                        <label for="pkgNameField">Package Name *</label>
+                        <input type="text" id="pkgNameField" name="packagename" class="form-control" value="<?php echo htmlentities($package->PackageName); ?>" required>
                     </div>
                     <div class="form-group">
-                        <label>Package Type *</label>
-                        <select name="packagetype" class="form-control" required>
+                        <label for="pkgTypeField">Package Type *</label>
+                        <select id="pkgTypeField" name="packagetype" class="form-control" required>
                             <?php $types = ['Family Package','Couple Package','Group Package','Domestic Packages','International Package'];
                             foreach($types as $t): ?>
                             <option value="<?php echo $t; ?>" <?php echo ($package->PackageType==$t)?'selected':''; ?>><?php echo $t; ?></option>
@@ -157,11 +156,11 @@ if(isset($_POST['submit'])) {
                         </select>
                     </div>
                     <div class="form-group">
-                        <label>Package Location *</label>
-                        <input type="text" name="packagelocation" class="form-control" value="<?php echo htmlentities($package->PackageLocation); ?>" required>
+                        <label for="pkgLocationField">Package Location *</label>
+                        <input type="text" id="pkgLocationField" name="packagelocation" class="form-control" value="<?php echo htmlentities($package->PackageLocation); ?>" required>
                     </div>
                     <div class="form-group">
-                        <label>Package Price (৳) *</label>
+                        <label for="packagePriceInput">Package Price (৳) *</label>
                         <div style="display:flex;gap:8px;">
                             <input type="number" name="packageprice" id="packagePriceInput" class="form-control" value="<?php echo htmlentities($package->PackagePrice); ?>" required>
                             <button type="button" id="suggestPriceBtn" class="btn btn-info" style="white-space:nowrap;"
@@ -169,73 +168,73 @@ if(isset($_POST['submit'])) {
                                 <i class="fa fa-magic"></i> Suggest
                             </button>
                         </div>
-                        <div id="priceSuggestionBox" style="display:none;margin-top:8px;padding:10px 12px;background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;font-size:12.5px;color:#1e40af;"></div>
+                        <div id="priceSuggestionBox" style="display:none;margin-top:8px;padding:10px 12px;background:#EEF7F1;border:1px solid #B8E4C9;border-radius:8px;font-size:12.5px;color:#104B3A;"></div>
                     </div>
                     <div class="form-group">
-                        <label>Package Features</label>
-                        <textarea name="packagefeatures" class="form-control" rows="3"><?php echo htmlentities($package->PackageFetures); ?></textarea>
+                        <label for="pkgFeaturesField">Package Features</label>
+                        <textarea id="pkgFeaturesField" name="packagefeatures" class="form-control" rows="3"><?php echo htmlentities($package->PackageFetures); ?></textarea>
                     </div>
                     <div class="form-group">
-                        <label>Package Details</label>
-                        <textarea name="packagedetails" class="form-control" rows="5"><?php echo htmlentities($package->PackageDetails); ?></textarea>
+                        <label for="pkgDetailsField">Package Details</label>
+                        <textarea id="pkgDetailsField" name="packagedetails" class="form-control" rows="5"><?php echo htmlentities($package->PackageDetails); ?></textarea>
                     </div>
                     <div class="form-group">
-                        <label>Duration <small style="font-weight:400;color:#94a3b8;">(e.g. "5 Days 4 Nights")</small></label>
-                        <input type="text" name="packageduration" class="form-control" value="<?php echo htmlentities($package->PackageDuration ?? ''); ?>" placeholder="5 Days 4 Nights">
+                        <label for="pkgDurationField">Duration <small style="font-weight:400;color:var(--text-muted);">(e.g. "5 Days 4 Nights")</small></label>
+                        <input type="text" id="pkgDurationField" name="packageduration" class="form-control" value="<?php echo htmlentities($package->PackageDuration ?? ''); ?>" placeholder="5 Days 4 Nights">
                     </div>
                     <div class="form-group">
-                        <label>Map Coordinates <small style="font-weight:400;color:#94a3b8;">(powers the interactive map, nearby-places widget, and price comparison — leave blank if unknown)</small></label>
-                        <div style="display:flex;gap:8px;">
-                            <input type="number" step="any" name="maplat" class="form-control" placeholder="Latitude" value="<?php echo htmlentities($package->MapLat ?? ''); ?>">
-                            <input type="number" step="any" name="maplng" class="form-control" placeholder="Longitude" value="<?php echo htmlentities($package->MapLng ?? ''); ?>">
+                        <label id="pkgMapCoordsGroupLabel">Map Coordinates <small style="font-weight:400;color:var(--text-muted);">(powers the interactive map, nearby-places widget, and price comparison — leave blank if unknown)</small></label>
+                        <div style="display:flex;gap:8px;" role="group" aria-labelledby="pkgMapCoordsGroupLabel">
+                            <input type="number" step="any" name="maplat" class="form-control" aria-label="Latitude" placeholder="Latitude" value="<?php echo htmlentities($package->MapLat ?? ''); ?>">
+                            <input type="number" step="any" name="maplng" class="form-control" aria-label="Longitude" placeholder="Longitude" value="<?php echo htmlentities($package->MapLng ?? ''); ?>">
                         </div>
                         <p><small><a href="https://www.latlong.net/" target="_blank" rel="noopener">Look up coordinates for this destination &rarr;</a></small></p>
                     </div>
                     <div class="form-group">
-                        <label>Hotel Name <small style="font-weight:400;color:#94a3b8;">(shown in package comparison)</small></label>
-                        <input type="text" name="hotelname" class="form-control" value="<?php echo htmlentities($package->HotelName ?? ''); ?>" placeholder="e.g. Sea Pearl Beach Resort">
+                        <label for="pkgHotelNameField">Hotel Name <small style="font-weight:400;color:var(--text-muted);">(shown in package comparison)</small></label>
+                        <input type="text" id="pkgHotelNameField" name="hotelname" class="form-control" value="<?php echo htmlentities($package->HotelName ?? ''); ?>" placeholder="e.g. Sea Pearl Beach Resort">
                     </div>
                     <div style="display:flex;gap:12px;">
                         <div class="form-group" style="flex:1;">
-                            <label>Hotel Rating <small style="font-weight:400;color:#94a3b8;">(1&ndash;5 stars)</small></label>
-                            <input type="number" step="0.5" min="1" max="5" name="hotelrating" class="form-control" value="<?php echo htmlentities($package->HotelRating ?? ''); ?>" placeholder="4.5">
+                            <label for="pkgHotelRatingField">Hotel Rating <small style="font-weight:400;color:var(--text-muted);">(1&ndash;5 stars)</small></label>
+                            <input type="number" step="0.5" min="1" max="5" id="pkgHotelRatingField" name="hotelrating" class="form-control" value="<?php echo htmlentities($package->HotelRating ?? ''); ?>" placeholder="4.5">
                         </div>
                         <div class="form-group" style="flex:1;">
-                            <label>Meal Plan</label>
-                            <input type="text" name="mealplan" class="form-control" value="<?php echo htmlentities($package->MealPlan ?? ''); ?>" placeholder="e.g. Breakfast Included">
+                            <label for="pkgMealPlanField">Meal Plan</label>
+                            <input type="text" id="pkgMealPlanField" name="mealplan" class="form-control" value="<?php echo htmlentities($package->MealPlan ?? ''); ?>" placeholder="e.g. Breakfast Included">
                         </div>
                     </div>
                     <div style="display:flex;gap:12px;">
                         <div class="form-group" style="flex:1;">
-                            <label>Transport Mode</label>
-                            <input type="text" name="transportmode" class="form-control" value="<?php echo htmlentities($package->TransportMode ?? ''); ?>" placeholder="e.g. AC Bus, Flight">
+                            <label for="pkgTransportModeField">Transport Mode</label>
+                            <input type="text" id="pkgTransportModeField" name="transportmode" class="form-control" value="<?php echo htmlentities($package->TransportMode ?? ''); ?>" placeholder="e.g. AC Bus, Flight">
                         </div>
                         <div class="form-group" style="flex:1;">
-                            <label>Seats Available <small style="font-weight:400;color:#94a3b8;">(leave blank = unlimited/not tracked)</small></label>
-                            <input type="number" min="0" name="seatsavailable" class="form-control" value="<?php echo htmlentities($package->SeatsAvailable ?? ''); ?>" placeholder="e.g. 30">
+                            <label for="pkgSeatsField">Seats Available <small style="font-weight:400;color:var(--text-muted);">(leave blank = unlimited/not tracked)</small></label>
+                            <input type="number" min="0" id="pkgSeatsField" name="seatsavailable" class="form-control" value="<?php echo htmlentities($package->SeatsAvailable ?? ''); ?>" placeholder="e.g. 30">
                         </div>
                     </div>
                     <div class="form-group">
-                        <label>Inclusions <small style="font-weight:400;color:#94a3b8;">(one item per line)</small></label>
-                        <textarea name="inclusions" class="form-control" rows="4"
+                        <label for="pkgInclusionsField">Inclusions <small style="font-weight:400;color:var(--text-muted);">(one item per line)</small></label>
+                        <textarea id="pkgInclusionsField" name="inclusions" class="form-control" rows="4"
                                   placeholder="Hotel accommodation&#10;Daily breakfast&#10;Airport transfers"><?php echo htmlentities($package->Inclusions ?? ''); ?></textarea>
                     </div>
                     <div class="form-group">
-                        <label>Exclusions <small style="font-weight:400;color:#94a3b8;">(one item per line)</small></label>
-                        <textarea name="exclusions" class="form-control" rows="4"
+                        <label for="pkgExclusionsField">Exclusions <small style="font-weight:400;color:var(--text-muted);">(one item per line)</small></label>
+                        <textarea id="pkgExclusionsField" name="exclusions" class="form-control" rows="4"
                                   placeholder="International airfare&#10;Travel insurance&#10;Personal expenses"><?php echo htmlentities($package->Exclusions ?? ''); ?></textarea>
                     </div>
                     <div class="form-group">
-                        <label>Cancellation Policy <small style="font-weight:400;color:#94a3b8;">(one rule per line, shown to travelers before booking)</small></label>
-                        <textarea name="cancellationpolicy" class="form-control" rows="4"
+                        <label for="pkgCancellationPolicyField">Cancellation Policy <small style="font-weight:400;color:var(--text-muted);">(one rule per line, shown to travelers before booking)</small></label>
+                        <textarea id="pkgCancellationPolicyField" name="cancellationpolicy" class="form-control" rows="4"
                                   placeholder="Free cancellation up to 7 days before departure&#10;50% refund within 3-7 days&#10;No refund within 48 hours"><?php echo htmlentities($package->CancellationPolicy ?? ''); ?></textarea>
                     </div>
                     <div class="form-group">
-                        <label>Package Image (leave blank to keep current)</label>
+                        <label for="pkgImageField">Package Image (leave blank to keep current)</label>
                         <?php if($package->PackageImage): ?>
                         <p><small>Current image: <strong><?php echo htmlentities($package->PackageImage); ?></strong></small></p>
                         <?php endif; ?>
-                        <input type="file" name="packageimage" class="form-control">
+                        <input type="file" id="pkgImageField" name="packageimage" class="form-control">
                     </div>
                     <button type="submit" name="submit" class="btn-v6 success">Update Package</button>
                     <a href="manage-package-addons.php?pkgid=<?php echo (int)$pid; ?>" class="btn-v6 ghost">
@@ -273,17 +272,19 @@ document.getElementById('suggestPriceBtn').addEventListener('click', function() 
             btn.disabled = false;
             btn.innerHTML = originalHtml;
             if (!res.success || !res.data || !res.data.prediction || !res.data.prediction.has_data) {
-                box.innerHTML = (res.data && res.data.prediction && res.data.prediction.message) || 'No comparable packages found — you\'ll need to set the price based on judgment for this one.';
+                box.textContent = (res.data && res.data.prediction && res.data.prediction.message) || 'No comparable packages found — you\'ll need to set the price based on judgment for this one.';
                 return;
             }
             var p = res.data.prediction;
-            var html = '<strong>' + p.comparable_count + ' comparable package(s)</strong> (matched by ' + p.match_basis + '): '
-                + '৳' + p.min_price + ' – ৳' + p.max_price + ' (median ৳' + p.median_price + ', avg ৳' + p.avg_price + ').';
+            var E = function (s) { var d = document.createElement('div'); d.textContent = (s == null ? '' : String(s)); return d.innerHTML; };
+            var N = function (v) { v = Number(v); return isFinite(v) ? v : 0; };
+            var html = '<strong>' + N(p.comparable_count) + ' comparable package(s)</strong> (matched by ' + E(p.match_basis) + '): '
+                + '৳' + N(p.min_price) + ' – ৳' + N(p.max_price) + ' (median ৳' + N(p.median_price) + ', avg ৳' + N(p.avg_price) + ').';
             if (p.own_price) {
-                html += '<br>This package (৳' + p.own_price + ') is currently <strong>' + p.position.replace('_',' ') + '</strong> (' + (p.diff_percent > 0 ? '+' : '') + p.diff_percent + '% vs avg).';
+                html += '<br>This package (৳' + N(p.own_price) + ') is currently <strong>' + E(String(p.position).replace('_',' ')) + '</strong> (' + (p.diff_percent > 0 ? '+' : '') + N(p.diff_percent) + '% vs avg).';
             }
-            if (p.ai_verdict) html += '<br><em>' + p.ai_verdict + '</em>';
-            html += '<br><button type="button" class="btn btn-xs btn-primary" style="margin-top:6px;" onclick="document.getElementById(\'packagePriceInput\').value=' + p.suggested_price + '">Use ৳' + p.suggested_price + '</button>';
+            if (p.ai_verdict) html += '<br><em>' + E(p.ai_verdict) + '</em>';
+            html += '<br><button type="button" class="btn btn-xs btn-primary" style="margin-top:6px;" onclick="document.getElementById(\'packagePriceInput\').value=' + N(p.suggested_price) + '">Use ৳' + N(p.suggested_price) + '</button>';
             box.innerHTML = html;
         })
         .catch(function() {

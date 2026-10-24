@@ -1,5 +1,5 @@
 <?php
-session_start();
+require_once __DIR__ . '/../backend/session-boot.php';
 error_reporting(E_ALL); ini_set('display_errors', '0'); ini_set('log_errors', '1');
 include('backend/config.php');
 // LIVE BUG FIX (customer-facing audit): this page is real browsing/
@@ -144,7 +144,7 @@ $filterActivity = tms_int($_GET['activity'] ?? 0, 0);
 $filterType = $filterPkg ? 'package' : ($filterHotel ? 'hotel' : ($filterActivity ? 'activity' : ''));
 $filterId   = $filterPkg ?: ($filterHotel ?: $filterActivity);
 
-$packages   = $dbh->query("SELECT PackageId, PackageName FROM tbltourpackages ORDER BY PackageName")->fetchAll(PDO::FETCH_OBJ);
+$packages   = $dbh->query("SELECT PackageId, PackageName FROM tbltourpackages WHERE " . TMS_PKG_PUBLIC_SQL . " ORDER BY PackageName")->fetchAll(PDO::FETCH_OBJ);
 $hotelsList = $dbh->query("SELECT HotelId, HotelName FROM tblhotels WHERE Status=1 ORDER BY HotelName")->fetchAll(PDO::FETCH_OBJ);
 $activitiesList = $dbh->query("SELECT ActivityId, ActivityName FROM tblactivities WHERE Status=1 ORDER BY ActivityName")->fetchAll(PDO::FETCH_OBJ);
 
@@ -180,17 +180,20 @@ $preselectType = $filterType ?: 'package';
 <html lang="<?php echo htmlspecialchars(tms_active_language(), ENT_QUOTES, 'UTF-8'); ?>">
 <head>
 <link rel="manifest" href="manifest.json">
-<meta name="theme-color" content="#0B2B3C">
+<meta name="theme-color" content="#104B3A">
 <link rel="apple-touch-icon" href="images/icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="TMS">
+<meta name="mobile-web-app-capable" content="yes">
 <title>TMS | Tourist Reviews</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <link href="css/bootstrap.min2.css" rel='stylesheet' type='text/css' />
-<link href="css/style.min.css" rel='stylesheet' type='text/css' />
+<link href="<?php echo tms_asset_ver('css/style.min.css'); ?>" rel='stylesheet' type='text/css' />
 <link href="css/font-awesome.min2.css" rel="stylesheet">
 <link href="<?php echo tms_asset_ver('css/modern-theme.css'); ?>" rel="stylesheet">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700;9..144,800&family=Manrope:wght@400;500;600;700;800&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
 <link href="css/animate.css" rel="stylesheet">
 <script src="js/jquery-1.12.0.min.js" defer></script>
 <script src="js/bootstrap.min.js" defer></script>
@@ -201,7 +204,7 @@ $preselectType = $filterType ?: 'package';
 .review-card:hover{box-shadow:0 8px 30px rgba(0,0,0,.12);}
 .reviewer-avatar{width:48px;height:48px;border-radius:50%;background:linear-gradient(135deg,#f093fb,#f5576c);display:flex;align-items:center;justify-content:center;color:#fff;font-size:18px;font-weight:700;flex-shrink:0;}
 .reviewer-info h5{font-size:15px;font-weight:700;color:#333;margin:0;}
-.reviewer-info p{font-size:12px;color:#aaa;margin:0;}
+.reviewer-info p{font-size:12px;color:var(--text-muted);margin:0;}
 .review-stars{color:#f0ad4e;font-size:18px;}
 .review-text{color:#555;font-size:14px;line-height:1.6;margin:12px 0 0;}
 .review-image{border-radius:8px;max-height:200px;object-fit:cover;margin-top:12px;cursor:pointer;}
@@ -342,7 +345,7 @@ html[data-theme="dark"] .review-text { color: var(--text-muted) !important; }
                         <textarea name="reviewtext" id="reviewTextField" class="form-control" rows="4" placeholder="Share your experience…" required maxlength="2000"></textarea>
                     </div>
                     <div class="form-group">
-                        <label for="reviewImageField">Upload Photo <small style="color:#aaa;">(optional, max 5 MB)</small></label>
+                        <label for="reviewImageField">Upload Photo <small style="color:var(--text-muted);">(optional, max 5 MB)</small></label>
                         <input type="file" name="reviewimage" id="reviewImageField" class="form-control" accept="image/*">
                     </div>
                     <button type="submit" name="submitreview" class="btn-review">
@@ -365,7 +368,7 @@ html[data-theme="dark"] .review-text { color: var(--text-muted) !important; }
                 <?php else: ?>
                 <div style="text-align:center;padding:20px;">
                     <i class="fa fa-lock" style="font-size:40px;color:#ddd;display:block;margin-bottom:15px;"></i>
-                    <p style="color:#777;margin-bottom:15px;">Please sign in to write a review</p>
+                    <p style="color:var(--text-muted);margin-bottom:15px;">Please sign in to write a review</p>
                     <a href="#" data-toggle="modal" data-target="#myModal4"
                        class="btn-review" style="text-decoration:none;display:inline-block;padding:10px 25px;">Sign In</a>
                 </div>
@@ -401,7 +404,7 @@ html[data-theme="dark"] .review-text { color: var(--text-muted) !important; }
                         <?php endforeach; ?>
                     </optgroup>
                 </select>
-                <span style="color:#aaa;font-size:14px;"><?php echo count($reviews); ?> review(s)</span>
+                <span style="color:var(--text-muted);font-size:14px;"><?php echo count($reviews); ?> review(s)</span>
             </div>
 
             <?php if (count($reviews) > 0): ?>
@@ -422,7 +425,7 @@ html[data-theme="dark"] .review-text { color: var(--text-muted) !important; }
                         </div>
                         <div class="review-stars">
                             <?php for ($i=1;$i<=5;$i++) echo $i<=$rev->Rating?'★':'☆'; ?>
-                            <span style="color:#aaa;font-size:13px;">&nbsp;<?php echo (int)$rev->Rating; ?>.0</span>
+                            <span style="color:var(--text-muted);font-size:13px;">&nbsp;<?php echo (int)$rev->Rating; ?>.0</span>
                         </div>
                         <p class="review-text"><?php echo nl2br(htmlspecialchars($rev->ReviewText, ENT_QUOTES,'UTF-8')); ?></p>
                         <?php if ($rev->ReviewImage): ?>
@@ -437,8 +440,8 @@ html[data-theme="dark"] .review-text { color: var(--text-muted) !important; }
             <?php else: ?>
             <div style="text-align:center;padding:60px 20px;">
                 <i class="fa fa-comment-o" style="font-size:60px;color:#ddd;display:block;margin-bottom:20px;"></i>
-                <h4 style="color:#aaa;">No reviews yet</h4>
-                <p style="color:#bbb;">Be the first to share your experience!</p>
+                <h4 style="color:var(--text-muted);">No reviews yet</h4>
+                <p style="color:var(--text-muted);">Be the first to share your experience!</p>
             </div>
             <?php endif; ?>
         </div>

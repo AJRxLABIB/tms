@@ -32,11 +32,16 @@ $groups = $groups->fetchAll(PDO::FETCH_OBJ);
 ?>
 <!DOCTYPE HTML><html lang="<?php echo htmlspecialchars(tms_active_language(), ENT_QUOTES, 'UTF-8'); ?>"><head>
 <link rel="manifest" href="manifest.json">
-<meta name="theme-color" content="#0B2B3C">
+<meta name="theme-color" content="#104B3A">
+<link rel="apple-touch-icon" href="images/icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="TMS">
+<meta name="mobile-web-app-capable" content="yes">
 <title>TMS | Group Trips</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <link href="css/bootstrap.min2.css" rel='stylesheet'/>
-<link href="css/style.min.css" rel='stylesheet'/>
+<link href="<?php echo tms_asset_ver('css/style.min.css'); ?>" rel='stylesheet'/>
 <link href="css/font-awesome.min2.css" rel="stylesheet">
 <link href="<?php echo tms_asset_ver('css/modern-theme.css'); ?>" rel="stylesheet">
 <script src="js/jquery-1.12.0.min.js" defer></script>
@@ -65,7 +70,7 @@ $groups = $groups->fetchAll(PDO::FETCH_OBJ);
 
   <div class="gt-box">
     <h4>Your group trips</h4>
-    <?php if (empty($groups)): ?><p style="color:#888;">You're not part of any group trip yet.</p><?php endif; ?>
+    <?php if (empty($groups)): ?><p style="color:var(--text-muted);">You're not part of any group trip yet.</p><?php endif; ?>
     <?php foreach ($groups as $g): ?>
       <div class="gt-row">
         <span><strong><?php echo htmlspecialchars($g->Name, ENT_QUOTES, 'UTF-8'); ?></strong> — <?php echo (int)$g->MemberCount; ?> member<?php echo $g->MemberCount==1?'':'s'; ?></span>

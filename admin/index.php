@@ -1,5 +1,5 @@
 <?php
-session_start();
+require_once __DIR__ . '/../backend/session-boot.php';
 error_reporting(E_ALL);
 ini_set('display_errors', 0);
 ini_set('log_errors', 1);
@@ -63,12 +63,20 @@ if (isset($_POST['btn-verify-2fa'])) {
         $q->execute([':u' => $pendingUser]);
         $row = $q->fetch(PDO::FETCH_OBJ);
 
-        if ($row && $row->TwoFASecret && tms_totp_verify($row->TwoFASecret, $code)) {
+        // A TOTP code, or (lost phone) one single-use recovery code. Both share the same lockout bucket above.
+        require_once __DIR__ . '/../backend/TwoFactorRecovery.php';
+        $viaRecovery = false;
+        $codeOk = $row && $row->TwoFASecret && tms_totp_verify($row->TwoFASecret, $code);
+        if (!$codeOk && $row && TwoFactorRecovery::looksLikeRecovery($code)
+            && TwoFactorRecovery::consume($dbh, (int)$row->id, $code, TwoFactorRecovery::TABLE_ADMIN)) {
+            $codeOk = true; $viaRecovery = true;
+        }
+        if ($codeOk) {
             tms_clear_login_attempts($dbh, $lockoutKey, $ip);
             unset($_SESSION['a2fa_pending']);
             $_SESSION['alogin'] = $pendingUser;
             session_regenerate_id(true);
-            tms_log_activity($dbh, $pendingUser, 'Admin Login', 'Successful admin sign-in (2FA verified)');
+            tms_log_activity($dbh, $pendingUser, 'Admin Login', $viaRecovery ? 'Successful admin sign-in (2FA recovery code used)' : 'Successful admin sign-in (2FA verified)');
             header('location:dashboard.php');
             exit;
         } else {
@@ -181,59 +189,57 @@ $showingTwoFactorPrompt = !empty($_SESSION['a2fa_pending']);
 <title>TMS | Admin Login</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Plus+Jakarta+Sans:wght@700;800&display=swap" onload="this.onload=null;this.rel='stylesheet'">
-<noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Plus+Jakarta+Sans:wght@700;800&display=swap" rel="stylesheet"></noscript>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;}
-body{font-family:'Inter',sans-serif;min-height:100vh;display:flex;background:#0f172a;overflow:hidden;}
+body{font-family:'Inter',sans-serif;min-height:100vh;display:flex;background:#17231E;overflow:hidden;}
 .login-left{
   flex:1;display:flex;flex-direction:column;justify-content:center;align-items:center;padding:60px 40px;
-  background:linear-gradient(135deg,#0f172a 0%,#1e3a5f 50%,#1e293b 100%);
+  background:linear-gradient(135deg,#17231E 0%,#104B3A 55%,#0E3B2D 100%);
   position:relative;overflow:hidden;
 }
 .login-left::before{
   content:'';position:absolute;width:600px;height:600px;border-radius:50%;
-  background:radial-gradient(circle,rgba(29,78,216,0.15),transparent 70%);
+  background:radial-gradient(circle,rgba(31,138,102,0.25),transparent 70%);
   top:-100px;left:-100px;
 }
 .login-left::after{
   content:'';position:absolute;width:400px;height:400px;border-radius:50%;
-  background:radial-gradient(circle,rgba(124,58,237,0.12),transparent 70%);
+  background:radial-gradient(circle,rgba(184,228,201,0.10),transparent 70%);
   bottom:-50px;right:-50px;
 }
 .login-brand{position:relative;z-index:1;text-align:center;margin-bottom:48px;}
 .brand-icon{
   width:72px;height:72px;border-radius:20px;margin:0 auto 20px;
-  background:linear-gradient(135deg,#1d4ed8,#7c3aed);
+  background:linear-gradient(135deg,#176B50,#1F8A66);
   display:flex;align-items:center;justify-content:center;font-size:32px;color:#fff;
 }
-.brand-title{font-family:'Plus Jakarta Sans',sans-serif;font-size:28px;font-weight:800;color:#fff;margin-bottom:8px;}
-.brand-sub{font-size:14px;color:#94a3b8;}
+.brand-title{font-family:'Inter',sans-serif;font-size:28px;font-weight:800;color:#fff;margin-bottom:8px;}
+.brand-sub{font-size:14px;color:var(--text-muted);}
 .login-features{position:relative;z-index:1;display:flex;flex-direction:column;gap:16px;width:100%;max-width:320px;}
 .feat-item{display:flex;align-items:center;gap:12px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.08);border-radius:12px;padding:14px 16px;}
 .feat-icon{width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;}
 .feat-text p{font-size:13.5px;font-weight:500;color:#e2e8f0;margin:0 0 2px;}
-.feat-text span{font-size:12px;color:#64748b;}
+.feat-text span{font-size:12px;color:var(--text-muted);}
 .login-right{
   width:480px;flex-shrink:0;display:flex;align-items:center;justify-content:center;
   background:#fff;padding:60px 48px;
 }
 .login-form{width:100%;max-width:360px;}
-.form-title{font-family:'Plus Jakarta Sans',sans-serif;font-size:26px;font-weight:800;color:#0f172a;margin-bottom:6px;}
-.form-sub{font-size:14px;color:#64748b;margin-bottom:36px;}
+.form-title{font-family:'Inter',sans-serif;font-size:26px;font-weight:800;color:var(--text-primary);margin-bottom:6px;}
+.form-sub{font-size:14px;color:var(--text-muted);margin-bottom:36px;}
 .form-label{display:block;font-size:13px;font-weight:500;color:#475569;margin-bottom:7px;}
 .form-input{
   width:100%;padding:11px 16px;
   border:1.5px solid #e2e8f0;border-radius:10px;
   font-size:14px;font-family:'Inter',sans-serif;
-  color:#0f172a;outline:none;transition:all 0.2s;
+  color:var(--text-primary);outline:none;transition:all 0.2s;
   background:#f8fafc;
 }
-.form-input:focus{border-color:#1d4ed8;background:#fff;box-shadow:0 0 0 3px rgba(29,78,216,0.1);}
+.form-input:focus{border-color:#176B50;background:#fff;box-shadow:0 0 0 3px rgba(29,78,216,0.1);}
 .field-group{margin-bottom:18px;}
 .btn-login{
   width:100%;padding:13px;border:none;border-radius:10px;
-  background:linear-gradient(135deg,#1d4ed8,#7c3aed);color:#fff;
+  background:linear-gradient(135deg,#176B50,#1F8A66);color:#fff;
   font-size:15px;font-weight:600;font-family:'Inter',sans-serif;
   cursor:pointer;transition:all 0.2s;margin-top:6px;
   box-shadow:0 4px 14px rgba(29,78,216,0.35);
@@ -241,8 +247,8 @@ body{font-family:'Inter',sans-serif;min-height:100vh;display:flex;background:#0f
 .btn-login:hover{transform:translateY(-1px);box-shadow:0 8px 20px rgba(29,78,216,0.4);}
 .btn-login:active{transform:translateY(0);}
 .error-box{background:#fee2e2;border:1px solid #fca5a5;border-radius:10px;padding:12px 16px;margin-bottom:20px;font-size:13.5px;color:#991b1b;display:flex;align-items:center;gap:8px;}
-.back-link{display:block;text-align:center;margin-top:24px;font-size:13px;color:#64748b;text-decoration:none;transition:color 0.2s;}
-.back-link:hover{color:#1d4ed8;}
+.back-link{display:block;text-align:center;margin-top:24px;font-size:13px;color:var(--text-muted);text-decoration:none;transition:color 0.2s;}
+.back-link:hover{color:#176B50;}
 @media(max-width:768px){
   body{flex-direction:column;}
   .login-left{display:none;}
@@ -261,7 +267,7 @@ body{font-family:'Inter',sans-serif;min-height:100vh;display:flex;background:#0f
   </div>
   <div class="login-features">
     <div class="feat-item">
-      <div class="feat-icon" style="background:rgba(29,78,216,0.2);color:#60a5fa;">&#128200;</div>
+      <div class="feat-icon" style="background:rgba(29,78,216,0.2);color:#7FD6AE;">&#128200;</div>
       <div class="feat-text"><p>Revenue Analytics</p><span>Real-time charts and reports</span></div>
     </div>
     <div class="feat-item">
@@ -284,7 +290,7 @@ body{font-family:'Inter',sans-serif;min-height:100vh;display:flex;background:#0f
   <div class="login-form">
     <?php if ($showingTwoFactorPrompt): ?>
       <div class="form-title">Two-Factor Code</div>
-      <div class="form-sub">Enter the 6-digit code from your authenticator app</div>
+      <div class="form-sub">Enter the 6-digit code from your authenticator app, or a recovery code</div>
 
       <?php if($error): ?>
       <div class="error-box">&#9888; <?= htmlspecialchars($error) ?></div>
@@ -293,8 +299,8 @@ body{font-family:'Inter',sans-serif;min-height:100vh;display:flex;background:#0f
       <form method="post" autocomplete="off">
         <?php tms_csrf_field(); ?>
         <div class="field-group">
-          <label class="form-label">Authentication Code</label>
-          <input type="text" name="totp_code" class="form-input" placeholder="123456" inputmode="numeric" pattern="[0-9]*" maxlength="6" required autocomplete="one-time-code" autofocus>
+          <label class="form-label" for="adminTotpCodeField">Authentication Code</label>
+          <input type="text" id="adminTotpCodeField" name="totp_code" class="form-input" placeholder="123456 or recovery code" maxlength="16" required autocomplete="one-time-code" autofocus>
         </div>
         <button type="submit" name="btn-verify-2fa" class="btn-login">Verify &#8594;</button>
       </form>
@@ -311,12 +317,12 @@ body{font-family:'Inter',sans-serif;min-height:100vh;display:flex;background:#0f
       <form method="post" autocomplete="off">
         <?php tms_csrf_field(); ?>
         <div class="field-group">
-          <label class="form-label">Username</label>
-          <input type="text" name="txtusername" class="form-input" placeholder="Admin username" required autocomplete="username">
+          <label class="form-label" for="adminUsernameField">Username</label>
+          <input type="text" id="adminUsernameField" name="txtusername" class="form-input" placeholder="Admin username" required autocomplete="username">
         </div>
         <div class="field-group">
-          <label class="form-label">Password</label>
-          <input type="password" name="txtpassword" class="form-input" placeholder="••••••••" required autocomplete="current-password">
+          <label class="form-label" for="adminPasswordField">Password</label>
+          <input type="password" id="adminPasswordField" name="txtpassword" class="form-input" placeholder="••••••••" required autocomplete="current-password">
         </div>
         <button type="submit" name="btn-login" class="btn-login">Sign In &#8594;</button>
       </form>

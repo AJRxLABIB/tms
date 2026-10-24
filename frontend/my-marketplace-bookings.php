@@ -1,5 +1,5 @@
 <?php
-session_start();
+require_once __DIR__ . '/../backend/session-boot.php';
 error_reporting(E_ALL); ini_set('display_errors', '0'); ini_set('log_errors', '1');
 include('backend/config.php');
 tms_require_user();
@@ -30,6 +30,9 @@ if (isset($_POST['cancel_hotel'])) {
         $hoursUntil = (new DateTime($b->CheckInDate))->getTimestamp() - (new DateTime())->getTimestamp();
         if ($hoursUntil / 3600 > 24) {
             $dbh->prepare("UPDATE tblhotel_bookings SET status=2 WHERE BookingId=:b")->execute([':b' => $bid]);
+            // Give any slot inventory this booking held back (idempotent; no-op for unmanaged hotels).
+            require_once __DIR__ . '/../backend/services/InventoryService.php';
+            InventoryService::releaseBooking($dbh, 'hotel', (int)$bid);
             $msg = 'Hotel booking cancelled.';
         } else {
             $error = 'Hotel bookings can only be cancelled more than 24 hours before check-in.';
@@ -49,6 +52,9 @@ if (isset($_POST['cancel_activity'])) {
         $hoursUntil = (new DateTime($b->ActivityDate))->getTimestamp() - (new DateTime())->getTimestamp();
         if ($hoursUntil / 3600 > 24) {
             $dbh->prepare("UPDATE tblactivity_bookings SET status=2 WHERE BookingId=:b")->execute([':b' => $bid]);
+            // Give any slot inventory this booking held back (idempotent; no-op for unmanaged activities).
+            require_once __DIR__ . '/../backend/services/InventoryService.php';
+            InventoryService::releaseBooking($dbh, 'activity', (int)$bid);
             $msg = 'Activity booking cancelled.';
         } else {
             $error = 'Activity bookings can only be cancelled more than 24 hours before the activity date.';
@@ -86,9 +92,14 @@ $statusMeta = [
 <title>TMS | My Marketplace Bookings</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <link rel="manifest" href="manifest.json">
-<meta name="theme-color" content="#0B2B3C">
+<meta name="theme-color" content="#104B3A">
+<link rel="apple-touch-icon" href="images/icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="TMS">
+<meta name="mobile-web-app-capable" content="yes">
 <link href="css/bootstrap.min2.css" rel='stylesheet'/>
-<link href="css/style.min.css" rel='stylesheet'/>
+<link href="<?php echo tms_asset_ver('css/style.min.css'); ?>" rel='stylesheet'/>
 <link href="css/font-awesome.min2.css" rel="stylesheet">
 <link href="<?php echo tms_asset_ver('css/modern-theme.css'); ?>" rel="stylesheet">
 <style>
@@ -107,7 +118,7 @@ $statusMeta = [
     <?php if ($error): ?><div class="alert-error"><i class="fa fa-exclamation-circle"></i> <?php echo htmlspecialchars($error, ENT_QUOTES, 'UTF-8'); ?></div><?php endif; ?>
     <?php if ($msg): ?><div class="alert-success"><i class="fa fa-check-circle"></i> <?php echo htmlspecialchars($msg, ENT_QUOTES, 'UTF-8'); ?></div><?php endif; ?>
 
-    <h3 style="color:var(--primary);margin-bottom:14px;"><i class="fa fa-hotel"></i> Hotel Bookings</h3>
+    <h3 style="color:var(--secondary);margin-bottom:14px;"><i class="fa fa-hotel"></i> Hotel Bookings</h3>
     <?php if (empty($hotelBookings)): ?>
     <p style="color:var(--text-muted);">No hotel bookings yet. <a href="hotels.php">Browse Hotels →</a></p>
     <?php else: foreach ($hotelBookings as $hb): $sm = $statusMeta[(int)$hb->status] ?? $statusMeta[0]; ?>
@@ -129,7 +140,7 @@ $statusMeta = [
     </div>
     <?php endforeach; endif; ?>
 
-    <h3 style="color:var(--primary);margin:28px 0 14px;"><i class="fa fa-map-signs"></i> Activity Bookings</h3>
+    <h3 style="color:var(--secondary);margin:28px 0 14px;"><i class="fa fa-map-signs"></i> Activity Bookings</h3>
     <?php if (empty($activityBookings)): ?>
     <p style="color:var(--text-muted);">No activity bookings yet. <a href="activities.php">Browse Activities →</a></p>
     <?php else: foreach ($activityBookings as $ab): $sm = $statusMeta[(int)$ab->status] ?? $statusMeta[0]; ?>

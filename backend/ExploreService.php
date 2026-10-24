@@ -52,6 +52,29 @@ class ExploreService {
     // DESTINATION SEARCH (autocomplete)
     // ════════════════════════════════════════════════════════════════════
 
+    /** Destinations from our own catalogue (packages that carry coordinates), used only when Nominatim fails. */
+    protected function searchLocalDestinations(string $query, int $limit): array {
+        try {
+            $st = $this->db->prepare(
+                "SELECT PackageLocation, Country, MapLat, MapLng FROM tbltourpackages
+                 WHERE Status = 1 AND MapLat IS NOT NULL AND MapLat <> '' AND MapLng IS NOT NULL AND MapLng <> ''
+                   AND (PackageLocation LIKE :q OR Country LIKE :q OR PackageName LIKE :q)
+                 GROUP BY PackageLocation, Country, MapLat, MapLng LIMIT " . (int)max(1, min(20, $limit))
+            );
+            $st->execute([':q' => '%' . str_replace(['%', '_'], ['\\%', '\\_'], $query) . '%']);
+            $out = [];
+            foreach ($st->fetchAll(PDO::FETCH_ASSOC) as $r) {
+                $label = trim((string)$r['PackageLocation']);
+                $out[] = ['display_name' => $label . ($r['Country'] ? ', ' . $r['Country'] : ''), 'short_name' => $label,
+                          'lat' => (float)$r['MapLat'], 'lng' => (float)$r['MapLng'], 'type' => 'catalogue',
+                          'country' => (string)$r['Country'], 'country_code' => ''];
+            }
+            return $out;
+        } catch (Throwable $e) {
+            return [];
+        }
+    }
+
     public function searchDestinations(string $query, int $limit = 6): array {
         $query = trim($query);
         if ($query === '' || mb_strlen($query) < 2) {
@@ -71,8 +94,12 @@ class ExploreService {
             'limit'          => $limit,
         ]);
 
-        $res = $this->httpGetJson($url);
-        if (!$res['success']) return $res;
+        $res = $this->httpRequest($url, 'GET', null, false, 8, 3);
+        if (!$res['success'] || !is_array($res['data'] ?? null)) {
+            // Nominatim down or rate-limiting: still let people find destinations we already have coordinates for.
+            $local = $this->searchLocalDestinations($query, $limit);
+            return $local ? ['success' => true, 'results' => $local, 'cached' => false, 'source' => 'local'] : ($res['success'] ? ['success' => false, 'error' => 'Search failed.'] : $res);
+        }
 
         $results = [];
         foreach ($res['data'] as $item) {
@@ -291,15 +318,46 @@ class ExploreService {
         'attraction'     => ['osm' => '["tourism"~"attraction|museum|viewpoint|artwork|gallery"]','google' => 'tourist_attraction'],
     ];
 
+    /**
+     * Public Overpass servers, raced in parallel (first valid answer wins). Previously a single mirror
+     * (overpass-api.de) was used with a 25 s timeout: when it was slow or rate-limiting, "Nearby Places"
+     * spun forever. Override with TMS_OVERPASS_MIRRORS (comma-separated interpreter URLs).
+     */
+    private const OVERPASS_MIRRORS = [
+        'https://overpass-api.de/api/interpreter',
+        'https://overpass.kumi.systems/api/interpreter',
+        'https://overpass.private.coffee/api/interpreter',
+    ];
+    /** Total wall-clock budget for one live places lookup (seconds). */
+    private const PLACES_BUDGET_SEC = 9;
+    /** After a failed live lookup for a key, skip the network for this long and answer from stale/local data. */
+    private const PLACES_FAIL_TTL = 90;
+    /** A second, long-lived copy of every successful lookup, served (flagged stale) when live lookups fail. */
+    private const PLACES_STALE_TTL = 60 * 60 * 24 * 30;
+
+    private function placesKey(float $lat, float $lng, string $category, int $radius): string {
+        return "places_{$category}_" . round($lat, 3) . '_' . round($lng, 3) . "_$radius";
+    }
+
+    /**
+     * Nearby places, never hangs and degrades in this order:
+     *   fresh cache -> live lookup (Google if keyed, else Overpass mirrors raced) -> stale cache -> local database.
+     * 'origin' tells the UI which one answered: live | cached | stale | local.
+     */
     public function getNearbyPlaces(float $lat, float $lng, string $category, int $radius = 4000): array {
         if (!isset(self::CATEGORY_MAP[$category])) {
             return ['success' => false, 'error' => 'Unknown place category.'];
         }
 
-        $cacheKey = "places_{$category}_" . round($lat, 3) . '_' . round($lng, 3) . "_$radius";
+        $cacheKey = $this->placesKey($lat, $lng, $category, $radius);
         $cached   = $this->cacheGet($cacheKey);
         if ($cached !== null) {
-            return ['success' => true, 'results' => $cached, 'cached' => true];
+            return ['success' => true, 'results' => $cached, 'cached' => true, 'origin' => 'cached', 'stale' => false, 'source' => 'cache'];
+        }
+
+        // A lookup for this exact area failed moments ago: do not make the visitor wait through it again.
+        if ($this->cacheGet('fail_' . $cacheKey) !== null) {
+            return $this->placesFallback($lat, $lng, $category, $radius, $cacheKey, 'Live place data is temporarily unavailable.');
         }
 
         $result = (defined('GOOGLE_PLACES_API_KEY') && GOOGLE_PLACES_API_KEY !== '')
@@ -307,14 +365,200 @@ class ExploreService {
             : $this->placesFromOverpass($lat, $lng, $category, $radius);
 
         if ($result['success']) {
-            $this->cacheSet($cacheKey, $result['results'], EXPLORE_CACHE_TTL_PLACES);
+            $this->storePlaces($cacheKey, $result['results']);
+            $result['origin'] = 'live';
+            $result['stale']  = false;
+            return $result;
         }
-        return $result;
+
+        $this->cacheSet('fail_' . $cacheKey, 1, self::PLACES_FAIL_TTL);
+        return $this->placesFallback($lat, $lng, $category, $radius, $cacheKey, $result['error'] ?? 'Live place data is temporarily unavailable.');
+    }
+
+    private function storePlaces(string $cacheKey, array $places): void {
+        $this->cacheSet($cacheKey, $places, EXPLORE_CACHE_TTL_PLACES);
+        $this->cacheSet('stale_' . $cacheKey, $places, self::PLACES_STALE_TTL);
+    }
+
+    /** Stale copy first (real data, older), then the app's own catalogue, else a clear failure. */
+    private function placesFallback(float $lat, float $lng, string $category, int $radius, string $cacheKey, string $error): array {
+        $stale = $this->cacheGet('stale_' . $cacheKey);
+        if (is_array($stale) && $stale) {
+            return ['success' => true, 'results' => $stale, 'cached' => true, 'origin' => 'stale', 'stale' => true, 'source' => 'cache',
+                    'notice' => 'Live data is unavailable right now. Showing results saved earlier; they may be out of date.'];
+        }
+        $local = $this->localNearby($lat, $lng, $category, $radius);
+        if ($local) {
+            return ['success' => true, 'results' => $local, 'origin' => 'local', 'stale' => false, 'source' => 'local',
+                    'notice' => 'Live map data is unavailable right now. Showing places from our own catalogue.'];
+        }
+        return ['success' => false, 'error' => $error, 'origin' => 'none', 'stale' => false, 'source' => 'none'];
+    }
+
+    /**
+     * Places from this application's own database. Only tour packages carry coordinates (MapLat/MapLng); hotels
+     * have none, so hotels are matched by the country/city of the nearest packaged destination and returned
+     * without coordinates (list only, never plotted). Sample rows are flagged is_sample, never presented as live.
+     */
+    protected function localNearby(float $lat, float $lng, string $category, int $radius): array {
+        $out = [];
+        // Bounding box ~ max(radius, 25 km): rows outside it cannot match, so the haversine below runs on few rows.
+        $reach = max($radius, 25000);
+        $dLat  = $reach / 111320.0;
+        $dLng  = $reach / (111320.0 * max(0.2, cos(deg2rad($lat))));
+        try {
+            $st = $this->db->prepare(
+                "SELECT PackageId, PackageName, PackageLocation, Country, MapLat, MapLng, PackagePrice
+                 FROM tbltourpackages
+                 WHERE Status = 1 AND MapLat IS NOT NULL AND MapLat <> '' AND MapLng IS NOT NULL AND MapLng <> ''
+                   AND CAST(MapLat AS DECIMAL(9,6)) BETWEEN :la1 AND :la2
+                   AND CAST(MapLng AS DECIMAL(9,6)) BETWEEN :lo1 AND :lo2
+                 LIMIT 200"
+            );
+            $st->execute([':la1' => $lat - $dLat, ':la2' => $lat + $dLat, ':lo1' => $lng - $dLng, ':lo2' => $lng + $dLng]);
+            $pkgs = $st->fetchAll(PDO::FETCH_ASSOC);
+        } catch (Throwable $e) {
+            return [];
+        }
+        $near = [];
+        foreach ($pkgs as $p) {
+            $d = (int)$this->haversine($lat, $lng, (float)$p['MapLat'], (float)$p['MapLng']);
+            $near[] = ['row' => $p, 'd' => $d];
+        }
+        usort($near, fn($a, $b) => $a['d'] <=> $b['d']);
+
+        if (in_array($category, ['attraction', 'tourist_info'], true)) {
+            foreach (array_slice($near, 0, 12) as $n) {
+                $p = $n['row'];
+                $out[] = $this->localItem((string)$p['PackageName'], (float)$p['MapLat'], (float)$p['MapLng'], (int)$n['d'],
+                    trim((string)$p['PackageLocation']) ?: null, 'package', 'package-details.php?pkgid=' . (int)$p['PackageId']);
+            }
+            return $out;
+        }
+
+        if ($category === 'hotel' && $near) {
+            $country = trim((string)($near[0]['row']['Country'] ?? ''));
+            if ($country !== '') {
+                try {
+                    $h = $this->db->prepare("SELECT HotelId, HotelName, City, StarRating, IsSampleData FROM tblhotels WHERE Status=1 AND Country=? ORDER BY AvgRating DESC, HotelId DESC LIMIT 10");
+                    $h->execute([$country]);
+                    foreach ($h->fetchAll(PDO::FETCH_ASSOC) as $r) {
+                        $out[] = $this->localItem((string)$r['HotelName'], null, null, null, trim((string)$r['City']) ?: null, 'hotel',
+                            'hotel-details.php?id=' . (int)$r['HotelId'], ((int)($r['IsSampleData'] ?? 0)) === 1);
+                    }
+                } catch (Throwable $e) { /* optional table */ }
+            }
+        }
+        return $out;
+    }
+
+    private function localItem(string $name, ?float $lat, ?float $lng, ?int $distance, ?string $address, string $kind, string $url, bool $sample = false): array {
+        return [
+            'name' => $name, 'lat' => $lat, 'lng' => $lng, 'address' => $address, 'phone' => null, 'opening_hours' => null,
+            'website' => null, 'rating' => null, 'photo' => null, 'photo_attribution' => null, 'distance_m' => $distance,
+            'is_open_now' => null, 'source' => 'local', 'local_kind' => $kind, 'local_url' => $url, 'is_sample' => $sample,
+        ];
     }
 
     private function overpassQl(string $category, float $lat, float $lng, int $radius): string {
         $filter = self::CATEGORY_MAP[$category]['osm'];
-        return "[out:json][timeout:20];(node$filter(around:$radius,$lat,$lng);way$filter(around:$radius,$lat,$lng););out center 25;";
+        return "[out:json][timeout:10];(node$filter(around:$radius,$lat,$lng);way$filter(around:$radius,$lat,$lng););out center 25;";
+    }
+
+    /** @return string[] */
+    protected function overpassMirrors(): array {
+        $env = function_exists('tms_env') ? (string)tms_env('TMS_OVERPASS_MIRRORS', '') : '';
+        $list = array_values(array_filter(array_map('trim', explode(',', $env)), fn($u) => preg_match('#^https://#', $u)));
+        return $list ?: self::OVERPASS_MIRRORS;
+    }
+
+    /**
+     * Ask every Overpass mirror at once and take the first valid answer. 'valid' = HTTP 2xx, JSON with an
+     * 'elements' array (Overpass can answer 200 with a runtime-error remark and no elements when it is overloaded).
+     * @return array{success:bool,data?:array,error?:string,mirror?:string}
+     */
+    protected function fetchOverpass(string $ql): array {
+        $reqs = [];
+        foreach ($this->overpassMirrors() as $i => $url) {
+            $reqs['m' . $i] = ['url' => $url, 'method' => 'POST', 'body' => 'data=' . urlencode($ql), 'formEncoded' => true];
+        }
+        $validate = fn($data) => is_array($data) && isset($data['elements']) && is_array($data['elements']);
+        $res = $this->raceRequests($reqs, self::PLACES_BUDGET_SEC, $validate);
+        foreach ($reqs as $key => $r) {
+            if (!empty($res[$key]['success']) && $validate($res[$key]['data'] ?? null)) {
+                return ['success' => true, 'data' => $res[$key]['data'], 'mirror' => parse_url($r['url'], PHP_URL_HOST) ?: ''];
+            }
+        }
+        return ['success' => false, 'error' => 'Nearby places service is temporarily unavailable. Please try again shortly.'];
+    }
+
+    /**
+     * Fire all $requests concurrently and return as soon as one passes $validate (the rest are cancelled), or when
+     * $budgetSec elapses. Connect timeout 3 s; each request is also capped at the budget. One result per key.
+     * Protected so tests can replace the network with a fake.
+     * @param array<string,array{url:string,method?:string,body?:?string,formEncoded?:bool}> $requests
+     * @return array<string,array{success:bool,data?:mixed,error?:string}>
+     */
+    protected function raceRequests(array $requests, int $budgetSec, callable $validate): array {
+        $results = [];
+        $mh = curl_multi_init();
+        $handles = [];
+        foreach ($requests as $key => $r) {
+            $ch = curl_init($r['url']);
+            $headers = ['User-Agent: ' . $this->ua, 'Accept: application/json'];
+            if (($r['body'] ?? null) !== null && empty($r['formEncoded'])) $headers[] = 'Content-Type: application/json';
+            curl_setopt_array($ch, [
+                CURLOPT_RETURNTRANSFER => true,
+                CURLOPT_CONNECTTIMEOUT => 3,
+                CURLOPT_TIMEOUT        => $budgetSec,
+                CURLOPT_HTTPHEADER     => $headers,
+                CURLOPT_SSL_VERIFYPEER => true,
+                CURLOPT_ENCODING       => '',
+            ]);
+            if (($r['method'] ?? 'GET') === 'POST') {
+                curl_setopt($ch, CURLOPT_POST, true);
+                curl_setopt($ch, CURLOPT_POSTFIELDS, $r['body'] ?? '');
+            }
+            curl_multi_add_handle($mh, $ch);
+            $handles[$key] = $ch;
+        }
+
+        $deadline = microtime(true) + $budgetSec;
+        $won = false;
+        $running = 0;
+        do {
+            curl_multi_exec($mh, $running);
+            while (($info = curl_multi_info_read($mh)) !== false) {
+                $ch  = $info['handle'];
+                $key = array_search($ch, $handles, true);
+                if ($key === false || isset($results[$key])) continue;
+                $code = (int)curl_getinfo($ch, CURLINFO_HTTP_CODE);
+                $host = parse_url($requests[$key]['url'], PHP_URL_HOST) ?: 'unknown';
+                if ($info['result'] !== CURLE_OK) {
+                    $results[$key] = ['success' => false, 'error' => 'Network error: ' . curl_error($ch)];
+                } elseif ($code < 200 || $code >= 300) {
+                    $results[$key] = ['success' => false, 'error' => "HTTP $code"];   // 429 / 504 land here: just try the other mirrors
+                } else {
+                    $data = json_decode((string)curl_multi_getcontent($ch), true);
+                    $results[$key] = $validate($data) ? ['success' => true, 'data' => $data] : ['success' => false, 'error' => 'Invalid or empty response'];
+                }
+                if (function_exists('tms_log_system_event')) {
+                    try { tms_log_system_event($this->db, 'maps', $host, $results[$key]['success'], $results[$key]['error'] ?? ''); } catch (Throwable $e) {}
+                }
+                if ($results[$key]['success']) { $won = true; }
+            }
+            if ($won || !$running) break;
+            if (microtime(true) >= $deadline) break;
+            curl_multi_select($mh, 0.25);
+        } while ($running);
+
+        foreach ($handles as $key => $ch) {
+            if (!isset($results[$key])) $results[$key] = ['success' => false, 'error' => $won ? 'Cancelled (another mirror answered first)' : 'Timed out'];
+            curl_multi_remove_handle($mh, $ch);
+            curl_close($ch);
+        }
+        curl_multi_close($mh);
+        return $results;
     }
 
     /**
@@ -366,9 +610,9 @@ class ExploreService {
 
     private function placesFromOverpass(float $lat, float $lng, string $category, int $radius): array {
         $ql  = $this->overpassQl($category, $lat, $lng, $radius);
-        $res = $this->httpPostJson('https://overpass-api.de/api/interpreter', 'data=' . urlencode($ql), true);
+        $res = $this->fetchOverpass($ql);
         if (!$res['success']) {
-            return ['success' => false, 'error' => 'Nearby places service is temporarily unavailable. Please try again shortly.'];
+            return ['success' => false, 'error' => $res['error'] ?? 'Nearby places service is temporarily unavailable. Please try again shortly.'];
         }
 
         $places = $this->parseOverpassPlaces($res['data']['elements'] ?? [], $lat, $lng);
@@ -469,22 +713,30 @@ class ExploreService {
         $final   = [];
         $pending = []; // category => request spec for httpRequestMulti
 
+        $mirrors = $this->overpassMirrors();
+        $i = 0;
         foreach ($categories as $cat) {
-            $cacheKey = "places_{$cat}_" . round($lat, 3) . '_' . round($lng, 3) . "_$radius";
+            $cacheKey = $this->placesKey($lat, $lng, $cat, $radius);
             $cached   = $this->cacheGet($cacheKey);
             if ($cached !== null) {
-                $final[$cat] = ['success' => true, 'results' => $cached, 'cached' => true];
+                $final[$cat] = ['success' => true, 'results' => $cached, 'cached' => true, 'origin' => 'cached', 'stale' => false];
+                continue;
+            }
+            // A recent failure for this area: go straight to stale/local data instead of waiting on the network again.
+            if ($this->cacheGet('fail_' . $cacheKey) !== null) {
+                $final[$cat] = $this->placesFallback($lat, $lng, $cat, $radius, $cacheKey, 'Live place data is temporarily unavailable.');
                 continue;
             }
 
             $useGoogle = defined('GOOGLE_PLACES_API_KEY') && GOOGLE_PLACES_API_KEY !== '';
+            // Spread the categories over the mirrors so one public server does not receive every query at once.
             $pending[$cat] = $useGoogle
                 ? ['url' => $this->googlePlacesUrl($cat, $lat, $lng, $radius), 'method' => 'GET']
-                : ['url' => 'https://overpass-api.de/api/interpreter', 'method' => 'POST', 'body' => 'data=' . urlencode($this->overpassQl($cat, $lat, $lng, $radius)), 'formEncoded' => true];
+                : ['url' => $mirrors[$i++ % count($mirrors)], 'method' => 'POST', 'body' => 'data=' . urlencode($this->overpassQl($cat, $lat, $lng, $radius)), 'formEncoded' => true];
         }
 
         if ($pending) {
-            $responses = $this->httpRequestMulti($pending);
+            $responses = $this->httpRequestMulti($pending, self::PLACES_BUDGET_SEC, 3);
             foreach ($pending as $cat => $req) {
                 $res = $responses[$cat];
                 $usedGoogle = $req['method'] === 'GET';
@@ -495,18 +747,20 @@ class ExploreService {
                     // category, sequentially (a single fallback request, not
                     // worth another concurrent round for one category).
                     $final[$cat] = $this->placesFromOverpass($lat, $lng, $cat, $radius);
-                } elseif (!$res['success']) {
-                    $final[$cat] = ['success' => false, 'error' => 'Nearby places service is temporarily unavailable. Please try again shortly.'];
+                } elseif (!$res['success'] || (!$usedGoogle && !is_array($res['data']['elements'] ?? null))) {
+                    // This mirror failed or answered with an Overpass runtime error: take the resilient single-category
+                    // path (all mirrors raced, then stale cache, then local data) rather than reporting an error.
+                    $final[$cat] = $this->getNearbyPlaces($lat, $lng, $cat, $radius);
+                    continue;
                 } else {
                     $places = $usedGoogle
                         ? $this->parseGooglePlaces($res['data']['results'] ?? [], $lat, $lng)
                         : $this->parseOverpassPlaces($res['data']['elements'] ?? [], $lat, $lng);
-                    $final[$cat] = ['success' => true, 'results' => $places, 'source' => $usedGoogle ? 'google_places' : 'openstreetmap'];
+                    $final[$cat] = ['success' => true, 'results' => $places, 'source' => $usedGoogle ? 'google_places' : 'openstreetmap', 'origin' => 'live', 'stale' => false];
                 }
 
-                if ($final[$cat]['success']) {
-                    $cacheKey = "places_{$cat}_" . round($lat, 3) . '_' . round($lng, 3) . "_$radius";
-                    $this->cacheSet($cacheKey, $final[$cat]['results'], EXPLORE_CACHE_TTL_PLACES);
+                if ($final[$cat]['success'] && ($final[$cat]['origin'] ?? 'live') === 'live') {
+                    $this->storePlaces($this->placesKey($lat, $lng, $cat, $radius), $final[$cat]['results']);
                 }
             }
         }
@@ -543,12 +797,25 @@ class ExploreService {
 
     private function routeFromOsrm(float $fromLat, float $fromLng, float $toLat, float $toLng, string $mode): array {
         $profile = ['driving' => 'driving', 'walking' => 'foot', 'cycling' => 'bike'][$mode] ?? 'driving';
-        $url = "https://router.project-osrm.org/route/v1/$profile/$fromLng,$fromLat;$toLng,$toLat?"
-             . http_build_query(['overview' => 'full', 'geometries' => 'geojson']);
+        $fossgis = ['driving' => 'car', 'walking' => 'foot', 'cycling' => 'bike'][$mode] ?? 'car';
+        $q = http_build_query(['overview' => 'full', 'geometries' => 'geojson']);
+        $coords = "$fromLng,$fromLat;$toLng,$toLat";
+        // FOSSGIS serves real foot/bike profiles (the project-osrm demo server only routes by car whatever the profile
+        // says), so try it first for those modes; both get short timeouts so a dead server cannot stall the page.
+        $urls = [
+            "https://routing.openstreetmap.de/routed-$fossgis/route/v1/driving/$coords?$q",
+            "https://router.project-osrm.org/route/v1/$profile/$coords?$q",
+        ];
+        if ($mode === 'driving') $urls = array_reverse($urls);
 
-        $res = $this->httpGetJson($url);
-        if (!$res['success'] || ($res['data']['code'] ?? '') !== 'Ok' || empty($res['data']['routes'][0])) {
-            return ['success' => false, 'error' => 'Routing service is temporarily unavailable.'];
+        $res = ['success' => false];
+        foreach ($urls as $url) {
+            $res = $this->httpRequest($url, 'GET', null, false, 8, 3);
+            if ($res['success'] && ($res['data']['code'] ?? '') === 'Ok' && !empty($res['data']['routes'][0])) break;
+            $res = ['success' => false];
+        }
+        if (!$res['success']) {
+            return ['success' => false, 'error' => 'The routing service did not answer in time. Showing the straight-line distance only; please try again shortly.'];
         }
 
         $route  = $res['data']['routes'][0];
@@ -752,27 +1019,42 @@ class ExploreService {
             // documented common case, see the FIX above) shouldn't hide a
             // visitor's own bookable inventory just because the AI text
             // failed. See the same reasoning on the parse-failure branch below.
-            return ['success' => false, 'error' => $res['error'] ?? 'AI service is temporarily unavailable.', 'local_inventory' => $localInventory];
+            // No AI summary (no provider, runtime down, quota, bad key): show verified catalogue information instead of an
+            // error banner. Never cached, so the real AI overview returns as soon as a provider works again.
+            return $this->catalogueOverview($name, $lat, $lng, $country, $localInventory, (string)($res['error'] ?? ''));
         }
 
         $data = $ai->parseJson($res['content']);
         if (!$data) {
-            return ['success' => false, 'error' => 'Could not parse destination information. Please try again.', 'local_inventory' => $localInventory];
+            return $this->catalogueOverview($name, $lat, $lng, $country, $localInventory, 'unparseable');
         }
 
         $data['emergency_contacts'] = $this->lookupEmergencyContacts($country);
 
         try {
-            $expires = date('Y-m-d H:i:s', time() + EXPLORE_CACHE_TTL_INFO);
+            $expires = (int)EXPLORE_CACHE_TTL_INFO; // seconds; expiry is computed by the DB clock below (PHP/MySQL timezone skew safe)
             $stmt = $this->db->prepare(
                 "INSERT INTO tbl_explore_destinations (place_key, display_name, country, lat, lng, info_json, expires_at)
-                 VALUES (?,?,?,?,?,?,?)
+                 VALUES (?,?,?,?,?,?,DATE_ADD(NOW(), INTERVAL ? SECOND))
                  ON DUPLICATE KEY UPDATE info_json=VALUES(info_json), expires_at=VALUES(expires_at)"
             );
             $stmt->execute([$placeKey, $name, $country, $lat, $lng, json_encode($data, JSON_UNESCAPED_UNICODE), $expires]);
         } catch (Exception $e) {}
 
         return ['success' => true, 'data' => $data, 'cached' => false, 'local_inventory' => $localInventory];
+    }
+
+    /** Overview built from the catalogue and curated guides when no AI text is available (see backend/ai/OverviewFallback.php). */
+    private function catalogueOverview(string $name, float $lat, float $lng, string $country, array $localInventory, string $reason): array {
+        require_once __DIR__ . '/ai/OverviewFallback.php';
+        try {
+            $data = OverviewFallback::fromDb($this->db, $name, $country, $localInventory, $this->lookupEmergencyContacts($country));
+        } catch (Throwable $e) {
+            error_log('[TMS Explore] catalogue overview failed: ' . $e->getMessage());
+            return ['success' => false, 'error' => 'Destination information is not available right now.', 'local_inventory' => $localInventory];
+        }
+        if ($reason !== '') error_log('[TMS Explore] AI overview unavailable, using catalogue overview: ' . substr(preg_replace('/\s+/', ' ', strip_tags($reason)), 0, 160));
+        return ['success' => true, 'data' => $data, 'cached' => false, 'local_inventory' => $localInventory, 'ai_unavailable' => true];
     }
 
     /** Record that this user opened a destination (see the note above). */
@@ -878,13 +1160,13 @@ class ExploreService {
      *   can be matched back up without relying on array order.
      * @return array<string,array{success:bool,data?:mixed,error?:string}>
      */
-    private function httpRequestMulti(array $requests): array {
+    private function httpRequestMulti(array $requests, int $timeout = 25, int $connectTimeout = 8): array {
         if (count($requests) === 1) {
             // No concurrency to gain for exactly one request — skip the
             // curl_multi machinery entirely and reuse the plain path.
             $key = array_key_first($requests);
             $r   = $requests[$key];
-            return [$key => $this->httpRequest($r['url'], $r['method'] ?? 'GET', $r['body'] ?? null, $r['formEncoded'] ?? false)];
+            return [$key => $this->httpRequest($r['url'], $r['method'] ?? 'GET', $r['body'] ?? null, $r['formEncoded'] ?? false, $timeout, $connectTimeout)];
         }
 
         $mh      = curl_multi_init();
@@ -901,8 +1183,8 @@ class ExploreService {
 
             curl_setopt_array($ch, [
                 CURLOPT_RETURNTRANSFER => true,
-                CURLOPT_TIMEOUT        => 25,
-                CURLOPT_CONNECTTIMEOUT => 8,
+                CURLOPT_TIMEOUT        => $timeout,
+                CURLOPT_CONNECTTIMEOUT => $connectTimeout,
                 CURLOPT_HTTPHEADER     => $headers,
                 CURLOPT_SSL_VERIFYPEER => true,
                 CURLOPT_ENCODING       => '',
@@ -954,7 +1236,7 @@ class ExploreService {
         return $results;
     }
 
-    private function httpRequest(string $url, string $method, ?string $body, bool $formEncoded = false): array {
+    private function httpRequest(string $url, string $method, ?string $body, bool $formEncoded = false, int $timeout = 25, int $connectTimeout = 8): array {
         $ch = curl_init($url);
         $headers = ['User-Agent: ' . $this->ua, 'Accept: application/json'];
         if ($body !== null && !$formEncoded) $headers[] = 'Content-Type: application/json';
@@ -966,8 +1248,8 @@ class ExploreService {
             // areas) was aborted client-side and reported to the user as
             // "temporarily unavailable", even though the server would have
             // answered. Give the slowest upstream room to finish.
-            CURLOPT_TIMEOUT        => 25,
-            CURLOPT_CONNECTTIMEOUT => 8,
+            CURLOPT_TIMEOUT        => $timeout,
+            CURLOPT_CONNECTTIMEOUT => $connectTimeout,
             CURLOPT_HTTPHEADER     => $headers,
             CURLOPT_SSL_VERIFYPEER => true,
             CURLOPT_ENCODING       => '',
